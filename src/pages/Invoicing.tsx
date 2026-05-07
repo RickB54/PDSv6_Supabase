@@ -535,50 +535,50 @@ const Invoicing = () => {
     
     // Add Logo - Top Center
     try {
-      const logoWidth = 35;
-      const logoHeight = 35;
-      const xPos = (210 - logoWidth) / 2; // Center horizontally (A4 is 210mm wide)
-      doc.addImage(logo, 'PNG', xPos, 10, logoWidth, logoHeight);
+      const logoWidth = 32;
+      const logoHeight = 32;
+      const xPos = (210 - logoWidth) / 2;
+      doc.addImage(logo, 'PNG', xPos, 5, logoWidth, logoHeight);
     } catch (e) {
       console.warn("Logo failed to load for PDF", e);
     }
 
-    doc.setFontSize(18);
+    doc.setFontSize(16);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text("Prime Auto Detail", 105, 52, { align: "center" });
+    doc.text("Prime Auto Detail", 105, 44, { align: "center" });
 
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(12);
-    doc.text("INVOICE", 105, 58, { align: "center" });
-    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 66, { align: "center" });
+    doc.setFontSize(11);
+    doc.text("INVOICE", 105, 50, { align: "center" });
+    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 56, { align: "center" });
 
     doc.setFontSize(10);
-    doc.text(`Service Date: ${invoice.date}`, 20, 80);
-    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 86);
+    doc.text(`Service Date: ${invoice.date}`, 20, 68);
+    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 74);
     
     // Move Customer and Vehicle to the right side to save vertical space
     doc.setFont("helvetica", "bold");
-    doc.text(`Customer: ${invoice.customerName}`, 130, 80);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 130, 86);
+    doc.text(`Customer: ${invoice.customerName}`, 130, 68);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 130, 74);
     doc.setFont("helvetica", "normal");
 
-    let y = 96;
-    doc.setFontSize(12);
+    let y = 84;
+    doc.setFontSize(11);
     doc.text("Services Provided:", 20, y);
-    y += 8;
+    y += 6;
 
     doc.setFontSize(10);
     invoice.services.forEach((s) => {
       doc.text(`${s.name}`, 25, y);
       doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
-      y += 7;
+      y += 6;
     });
 
-    y += 5;
+    y += 3;
     doc.line(20, y, 190, y);
-    y += 10;
+    y += 8;
 
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     
     if (invoice.discount && invoice.discount.amount > 0) {
       doc.setFontSize(10);
@@ -588,25 +588,24 @@ const Invoicing = () => {
         : `Discount (Fixed):`;
       doc.text(discountLabel, 140, y);
       doc.text(`-$${invoice.discount.amount.toFixed(2)}`, 180, y, { align: "right" });
-      y += 8;
-      doc.setFontSize(14);
+      y += 7;
+      doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
     }
 
     doc.text("Total Amount:", 125, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
-    y += 10;
+    y += 8;
 
     if (invoice.paidAmount && invoice.paidAmount > 0) {
-      y += 8;
       doc.setFontSize(10);
       doc.setTextColor(16, 185, 129);
       doc.text(`Paid: $${invoice.paidAmount.toFixed(2)}`, 180, y, { align: "right" });
 
       const balance = invoice.total - invoice.paidAmount;
       if (balance <= 0) {
-        y += 8;
-        doc.setFontSize(14);
+        y += 7;
+        doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
         doc.text("PAID IN FULL", 180, y, { align: "right" });
         doc.setFont("helvetica", "normal");
@@ -616,8 +615,7 @@ const Invoicing = () => {
         doc.text(`Balance Due: $${balance.toFixed(2)}`, 180, y, { align: "right" });
       }
     } else if (invoice.total === 0) {
-      y += 8;
-      doc.setFontSize(14);
+      doc.setFontSize(13);
       doc.setTextColor(16, 185, 129);
       doc.setFont("helvetica", "bold");
       doc.text("PAID IN FULL", 180, y, { align: "right" });
@@ -625,11 +623,11 @@ const Invoicing = () => {
     }
 
     if (invoice.notes) {
-      if (y > 220) {
+      if (y > 230) {
         doc.addPage();
         y = 20;
       }
-      y += 12;
+      y += 8;
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60); // Darker grey
       doc.setFont("helvetica", "bold");
@@ -637,56 +635,56 @@ const Invoicing = () => {
       doc.setFont("helvetica", "normal");
       doc.setTextColor(80, 80, 80);
       const splitNotes = doc.splitTextToSize(invoice.notes, 170);
-      doc.text(splitNotes, 20, y + 6);
-      y += (splitNotes.length * 5) + 5;
+      doc.text(splitNotes, 20, y + 5);
+      y += (splitNotes.length * 5) + 4;
     }
 
     // Google Review Section - Compact Layout
-    if (y > 200) {
+    if (y > 210) {
       doc.addPage();
       y = 30;
     } else {
-      y += 8;
+      y += 6;
     }
 
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(16, 185, 129); // Emerald
     doc.setFont("helvetica", "bold");
     doc.text("Help Us Grow!", 105, y, { align: "center" });
     
-    y += 6;
+    y += 5;
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
     const reviewStatement = "Your feedback is extremely valuable and plays a vital role in helping small businesses like mine continue to grow and reach new customers.";
-    const splitStatement = doc.splitTextToSize(reviewStatement, 150);
+    const splitStatement = doc.splitTextToSize(reviewStatement, 160);
     doc.text(splitStatement, 105, y, { align: "center" });
     
-    y += (splitStatement.length * 5) + 4;
+    y += (splitStatement.length * 5) + 3;
     
     // QR Code
     try {
-      const qrWidth = 32;
-      const qrHeight = 32;
+      const qrWidth = 28;
+      const qrHeight = 28;
       const qrX = (210 - qrWidth) / 2;
       doc.addImage(qrCode, 'PNG', qrX, y, qrWidth, qrHeight);
-      y += qrHeight + 5;
+      y += qrHeight + 4;
     } catch (e) {
       console.warn("QR Code failed to load for PDF", e);
     }
 
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text("Scan with your phone to leave a Google Review", 105, y, { align: "center" });
     doc.setTextColor(16, 185, 129);
     doc.setFont("helvetica", "bold");
-    doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 5, { align: "center" });
+    doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 4, { align: "center" });
     doc.setFont("helvetica", "normal");
 
-    y += 18;
+    y += 12;
     doc.setTextColor(100);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y, { align: "center" });
-    doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 6, { align: "center" });
+    doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 5, { align: "center" });
 
     if (download) doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
