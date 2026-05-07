@@ -470,6 +470,73 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </Card>
             </div>
 
+            {/* Active Reminders List */}
+            <Card className="bg-zinc-950/20 border-zinc-800 shadow-sm">
+                <Accordion type="single" collapsible defaultValue={defaultOpenAccordion} className="w-full">
+                    <AccordionItem value="active-reminders" className="border-none">
+                        <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                            <div className="flex items-center gap-3">
+                                <Bell className="w-5 h-5 text-amber-500" />
+                                <span className="font-bold text-zinc-100 uppercase tracking-widest text-xs">Active Reminders</span>
+                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 h-5">
+                                    {activeReminders.length}
+                                </Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-6 pb-6 pt-2">
+                            <div className="space-y-3">
+                                {activeReminders.length === 0 ? (
+                                    <div className="text-center py-10 text-zinc-600 border border-dashed border-zinc-800 rounded-lg">
+                                        No reminders set.
+                                    </div>
+                                ) : (
+                                    activeReminders.map(b => (
+                                        <div key={b.id} className="flex items-center justify-between p-4 bg-zinc-900/40 rounded-xl border border-zinc-800/50 group hover:border-amber-500/30 transition-all shadow-lg">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 font-bold border border-amber-500/20">
+                                                    {b.customer?.[0]?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-zinc-100">{b.customer}</h4>
+                                                    <div className="flex items-center gap-3 mt-1">
+                                                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                                            <CalendarIcon className="w-3 h-3" />
+                                                            Due: {format(parseISO(b.date), "MMM d, yyyy")}
+                                                        </span>
+                                                        <Badge variant="outline" className="text-[9px] h-4 px-1 bg-zinc-800 border-none text-zinc-500">
+                                                            Every {b.reminderFrequency} mo
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 px-2 text-zinc-500 hover:text-white"
+                                                    onClick={() => handleEditReminder(b)}
+                                                >
+                                                    <Repeat className="w-4 h-4 mr-1" />
+                                                    Reschedule
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 px-2 text-zinc-500 hover:text-red-400"
+                                                    onClick={() => update(b.id, { hasReminder: false })}
+                                                >
+                                                    Dismiss
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </Card>
+
             {/* Service Performance Detail Log - COMPLETED ONLY */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
@@ -1065,72 +1132,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardContent>
             </Card>
 
-            {/* Active Reminders List - MOVED HERE BELOW CUSTOMER INSIGHTS */}
-            <Card className="bg-zinc-950/20 border-zinc-800 shadow-sm">
-                <Accordion type="single" collapsible defaultValue={defaultOpenAccordion} className="w-full">
-                    <AccordionItem value="active-reminders" className="border-none">
-                        <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                            <div className="flex items-center gap-3">
-                                <Bell className="w-5 h-5 text-amber-500" />
-                                <span className="font-bold text-zinc-100 uppercase tracking-widest text-xs">Active Reminders</span>
-                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 h-5">
-                                    {activeReminders.length}
-                                </Badge>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-6 pb-6 pt-2">
-                            <div className="space-y-3">
-                                {activeReminders.length === 0 ? (
-                                    <div className="text-center py-10 text-zinc-600 border border-dashed border-zinc-800 rounded-lg">
-                                        No reminders set.
-                                    </div>
-                                ) : (
-                                    activeReminders.map(b => (
-                                        <div key={b.id} className="flex items-center justify-between p-4 bg-zinc-900/40 rounded-xl border border-zinc-800/50 group hover:border-amber-500/30 transition-all shadow-lg">
-                                            <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 font-bold border border-amber-500/20">
-                                                    {b.customer?.[0]?.toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-bold text-zinc-100">{b.customer}</h4>
-                                                    <div className="flex items-center gap-3 mt-1">
-                                                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-                                                            <CalendarIcon className="w-3 h-3" />
-                                                            Due: {format(parseISO(b.date), "MMM d, yyyy")}
-                                                        </span>
-                                                        <Badge variant="outline" className="text-[9px] h-4 px-1 bg-zinc-800 border-none text-zinc-500">
-                                                            Every {b.reminderFrequency} mo
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="h-8 px-2 text-zinc-500 hover:text-white"
-                                                    onClick={() => handleEditReminder(b)}
-                                                >
-                                                    <Repeat className="w-4 h-4 mr-1" />
-                                                    Reschedule
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="h-8 px-2 text-zinc-500 hover:text-red-400"
-                                                    onClick={() => update(b.id, { hasReminder: false })}
-                                                >
-                                                    Dismiss
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </Card>
+
 
             {/* Post-Service Performance Review Section - NEW AT BOTTOM */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group">
