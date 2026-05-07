@@ -88,11 +88,25 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     label = `${pkgName} (${parts[2].toUpperCase()})`;
                 } else if (key.startsWith('addon:')) {
                     label = key.replace('addon:', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    // Grouping fix: if it ends with :compact etc, let's make it cleaner
+                    if (label.includes(':')) {
+                        const lparts = label.split(':');
+                        label = `${lparts[0]} (${lparts[1].toUpperCase()})`;
+                    }
                 }
 
-                const evolution = snapshots.map(h => `$${h.snapshot![key]}`).join(' → ');
-                const original = `$${snapshots[0].snapshot![key]}`;
-                const current = `$${snapshots[snapshots.length - 1].snapshot![key]}`;
+                // Filter consecutive duplicate prices to clean up the timeline
+                const uniquePrices: string[] = [];
+                snapshots.forEach(h => {
+                    const price = `$${h.snapshot![key]}`;
+                    if (uniquePrices.length === 0 || uniquePrices[uniquePrices.length - 1] !== price) {
+                        uniquePrices.push(price);
+                    }
+                });
+
+                const evolution = uniquePrices.join(' → ');
+                const original = uniquePrices[0];
+                const current = uniquePrices[uniquePrices.length - 1];
 
                 return [label, original, current, evolution];
             }).filter(Boolean) as any[][];
