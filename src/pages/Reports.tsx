@@ -92,7 +92,7 @@ const Reports = () => {
     const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
     const taxReportsData = await getSupabaseTaxReports();
 
-    const inv = (await localforage.getItem<any[]>("invoices")) || [];
+    const inv = await getSupabaseInvoices();
     // Load Inventory from Supabase
     const chems = await getChemicals();
     const mats = await getMaterials();
