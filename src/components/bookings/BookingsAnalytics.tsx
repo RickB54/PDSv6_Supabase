@@ -96,8 +96,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value)
-            .slice(0, 5);
+            .sort((a, b) => b.value - a.value);
     }, [filteredBookings]);
 
     const serviceDetailsData = useMemo(() => {
@@ -106,6 +105,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
             const address = b.address || customer?.address || "N/A";
             const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
             
+            // Cross-reference revenue from invoices if booking price is 0
+            let revenue = Number(b.price || 0);
+            if (revenue === 0) {
+                const bDate = b.date?.split('T')[0];
+                const match = invoices.find(inv => {
+                    const invDate = inv.date || inv.createdAt?.split('T')[0];
+                    const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
+                    // Match by customer and date (some wiggle room for date sync)
+                    return isCustMatch && (invDate === bDate || (inv.total > 0 && Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000));
+                });
+                if (match) revenue = match.total;
+            }
+
             return {
                 id: b.id,
                 date: b.date,
@@ -113,10 +125,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 address: address,
                 locationType: isShop ? "Shop" : "Onsite",
                 service: b.title,
-                revenue: b.price || 0
+                status: (b.status || 'pending').toLowerCase(),
+                revenue: revenue
             };
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [filteredBookings, customers]);
+    }, [filteredBookings, customers, invoices]);
+
+    const doneServices = useMemo(() => 
+        serviceDetailsData.filter(s => s.status === 'done' || s.status === 'completed'),
+    [serviceDetailsData]);
+
+    const toDoServices = useMemo(() => 
+        serviceDetailsData.filter(s => s.status !== 'done' && s.status !== 'completed'),
+    [serviceDetailsData]);
 
     // --- Reminder Frequency Data ---
     const frequencyData = useMemo(() => {
@@ -388,6 +409,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                 </Pie>
                                 <Tooltip 
                                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#fff' }}
                                 />
                                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                             </PieChart>
@@ -396,14 +418,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </Card>
             </div>
 
-            {/* Service Performance Detail Log */}
+            {/* Service Performance Detail Log - COMPLETED ONLY */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-blue-400" />
+                        <Sparkles className="w-5 h-5 text-emerald-400" />
                         <div>
                             <CardTitle>Service Performance Detail</CardTitle>
-                            <CardDescription>Detailed breakdown of all services performed</CardDescription>
+                            <CardDescription>History of all completed services</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -421,14 +443,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {serviceDetailsData.length === 0 ? (
+                                {doneServices.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
-                                            No service data found for the selected filters.
+                                            No completed services recorded yet.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    serviceDetailsData.map((svc) => (
+                                    doneServices.map((svc) => (
                                         <TableRow key={svc.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
                                             <TableCell className="text-zinc-400 text-xs font-mono">
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
@@ -452,6 +474,72 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                                 <span className="text-emerald-400 font-bold font-mono">
                                                     ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Services To Be Done - UPCOMING/IN PROGRESS */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
+                    <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-400" />
+                        <div>
+                            <CardTitle>Services To Be Done</CardTitle>
+                            <CardDescription>Upcoming and in-progress appointments</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead className="w-[120px]">Scheduled</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Est. Revenue</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {toDoServices.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-10 italic">
+                                            No upcoming services scheduled.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    toDoServices.map((svc) => (
+                                        <TableRow key={svc.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                            <TableCell className="text-zinc-400 text-xs font-mono">
+                                                {format(parseISO(svc.date), "MMM d, yyyy")}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-zinc-300">{svc.customer}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
+                                                    svc.locationType === 'Shop' 
+                                                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                                        : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                                )}>
+                                                    {svc.locationType}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-zinc-400 text-sm">{svc.service}</TableCell>
+                                            <TableCell>
+                                                <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">
+                                                    {svc.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right text-zinc-500 font-mono">
+                                                ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                             </TableCell>
                                         </TableRow>
                                     ))
