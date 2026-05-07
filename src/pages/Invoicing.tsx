@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -419,10 +419,21 @@ const Invoicing = () => {
   };
 
   const handleEditInvoice = (inv: Invoice) => {
-    setSelectedInvoice(inv);
+    // Fallback to customer's vehicle if invoice vehicle is missing or 'Unknown'
+    let resolvedVehicle = inv.vehicle || "";
+    if (!resolvedVehicle || resolvedVehicle === "Unknown" || resolvedVehicle === "Unknown Vehicle") {
+      const cust = customers.find(c => c.id === inv.customerId);
+      if (cust) {
+        resolvedVehicle = `${cust.year || ''} ${cust.vehicle || ''} ${cust.model || ''}`.trim();
+      }
+    }
+    if (!resolvedVehicle) resolvedVehicle = "Unknown";
+
+    const enrichedInv = { ...inv, vehicle: resolvedVehicle };
+    setSelectedInvoice(enrichedInv);
     const services = Array.isArray(inv.services) ? [...inv.services] : [];
     setEditServices(services);
-    setEditVehicle(inv.vehicle || "");
+    setEditVehicle(resolvedVehicle);
     setEditNotes(inv.notes || "");
     setIsEditingInvoice(true);
   };
@@ -1104,7 +1115,11 @@ Precision. Protection. Perfection.`;
                         <span className="text-zinc-500 text-sm">• {invoice.date}</span>
                       </div>
                       <div className="font-medium text-zinc-300">{invoice.customerName}</div>
-                      <div className="text-xs text-zinc-500">{invoice.vehicle}</div>
+                      <div className="text-xs text-zinc-500">
+                        {(!invoice.vehicle || invoice.vehicle === "Unknown" || invoice.vehicle === "Unknown Vehicle") 
+                          ? (customers.find(c => c.id === invoice.customerId)?.vehicle || "Unknown") 
+                          : invoice.vehicle}
+                      </div>
                     </div>
                   </div>
 
@@ -1198,16 +1213,16 @@ Precision. Protection. Perfection.`;
                   </h2>
                   <p className="text-zinc-400">Prime Auto Detail</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3 items-center">
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 h-9"
+                    className="bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 h-9 font-bold px-4"
                     onClick={() => navigate(`/search-customer?customerId=${selectedInvoice.customerId}&search=${encodeURIComponent(selectedInvoice.customerName)}`)}
                   >
-                    <Users className="h-4 w-4 mr-2" /> Customer Info
+                    <Users className="h-4 w-4 mr-2" /> Customer Profile
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(null)} className="h-9 w-9 p-0 rounded-full hover:bg-zinc-900 text-zinc-500">✕</Button>
                 </div>
               </div>
 
