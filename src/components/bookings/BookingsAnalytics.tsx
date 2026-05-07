@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
-import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart } from "lucide-react";
+import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek } from "date-fns";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -378,7 +378,89 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setReminderOpen(true);
     };
 
-    const activeReminders = filteredPerfBookings.filter(b => b.hasReminder);
+    const dashboardReminders = useMemo(() => {
+        const reminders: { id: string, type: string, customer: string, date: string, title: string, description: string, actionText: string, actionUrl: string, icon: any, color: string, booking?: any }[] = [];
+        
+        // 1. Manual Reminders
+        filteredPerfBookings.filter(b => b.hasReminder).forEach(b => {
+            reminders.push({
+                id: `manual-${b.id}`,
+                type: 'manual_reminder',
+                customer: b.customer,
+                date: b.date,
+                title: 'Follow-up Task',
+                description: `Reminder to follow up with ${b.customer} regarding their ${b.title}.`,
+                actionText: 'Reschedule',
+                actionUrl: '', // handled by custom button
+                icon: <Bell className="w-4 h-4" />,
+                color: 'amber',
+                booking: b
+            });
+        });
+
+        // 2. Upcoming Bookings this Week
+        const dWeekStart = startOfWeek(new Date());
+        const dWeekEnd = endOfWeek(new Date());
+        toDoServices.forEach(b => {
+            const d = parseISO(b.date);
+            if (isWithinInterval(d, { start: dWeekStart, end: dWeekEnd }) && d >= startOfDay(new Date())) {
+                reminders.push({
+                    id: `upcoming-${b.id}`,
+                    type: 'upcoming_booking',
+                    customer: b.customer,
+                    date: b.date,
+                    title: 'Upcoming Booking',
+                    description: `${b.service} scheduled for ${format(d, "EEEE, MMM d")}.`,
+                    actionText: 'View Details',
+                    actionUrl: `/bookings?customer=${encodeURIComponent(b.customer)}`,
+                    icon: <CalendarIcon className="w-4 h-4" />,
+                    color: 'blue'
+                });
+            }
+        });
+
+        // 3. Unpaid Invoices
+        invoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Draft').forEach(inv => {
+            reminders.push({
+                id: `unpaid-${inv.id}`,
+                type: 'unpaid_invoice',
+                customer: inv.customerName || 'Customer',
+                date: inv.createdAt || inv.date,
+                title: 'Unpaid Invoice',
+                description: `Invoice #${inv.id.slice(0,6).toUpperCase()} for $${(inv.total || 0).toFixed(2)} is pending.`,
+                actionText: 'View Invoice',
+                actionUrl: `/invoicing?customerId=${inv.customerId}`,
+                icon: <FileText className="w-4 h-4" />,
+                color: 'red'
+            });
+        });
+
+        // 4. Missing Invoices for Completed Jobs
+        doneServices.forEach(b => {
+            const hasInvoice = invoices.some(inv => {
+                const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
+                const invDate = inv.date || inv.createdAt?.split('T')[0];
+                const bDate = b.date?.split('T')[0];
+                return isCustMatch && (invDate === bDate || Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000);
+            });
+            if (!hasInvoice && b.revenue > 0) {
+                reminders.push({
+                    id: `unsent-${b.id}`,
+                    type: 'unsent_invoice',
+                    customer: b.customer,
+                    date: b.date,
+                    title: 'Invoice Needed',
+                    description: `Job completed on ${format(parseISO(b.date), "MMM d")} but no invoice found.`,
+                    actionText: 'Create Invoice',
+                    actionUrl: `/invoicing?customerId=${b.customerId || ''}`, // Assuming the invoicing page handles missing customerId or we can search
+                    icon: <FilePlus className="w-4 h-4" />,
+                    color: 'emerald'
+                });
+            }
+        });
+
+        return reminders.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [filteredPerfBookings, toDoServices, doneServices, invoices]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
@@ -479,54 +561,68 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <Bell className="w-5 h-5 text-amber-500" />
                                 <span className="font-bold text-zinc-100 uppercase tracking-widest text-xs">Active Reminders</span>
                                 <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 h-5">
-                                    {activeReminders.length}
+                                    {dashboardReminders.length}
                                 </Badge>
                             </div>
                         </AccordionTrigger>
                         <AccordionContent className="px-6 pb-6 pt-2">
                             <div className="space-y-3">
-                                {activeReminders.length === 0 ? (
+                                {dashboardReminders.length === 0 ? (
                                     <div className="text-center py-10 text-zinc-600 border border-dashed border-zinc-800 rounded-lg">
                                         No reminders set.
                                     </div>
                                 ) : (
-                                    activeReminders.map(b => (
-                                        <div key={b.id} className="flex items-center justify-between p-4 bg-zinc-900/40 rounded-xl border border-zinc-800/50 group hover:border-amber-500/30 transition-all shadow-lg">
+                                    dashboardReminders.map(rem => (
+                                        <div key={rem.id} className={`flex items-center justify-between p-4 bg-zinc-900/40 rounded-xl border border-zinc-800/50 group hover:border-${rem.color}-500/30 transition-all shadow-lg`}>
                                             <div className="flex items-start gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 font-bold border border-amber-500/20">
-                                                    {b.customer?.[0]?.toUpperCase()}
+                                                <div className={`w-10 h-10 rounded-full bg-${rem.color}-500/10 flex items-center justify-center text-${rem.color}-500 font-bold border border-${rem.color}-500/20`}>
+                                                    {rem.icon}
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-zinc-100">{b.customer}</h4>
-                                                    <div className="flex items-center gap-3 mt-1">
-                                                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-                                                            <CalendarIcon className="w-3 h-3" />
-                                                            Due: {format(parseISO(b.date), "MMM d, yyyy")}
-                                                        </span>
-                                                        <Badge variant="outline" className="text-[9px] h-4 px-1 bg-zinc-800 border-none text-zinc-500">
-                                                            Every {b.reminderFrequency} mo
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-zinc-100">{rem.customer}</h4>
+                                                        <Badge variant="outline" className={`text-[9px] h-4 px-1.5 bg-${rem.color}-500/10 text-${rem.color}-400 border-${rem.color}-500/20 uppercase tracking-wider`}>
+                                                            {rem.title}
                                                         </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-1">
+                                                        <span className="text-[11px] text-zinc-400">
+                                                            {rem.description}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="h-8 px-2 text-zinc-500 hover:text-white"
-                                                    onClick={() => handleEditReminder(b)}
-                                                >
-                                                    <Repeat className="w-4 h-4 mr-1" />
-                                                    Reschedule
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="h-8 px-2 text-zinc-500 hover:text-red-400"
-                                                    onClick={() => update(b.id, { hasReminder: false })}
-                                                >
-                                                    Dismiss
-                                                </Button>
+                                                {rem.type === 'manual_reminder' ? (
+                                                    <>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-8 px-2 text-zinc-500 hover:text-white"
+                                                            onClick={() => handleEditReminder(rem.booking)}
+                                                        >
+                                                            <Repeat className="w-4 h-4 mr-1" />
+                                                            Reschedule
+                                                        </Button>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-8 px-2 text-zinc-500 hover:text-red-400"
+                                                            onClick={() => update(rem.booking.id, { hasReminder: false })}
+                                                        >
+                                                            Dismiss
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className={`h-8 px-4 bg-${rem.color}-500/10 text-${rem.color}-400 hover:bg-${rem.color}-500/20 hover:text-${rem.color}-300`}
+                                                        onClick={() => navigate(rem.actionUrl)}
+                                                    >
+                                                        {rem.actionText}
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
                                     ))
