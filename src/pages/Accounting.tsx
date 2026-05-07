@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import {
   Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
   Download, Upload, RefreshCw, TrendingUp, Search,
-  Printer, TrendingDown, DollarSign, Package, HelpCircle
+  Printer, TrendingDown, DollarSign, Package, HelpCircle,
+  CheckCircle
 } from "lucide-react";
 import { getInvoices, getExpenses, upsertExpense, deleteExpense } from "@/lib/db";
 import { getReceivables, upsertReceivable, deleteReceivable, Receivable } from "@/lib/receivables";
