@@ -1270,6 +1270,13 @@ Precision. Protection. Perfection.`;
                       <span className="font-bold text-2xl text-white">${selectedInvoice.total.toFixed(2)}</span>
                     </div>
 
+                    {selectedInvoice.notes && (
+                      <div className="mt-4 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                        <Label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1">Notes</Label>
+                        <p className="text-sm text-zinc-400 italic">"{selectedInvoice.notes}"</p>
+                      </div>
+                    )}
+
                     <div className="flex gap-2 pt-6">
                       <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => generatePDF(selectedInvoice, true)}>
                         <Save className="h-4 w-4 mr-2" /> Download PDF
