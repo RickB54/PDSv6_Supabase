@@ -91,6 +91,7 @@ const Invoicing = () => {
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterCustomerId, setFilterCustomerId] = useState("");
+  const [filterVehicle, setFilterVehicle] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditingPaid, setIsEditingPaid] = useState(false);
   const [editPaidValue, setEditPaidValue] = useState("");
@@ -122,15 +123,17 @@ const Invoicing = () => {
     const cid = params.get('customerId');
     if (cid) {
       setFilterCustomerId(cid);
-      // Also try to pre-fill search term with customer name + vehicle if we have it
+      // Also try to pre-fill search term with customer name
       const cust = customers.find(c => c.id === cid);
       if (cust) {
-        const vehicleInfo = `${cust.vehicle || ''} ${cust.model || ''}`.trim();
-        setSearchTerm(`${cust.name}${vehicleInfo ? ' - ' + vehicleInfo : ''}`);
+        setSearchTerm(cust.name);
+        // If there's a specific vehicle in the URL or we want to default to 'all'
+        setFilterVehicle("all");
       }
     } else {
       // If no customerId in URL, reset the filter
       setFilterCustomerId("");
+      setFilterVehicle("all");
     }
   }, [location.search, customers]);
 
@@ -348,7 +351,12 @@ const Invoicing = () => {
           String(inv.invoiceNumber || '').includes(lower);
       }
 
-      return passQuick && passRange && passCustomer && passSearch;
+      let passVehicle = true;
+      if (filterVehicle !== "all") {
+        passVehicle = inv.vehicle.toLowerCase().includes(filterVehicle.toLowerCase());
+      }
+
+      return passQuick && passRange && passCustomer && passSearch && passVehicle;
     });
   };
 
@@ -870,15 +878,39 @@ Precision. Protection. Perfection.`;
                 className="pl-10 bg-zinc-950 border-zinc-800"
               />
             </div>
-            <Select value={filterCustomerId || "all"} onValueChange={(val) => setFilterCustomerId(val === "all" ? "" : val)}>
-              <SelectTrigger className="w-[180px] bg-zinc-950 border-zinc-800">
-                <SelectValue placeholder="All Customers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Customers</SelectItem>
-                {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {filterCustomerId ? (
+              <Select value={filterVehicle} onValueChange={(val) => {
+                if (val === "clear") {
+                  setFilterCustomerId("");
+                  setFilterVehicle("all");
+                  setSearchTerm("");
+                } else {
+                  setFilterVehicle(val);
+                }
+              }}>
+                <SelectTrigger className="w-[200px] bg-zinc-950 border-zinc-800 text-zinc-200">
+                  <SelectValue placeholder="All Vehicles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Vehicles</SelectItem>
+                  {customers.find(c => c.id === filterCustomerId)?.vehicles?.map((v, idx) => {
+                    const label = `${v.year || ''} ${v.make} ${v.model}`.trim();
+                    return <SelectItem key={v.id || idx} value={label}>{label}</SelectItem>;
+                  })}
+                  <SelectItem value="clear" className="text-red-400 font-bold border-t border-zinc-800 mt-2">Clear Customer Filter</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value="all" onValueChange={(val) => setFilterCustomerId(val === "all" ? "" : val)}>
+                <SelectTrigger className="w-[180px] bg-zinc-950 border-zinc-800 text-zinc-400">
+                  <SelectValue placeholder="Filter by Customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Select Customer...</SelectItem>
+                  {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex items-center gap-2 bg-zinc-950/50 px-3 py-1.5 rounded-md border border-zinc-800/50">
               <input 
                 id="show-archived-main"
