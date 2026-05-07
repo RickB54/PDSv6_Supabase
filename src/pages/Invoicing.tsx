@@ -62,7 +62,7 @@ interface Invoice {
   services: { name: string; price: number }[];
   total: number;
   date: string;
-  createdAt: string;
+  createdAt?: string;
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
   paidAmount?: number;
   paidDate?: string;
@@ -71,6 +71,7 @@ interface Invoice {
     value: number;
     amount: number;
   };
+  notes?: string;
 }
 
 const Invoicing = () => {
@@ -106,7 +107,8 @@ const Invoicing = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [customVehicle, setCustomVehicle] = useState("");
   const [editVehicle, setEditVehicle] = useState("");
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [customNotes, setCustomNotes] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   useEffect(() => {
     loadData();
@@ -275,6 +277,7 @@ const Invoicing = () => {
         createdAt: new Date().toISOString(),
         paymentStatus: calculateTotal() === 0 ? "paid" : "unpaid",
         paidAmount: 0,
+        notes: customNotes,
       };
 
       // 3. Create Invoice
@@ -284,6 +287,7 @@ const Invoicing = () => {
       setSelectedCustomer("");
       setServices([]);
       setCustomVehicle("");
+      setCustomNotes("");
       setShowCreateForm(false);
       loadData();
 
@@ -407,6 +411,7 @@ const Invoicing = () => {
     if (!selectedInvoice) return;
     setEditServices([...selectedInvoice.services]);
     setEditVehicle(selectedInvoice.vehicle);
+    setEditNotes(selectedInvoice.notes || "");
     setIsEditingInvoice(true);
   };
 
@@ -417,6 +422,7 @@ const Invoicing = () => {
       ...selectedInvoice, 
       services: editServices, 
       vehicle: editVehicle,
+      notes: editNotes,
       total: newTotal 
     };
     
@@ -524,6 +530,19 @@ const Invoicing = () => {
       doc.setFont("helvetica", "bold");
       doc.text("PAID IN FULL", 180, y, { align: "right" });
       doc.setFont("helvetica", "normal");
+    }
+
+    if (invoice.notes) {
+      y += 15;
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.setFont("helvetica", "bold");
+      doc.text("Notes:", 20, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(120);
+      const splitNotes = doc.splitTextToSize(invoice.notes, 170);
+      doc.text(splitNotes, 20, y + 6);
+      y += (splitNotes.length * 5) + 5;
     }
 
     y += 20;
@@ -739,7 +758,7 @@ Precision. Protection. Perfection.`;
             </div>
 
             <div className="flex gap-3 justify-end pt-4">
-              <Button variant="ghost" onClick={() => setEmailModalOpen(false)} className="text-zinc-400 hover:text-white">
+              <Button variant="ghost" onClick={() => setIsEmailModalOpen(false)} className="text-zinc-400 hover:text-white">
                 Cancel
               </Button>
               <Button 
@@ -874,6 +893,16 @@ Precision. Protection. Perfection.`;
                     className="bg-zinc-950 border-zinc-800"
                   />
                   <p className="text-[10px] text-zinc-500 italic">Leave blank to use customer's default vehicle.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Invoice Notes</Label>
+                  <Textarea 
+                    placeholder="Add special instructions or reminders for this invoice..."
+                    value={customNotes}
+                    onChange={(e) => setCustomNotes(e.target.value)}
+                    className="bg-zinc-950 border-zinc-800 min-h-[80px]"
+                  />
                 </div>
 
                 <div className="p-4 rounded-lg bg-zinc-950 border border-zinc-800">
@@ -1191,6 +1220,16 @@ Precision. Protection. Perfection.`;
                         onChange={(e) => setEditVehicle(e.target.value)}
                         placeholder="Year Make Model"
                         className="bg-zinc-900 border-zinc-800 text-sm h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-2 pb-4">
+                      <Label className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Notes</Label>
+                      <Textarea 
+                        value={editNotes}
+                        onChange={(e) => setEditNotes(e.target.value)}
+                        placeholder="Invoice notes..."
+                        className="bg-zinc-900 border-zinc-800 text-sm min-h-[60px]"
                       />
                     </div>
 
