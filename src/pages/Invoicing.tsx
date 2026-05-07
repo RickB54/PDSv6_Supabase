@@ -119,24 +119,27 @@ const Invoicing = () => {
     loadData();
   }, [isDemoMode, showArchived]);
 
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const cid = params.get('customerId');
-    if (cid) {
+    if (cid && customers.length > 0) {
       setFilterCustomerId(cid);
-      // Also try to pre-fill search term with customer name
       const cust = customers.find(c => c.id === cid);
       if (cust) {
         setSearchTerm(cust.name);
-        // If there's a specific vehicle in the URL or we want to default to 'all'
         setFilterVehicle("all");
+        // Automatically open the customer modal for review
+        setEditingCustomer(cust);
+        setIsCustomerModalOpen(true);
       }
-    } else {
-      // If no customerId in URL, reset the filter
+    } else if (!cid) {
       setFilterCustomerId("");
       setFilterVehicle("all");
     }
-  }, [location.search, customers]);
+  }, [location.search, customers.length]);
 
   const toBuiltInVehKey = (key: string): LibVehicleType => {
     const k = key?.toLowerCase();
@@ -1531,6 +1534,79 @@ Precision. Protection. Perfection.`;
           </Card>
         </div>
       )}
+      {/* Customer Profile Modal (Auto-opens from Analytics) */}
+      <Dialog open={isCustomerModalOpen} onOpenChange={setIsCustomerModalOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-zinc-950 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100 flex items-center gap-2">
+              <User className="h-5 w-5 text-violet-400" />
+              {editingCustomer?.id ? 'Customer Profile' : 'Add New Customer'}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 italic">
+              Manage contact details and business information for this customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Full Name</Label>
+                <Input 
+                  value={editingCustomer?.name || ""} 
+                  onChange={e => setEditingCustomer(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Email Address</Label>
+                <Input 
+                  value={editingCustomer?.email || ""} 
+                  onChange={e => setEditingCustomer(prev => prev ? { ...prev, email: e.target.value } : null)}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Phone Number</Label>
+                <Input 
+                  value={editingCustomer?.phone || ""} 
+                  onChange={e => setEditingCustomer(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Address / Location</Label>
+                <Input 
+                  value={editingCustomer?.address || ""} 
+                  onChange={e => setEditingCustomer(prev => prev ? { ...prev, address: e.target.value } : null)}
+                  className="bg-zinc-900 border-zinc-800 text-zinc-100"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-zinc-800 pt-6">
+            <Button variant="ghost" onClick={() => setIsCustomerModalOpen(false)} className="text-zinc-500 hover:text-white">Cancel</Button>
+            <Button 
+              className="bg-violet-600 hover:bg-violet-700 text-white font-bold px-6 shadow-lg shadow-violet-900/20"
+              onClick={async () => {
+                if (editingCustomer) {
+                  try {
+                    const { upsertSupabaseCustomer } = await import("@/lib/supabase");
+                    await upsertSupabaseCustomer(editingCustomer);
+                    toast({ title: "Success", description: "Customer profile updated." });
+                    loadData();
+                    setIsCustomerModalOpen(false);
+                  } catch (err) {
+                    toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
+                  }
+                }
+              }}
+            >
+              Save Profile Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

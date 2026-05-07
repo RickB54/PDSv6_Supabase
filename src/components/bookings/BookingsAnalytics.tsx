@@ -17,6 +17,7 @@ import { useTasksStore } from "@/store/tasks";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { addOns } from "@/lib/services";
@@ -40,6 +41,45 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
     const [reminderNote, setReminderNote] = useState("");
     const [reminderFrequency, setReminderFrequency] = useState<string>("3"); // Default 3 months
     const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+
+    // Operational Review State
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
+    const [bookingReviews, setBookingReviews] = useState<Record<string, any>>(() => {
+        try {
+            return JSON.parse(localStorage.getItem('prime_booking_reviews') || '{}');
+        } catch { return {}; }
+    });
+
+    const [reviewForm, setReviewForm] = useState({
+        performance: "",
+        mistakes: "",
+        sentiment: "satisfied", // loved, satisfied, disappointed
+        googleReview: false,
+        googleStars: 5
+    });
+
+    const saveReview = () => {
+        if (!selectedBookingForReview) return;
+        const updated = { ...bookingReviews, [selectedBookingForReview.id]: reviewForm };
+        setBookingReviews(updated);
+        localStorage.setItem('prime_booking_reviews', JSON.stringify(updated));
+        setIsReviewModalOpen(false);
+        toast.success("Operational review saved.");
+    };
+
+    const openReview = (booking: any) => {
+        setSelectedBookingForReview(booking);
+        const existing = bookingReviews[booking.id] || {
+            performance: "",
+            mistakes: "",
+            sentiment: "satisfied",
+            googleReview: false,
+            googleStars: 5
+        };
+        setReviewForm(existing);
+        setIsReviewModalOpen(true);
+    };
 
     // Filter State
     const [showArchived, setShowArchived] = useState(false);
@@ -156,16 +196,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
 
     const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
-    // --- CRM / Customer List ---
     const customerStats = useMemo(() => {
-        const map = new Map<string, { name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string }>();
+        const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string }>();
 
         filteredBookings.forEach(b => {
             if (!b.customer) return;
+            const custMatch = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const existing = map.get(b.customer) || {
+                id: custMatch?.id || "",
                 name: b.customer,
-                email: customers.find(c => c.name === b.customer)?.email || "",
-                phone: customers.find(c => c.name === b.customer)?.phone || "",
+                email: custMatch?.email || "",
+                phone: custMatch?.phone || "",
                 count: 0,
                 lastService: "",
                 service: "",
@@ -284,71 +325,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </Card>
             </div>
 
-            {/* Reminders Section (Accordion) */}
-            <Card className="bg-zinc-900 border-zinc-800">
-                <Accordion type="single" collapsible className="w-full" defaultValue={defaultOpenAccordion}>
-                    <AccordionItem value="reminders" className="border-b-0">
-                        <AccordionTrigger className="px-6 hover:no-underline">
-                            <div className="flex items-center gap-2">
-                                <Bell className="w-5 h-5 text-yellow-500" />
-                                <span>Active Reminders</span>
-                                <Badge variant="secondary" className="ml-2 text-yellow-500 bg-yellow-500/10 border-yellow-500/20">{activeReminders.length}</Badge>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Frequency Chart */}
-                                <div className="h-[250px] w-full border border-zinc-800 rounded-lg p-4 bg-zinc-950/50">
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-4 text-center">Reminder Intervals</h4>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={frequencyData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                            >
-                                                {frequencyData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a' }} />
-                                            <Legend verticalAlign="bottom" height={36} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                {/* Reminder List */}
-                                <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2">
-                                    {activeReminders.length === 0 && <div className="text-sm text-muted-foreground text-center py-8">No reminders set.</div>}
-                                    {activeReminders.map(b => (
-                                        <div
-                                            key={b.id}
-                                            className="flex justify-between items-center p-3 rounded-lg border border-zinc-800 bg-zinc-950/50 hover:bg-zinc-900 cursor-pointer transition-colors"
-                                            onClick={() => handleEditReminder(b)}
-                                        >
-                                            <div>
-                                                <div className="font-medium text-sm">{b.customer}</div>
-                                                <div className="text-xs text-muted-foreground">{b.title} • {new Date(b.date).toLocaleDateString()}</div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant="outline" className="text-xs gap-1">
-                                                    <Repeat className="w-3 h-3" /> {b.reminderFrequency ? `${b.reminderFrequency} mo` : 'Custom'}
-                                                </Badge>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6">
-                                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                </Accordion>
-            </Card>
+
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -770,6 +747,162 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </CardContent>
             </Card>
 
+            {/* Active Reminders List - MOVED HERE BELOW CUSTOMER INSIGHTS */}
+            <Card className="bg-zinc-950/20 border-zinc-800 shadow-sm">
+                <Accordion type="single" collapsible defaultValue={defaultOpenAccordion} className="w-full">
+                    <AccordionItem value="active-reminders" className="border-none">
+                        <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                            <div className="flex items-center gap-3">
+                                <Bell className="w-5 h-5 text-amber-500" />
+                                <span className="font-bold text-zinc-100 uppercase tracking-widest text-xs">Active Reminders</span>
+                                <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 h-5">
+                                    {activeReminders.length}
+                                </Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-6 pb-6 pt-2">
+                            <div className="space-y-3">
+                                {activeReminders.length === 0 ? (
+                                    <div className="text-center py-10 text-zinc-600 border border-dashed border-zinc-800 rounded-lg">
+                                        No reminders set.
+                                    </div>
+                                ) : (
+                                    activeReminders.map(b => (
+                                        <div key={b.id} className="flex items-center justify-between p-4 bg-zinc-900/40 rounded-xl border border-zinc-800/50 group hover:border-amber-500/30 transition-all shadow-lg">
+                                            <div className="flex items-start gap-4">
+                                                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 font-bold border border-amber-500/20">
+                                                    {b.customer?.[0]?.toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-zinc-100">{b.customer}</h4>
+                                                    <div className="flex items-center gap-3 mt-1">
+                                                        <span className="text-[10px] text-zinc-400 flex items-center gap-1">
+                                                            <CalendarIcon className="w-3 h-3" />
+                                                            Due: {format(parseISO(b.date), "MMM d, yyyy")}
+                                                        </span>
+                                                        <Badge variant="outline" className="text-[9px] h-4 px-1 bg-zinc-800 border-none text-zinc-500">
+                                                            Every {b.reminderFrequency} mo
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 px-2 text-zinc-500 hover:text-white"
+                                                    onClick={() => handleEditReminder(b)}
+                                                >
+                                                    <Repeat className="w-4 h-4 mr-1" />
+                                                    Reschedule
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 px-2 text-zinc-500 hover:text-red-400"
+                                                    onClick={() => update(b.id, { hasReminder: false })}
+                                                >
+                                                    Dismiss
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </Card>
+
+            {/* Post-Service Performance Review Section - NEW AT BOTTOM */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                <CardHeader className="bg-zinc-950/20 relative">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-violet-500/10 rounded-lg border border-violet-500/20 glow-violet">
+                                <Repeat className="w-5 h-5 text-violet-400" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-zinc-100 uppercase tracking-tighter">Operational Quality Review</CardTitle>
+                                <CardDescription className="text-zinc-400">Log internal notes, mistakes, and customer sentiment for continuous improvement</CardDescription>
+                            </div>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0 relative">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead className="w-[120px]">Job Date</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Sentiment</TableHead>
+                                    <TableHead>Google Star</TableHead>
+                                    <TableHead className="text-right">Review Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {doneServices.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                            No completed jobs available for review yet.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    doneServices.slice(0, 15).map((svc) => {
+                                        const review = bookingReviews[svc.id];
+                                        return (
+                                            <TableRow key={svc.id} className="hover:bg-zinc-800/20 border-zinc-800 group/row">
+                                                <TableCell className="text-zinc-500 text-xs font-mono">
+                                                    {format(parseISO(svc.date), "MMM d, yyyy")}
+                                                </TableCell>
+                                                <TableCell className="font-bold text-zinc-200">{svc.customer}</TableCell>
+                                                <TableCell>
+                                                    {review ? (
+                                                        <Badge variant="outline" className={cn(
+                                                            "text-[10px] h-5 px-2 font-black tracking-tighter",
+                                                            review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                            review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                            "bg-red-500/10 text-red-400 border-red-500/20"
+                                                        )}>
+                                                            {review.sentiment.toUpperCase()}
+                                                        </Badge>
+                                                    ) : <span className="text-[10px] text-zinc-600 italic uppercase font-bold tracking-widest opacity-40">Pending Review</span>}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {review?.googleReview ? (
+                                                        <div className="flex items-center gap-1 text-amber-500">
+                                                            <Sparkles className="w-3 h-3 fill-current" />
+                                                            <span className="text-xs font-bold font-mono">{review.googleStars}/5</span>
+                                                        </div>
+                                                    ) : <span className="text-xs text-zinc-700">—</span>}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className={cn(
+                                                            "text-[10px] h-7 px-3 font-bold transition-all",
+                                                            review 
+                                                                ? "text-zinc-500 hover:text-white" 
+                                                                : "text-violet-400 hover:text-white bg-violet-500/5 hover:bg-violet-500/20 border border-violet-500/10"
+                                                        )}
+                                                        onClick={() => openReview(svc)}
+                                                    >
+                                                        {review ? 'Edit Report' : 'Log Feedback'}
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Reminder Dialog */}
             <Dialog open={reminderOpen} onOpenChange={(open) => { setReminderOpen(open); if (!open) setEditingBookingId(null); }}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-[500px]">
@@ -798,7 +931,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                             size="sm" 
                             className="flex-1 text-[10px] bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
                             onClick={() => {
-                                const id = selectedCustomerForReminder?.id;
+                                const id = selectedCustomerForReminder?.id || customers.find(c => c.name === selectedCustomerForReminder?.name)?.id;
                                 if (id) navigate(`/invoicing?customerId=${id}`);
                             }}
                         >
@@ -858,6 +991,106 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                         <Button variant="ghost" onClick={() => setReminderOpen(false)} className="text-zinc-400 hover:text-white">Cancel</Button>
                         <Button onClick={handleCreateReminder} className="bg-primary hover:bg-primary/90 text-white font-bold px-6">
                             {editingBookingId ? 'Update Task' : 'Set Follow-up Task'}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Operational Review Modal */}
+            <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-[550px] overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-600 via-emerald-500 to-violet-600" />
+                    <DialogHeader className="pt-4">
+                        <DialogTitle className="text-xl font-bold text-zinc-100 flex items-center gap-2">
+                            <Repeat className="w-5 h-5 text-violet-400" />
+                            Post-Service Performance Review
+                        </DialogTitle>
+                        <CardDescription className="text-zinc-400">
+                            Log internal notes and customer feedback for the job with <strong>{selectedBookingForReview?.customer}</strong>
+                        </CardDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-6 py-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">How did you do? (Performance Notes)</Label>
+                            <Textarea 
+                                className="bg-zinc-900 border-zinc-800 text-zinc-100 h-24 placeholder:text-zinc-700 resize-none focus:border-violet-500/50 transition-colors"
+                                placeholder="Write specific notes on how the job went, tools used, timing, etc..."
+                                value={reviewForm.performance}
+                                onChange={e => setReviewForm(prev => ({ ...prev, performance: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500 text-red-400/70">Mistakes or Areas for Improvement</Label>
+                            <Textarea 
+                                className="bg-zinc-900 border-zinc-800 text-zinc-100 h-20 placeholder:text-zinc-700 resize-none focus:border-red-500/30 transition-colors"
+                                placeholder="Any missed spots? Time delays? Communication issues?"
+                                value={reviewForm.mistakes}
+                                onChange={e => setReviewForm(prev => ({ ...prev, mistakes: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Customer Sentiment</Label>
+                                <Select value={reviewForm.sentiment} onValueChange={v => setReviewForm(prev => ({ ...prev, sentiment: v }))}>
+                                    <SelectTrigger className={cn(
+                                        "bg-zinc-900 border-zinc-800 text-zinc-100",
+                                        reviewForm.sentiment === 'loved' && "border-emerald-500/30 text-emerald-400",
+                                        reviewForm.sentiment === 'disappointed' && "border-red-500/30 text-red-400"
+                                    )}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        <SelectItem value="loved" className="text-emerald-400">Loved it! (Stellar)</SelectItem>
+                                        <SelectItem value="satisfied" className="text-blue-400">Satisfied (Good)</SelectItem>
+                                        <SelectItem value="disappointed" className="text-red-400">Disappointed (Poor)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Google Review?</Label>
+                                <div className={cn(
+                                    "flex items-center gap-4 h-10 rounded-md border px-3 transition-colors",
+                                    reviewForm.googleReview ? "bg-amber-500/5 border-amber-500/30" : "bg-zinc-900 border-zinc-800"
+                                )}>
+                                    <Switch checked={reviewForm.googleReview} onCheckedChange={v => setReviewForm(prev => ({ ...prev, googleReview: v }))} />
+                                    <span className={cn("text-xs font-bold", reviewForm.googleReview ? "text-amber-500" : "text-zinc-500")}>
+                                        {reviewForm.googleReview ? 'Review Received' : 'No Review Yet'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {reviewForm.googleReview && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Google Star Rating</Label>
+                                <div className="flex gap-4">
+                                    {[1,2,3,4,5].map(star => (
+                                        <Button 
+                                            key={star}
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className={cn(
+                                                "flex-1 h-10 rounded-lg border transition-all",
+                                                reviewForm.googleStars >= star ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-zinc-900 border-zinc-800 text-zinc-700 hover:bg-zinc-800"
+                                            )}
+                                            onClick={() => setReviewForm(prev => ({ ...prev, googleStars: star }))}
+                                        >
+                                            <Sparkles className={cn("w-4 h-4 mr-1", reviewForm.googleStars >= star ? "fill-current" : "")} />
+                                            {star}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex justify-end gap-2 mt-4 border-t border-zinc-800 pt-6">
+                        <Button variant="ghost" onClick={() => setIsReviewModalOpen(false)} className="text-zinc-500 hover:text-white">Cancel</Button>
+                        <Button onClick={saveReview} className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 shadow-lg shadow-violet-600/20 active:scale-95 transition-transform">
+                            Save Operational Review
                         </Button>
                     </div>
                 </DialogContent>
