@@ -1144,21 +1144,38 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
-        return (data || []).map((i: any) => ({
-            id: i.id,
-            invoiceNumber: i.invoice_number,
-            customerId: i.customer_id,
-            customerName: i.customers?.full_name || 'Unknown',
-            vehicle: i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : 'Unknown'),
-            services: i.services || [],
-            total: i.total,
-            discount: i.discount, // Include discount object
-            date: i.date,
-            paymentStatus: i.status || 'unpaid',
-            createdAt: i.created_at,
-            paidAmount: i.paid_amount || 0,
-            paidDate: i.paid_date
-        }));
+        return (data || []).map(i => {
+        // Unpack virtualized fields from services if they exist
+        let notes = i.notes || "";
+        let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "Unknown");
+        const filteredServices = (i.services || []).filter((s: any) => {
+          if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
+            vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+            return false;
+          }
+          if (s.name.startsWith("VIRTUAL_NOTES:")) {
+            notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
+            return false;
+          }
+          return true;
+        });
+
+        return {
+          id: i.id,
+          invoiceNumber: i.invoice_number,
+          customerId: i.customer_id,
+          customerName: i.customers?.full_name || i.customerName || "Unknown",
+          vehicle: vehicle,
+          date: i.date || i.created_at?.split('T')[0],
+          total: i.total || i.total_amount || 0,
+          services: filteredServices,
+          paymentStatus: i.status || "unpaid",
+          paidAmount: i.paid_amount || 0,
+          paidDate: i.paid_date,
+          notes: notes,
+          createdAt: i.created_at
+        };
+      });
     } catch (err) {
         console.error('getSupabaseInvoices exception:', err);
         return [];
@@ -1167,25 +1184,19 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
 
 export const upsertSupabaseInvoice = async (invoice: any) => {
     if (isDemoActive()) return { ...invoice, id: invoice.id || `demo_inv_${Date.now()}` };
-    // Map Frontend Invoice object to DB columns
+    
+    const virtualServices = [...(invoice.services || [])];
+    if (invoice.vehicle) virtualServices.push({ name: `VIRTUAL_VEHICLE:${invoice.vehicle}`, price: 0 });
+    if (invoice.notes) virtualServices.push({ name: `VIRTUAL_NOTES:${invoice.notes}`, price: 0 });
+
     const payload = {
-        invoice_number: invoice.invoiceNumber,
-        customer_id: invoice.customerId,
-        // We don't store customer_name or vehicle text directly if we have relations, 
-        // but if the table supports it as cache, we could. 
-        // For now, assume relations handle it, OR relying on what we just selected.
-        // Actually, for Auth-only users who don't have a Customer row, we MIGHT have an issue if we don't store the name.
-        // Let's check if the table has 'customer_name' column? 
-        // If not, we rely on the ID.
-        // vehicle_id might be needed if we want to link it.
-        // services is JSONB
-        services: invoice.services,
         total: invoice.total,
+        total_amount: invoice.total,
         date: invoice.date,
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
         paid_date: invoice.paidDate,
-        notes: invoice.vehicle ? `[Vehicle: ${invoice.vehicle}] ${invoice.notes || ''}` : invoice.notes,
+        services: virtualServices,
         customer_id: invoice.customerId,
         invoice_number: invoice.invoiceNumber
     };

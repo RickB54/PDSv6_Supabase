@@ -1168,7 +1168,7 @@ Precision. Protection. Perfection.`;
         onConfirm={updatePayment}
       />
 
-      {/* Detail Modal */}
+      {/* Edit Modal */}
       {selectedInvoice && !paymentDialogOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)}>
           <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -1199,224 +1199,161 @@ Precision. Protection. Perfection.`;
                 </div>
               </div>
 
-              <div className="py-6 space-y-3">
-                <div className="flex justify-between items-center mb-4">
-                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Services Provided</Label>
-                  {!isEditingInvoice && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400 hover:text-white" onClick={handleEditInvoice}>
-                      <Pencil className="h-3 w-3 mr-1" /> Edit Items
-                    </Button>
-                  )}
-                </div>
-
-                {isEditingInvoice ? (
-                  <div className="space-y-6">
-                    <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
-                      <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-4">Line Items</Label>
-                      
-                      <div className="space-y-2 mb-6 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                        {editServices.map((s, i) => (
-                          <div key={i} className="flex gap-2 items-center bg-zinc-950 p-2 rounded-md border border-zinc-800 group">
-                            <div className="flex-1">
-                              <Input 
-                                value={s.name} 
-                                onChange={e => {
-                                  const newS = [...editServices];
-                                  newS[i].name = e.target.value;
-                                  setEditServices(newS);
-                                }}
-                                className="bg-transparent border-0 text-sm h-8 font-medium text-white focus-visible:ring-0 px-1"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-zinc-500 text-xs">$</span>
-                              <Input 
-                                type="number"
-                                value={s.price} 
-                                onChange={e => {
-                                  const newS = [...editServices];
-                                  newS[i].price = parseFloat(e.target.value) || 0;
-                                  setEditServices(newS);
-                                }}
-                                className="w-20 bg-transparent border-0 text-sm h-8 text-right font-mono focus-visible:ring-0 px-1"
-                              />
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4 border-b border-zinc-800/50 mb-4">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Category</Label>
-                          <Select value={serviceCategory} onValueChange={(val: any) => setServiceCategory(val)}>
-                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="package">Packages</SelectItem>
-                              <SelectItem value="addon">Add-ons</SelectItem>
-                              <SelectItem value="custom">Custom Line</SelectItem>
-                            </SelectContent>
-                          </Select>
+              <div className="py-6 space-y-6">
+                <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                  <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-4">Line Items</Label>
+                  
+                  <div className="space-y-2 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                    {editServices.map((s, i) => (
+                      <div key={i} className="flex gap-2 items-center bg-zinc-950 p-2 rounded-md border border-zinc-800 group">
+                        <div className="flex-1">
+                          <Input 
+                            value={s.name} 
+                            onChange={e => {
+                              const newS = [...editServices];
+                              newS[i].name = e.target.value;
+                              setEditServices(newS);
+                            }}
+                            className="bg-transparent border-0 text-sm h-8 font-medium text-white focus-visible:ring-0 px-1"
+                          />
                         </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Selection</Label>
-                          {serviceCategory === "package" ? (
-                            <Select onValueChange={(val) => handleAddEditItem('package', val)}>
-                              <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
-                                <SelectValue placeholder="Add Package..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {servicePackages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          ) : serviceCategory === "addon" ? (
-                            <Select onValueChange={(val) => handleAddEditItem('addon', val)}>
-                              <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
-                                <SelectValue placeholder="Add Add-on..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {addOns.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Button variant="outline" className="w-full border-dashed border-zinc-700 text-zinc-400 h-9" onClick={() => setEditServices([...editServices, { name: "Custom Service", price: 0 }])}>
-                              <Plus className="h-4 w-4 mr-2" /> Custom Item
-                            </Button>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-zinc-500 text-xs">$</span>
+                          <Input 
+                            type="number"
+                            value={s.price} 
+                            onChange={e => {
+                              const newS = [...editServices];
+                              newS[i].price = parseFloat(e.target.value) || 0;
+                              setEditServices(newS);
+                            }}
+                            className="w-20 bg-transparent border-0 text-sm h-8 text-right font-mono focus-visible:ring-0 px-1"
+                          />
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      </div>
-
-                      <div className="flex justify-between items-center px-2">
-                         <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">New Total</span>
-                         <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
-                        <Input 
-                          value={editVehicle}
-                          onChange={(e) => setEditVehicle(e.target.value)}
-                          placeholder="Year Make Model"
-                          className="bg-zinc-900 border-zinc-800 text-white"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Invoice Notes (Visible to Customer)</Label>
-                        <Textarea 
-                          value={editNotes}
-                          onChange={(e) => setEditNotes(e.target.value)}
-                          placeholder="Add special instructions or reminders for the customer..."
-                          className="bg-zinc-900 border-zinc-800 text-white min-h-[100px] text-sm leading-relaxed"
-                        />
-                        <p className="text-[10px] text-zinc-500 italic">These notes will appear at the bottom of the PDF invoice.</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-4 border-t border-zinc-800">
-                      <Button size="sm" variant="outline" className="flex-1 border-zinc-700 text-zinc-400" onClick={() => openEmailModal(selectedInvoice.id)}>
-                        <Mail className="h-4 w-4 mr-2" /> Preview Email
-                      </Button>
-                      <Button size="sm" variant="ghost" className="flex-1 text-zinc-500" onClick={() => setIsEditingInvoice(false)}>Cancel</Button>
-                      <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20" onClick={saveEditedInvoice}>
-                        <CheckCircle className="h-4 w-4 mr-2" /> Update Invoice
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {selectedInvoice.services.map((s, i) => (
-                      <div key={i} className="flex justify-between items-center text-sm py-1">
-                        <span className="text-zinc-300">{s.name}</span>
-                        <span className="font-mono text-zinc-400">${s.price.toFixed(2)}</span>
                       </div>
                     ))}
-                    {selectedInvoice.discount && selectedInvoice.discount.amount > 0 && (
-                      <div className="flex justify-between items-center text-sm py-1 text-zinc-500 italic">
-                        <span>Discount ({selectedInvoice.discount.type === 'percent' ? `${selectedInvoice.discount.value}%` : 'Fixed'})</span>
-                        <span>-${selectedInvoice.discount.amount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="pt-4 border-t border-zinc-800 flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-zinc-400">Total Amount</span>
-                        {(selectedInvoice.paymentStatus === 'paid' || selectedInvoice.total === 0) && (
-                          <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Paid In Full</span>
-                        )}
-                      </div>
-                      <span className="font-bold text-2xl text-white">${selectedInvoice.total.toFixed(2)}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4 border-b border-zinc-800/50 mb-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Category</Label>
+                      <Select value={serviceCategory} onValueChange={(val: any) => setServiceCategory(val)}>
+                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="package">Packages</SelectItem>
+                          <SelectItem value="addon">Add-ons</SelectItem>
+                          <SelectItem value="custom">Custom Line</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    {selectedInvoice.notes && (
-                      <div className="mt-4 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800">
-                        <Label className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold block mb-1">Notes</Label>
-                        <p className="text-sm text-zinc-400 italic">"{selectedInvoice.notes}"</p>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 pt-6">
-                      <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => generatePDF(selectedInvoice, true)}>
-                        <Save className="h-4 w-4 mr-2" /> Download PDF
-                      </Button>
-                      <Button variant="outline" className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => openEmailModal(selectedInvoice.id)}>
-                        <Mail className="h-4 w-4 mr-2" /> Preview Email
-                      </Button>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] text-zinc-500 uppercase font-bold ml-1">Selection</Label>
+                      {serviceCategory === "package" ? (
+                        <Select onValueChange={(val) => handleAddEditItem('package', val)}>
+                          <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                            <SelectValue placeholder="Add Package..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {servicePackages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : serviceCategory === "addon" ? (
+                        <Select onValueChange={(val) => handleAddEditItem('addon', val)}>
+                          <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                            <SelectValue placeholder="Add Add-on..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {addOns.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Button variant="outline" className="w-full border-dashed border-zinc-700 text-zinc-400 h-9" onClick={() => setEditServices([...editServices, { name: "Custom Service", price: 0 }])}>
+                          <Plus className="h-4 w-4 mr-2" /> Custom Item
+                        </Button>
+                      )}
                     </div>
                   </div>
-                )}
-                {(selectedInvoice.paidAmount || 0) >= 0 && (
-                  <div className="flex justify-between items-center text-sm text-zinc-400 h-9">
-                    <span>Amount Paid</span>
-                    {isEditingPaid ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          value={editPaidValue}
-                          onChange={e => setEditPaidValue(e.target.value)}
-                          className="h-8 w-24 bg-zinc-900 border-zinc-700 text-right px-2"
-                        />
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10" onClick={saveEditedPaid}>
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => setIsEditingPaid(false)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 group">
-                        <span>-${(selectedInvoice.paidAmount || 0).toFixed(2)}</span>
-                        <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setIsEditingPaid(true); }}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
+
+                  <div className="flex justify-between items-center px-2">
+                     <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Subtotal Owed</span>
+                     <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
                   </div>
-                )}
-                {(selectedInvoice.paidAmount || 0) > 0 && (selectedInvoice.total - (selectedInvoice.paidAmount || 0) > 0) && (
-                  <div className="flex justify-between items-center text-lg font-bold text-red-400 border-t border-zinc-800/50 pt-2">
-                    <span>Balance Due</span>
-                    <span>${(selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)}</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
+                    <Input 
+                      value={editVehicle}
+                      onChange={(e) => setEditVehicle(e.target.value)}
+                      placeholder="Year Make Model"
+                      className="bg-zinc-900 border-zinc-800 text-white"
+                    />
                   </div>
-                )}
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Invoice Notes (Visible to Customer)</Label>
+                    <Textarea 
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      placeholder="Add special instructions or reminders for the customer..."
+                      className="bg-zinc-900 border-zinc-800 text-white min-h-[120px] text-sm leading-relaxed"
+                    />
+                    <p className="text-[10px] text-zinc-500 italic">These notes will appear at the bottom of the PDF invoice.</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-between pt-4 border-t border-zinc-800">
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedInvoice, false)}>
+                      <Printer className="h-4 w-4 mr-2" /> Print
+                    </Button>
+                    <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => openEmailModal(selectedInvoice.id)}>
+                      <Mail className="h-4 w-4 mr-2" /> Preview Email
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" className="text-zinc-500" onClick={() => setSelectedInvoice(null)}>Cancel</Button>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20" onClick={saveEditedInvoice}>
+                      <CheckCircle className="h-4 w-4 mr-2" /> Save Changes
+                    </Button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-2 justify-end pt-4 border-t border-zinc-800">
-                <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedInvoice, false)}>
-                  <Printer className="h-4 w-4 mr-2" /> Print
-                </Button>
-                {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && selectedInvoice.total > 0 && (
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setPaymentAmount((selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
+              {(selectedInvoice.paidAmount || 0) > 0 && (
+                <div className="mt-6 pt-6 border-t border-zinc-800 space-y-2">
+                  <div className="flex justify-between items-center text-sm text-zinc-400">
+                    <span>Amount Paid</span>
+                    <div className="flex items-center gap-2 group">
+                      <span>-${(selectedInvoice.paidAmount || 0).toFixed(2)}</span>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setIsEditingPaid(true); }}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  {(selectedInvoice.total - (selectedInvoice.paidAmount || 0) > 0) && (
+                    <div className="flex justify-between items-center text-lg font-bold text-red-400">
+                      <span>Balance Due</span>
+                      <span>${(selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && (
+                <div className="mt-6">
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6" onClick={() => { setPaymentAmount((selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
                     <CreditCard className="h-4 w-4 mr-2" /> Record Payment
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </Card>
         </div>
