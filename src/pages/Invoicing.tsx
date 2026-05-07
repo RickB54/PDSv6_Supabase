@@ -191,21 +191,7 @@ const Invoicing = () => {
     const displayedCustomers = showArchived ? allCustomers : activeCustomers;
     const displayedCustomerIds = new Set(displayedCustomers.map(c => c.id));
 
-    const seen = new Map<string, Invoice>();
-    processedInvoices.forEach(inv => {
-      // Skip if customer is archived and we're not showing archived
-      if (!displayedCustomerIds.has(inv.customerId)) return;
-
-      const day = new Date(inv.createdAt || inv.date).toDateString();
-      const key = `${inv.customerId}_${inv.total.toFixed(2)}_${day}`;
-      const existing = seen.get(key);
-      
-      if (!existing || (inv.id && existing.id && inv.id > existing.id)) {
-        seen.set(key, inv);
-      }
-    });
-
-    setInvoices(Array.from(seen.values()));
+    setInvoices(processedInvoices);
     setCustomers(displayedCustomers);
   };
 
@@ -433,7 +419,8 @@ const Invoicing = () => {
 
   const handleEditInvoice = (inv: Invoice) => {
     setSelectedInvoice(inv);
-    setEditServices(inv.services ? [...inv.services] : []);
+    const services = Array.isArray(inv.services) ? [...inv.services] : [];
+    setEditServices(services);
     setEditVehicle(inv.vehicle || "");
     setEditNotes(inv.notes || "");
     setIsEditingInvoice(true);

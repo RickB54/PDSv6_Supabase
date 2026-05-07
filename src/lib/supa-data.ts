@@ -1177,14 +1177,14 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
           invoiceNumber: i.invoice_number,
           customerId: i.customer_id,
           customerName: i.customers?.full_name || i.customerName || "Unknown",
-          vehicle: vehicle,
+          vehicle: vehicle || "Unknown Vehicle",
           date: i.date || i.created_at?.split('T')[0],
           total: i.total || 0,
           services: filteredServices,
           paymentStatus: i.status || "unpaid",
           paidAmount: i.paid_amount || 0,
           paidDate: i.paid_date,
-          notes: notes,
+          notes: notes || "",
           discount: discount,
           createdAt: i.created_at
         };
