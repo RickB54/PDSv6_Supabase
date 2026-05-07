@@ -336,9 +336,6 @@ export default function StaffSchedule() {
                 >
                     <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/employee')} className="h-8 text-xs">
-                    <LayoutDashboard className="w-3 h-3 mr-2" /> Dash
-                </Button>
                 <Button variant="outline" size="sm" onClick={() => navigate('/payroll')} className="h-8 text-xs">
                     <DollarSign className="w-3 h-3 mr-2" /> Payroll
                 </Button>

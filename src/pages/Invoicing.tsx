@@ -695,6 +695,7 @@ Precision. Protection. Perfection.`;
     }
   };
 
+  return (
     <div className="min-h-screen bg-background pb-20">
       <PageHeader title="Invoicing & Payments" showBack />
 
