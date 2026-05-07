@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ interface Invoice {
 
 const Invoicing = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const { isDemoMode } = useDemoMode();
