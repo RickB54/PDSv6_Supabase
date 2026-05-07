@@ -854,6 +854,28 @@ const Reports = () => {
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
 
+  const addonsData = useMemo(() => {
+    const fInvoices = filterByDate(invoices);
+    const addons: any[] = [];
+    fInvoices.forEach(inv => {
+      (inv.services || []).forEach((s: any) => {
+        if (s.isAddon || s.type === 'addon' || (s.name && s.name.toLowerCase().includes('add-on'))) {
+          addons.push({
+            name: s.name,
+            price: Number(s.price || 0),
+            date: inv.date || inv.createdAt,
+            customerName: inv.customerName,
+            invoiceNumber: inv.invoiceNumber,
+            id: inv.id
+          });
+        }
+      });
+    });
+    return addons;
+  }, [invoices, dateFilter, dateRange]);
+
+  const totalAddonRevenue = addonsData.reduce((sum, a) => sum + a.price, 0);
+
   const tabList = [
     { id: 'customers', label: 'Customers' },
     { id: 'prospects', label: 'Prospects' },
@@ -863,6 +885,7 @@ const Reports = () => {
     { id: 'estimates', label: 'Estimates' },
     { id: 'accounting', label: 'Accounting' },
     { id: 'tax-report', label: 'Tax Report' },
+    { id: 'addons', label: 'Add-ons' },
   ]
 
   const tab = searchParams.get('tab') || 'customers';
@@ -1875,6 +1898,86 @@ const Reports = () => {
                   </div>
                 </div>
               )}
+            </Card>
+          </TabsContent>
+
+          {/* ADD-ONS TAB */}
+          <TabsContent value="addons" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-200">Add-on Performance</h3>
+                  <p className="text-xs text-zinc-500 mt-1 italic">* This data is for analysis only and is not double-counted in Accounting/Budget totals.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const doc = new jsPDF();
+                    doc.text("Add-on Analysis Report", 14, 20);
+                    autoTable(doc, {
+                      startY: 25,
+                      head: [['Date', 'Add-on', 'Customer', 'Invoice', 'Revenue']],
+                      body: addonsData.map(a => [
+                        new Date(a.date).toLocaleDateString(),
+                        a.name,
+                        a.customerName || 'N/A',
+                        `#${a.invoiceNumber || 'N/A'}`,
+                        `$${a.price.toFixed(2)}`
+                      ])
+                    });
+                    window.open(doc.output('bloburl'), '_blank');
+                  }} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                    <Printer className="h-4 w-4 mr-2" /> Print Analysis
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Add-on Upsells</p>
+                  <p className="text-3xl font-bold text-blue-400 mt-1">{addonsData.length}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Add-on Revenue</p>
+                  <p className="text-3xl font-bold text-emerald-400 mt-1">${totalAddonRevenue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Avg Add-on Value</p>
+                  <p className="text-3xl font-bold text-purple-400 mt-1">
+                    ${addonsData.length > 0 ? (totalAddonRevenue / addonsData.length).toFixed(2) : '0.00'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400">Date</TableHead>
+                      <TableHead className="text-zinc-400">Add-on Item</TableHead>
+                      <TableHead className="text-zinc-400">Customer</TableHead>
+                      <TableHead className="text-zinc-400">Invoice</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {addonsData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-zinc-500 italic">No add-ons found for the selected period.</TableCell>
+                      </TableRow>
+                    ) : (
+                      addonsData.map((a, idx) => (
+                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                          <TableCell className="text-zinc-400">{new Date(a.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-zinc-200">{a.name}</TableCell>
+                          <TableCell className="text-zinc-300">{a.customerName || 'N/A'}</TableCell>
+                          <TableCell className="text-zinc-400">#{a.invoiceNumber || 'N/A'}</TableCell>
+                          <TableCell className="text-emerald-400 text-right font-bold">${a.price.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </TabsContent>
 

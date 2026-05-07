@@ -821,7 +821,7 @@ const Accounting = () => {
                             <div>
                               <p className="font-semibold text-blue-700">+${(inv.paidAmount || inv.total).toFixed(2)}</p>
                               <p className="text-sm">Paid Invoice #{String(inv.invoiceNumber || inv.id?.slice(0, 8))}</p>
-                              <span className="text-[11px] font-bold text-zinc-500 mt-1 block opacity-80">{new Date(inv.createdAt).toLocaleString()}</span>
+                              <span className="text-[11px] font-black text-blue-500/80 mt-1 block uppercase tracking-widest">{new Date(inv.createdAt).toLocaleString()}</span>
                             </div>
                           </div>
                         ))}
@@ -830,7 +830,7 @@ const Accounting = () => {
                             <div>
                               <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
                               <p className="text-sm">{income.description || 'Income'}</p>
-                              <span className="text-[11px] font-bold text-zinc-500 mt-1 block opacity-80">{new Date(income.createdAt || income.date).toLocaleString()}</span>
+                              <span className="text-[11px] font-black text-emerald-500/80 mt-1 block uppercase tracking-widest">{new Date(income.createdAt || income.date).toLocaleString()}</span>
                             </div>
                             <div className="flex gap-1">
                               <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) })}><Pencil className="h-4 w-4" /></Button>
@@ -849,7 +849,7 @@ const Accounting = () => {
                             <div>
                               <p className="font-semibold text-red-700">-${(expense.amount || 0).toFixed(2)}</p>
                               <p className="text-sm">{expense.description || 'Expense'}</p>
-                              <span className="text-[11px] font-bold text-zinc-500 mt-1 block opacity-80">{new Date(expense.createdAt).toLocaleString()}</span>
+                              <span className="text-[11px] font-black text-red-500/80 mt-1 block uppercase tracking-widest">{new Date(expense.createdAt).toLocaleString()}</span>
                             </div>
                             <div className="flex gap-1">
                               <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'expense', id: expense.id!, amount: String(expense.amount || 0) })}><Pencil className="h-4 w-4" /></Button>
