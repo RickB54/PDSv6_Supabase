@@ -18,6 +18,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { addOns } from "@/lib/services";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -145,7 +146,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         
         invoices.forEach(inv => {
             (inv.services || []).forEach((s: any) => {
-                const isAddon = s.isAddon || s.type === 'addon' || (s.name && s.name.toLowerCase().includes('add-on'));
+                const sName = (s.name || '').toLowerCase();
+                const isAddon = s.isAddon || 
+                                s.type === 'addon' || 
+                                sName.includes('add-on') || 
+                                addOns.some(a => a.name.toLowerCase() === sName);
+                                
                 if (isAddon) {
                     const name = s.name;
                     if (!addons[name]) {
@@ -351,6 +357,51 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </Card>
             </div>
 
+            {/* Add-on Performance Section */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-emerald-400" />
+                        <div>
+                            <CardTitle>Add-on Performance</CardTitle>
+                            <CardDescription>Revenue tracking for specialized service add-ons</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950">
+                                <TableRow>
+                                    <TableHead>Add-on Item</TableHead>
+                                    <TableHead className="text-center">Quantity Sold</TableHead>
+                                    <TableHead className="text-right">Total Revenue</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {addonsData.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center text-zinc-500 py-10 italic">
+                                            No add-on revenue recorded yet.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    addonsData.map((addon) => (
+                                        <TableRow key={addon.name} className="hover:bg-zinc-950/50">
+                                            <TableCell className="font-medium text-zinc-200">{addon.name}</TableCell>
+                                            <TableCell className="text-center text-zinc-400">{addon.count}</TableCell>
+                                            <TableCell className="text-right text-emerald-400 font-mono">
+                                                ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* CRM Customer List */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -471,51 +522,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Add-on Performance Section */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-emerald-400" />
-                        <div>
-                            <CardTitle>Add-on Performance</CardTitle>
-                            <CardDescription>Revenue tracking for specialized service add-ons</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-zinc-950">
-                                <TableRow>
-                                    <TableHead>Add-on Item</TableHead>
-                                    <TableHead className="text-center">Quantity Sold</TableHead>
-                                    <TableHead className="text-right">Total Revenue</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {addonsData.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center py-8 text-zinc-500">
-                                            No add-on data found in current invoices.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    addonsData.map((addon) => (
-                                        <TableRow key={addon.name} className="hover:bg-zinc-900/50">
-                                            <TableCell className="font-medium text-emerald-400">{addon.name}</TableCell>
-                                            <TableCell className="text-center font-bold text-white">{addon.count}</TableCell>
-                                            <TableCell className="text-right font-black text-emerald-500">
-                                                ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
                             </TableBody>
                         </Table>
                     </div>
