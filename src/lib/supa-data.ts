@@ -1155,6 +1155,8 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
         let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
         if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
         let discount = i.discount || null;
+        let isSent = false;
+        let sentDate = "";
         
         const filteredServices = (i.services || []).filter((s: any) => {
           if (!s || !s.name) return true;
@@ -1170,6 +1172,14 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             try {
               discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
             } catch (e) { console.error("Failed to parse virtual discount", e); }
+            return false;
+          }
+          if (s.name.startsWith("VIRTUAL_SENT:")) {
+            isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
+            return false;
+          }
+          if (s.name.startsWith("VIRTUAL_SENT_DATE:")) {
+            sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
             return false;
           }
           return true;
@@ -1189,6 +1199,8 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
           paidDate: i.paid_date,
           notes: notes || "",
           discount: discount,
+          isSent: isSent,
+          sentDate: sentDate,
           createdAt: i.created_at
         };
       });
@@ -1205,6 +1217,8 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     if (invoice.vehicle) virtualServices.push({ name: `VIRTUAL_VEHICLE:${invoice.vehicle}`, price: 0 });
     if (invoice.notes) virtualServices.push({ name: `VIRTUAL_NOTES:${invoice.notes}`, price: 0 });
     if (invoice.discount) virtualServices.push({ name: `VIRTUAL_DISCOUNT:${JSON.stringify(invoice.discount)}`, price: 0 });
+    if (invoice.isSent !== undefined) virtualServices.push({ name: `VIRTUAL_SENT:${invoice.isSent}`, price: 0 });
+    if (invoice.sentDate) virtualServices.push({ name: `VIRTUAL_SENT_DATE:${invoice.sentDate}`, price: 0 });
 
     const payload = {
         total: invoice.total,

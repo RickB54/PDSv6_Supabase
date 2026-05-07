@@ -48,7 +48,8 @@ import {
 
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumber, cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/pds-final-logo.png";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as LibVehicleType } from "@/lib/services";
 import { getCustomPackages } from "@/lib/servicesMeta";
@@ -73,6 +74,8 @@ interface Invoice {
     amount: number;
   };
   notes?: string;
+  isSent?: boolean;
+  sentDate?: string;
 }
 
 const Invoicing = () => {
@@ -112,6 +115,7 @@ const Invoicing = () => {
   const [editVehicle, setEditVehicle] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editIsSent, setEditIsSent] = useState(false);
 
   const location = useLocation();
 
@@ -294,6 +298,7 @@ const Invoicing = () => {
         paymentStatus: calculateTotal() === 0 ? "paid" : "unpaid",
         paidAmount: 0,
         notes: customNotes,
+        isSent: false,
       };
 
       // 3. Create Invoice
@@ -367,6 +372,25 @@ const Invoicing = () => {
   const filteredInvoices = filterItems();
   
   // Safe Sort: Create a copy and handle invalid dates
+  const toggleSentStatus = async (e: React.MouseEvent, invoice: Invoice) => {
+    e.stopPropagation();
+    const updated = { 
+      ...invoice, 
+      isSent: !invoice.isSent,
+      sentDate: !invoice.isSent ? new Date().toISOString() : invoice.sentDate
+    };
+    try {
+      await upsertSupabaseInvoice(updated);
+      await loadData();
+      toast({ 
+        title: updated.isSent ? "Invoice marked as sent" : "Invoice marked as unsent",
+        description: updated.isSent ? `Marked as sent on ${new Date().toLocaleDateString()}` : "Sent status removed"
+      });
+    } catch (err: any) {
+      toast({ title: "Failed to update status", description: err.message, variant: "destructive" });
+    }
+  };
+
   const sortedInvoices = [...filteredInvoices].sort((a, b) => {
     const dateA = new Date(a.createdAt || a.date).getTime() || 0;
     const dateB = new Date(b.createdAt || b.date).getTime() || 0;
@@ -450,6 +474,7 @@ const Invoicing = () => {
     setEditServices(services);
     setEditVehicle(resolvedVehicle);
     setEditNotes(inv.notes || "");
+    setEditIsSent(inv.isSent || false);
     setIsEditingInvoice(true);
   };
 
@@ -467,6 +492,8 @@ const Invoicing = () => {
       services: editServices, 
       vehicle: editVehicle,
       notes: editNotes,
+      isSent: editIsSent,
+      sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
       total: newTotal 
     };
     
@@ -1182,6 +1209,11 @@ Precision. Protection. Perfection.`;
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white text-lg">#{invoice.invoiceNumber}</span>
                         <span className="text-zinc-500 text-sm">• {invoice.date}</span>
+                        {invoice.isSent && (
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px] h-4 px-1 py-0 uppercase font-black tracking-widest ml-1">
+                            SENT
+                          </Badge>
+                        )}
                       </div>
                       <div className="font-medium text-zinc-300">{invoice.customerName}</div>
                       <div className="text-xs text-zinc-500">
@@ -1212,6 +1244,24 @@ Precision. Protection. Perfection.`;
                         }`}>
                         {(invoice.total === 0 ? 'paid' : (invoice.paymentStatus || 'unpaid')).toUpperCase()}
                       </div>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-1 min-w-[60px]" onClick={e => e.stopPropagation()}>
+                       <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Sent?</div>
+                       <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className={cn(
+                          "h-8 w-8 rounded-full border transition-all",
+                          invoice.isSent 
+                            ? "bg-blue-500/20 border-blue-500/50 text-blue-400" 
+                            : "bg-zinc-900 border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                        )}
+                        onClick={(e) => toggleSentStatus(e, invoice)}
+                        title={invoice.isSent ? `Sent on ${invoice.sentDate ? new Date(invoice.sentDate).toLocaleDateString() : 'N/A'}` : "Mark as Sent"}
+                       >
+                         <Send className={cn("h-4 w-4", invoice.isSent && "fill-blue-400/20")} />
+                       </Button>
                     </div>
 
                     <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1395,6 +1445,33 @@ Precision. Protection. Perfection.`;
                      <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Subtotal Owed</span>
                      <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
                   </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mt-4">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditIsSent(!editIsSent)}
+                    className={cn(
+                      "gap-2 font-bold text-[11px] uppercase tracking-wider",
+                      editIsSent 
+                        ? "text-blue-400 hover:text-blue-300 hover:bg-blue-400/10" 
+                        : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-4 w-4 rounded border flex items-center justify-center transition-colors",
+                      editIsSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
+                    )}>
+                      {editIsSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
+                    </div>
+                    I have sent this invoice to the customer
+                  </Button>
+                  {editIsSent && selectedInvoice.sentDate && (
+                    <span className="text-[10px] text-zinc-500 italic ml-auto">
+                      Marked sent on {new Date(selectedInvoice.sentDate).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-4">

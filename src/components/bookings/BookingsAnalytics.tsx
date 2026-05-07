@@ -259,18 +259,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const chronological = [...priceHistory].reverse();
         return chronological.map((record) => {
             const date = format(parseISO(record.date), "MMM d");
-            let avgPrice = 0;
-            let fullDetailCompact = 0;
+            let extPrice = 0, intPrice = 0, fullPrice = 0;
             if (record.snapshot && Object.keys(record.snapshot).length > 0) {
-                const vals = Object.values(record.snapshot).map(v => parseFloat(v) || 0);
-                avgPrice = vals.reduce((a, b) => a + b, 0) / vals.length;
-                fullDetailCompact = parseFloat(record.snapshot['package:prime-essential-full:compact'] || '0');
+                extPrice = parseFloat(record.snapshot['package:prime-essential-exterior:compact'] || '0');
+                intPrice = parseFloat(record.snapshot['package:prime-essential-interior:compact'] || '0');
+                fullPrice = parseFloat(record.snapshot['package:prime-essential-full:compact'] || '0');
             }
             return {
                 name: date,
                 fullDate: format(parseISO(record.date), "MMM d, yyyy HH:mm"),
-                "Average Price": parseFloat(avgPrice.toFixed(2)),
-                "Full Detail (Compact)": fullDetailCompact || null,
+                "Exterior": extPrice || null,
+                "Interior": intPrice || null,
+                "Full Detail": fullPrice || null,
                 type: record.type,
                 description: record.description
             };
@@ -1369,44 +1369,93 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             Not enough price change data to display a trend graph yet. Make a few price adjustments to see this populate.
                         </div>
                     ) : (
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={priceChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickMargin={10} />
-                                    <YAxis stroke="#52525b" fontSize={12} tickFormatter={(val) => `$${val}`} />
-                                    <Tooltip 
-                                        contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#e4e4e7' }}
-                                        labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
-                                        formatter={(value: number, name: string) => [`$${value}`, name]}
-                                        labelFormatter={(label, payload) => {
-                                            if (payload && payload.length > 0) {
-                                                return `${payload[0].payload.fullDate} - ${payload[0].payload.type.toUpperCase()}`;
-                                            }
-                                            return label;
-                                        }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="Average Price" 
-                                        stroke="#a855f7" 
-                                        strokeWidth={3} 
-                                        dot={{ r: 4, fill: '#a855f7', strokeWidth: 2 }} 
-                                        activeDot={{ r: 6, fill: '#c084fc' }}
-                                    />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="Full Detail (Compact)" 
-                                        stroke="#10b981" 
-                                        strokeWidth={3} 
-                                        dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} 
-                                        activeDot={{ r: 6, fill: '#34d399' }}
-                                        connectNulls
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Exterior Graph */}
+                            <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/80">
+                                <h3 className="text-sm font-bold text-zinc-300 mb-4 text-center">Prime Essential Exterior</h3>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={priceChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis dataKey="name" stroke="#52525b" fontSize={10} tickMargin={8} />
+                                            <YAxis stroke="#52525b" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#e4e4e7', fontSize: '12px' }}
+                                                labelStyle={{ color: '#a1a1aa', marginBottom: '4px', fontSize: '10px' }}
+                                                formatter={(value: number, name: string) => [`$${value}`, name]}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="Exterior" 
+                                                stroke="#3b82f6" 
+                                                strokeWidth={2} 
+                                                dot={{ r: 3, fill: '#3b82f6', strokeWidth: 1 }} 
+                                                activeDot={{ r: 5, fill: '#60a5fa' }}
+                                                connectNulls
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Interior Graph */}
+                            <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/80">
+                                <h3 className="text-sm font-bold text-zinc-300 mb-4 text-center">Prime Essential Interior</h3>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={priceChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis dataKey="name" stroke="#52525b" fontSize={10} tickMargin={8} />
+                                            <YAxis stroke="#52525b" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#e4e4e7', fontSize: '12px' }}
+                                                labelStyle={{ color: '#a1a1aa', marginBottom: '4px', fontSize: '10px' }}
+                                                formatter={(value: number, name: string) => [`$${value}`, name]}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="Interior" 
+                                                stroke="#f59e0b" 
+                                                strokeWidth={2} 
+                                                dot={{ r: 3, fill: '#f59e0b', strokeWidth: 1 }} 
+                                                activeDot={{ r: 5, fill: '#fbbf24' }}
+                                                connectNulls
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Full Detail Graph */}
+                            <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/80">
+                                <h3 className="text-sm font-bold text-zinc-300 mb-4 text-center">Prime Essential Full Detail</h3>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={priceChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis dataKey="name" stroke="#52525b" fontSize={10} tickMargin={8} />
+                                            <YAxis stroke="#52525b" fontSize={10} tickFormatter={(val) => `$${val}`} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#e4e4e7', fontSize: '12px' }}
+                                                labelStyle={{ color: '#a1a1aa', marginBottom: '4px', fontSize: '10px' }}
+                                                formatter={(value: number, name: string) => [`$${value}`, name]}
+                                            />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="Full Detail" 
+                                                stroke="#10b981" 
+                                                strokeWidth={2} 
+                                                dot={{ r: 3, fill: '#10b981', strokeWidth: 1 }} 
+                                                activeDot={{ r: 5, fill: '#34d399' }}
+                                                connectNulls
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </CardContent>
