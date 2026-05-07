@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -85,6 +85,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
             const count = filteredBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
             return { name, bookings: count };
         });
+    }, [filteredBookings]);
+
+    const pieData = useMemo(() => {
+        const counts: Record<string, number> = {};
+        filteredBookings.forEach(b => {
+            const svc = b.title || "Unknown";
+            counts[svc] = (counts[svc] || 0) + 1;
+        });
+        return Object.entries(counts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
     }, [filteredBookings]);
 
     const serviceDetailsData = useMemo(() => {
@@ -314,45 +326,95 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </Accordion>
             </Card>
 
-            {/* Booking Volume Chart */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader>
-                    <CardTitle>Booking Volume</CardTitle>
-                    <CardDescription>Monthly bookings for the last 6 months</CardDescription>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={barData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                            <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                            <YAxis stroke="#888" fontSize={12} />
-                            <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a' }} />
-                            <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Booking Volume Chart */}
+                <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                    <CardHeader>
+                        <CardTitle className="text-zinc-100 flex items-center gap-2">
+                            <BarChart3 className="w-4 h-4 text-violet-400" />
+                            Booking Volume
+                        </CardTitle>
+                        <CardDescription>Monthly bookings for the last 6 months</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={barData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                />
+                                <Bar dataKey="bookings" fill="url(#violetGradient)" radius={[4, 4, 0, 0]} />
+                                <defs>
+                                    <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
+                                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                                    </linearGradient>
+                                </defs>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
 
-            {/* Service Distribution / Performance Log */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader>
+                {/* Service Distribution Pie Chart */}
+                <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                    <CardHeader>
+                        <CardTitle className="text-zinc-100 flex items-center gap-2">
+                            <Package className="w-4 h-4 text-emerald-400" />
+                            Service Distribution
+                        </CardTitle>
+                        <CardDescription>Most popular service packages</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                />
+                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Service Performance Detail Log */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
                     <div className="flex items-center gap-2">
-                        <Package className="w-5 h-5 text-blue-400" />
+                        <Sparkles className="w-5 h-5 text-blue-400" />
                         <div>
                             <CardTitle>Service Performance Detail</CardTitle>
                             <CardDescription>Detailed breakdown of all services performed</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
                         <Table>
-                            <TableHeader className="bg-zinc-950">
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead className="w-[120px]">Date</TableHead>
                                     <TableHead>Customer</TableHead>
                                     <TableHead>Location</TableHead>
-                                    <TableHead>Address</TableHead>
+                                    <TableHead className="hidden md:table-cell">Address</TableHead>
                                     <TableHead>Service Package</TableHead>
                                     <TableHead className="text-right">Revenue</TableHead>
                                 </TableRow>
@@ -360,28 +422,35 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                             <TableBody>
                                 {serviceDetailsData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-10 italic">
+                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
                                             No service data found for the selected filters.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     serviceDetailsData.map((svc) => (
-                                        <TableRow key={svc.id} className="hover:bg-zinc-950/50">
-                                            <TableCell className="text-zinc-400 text-xs">
+                                        <TableRow key={svc.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                            <TableCell className="text-zinc-400 text-xs font-mono">
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
                                             </TableCell>
-                                            <TableCell className="font-medium text-zinc-200">{svc.customer}</TableCell>
+                                            <TableCell className="font-semibold text-zinc-200">{svc.customer}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className={svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}>
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
+                                                    svc.locationType === 'Shop' 
+                                                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                                        : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                                )}>
                                                     {svc.locationType}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-xs text-zinc-500 max-w-[200px] truncate" title={svc.address}>
+                                            <TableCell className="hidden md:table-cell text-xs text-zinc-500 max-w-[180px] truncate" title={svc.address}>
                                                 {svc.address}
                                             </TableCell>
-                                            <TableCell className="text-zinc-300">{svc.service}</TableCell>
-                                            <TableCell className="text-right text-emerald-400 font-mono">
-                                                ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            <TableCell className="text-zinc-300 font-medium">{svc.service}</TableCell>
+                                            <TableCell className="text-right">
+                                                <span className="text-emerald-400 font-bold font-mono">
+                                                    ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                </span>
                                             </TableCell>
                                         </TableRow>
                                     ))
