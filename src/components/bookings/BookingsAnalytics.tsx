@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -618,6 +618,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
         });
 
+        // 5. Generated Invoices Not Yet Sent
+        invoices.filter(inv => !inv.isSent).forEach(inv => {
+            reminders.push({
+                id: `invoice-not-sent-${inv.id}`,
+                type: 'unsent_invoice',
+                customer: inv.customerName || 'Customer',
+                date: inv.date || inv.createdAt || new Date().toISOString(),
+                title: 'Unsent Invoice',
+                description: `Invoice #${inv.invoiceNumber || inv.id.slice(0,6).toUpperCase()} has not been sent yet.`,
+                actionText: 'View Invoice',
+                actionUrl: `/invoicing?customerId=${inv.customerId}`,
+                icon: <Send className="w-4 h-4" />,
+                color: 'indigo'
+            });
+        });
+
         return reminders.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [filteredPerfBookings, toDoServices, doneServices, invoices]);
 
@@ -1000,6 +1016,71 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             </TableCell>
                                             <TableCell className="text-right text-zinc-500 font-mono">
                                                 ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Invoices To Be Sent - NOT SENT YET */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Send className="w-5 h-5 text-indigo-400" />
+                            <div>
+                                <CardTitle>Invoices To Be Sent</CardTitle>
+                                <CardDescription>Invoices generated but not yet marked as sent</CardDescription>
+                            </div>
+                        </div>
+                        <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                            {invoices.filter(inv => !inv.isSent).length} PENDING
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead className="w-[120px]">Date</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Vehicle</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {invoices.filter(inv => !inv.isSent).length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-10 italic">
+                                            All invoices have been sent! Excellent work.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    invoices.filter(inv => !inv.isSent).map((inv) => (
+                                        <TableRow key={inv.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors group">
+                                            <TableCell className="text-zinc-400 text-xs font-mono">
+                                                {inv.date}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-zinc-300">{inv.customerName}</TableCell>
+                                            <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
+                                            <TableCell className="font-bold text-zinc-300">
+                                                ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-8 text-[10px] uppercase font-black tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                                                    onClick={() => navigate(`/invoicing?customerId=${inv.customerId}`)}
+                                                >
+                                                    View Invoice
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))
