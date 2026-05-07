@@ -622,6 +622,11 @@ const SearchCustomer = () => {
                                 <FileText className="h-4 w-4 mr-2" /> Invoices
                               </Link>
                             </Button>
+                            <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
+                              <Link to={`/estimates?customerId=${customer.id}`}>
+                                <FileBarChart className="h-4 w-4 mr-2" /> Estimates
+                              </Link>
+                            </Button>
                             <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
                               <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
                             </Button>

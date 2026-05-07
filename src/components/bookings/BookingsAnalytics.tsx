@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3 } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -27,10 +27,11 @@ interface BookingsAnalyticsProps {
     bookings: Booking[];
     customers: any[];
     invoices?: any[];
+    estimates?: any[];
     defaultOpenAccordion?: string;
 }
 
-export function BookingsAnalytics({ bookings, customers, invoices = [], defaultOpenAccordion }: BookingsAnalyticsProps) {
+export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion }: BookingsAnalyticsProps) {
     const navigate = useNavigate();
     const { add } = useTasksStore();
     const { update } = useBookingsStore();
@@ -81,40 +82,104 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         setIsReviewModalOpen(true);
     };
 
-    // Filter State
-    const [showArchived, setShowArchived] = useState(false);
-    const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    // --- Persistent Filter States ---
+    
+    // Performance Filter
+    const [perfShowArchived, setPerfShowArchived] = useState(() => localStorage.getItem('analytics_perf_showArchived') === 'true');
+    const [perfDateFilter, setPerfDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_perf_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    // Insights Filter
+    const [insShowArchived, setInsShowArchived] = useState(() => localStorage.getItem('analytics_ins_showArchived') === 'true');
+    const [insDateFilter, setInsDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_ins_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    // Quotes Filter
+    const [quotesShowArchived, setQuotesShowArchived] = useState(() => localStorage.getItem('analytics_quotes_showArchived') === 'true');
+    const [quotesDateFilter, setQuotesDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_quotes_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    // Persistence Effects
+    useEffect(() => {
+        localStorage.setItem('analytics_perf_showArchived', String(perfShowArchived));
+        localStorage.setItem('analytics_perf_dateFilter', JSON.stringify(perfDateFilter));
+    }, [perfShowArchived, perfDateFilter]);
+
+    useEffect(() => {
+        localStorage.setItem('analytics_ins_showArchived', String(insShowArchived));
+        localStorage.setItem('analytics_ins_dateFilter', JSON.stringify(insDateFilter));
+    }, [insShowArchived, insDateFilter]);
+
+    useEffect(() => {
+        localStorage.setItem('analytics_quotes_showArchived', String(quotesShowArchived));
+        localStorage.setItem('analytics_quotes_dateFilter', JSON.stringify(quotesDateFilter));
+    }, [quotesShowArchived, quotesDateFilter]);
 
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
         update(bookingId, { isArchived: !currentStatus });
         toast.success(currentStatus ? "Booking restored" : "Booking archived");
     };
 
-    // --- Unified Filtered Bookings ---
-    const filteredBookings = useMemo(() => {
-        let result = bookings;
+    // --- Helper to filter data ---
+    const getFiltered = (data: any[], showArchived: boolean, dateFilter: { start: Date | undefined; end: Date | undefined }, dateKey: string = 'date') => {
+        let result = data;
         if (!showArchived) {
-            result = result.filter(b => !b.isArchived);
+            result = result.filter(b => !b.isArchived && !b.archived);
         }
         if (dateFilter.start && dateFilter.end) {
             result = result.filter(b => {
-                const d = parseISO(b.date);
+                const val = b[dateKey] || b.createdAt;
+                if (!val) return true;
+                const d = typeof val === 'string' ? parseISO(val) : val;
                 return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
             });
         } else if (dateFilter.start) {
-            result = result.filter(b => isSameDay(parseISO(b.date), dateFilter.start!));
+            result = result.filter(b => {
+                const val = b[dateKey] || b.createdAt;
+                if (!val) return true;
+                const d = typeof val === 'string' ? parseISO(val) : val;
+                return isSameDay(d, dateFilter.start!);
+            });
         }
         return result;
-    }, [bookings, showArchived, dateFilter]);
+    };
 
-    // --- Stats Calculation ---
+    // Derived filtered data
+    const filteredPerfBookings = useMemo(() => getFiltered(bookings, perfShowArchived, perfDateFilter), [bookings, perfShowArchived, perfDateFilter]);
+    const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
+    const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
+
+    // Stats based on Performance Filter (Primary view)
     const stats = useMemo(() => {
-        const totalBookings = filteredBookings.length;
-        const completed = filteredBookings.filter(b => b.status === "done" || b.status === "completed").length;
-        const pending = filteredBookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
+        const totalBookings = filteredPerfBookings.length;
+        const completed = filteredPerfBookings.filter(b => b.status === "done" || b.status === "completed").length;
+        const pending = filteredPerfBookings.filter(b => b.status === "pending" || b.status === "confirmed").length;
         return { totalBookings, completed, pending };
-    }, [filteredBookings]);
+    }, [filteredPerfBookings]);
 
     // --- Charts Data ---
     const barData = useMemo(() => {
@@ -125,24 +190,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         }
         return months.map(date => {
             const name = format(date, "MMM");
-            const count = filteredBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
+            const count = filteredPerfBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
             return { name, bookings: count };
         });
-    }, [filteredBookings]);
+    }, [filteredPerfBookings]);
 
     const pieData = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredBookings.forEach(b => {
+        filteredPerfBookings.forEach(b => {
             const svc = b.title || "Unknown";
             counts[svc] = (counts[svc] || 0) + 1;
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [filteredBookings]);
+    }, [filteredPerfBookings]);
 
     const serviceDetailsData = useMemo(() => {
-        return filteredBookings.map(b => {
+        return filteredPerfBookings.map(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const address = b.address || customer?.address || "N/A";
             const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
@@ -171,7 +236,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 revenue: revenue
             };
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [filteredBookings, customers, invoices]);
+    }, [filteredPerfBookings, customers, invoices]);
 
     const doneServices = useMemo(() => 
         serviceDetailsData.filter(s => s.status === 'done' || s.status === 'completed'),
@@ -184,7 +249,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
     // --- Reminder Frequency Data ---
     const frequencyData = useMemo(() => {
         const counts: Record<string, number> = { '1 Month': 0, '3 Months': 0, '4 Months': 0, '6 Months': 0, 'Custom': 0 };
-        filteredBookings.filter(b => b.hasReminder).forEach(b => {
+        filteredPerfBookings.filter(b => b.hasReminder).forEach(b => {
             if (b.reminderFrequency === 1) counts['1 Month']++;
             else if (b.reminderFrequency === 3) counts['3 Months']++;
             else if (b.reminderFrequency === 4) counts['4 Months']++;
@@ -192,14 +257,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
             else counts['Custom']++;
         });
         return Object.entries(counts).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
-    }, [filteredBookings]);
+    }, [filteredPerfBookings]);
 
     const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
     const customerStats = useMemo(() => {
         const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string }>();
 
-        filteredBookings.forEach(b => {
+        filteredInsBookings.forEach(b => {
             if (!b.customer) return;
             const custMatch = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const existing = map.get(b.customer) || {
@@ -219,10 +284,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 existing.service = b.title;
                 existing.lastBookingId = b.id;
             }
+            
+            // Add quotes to the customer stats
+            const customerQuotes = (estimates || []).filter(est => 
+                (est.customer_id === b.customerId) || 
+                ((est.customer_name || est.customerName || '').toLowerCase().trim() === b.customer.toLowerCase().trim())
+            );
+            (existing as any).quotes = customerQuotes;
+
             map.set(b.customer, existing);
         });
         return Array.from(map.values()).sort((a, b) => new Date(b.lastService).getTime() - new Date(a.lastService).getTime());
-    }, [filteredBookings, customers]);
+    }, [filteredInsBookings, customers, estimates]);
 
     const addonsData = useMemo(() => {
         const details: { name: string, customer: string, date: string, revenue: number, id: string }[] = [];
@@ -305,7 +378,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
         setReminderOpen(true);
     };
 
-    const activeReminders = filteredBookings.filter(b => b.hasReminder);
+    const activeReminders = filteredPerfBookings.filter(b => b.hasReminder);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
@@ -399,7 +472,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
 
             {/* Service Performance Detail Log - COMPLETED ONLY */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl">
-                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-emerald-400" />
                         <div>
@@ -407,6 +480,92 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                             <CardDescription>History of all completed services</CardDescription>
                         </div>
                     </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                <Filter className="h-4 w-4" />
+                                Filter
+                                {(perfShowArchived || perfDateFilter.start) && (
+                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
+                                        !
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-zinc-200">Show Archived</span>
+                                    <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setPerfDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setPerfDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                    <div className="grid gap-2 text-zinc-200">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
+                                            onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                        />
+                                    </div>
+                                    {(perfDateFilter.start || perfDateFilter.end) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                            className="w-full text-zinc-400 hover:text-white mt-2"
+                                        >
+                                            Clear Range
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -578,19 +737,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                 </CardContent>
             </Card>
 
-            {/* CRM Customer List */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Customer Insights & Follow-up</CardTitle>
-                        <CardDescription>Track recent customers and set reminders for repeat business</CardDescription>
+            {/* Customer Quotes Section */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-blue-500/30">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <FileBarChart className="w-5 h-5 text-blue-400" />
+                        <div>
+                            <CardTitle>Customer Quotes</CardTitle>
+                            <CardDescription>Quotes and estimates given to customers or prospects</CardDescription>
+                        </div>
                     </div>
-                    <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
                                 Filter
-                                {(showArchived || dateFilter.start) && (
+                                {(quotesShowArchived || quotesDateFilter.start) && (
                                     <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
                                         !
                                     </Badge>
@@ -601,7 +763,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium text-zinc-200">Show Archived</span>
-                                    <Switch checked={showArchived} onCheckedChange={setShowArchived} />
+                                    <Switch checked={quotesShowArchived} onCheckedChange={setQuotesShowArchived} className="border border-zinc-700 data-[state=checked]:bg-blue-500" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
@@ -610,7 +772,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                             variant="outline" 
                                             size="sm" 
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                            onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                                            onClick={() => setQuotesDateFilter({ start: undefined, end: undefined })}
                                         >
                                             All Time
                                         </Button>
@@ -618,7 +780,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                             variant="outline" 
                                             size="sm" 
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                            onClick={() => setDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                            onClick={() => setQuotesDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
                                         >
                                             Today
                                         </Button>
@@ -628,7 +790,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                                setQuotesDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
                                             }}
                                         >
                                             This Week
@@ -639,7 +801,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                                setQuotesDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
                                             }}
                                         >
                                             This Month
@@ -651,18 +813,159 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                     <div className="grid gap-2 text-zinc-200">
                                         <Calendar
                                             mode="range"
-                                            selected={{ from: dateFilter.start, to: dateFilter.end }}
-                                            onSelect={(range) => setDateFilter({ start: range?.from, end: range?.to })}
+                                            selected={{ from: quotesDateFilter.start, to: quotesDateFilter.end }}
+                                            onSelect={(range) => setQuotesDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                        />
+                                    </div>
+                                    {(quotesDateFilter.start || quotesDateFilter.end) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setQuotesDateFilter({ start: undefined, end: undefined })}
+                                            className="w-full text-zinc-400 hover:text-white mt-2"
+                                        >
+                                            Clear Range
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead className="text-right">Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredQuotes.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                            No quotes found for the selected period.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredQuotes.map((q) => (
+                                        <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                            <TableCell className="text-zinc-400 text-xs font-mono">
+                                                {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
+                                            </TableCell>
+                                            <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
+                                            <TableCell className="text-zinc-300">{Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}</TableCell>
+                                            <TableCell className="text-emerald-400 font-mono font-bold">${(q.total || 0).toFixed(2)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
+                                                    q.status === 'Accepted' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                    q.status === 'Sent' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                    "bg-zinc-800 text-zinc-400 border-zinc-700"
+                                                )}>
+                                                    {q.status || 'Draft'}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* CRM Customer List */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Customer Insights & Follow-up</CardTitle>
+                        <CardDescription>Track recent customers and set reminders for repeat business</CardDescription>
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                <Filter className="h-4 w-4" />
+                                Filter
+                                {(insShowArchived || insDateFilter.start) && (
+                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
+                                        !
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-zinc-200">Show Archived</span>
+                                    <Switch checked={insShowArchived} onCheckedChange={setInsShowArchived} className="border border-zinc-700 data-[state=checked]:bg-primary" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setInsDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setInsDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setInsDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setInsDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                    <div className="grid gap-2 text-zinc-200">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: insDateFilter.start, to: insDateFilter.end }}
+                                            onSelect={(range) => setInsDateFilter({ start: range?.from, end: range?.to })}
                                             initialFocus
                                             className="rounded-md border border-zinc-800 bg-zinc-900"
                                         />
                                     </div>
-                                    {(dateFilter.start || dateFilter.end) && (
+                                    {(insDateFilter.start || insDateFilter.end) && (
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="w-full text-xs text-muted-foreground hover:text-white"
-                                            onClick={() => setDateFilter({ start: undefined, end: undefined })}
+                                            onClick={() => setInsDateFilter({ start: undefined, end: undefined })}
                                         >
                                             Clear Dates
                                         </Button>
@@ -680,7 +983,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                     <TableHead className="w-[150px]">Customer</TableHead>
                                     <TableHead className="min-w-[150px]">Contact</TableHead>
                                     <TableHead className="min-w-[100px]">Last Service</TableHead>
-                                    <TableHead className="min-w-[120px]">Service Type</TableHead>
+                                    <TableHead className="min-w-[120px]">Quotes Given</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -695,7 +998,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], defaultO
                                             </div>
                                         </TableCell>
                                         <TableCell>{new Date(cust.lastService).toLocaleDateString()}</TableCell>
-                                        <TableCell>{cust.service}</TableCell>
+                                        <TableCell>
+                                            {(cust as any).quotes && (cust as any).quotes.length > 0 ? (
+                                                <div className="flex flex-col gap-1">
+                                                    {(cust as any).quotes.slice(0, 2).map((q: any, idx: number) => (
+                                                        <Badge key={q.id || idx} variant="outline" className="text-[9px] h-4 bg-blue-500/5 text-blue-400 border-blue-500/20 truncate max-w-[120px]">
+                                                            ${(q.total || 0).toFixed(0)} - {q.status || 'Draft'}
+                                                        </Badge>
+                                                    ))}
+                                                    {(cust as any).quotes.length > 2 && (
+                                                        <span className="text-[9px] text-zinc-500 ml-1">+{(cust as any).quotes.length - 2} more</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-zinc-600 italic">No quotes</span>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             {bookings.find(b => b.id === cust.lastBookingId)?.hasReminder ? (
                                                 <div className="flex justify-end">

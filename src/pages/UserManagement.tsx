@@ -407,6 +407,18 @@ export default function UserManagement() {
         await loadAdmins();
         toast({ title: "Admin deleted" });
       } else if (type === 'customer') {
+        // SAFETY: Prevent deleting records that belong to employees or admins in app_users
+        const { data: matchedAppUser } = await supabase.from("app_users").select("id,role,name").eq("id", id).single();
+        if (matchedAppUser && (matchedAppUser.role === 'employee' || matchedAppUser.role === 'admin' || matchedAppUser.role === 'owner')) {
+          toast({ 
+            title: "Action Blocked", 
+            description: `"${matchedAppUser.name}" is an active ${matchedAppUser.role}. Remove them from the Employees section instead, not from Customers.`, 
+            variant: "destructive" 
+          });
+          setDeleteConfirm({ open: false, type: null, id: null });
+          return;
+        }
+
         // 1. Delete Estimates
         const { error: estError } = await supabase.from("estimates").delete().eq("customer_id", id);
         if (estError) throw new Error(`Failed to delete related estimates: ${estError.message}`);

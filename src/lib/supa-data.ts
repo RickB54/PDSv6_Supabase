@@ -360,6 +360,9 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 
         // Add Auth Data (if not duplicate)
         (authData || []).forEach((u: any) => {
+            // Do NOT add employees or admins as "Registered Account" customers
+            if (u.role === 'admin' || u.role === 'employee') return;
+
             const safeEmail = (u.email || '').toLowerCase().trim();
             if (safeEmail && !mergedMap.has(safeEmail)) {
                 mergedMap.set(safeEmail, {

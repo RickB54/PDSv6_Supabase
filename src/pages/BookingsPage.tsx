@@ -203,7 +203,7 @@ export default function BookingsPage() {
         ...items.map(b => (b.customer || '').trim()),
         ...unifiedEvents.map(e => (e.customer || 'INTERNAL: System Blocks').trim())
       ])
-    ).filter(name => name && name !== 'INTERNAL: System Blocks').map(customerName => {
+    ).filter(name => name && (name !== 'INTERNAL: System Blocks' || sourceFilter === 'HYBRID AVAILABILITY SYSTEM')).map(customerName => {
       if (!customerName) return null;
       
       const customerData = customers.find(c => c.name?.trim().toLowerCase() === customerName.trim().toLowerCase());
@@ -222,10 +222,10 @@ export default function BookingsPage() {
             archiveFilter === 'all' ? true : 
             archiveFilter === 'archived' ? isArchived : !isArchived;
           
-          // EXPLICIT: Don't show blocked slots in history
           const isBlocked = b.status === 'blocked' || (b as any).type === 'manual-block';
+          const isBlockedVisible = sourceFilter === 'HYBRID AVAILABILITY SYSTEM' ? true : !isBlocked;
           
-          return isCustMatch && isArchiveVisible && !isBlocked;
+          return isCustMatch && isArchiveVisible && isBlockedVisible;
         }).map(b => ({ ...b, type: 'booking' as const })),
         ...unifiedEvents.filter(e => {
           const eCust = (e.customer || 'INTERNAL: System Blocks').trim().toLowerCase();
@@ -235,10 +235,10 @@ export default function BookingsPage() {
             archiveFilter === 'all' ? true : 
             archiveFilter === 'archived' ? isArchived : !isArchived;
             
-          // EXPLICIT: Don't show blocked slots in history
           const isBlocked = e.type === 'manual-block' || (e as any).status === 'blocked';
-          
-          return isCustMatch && isArchiveVisible && e.type !== 'booking' && !isBlocked;
+          const isBlockedVisible = sourceFilter === 'HYBRID AVAILABILITY SYSTEM' ? true : !isBlocked;
+            
+          return isCustMatch && isArchiveVisible && e.type !== 'booking' && isBlockedVisible;
         })
       ];
 
