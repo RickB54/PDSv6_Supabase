@@ -1185,7 +1185,7 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
         status: invoice.paymentStatus,
         paid_amount: invoice.paidAmount,
         paid_date: invoice.paidDate,
-        vehicle: invoice.vehicle,
+        notes: invoice.vehicle ? `[Vehicle: ${invoice.vehicle}] ${invoice.notes || ''}` : invoice.notes,
         customer_id: invoice.customerId,
         invoice_number: invoice.invoiceNumber
     };

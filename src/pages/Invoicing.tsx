@@ -251,13 +251,13 @@ const Invoicing = () => {
       // This is crucial if 'selectedCustomer' is an Auth User ID who hasn't been synced to 'customers' table yet.
       // We assume 'customer' object has at least a name, maybe email.
       const crmCustomer = await upsertSupabaseCustomer({
-        id: customer.id, // Try to keep same ID
+        id: customer.id, 
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
         address: customer.address,
         vehicle_info: {
-          make: customer.vehicle?.split(' ')[1] || '', // Rough parsing fallback, ideally we have structured vehicle info
+          make: customer.vehicle?.split(' ')[1] || '',
           model: customer.model,
           year: customer.year
         }
@@ -268,7 +268,7 @@ const Invoicing = () => {
 
       const invoice: Invoice = {
         invoiceNumber: generateInvoiceNumber(),
-        customerId: crmCustomer.id!, // Use ID from CRM upsert result to be safe
+        customerId: crmCustomer.id!,
         customerName: crmCustomer.full_name || customer.name,
         vehicle: vehicleDesc.trim() || "Unknown Vehicle",
         services,
@@ -1114,6 +1114,9 @@ Precision. Protection. Perfection.`;
                     </div>
 
                     <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => { setSelectedInvoice(invoice); handleEditInvoice(); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, true)}>
                         <Save className="h-4 w-4" />
                       </Button>
@@ -1293,8 +1296,8 @@ Precision. Protection. Perfection.`;
                          <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
                         <Input 
@@ -1306,13 +1309,14 @@ Precision. Protection. Perfection.`;
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Invoice Notes</Label>
+                        <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Invoice Notes (Visible to Customer)</Label>
                         <Textarea 
                           value={editNotes}
                           onChange={(e) => setEditNotes(e.target.value)}
-                          placeholder="Add notes for the customer..."
-                          className="bg-zinc-900 border-zinc-800 text-white min-h-[40px] h-9 resize-none"
+                          placeholder="Add special instructions or reminders for the customer..."
+                          className="bg-zinc-900 border-zinc-800 text-white min-h-[100px] text-sm leading-relaxed"
                         />
+                        <p className="text-[10px] text-zinc-500 italic">These notes will appear at the bottom of the PDF invoice.</p>
                       </div>
                     </div>
 
