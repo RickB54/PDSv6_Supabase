@@ -22,6 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { addOns } from "@/lib/services";
 import { cn } from "@/lib/utils";
+import { getPriceChangeHistory, PriceChangeRecord } from "@/lib/servicesMeta";
+import { LineChart, Line } from "recharts";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -51,6 +53,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             return JSON.parse(localStorage.getItem('prime_booking_reviews') || '{}');
         } catch { return {}; }
     });
+
+    // Price History State
+    const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
+    useEffect(() => {
+        setPriceHistory(getPriceChangeHistory());
+    }, []);
 
     const [reviewForm, setReviewForm] = useState({
         performance: "",
@@ -245,6 +253,29 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const toDoServices = useMemo(() => 
         serviceDetailsData.filter(s => s.status !== 'done' && s.status !== 'completed'),
     [serviceDetailsData]);
+
+    // --- Price Chart Data ---
+    const priceChartData = useMemo(() => {
+        const chronological = [...priceHistory].reverse();
+        return chronological.map((record) => {
+            const date = format(parseISO(record.date), "MMM d");
+            let avgPrice = 0;
+            let fullDetailCompact = 0;
+            if (record.snapshot && Object.keys(record.snapshot).length > 0) {
+                const vals = Object.values(record.snapshot).map(v => parseFloat(v) || 0);
+                avgPrice = vals.reduce((a, b) => a + b, 0) / vals.length;
+                fullDetailCompact = parseFloat(record.snapshot['package:prime-essential-full:compact'] || '0');
+            }
+            return {
+                name: date,
+                fullDate: format(parseISO(record.date), "MMM d, yyyy HH:mm"),
+                "Average Price": parseFloat(avgPrice.toFixed(2)),
+                "Full Detail (Compact)": fullDetailCompact || null,
+                type: record.type,
+                description: record.description
+            };
+        });
+    }, [priceHistory]);
 
     // --- Reminder Frequency Data ---
     const frequencyData = useMemo(() => {
@@ -1316,6 +1347,68 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </TableBody>
                         </Table>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Price Fluctuation History Section */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-8">
+                <CardHeader className="bg-zinc-950/20">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                            <BarChart3 className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-zinc-100 uppercase tracking-tighter">Price Fluctuation History</CardTitle>
+                            <CardDescription className="text-zinc-400">Track how your pricing strategy has evolved over time</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {priceChartData.length < 2 ? (
+                        <div className="text-center text-zinc-500 py-12 italic border border-dashed border-zinc-800 rounded-lg">
+                            Not enough price change data to display a trend graph yet. Make a few price adjustments to see this populate.
+                        </div>
+                    ) : (
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={priceChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#52525b" fontSize={12} tickMargin={10} />
+                                    <YAxis stroke="#52525b" fontSize={12} tickFormatter={(val) => `$${val}`} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#e4e4e7' }}
+                                        labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
+                                        formatter={(value: number, name: string) => [`$${value}`, name]}
+                                        labelFormatter={(label, payload) => {
+                                            if (payload && payload.length > 0) {
+                                                return `${payload[0].payload.fullDate} - ${payload[0].payload.type.toUpperCase()}`;
+                                            }
+                                            return label;
+                                        }}
+                                    />
+                                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="Average Price" 
+                                        stroke="#a855f7" 
+                                        strokeWidth={3} 
+                                        dot={{ r: 4, fill: '#a855f7', strokeWidth: 2 }} 
+                                        activeDot={{ r: 6, fill: '#c084fc' }}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="Full Detail (Compact)" 
+                                        stroke="#10b981" 
+                                        strokeWidth={3} 
+                                        dot={{ r: 4, fill: '#10b981', strokeWidth: 2 }} 
+                                        activeDot={{ r: 6, fill: '#34d399' }}
+                                        connectNulls
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

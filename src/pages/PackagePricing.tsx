@@ -41,6 +41,9 @@ import {
   updateCustomService,
   deleteCustomService,
   postServicesFullSync,
+  getPriceChangeHistory,
+  logPriceChange,
+  PriceChangeRecord,
 } from "@/lib/servicesMeta";
 import supabase from "@/lib/supabase";
 import * as supaPkgs from "@/services/supabase/packages";
@@ -143,6 +146,15 @@ export default function PackagePricing() {
 
   const [comparisonMatrixOpen, setComparisonMatrixOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
+
+  useEffect(() => {
+    setPriceHistory(getPriceChangeHistory());
+  }, []);
+  
+  const refreshHistory = () => {
+    setPriceHistory(getPriceChangeHistory());
+  };
 
   const [searchParams] = useSearchParams();
   useEffect(() => {
@@ -1070,8 +1082,9 @@ export default function PackagePricing() {
       if (data.customAddOns) localStorage.setItem('customAddOns', JSON.stringify(data.customAddOns));
       if (data.customServices) localStorage.setItem('customServices', JSON.stringify(data.customServices));
       await postFullSync();
-      await postServicesFullSync();
       await refreshLiveAfterSync();
+      logPriceChange({ type: 'restore', description: `Restored pricing from JSON backup file: ${file.name}` });
+      refreshHistory();
       toast.success('Pricing restored from backup — live site updated');
       setViewAllOpen(false);
     } catch (error) {
@@ -1241,6 +1254,8 @@ export default function PackagePricing() {
       updated[key] = String(Math.ceil(preciseValue));
     });
     setCurrentPrices(updated);
+    logPriceChange({ type: 'percentage', description: `Applied ${percent}% increase to package ${id}. (Unsaved)`, snapshot: updated });
+    refreshHistory();
   };
 
   const reset = (id: string) => {
@@ -1255,6 +1270,8 @@ export default function PackagePricing() {
 
   const resetAll = () => {
     setCurrentPrices(savedPrices);
+    logPriceChange({ type: 'reset', description: 'Reset all unsaved changes.' });
+    refreshHistory();
     toast.success("Back to your last SAVED prices");
   };
 
@@ -1273,6 +1290,8 @@ export default function PackagePricing() {
     });
     setCurrentPrices(updated);
     setMasterPct('');
+    logPriceChange({ type: 'master', description: `Applied ${pct}% increase to ${target} (Unsaved)`, snapshot: updated });
+    refreshHistory();
     toast.success(`Applied ${pct > 0 ? '+' : ''}${pct}% to ${target === 'both' ? 'EVERYTHING' : target}`);
   };
 
@@ -1288,6 +1307,8 @@ export default function PackagePricing() {
     });
     setCurrentPrices(updated);
     setGlobalPct('');
+    logPriceChange({ type: 'global', description: `NUCLEAR: Applied ${pct}% to ALL prices (Unsaved)`, snapshot: updated });
+    refreshHistory();
     toast.success(`NUCLEAR UPDATE: ${pct > 0 ? '+' : ''}${pct}% APPLIED TO ALL PRICES`);
   };
 
@@ -1346,6 +1367,8 @@ export default function PackagePricing() {
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
+    logPriceChange({ type: 'manual', description: `Saved changes to items: ${keys.join(', ')}`, snapshot: updated });
+    refreshHistory();
     toast.success(`${label} prices and visibility status locked in.`);
   };
 
@@ -1389,6 +1412,8 @@ export default function PackagePricing() {
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
+    logPriceChange({ type: 'manual', description: 'Saved ALL prices and visibility globally.', snapshot: rounded });
+    refreshHistory();
     toast.success("All changes (pricing + visibility) synced to Cloud and Live Website.");
   };
 
@@ -1418,6 +1443,8 @@ export default function PackagePricing() {
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
+    logPriceChange({ type: 'restore', description: 'Restored all prices from persistent backup.', snapshot: restored });
+    refreshHistory();
   };
 
   // Utilities: image mapping for current live assets
@@ -2004,6 +2031,45 @@ export default function PackagePricing() {
                 </div>
               </AccordionContent>
             </AccordionItem>
+
+            {/* Price Change History Section */}
+            <AccordionItem value="history" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-purple-900/30 group">
+              <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-purple-400 data-[state=open]:text-purple-400 transition-colors">
+                <span className="text-lg font-semibold flex items-center gap-3">
+                  <span className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  </span>
+                  Price Change History
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4">
+                <div className="bg-black/50 border border-zinc-800 rounded-lg p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+                  {priceHistory.length === 0 ? (
+                    <div className="text-zinc-500 text-center py-6">No price changes recorded yet.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {priceHistory.map(record => (
+                        <div key={record.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
+                          <div>
+                            <div className="text-xs text-zinc-500 mb-0.5">{new Date(record.date).toLocaleString()}</div>
+                            <div className="text-sm text-zinc-300 font-medium">{record.description}</div>
+                          </div>
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border self-start sm:self-auto ${
+                            record.type === 'percentage' || record.type === 'master' || record.type === 'global' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                            record.type === 'restore' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                            record.type === 'reset' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                            'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {record.type}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
           </Accordion>
 
           {/* Action Buttons */}

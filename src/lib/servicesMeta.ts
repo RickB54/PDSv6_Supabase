@@ -22,6 +22,7 @@ const ADDON_META_KEY = 'addOnMeta';
 const CUSTOM_PKGS_KEY = 'customServicePackages';
 const CUSTOM_ADDONS_KEY = 'customAddOns';
 const CUSTOM_SERVICES_KEY = 'customServices';
+const PRICE_HISTORY_KEY = 'priceChangeHistory';
 
 const LEGACY_PKG_IDS = [
   'basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'
@@ -160,6 +161,41 @@ export function deleteCustomService(id: string) {
     if (m.stepIds) m.stepIds = m.stepIds.filter(sid => sid !== id);
   });
   saveMap(ADDON_META_KEY, addMeta);
+}
+
+export interface PriceChangeRecord {
+  id: string;
+  date: string;
+  type: 'manual' | 'percentage' | 'restore' | 'reset' | 'global' | 'master';
+  description: string;
+  snapshot?: Record<string, string>;
+}
+
+export function getPriceChangeHistory(): PriceChangeRecord[] {
+  try { return JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+
+export function logPriceChange(record: Omit<PriceChangeRecord, 'id' | 'date'>) {
+  const history = getPriceChangeHistory();
+  // Attempt to capture current state if not explicitly passed
+  let snapshot = record.snapshot;
+  if (!snapshot) {
+    try {
+      snapshot = JSON.parse(localStorage.getItem('savedPrices') || '{}');
+    } catch {
+      snapshot = {};
+    }
+  }
+
+  const newRecord: PriceChangeRecord = {
+    id: `ph-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    date: new Date().toISOString(),
+    ...record,
+    snapshot
+  };
+  history.unshift(newRecord);
+  if (history.length > 200) history.pop(); // keep last 200 records
+  localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(history));
 }
 
 // Build a snapshot payload for full-sync API
