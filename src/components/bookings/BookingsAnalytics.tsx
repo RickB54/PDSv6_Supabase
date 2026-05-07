@@ -19,6 +19,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { addOns } from "@/lib/services";
+import { cn } from "@/lib/utils";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
