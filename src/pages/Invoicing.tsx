@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
