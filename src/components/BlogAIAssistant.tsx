@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Sparkles, Wand2, Lightbulb, Send, Loader2, Newspaper, Star, HelpCircle, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 interface BlogAIAssistantProps {
     isOpen: boolean;
@@ -28,34 +29,24 @@ export function BlogAIAssistant({ isOpen, onOpenChange, onApplySuggestion, curre
 
     const generateIdeas = async (type: 'title' | 'story' | 'hook' | 'new_post') => {
         setIsGenerating(true);
-        // Simulate AI intelligence
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        let result = "";
-        if (type === 'title') {
-            result = "Unveiling the Gloss: A Ceramic Coating Masterclass on the 2024 Porsche 911";
-        } else if (type === 'story' || type === 'new_post') {
-            const isOwnerAudience = Math.random() > 0.5;
-            if (isOwnerAudience) {
-                result = `Running a detailing business isn't just about the tools you use; it's about the systems that keep your shop profitable while maintaining laboratory-grade standards. Many shop owners focus solely on the 'elbow grease,' but the real magic happens in the chemical chemistry and workflow efficiency. 
+        try {
+            const contextPrompt = prompt || `Create a professional detailing blog ${type} for a post about "${currentTitle || 'Professional Detailing'}". Description: ${currentDescription || 'No details provided'}. Keep the tone authoritative, technical, and high-end.`;
+            
+            const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+                body: { prompt: contextPrompt }
+            });
 
-By implementing high-precision dilution ratios and standardized prep checklists, you can reduce waste by up to 30% while ensuring every vehicle leaves with a consistent, show-room finish. This level of professionalism doesn't just improve your margins—it builds a reputation that allows you to charge premium rates for your expertise.
-
-In today's competitive market, being 'just a detailer' isn't enough. You need to be a chemical consultant for your clients, explaining the technical risk factors of clear-coat depletion and the scientific benefits of ceramic longevity. This post explores the top 5 systems every successful shop must master to stay ahead of the curve.`;
-            } else {
-                result = `Most car owners see a wash as just soap and water, but to a professional, it's a delicate decontamination process designed to preserve your vehicle's value for years to come. When you see those mirror-like reflections on a freshly corrected hood, you're seeing the result of hours of specialized surfactants breaking down organic sap, industrial fallout, and traffic film that standard car washes simply can't touch.
-
-The difference lies in the 'Safe Wash' method—a multi-stage process that prioritizes paint safety. From PH-neutral snow foams that lift abrasive dirt to the final application of a hydrophobic sealant, every step is calculated to prevent micro-marring and swirl marks. Protecting your investment requires more than a weekend bucket; it requires an understanding of how environment and chemistry interact on your paint's surface.
-
-We believe that every client deserves to understand the 'why' behind our work. Whether it's the technical bonding of a ceramic coating or the deep-pore extraction of a leather treatment, our goal is to provide a service that makes your daily driver feel like a luxury asset. Follow along as we dive deep into the science of automotive preservation.`;
-            }
-        } else {
-            result = "🚨 TRANSFORM ALERT: You won't believe the 'Before' state of this luxury SUV. Click to see how we saved the paint! 🛡️";
+            if (error) throw error;
+            const result = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm sorry, I couldn't generate that content right now.";
+            
+            setSuggestion(result);
+            toast({ title: "AI Content Generated", description: "A live, AI-crafted story is ready." });
+        } catch (e: any) {
+            console.error("AI Generation failed:", e);
+            toast({ title: "Generation Failed", description: "Could not reach the AI strategist.", variant: "destructive" });
+        } finally {
+            setIsGenerating(false);
         }
-        
-        setSuggestion(result);
-        setIsGenerating(false);
-        toast({ title: "AI Content Generated", description: "A comprehensive, detailing-focused story is ready." });
     };
 
     const generateImage = async () => {
