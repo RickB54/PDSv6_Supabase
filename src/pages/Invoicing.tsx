@@ -647,7 +647,7 @@ const Invoicing = () => {
       y += 6;
     }
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(16, 185, 129); // Emerald
     doc.setFont("helvetica", "bold");
     doc.text("Help Us Grow!", 105, y, { align: "center" });
@@ -672,19 +672,19 @@ const Invoicing = () => {
       console.warn("QR Code failed to load for PDF", e);
     }
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text("Scan with your phone to leave a Google Review", 105, y, { align: "center" });
     doc.setTextColor(16, 185, 129);
     doc.setFont("helvetica", "bold");
-    doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 4, { align: "center" });
+    doc.text("https://g.page/r/CUaXyAfwdcv1EBM/review", 105, y + 5, { align: "center" });
     doc.setFont("helvetica", "normal");
 
     y += 12;
     doc.setTextColor(100);
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y, { align: "center" });
-    doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 5, { align: "center" });
+    doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 6, { align: "center" });
 
     if (download) doc.save(`Invoice_${invoice.invoiceNumber}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
