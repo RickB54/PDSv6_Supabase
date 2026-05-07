@@ -292,7 +292,7 @@ export default function FollowUpCenter() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-      <main className="container mx-auto px-4 pr-[70px] lg:pr-4 pt-48 pb-12">
+      <main className="container mx-auto px-4 pr-[70px] lg:pr-4 pt-32 pb-12">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div className="space-y-2">

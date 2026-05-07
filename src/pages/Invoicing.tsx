@@ -695,19 +695,8 @@ Precision. Protection. Perfection.`;
     }
   };
 
-  return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="flex items-center gap-2 mb-6 pt-6 px-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Invoicing & Payments</h1>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-zinc-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all rounded-full h-8 w-8"
-          onClick={() => setIsHelpModalOpen(true)}
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
-      </div>
+      <PageHeader title="Invoicing & Payments" showBack />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
         {/* Help Modal */}
