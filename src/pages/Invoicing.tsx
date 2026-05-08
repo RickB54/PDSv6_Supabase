@@ -116,6 +116,7 @@ const Invoicing = () => {
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editIsSent, setEditIsSent] = useState(false);
+  const [invoiceStyle, setInvoiceStyle] = useState<'original' | 'professional'>('original');
 
   const location = useLocation();
 
@@ -530,39 +531,75 @@ const Invoicing = () => {
     }
   };
 
-  const generatePDF = (invoice: Invoice, download = false) => {
+  const generatePDF = (invoice: Invoice, download = false, styleOverride?: 'original' | 'professional') => {
     const doc = new jsPDF();
+    const style = styleOverride || invoiceStyle;
     
-    // Add Logo - Top Center
-    try {
-      const logoWidth = 32;
-      const logoHeight = 32;
-      const xPos = (210 - logoWidth) / 2;
-      doc.addImage(logo, 'PNG', xPos, 5, logoWidth, logoHeight);
-    } catch (e) {
-      console.warn("Logo failed to load for PDF", e);
+    if (style === 'professional') {
+      // NEW PROFESSIONAL STYLE
+      try {
+        const logoWidth = 28;
+        const logoHeight = 28;
+        doc.addImage(logo, 'PNG', 20, 10, logoWidth, logoHeight);
+        
+        // Contact Info next to logo
+        doc.setFontSize(13);
+        doc.setTextColor(16, 185, 129); // Emerald color
+        doc.setFont("helvetica", "bold");
+        doc.text("Rick Berube", 52, 18);
+        
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.setFont("helvetica", "normal");
+        doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
+        doc.text("978-566-1008", 52, 29);
+        
+        // Company Name on the Right
+        doc.setFontSize(14);
+        doc.setTextColor(16, 185, 129);
+        doc.setFont("helvetica", "bold");
+        doc.text("Prime Auto Detail", 190, 18, { align: "right" });
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+        doc.text("INVOICE", 190, 24, { align: "right" });
+        doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 190, 29, { align: "right" });
+      } catch (e) {
+        console.warn("Professional header failed", e);
+      }
+    } else {
+      // ORIGINAL STYLE - Top Center
+      try {
+        const logoWidth = 32;
+        const logoHeight = 32;
+        const xPos = (210 - logoWidth) / 2;
+        doc.addImage(logo, 'PNG', xPos, 5, logoWidth, logoHeight);
+      } catch (e) {
+        console.warn("Logo failed to load for PDF", e);
+      }
+
+      doc.setFontSize(16);
+      doc.setTextColor(16, 185, 129); // Emerald color
+      doc.text("Prime Auto Detail", 105, 44, { align: "center" });
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.text("INVOICE", 105, 50, { align: "center" });
+      doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 56, { align: "center" });
     }
 
-    doc.setFontSize(16);
-    doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text("Prime Auto Detail", 105, 44, { align: "center" });
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.text("INVOICE", 105, 50, { align: "center" });
-    doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 56, { align: "center" });
-
+    const contentStartY = style === 'professional' ? 45 : 68;
     doc.setFontSize(10);
-    doc.text(`Service Date: ${invoice.date}`, 20, 68);
-    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, 74);
+    doc.text(`Service Date: ${invoice.date}`, 20, contentStartY);
+    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, contentStartY + 6);
     
-    // Move Customer and Vehicle to the right side to save vertical space
+    // Move Customer and Vehicle to the right side
     doc.setFont("helvetica", "bold");
-    doc.text(`Customer: ${invoice.customerName}`, 130, 68);
-    doc.text(`Vehicle: ${invoice.vehicle}`, 130, 74);
+    doc.text(`Customer: ${invoice.customerName}`, 130, contentStartY);
+    doc.text(`Vehicle: ${invoice.vehicle}`, 130, contentStartY + 6);
     doc.setFont("helvetica", "normal");
 
-    let y = 84;
+    let y = contentStartY + 16;
     doc.setFontSize(11);
     doc.text("Services Provided:", 20, y);
     y += 6;
@@ -1400,6 +1437,37 @@ Precision. Protection. Perfection.`;
                   <div className={`mt-1 font-bold ${((selectedInvoice.paymentStatus || 'unpaid') === 'paid' || selectedInvoice.total === 0) ? 'text-emerald-400' : 'text-red-400'}`}>
                     {(selectedInvoice.total === 0 ? 'paid' : (selectedInvoice.paymentStatus || 'unpaid')).toUpperCase()}
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/30 p-4 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">PDF Header Style</Label>
+                  <p className="text-[10px] text-zinc-600 italic">Toggle between the original center-logo or professional side-logo with contact info.</p>
+                </div>
+                <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 shadow-inner">
+                  <Button 
+                    variant={invoiceStyle === 'original' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setInvoiceStyle('original')}
+                    className={cn(
+                      "rounded-lg text-[10px] font-black tracking-tighter h-7 px-3 uppercase transition-all",
+                      invoiceStyle === 'original' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    Original
+                  </Button>
+                  <Button 
+                    variant={invoiceStyle === 'professional' ? 'default' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setInvoiceStyle('professional')}
+                    className={cn(
+                      "rounded-lg text-[10px] font-black tracking-tighter h-7 px-3 uppercase transition-all",
+                      invoiceStyle === 'professional' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    Professional
+                  </Button>
                 </div>
               </div>
 

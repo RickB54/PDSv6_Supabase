@@ -33,10 +33,6 @@
       "addon:ceramic-trim-coat:midsize": "75",
       "addon:ceramic-trim-coat:truck": "95",
       "addon:ceramic-trim-coat:luxury": "125",
-      "addon:clay-bar:compact": "80",
-      "addon:clay-bar:midsize": "90",
-      "addon:clay-bar:truck": "100",
-      "addon:clay-bar:luxury": "120",
       "addon:clay-bar-decon:compact": "65",
       "addon:clay-bar-decon:midsize": "80",
       "addon:clay-bar-decon:truck": "95",
@@ -109,19 +105,31 @@
       "addon:wheel-cleaning:midsize": "25",
       "addon:wheel-cleaning:truck": "30",
       "addon:wheel-cleaning:luxury": "40",
+      "addon:clay-bar:compact": "80",
+      "addon:clay-bar:midsize": "90",
+      "addon:clay-bar:truck": "100",
+      "addon:clay-bar:luxury": "120",
       "package:prime-elite-exterior:compact": "160",
+      "package:prime-elite-interior:compact": "390",
+      "package:prime-elite-full:compact": "495",
+      "package:prime-essential-exterior:compact": "90",
+      "addon:ceramic-protection-1yr:compact": "79",
+      "addon:ceramic-protection-1yr:midsize": "109",
+      "addon:ceramic-protection-1yr:truck": "129",
+      "addon:ceramic-protection-1yr:luxury": "149",
+      "addon:ceramic-coating-2yr:compact": "269",
+      "addon:ceramic-coating-2yr:midsize": "299",
+      "addon:ceramic-coating-2yr:truck": "349",
+      "addon:ceramic-coating-2yr:luxury": "449",
       "package:prime-elite-exterior:midsize": "180",
       "package:prime-elite-exterior:truck": "190",
       "package:prime-elite-exterior:luxury": "210",
-      "package:prime-elite-full:compact": "495",
       "package:prime-elite-full:midsize": "595",
       "package:prime-elite-full:truck": "695",
       "package:prime-elite-full:luxury": "850",
-      "package:prime-elite-interior:compact": "390",
       "package:prime-elite-interior:midsize": "475",
       "package:prime-elite-interior:truck": "495",
       "package:prime-elite-interior:luxury": "590",
-      "package:prime-essential-exterior:compact": "90",
       "package:prime-essential-exterior:midsize": "110",
       "package:prime-essential-exterior:truck": "120",
       "package:prime-essential-exterior:luxury": "130",
@@ -132,49 +140,11 @@
       "package:prime-essential-interior:compact": "180",
       "package:prime-essential-interior:midsize": "200",
       "package:prime-essential-interior:truck": "210",
-      "package:prime-essential-interior:luxury": "240",
-      "addon:ceramic-protection-1yr:compact": "79",
-      "addon:ceramic-protection-1yr:midsize": "109",
-      "addon:ceramic-protection-1yr:truck": "129",
-      "addon:ceramic-protection-1yr:luxury": "149",
-      "addon:ceramic-coating-2yr:compact": "269",
-      "addon:ceramic-coating-2yr:midsize": "299",
-      "addon:ceramic-coating-2yr:truck": "349",
-      "addon:ceramic-coating-2yr:luxury": "449"
+      "package:prime-essential-interior:luxury": "240"
     },
     "packageMeta": {
-      "basic-exterior": {
-        "id": "basic-exterior",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "express-wax": {
-        "id": "express-wax",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "full-detail": {
-        "id": "full-detail",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "full-exterior": {
-        "id": "full-exterior",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "interior-cleaning": {
-        "id": "interior-cleaning",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "premium-detail": {
-        "id": "premium-detail",
+      "prime-elite-exterior": {
+        "id": "prime-elite-exterior",
         "visible": false,
         "deleted": false,
         "imageDataUrl": ""
@@ -187,12 +157,6 @@
       },
       "prime-elite-interior": {
         "id": "prime-elite-interior",
-        "visible": false,
-        "deleted": false,
-        "imageDataUrl": ""
-      },
-      "prime-elite-exterior": {
-        "id": "prime-elite-exterior",
         "visible": false,
         "deleted": false,
         "imageDataUrl": ""
@@ -214,9 +178,43 @@
         "visible": true,
         "deleted": false,
         "imageDataUrl": ""
+      },
+      "basic-exterior": {
+        "id": "basic-exterior",
+        "visible": false
+      },
+      "express-wax": {
+        "id": "express-wax",
+        "visible": false
+      },
+      "full-exterior": {
+        "id": "full-exterior",
+        "visible": false
+      },
+      "interior-cleaning": {
+        "id": "interior-cleaning",
+        "visible": false
+      },
+      "full-detail": {
+        "id": "full-detail",
+        "visible": false
+      },
+      "premium-detail": {
+        "id": "premium-detail",
+        "visible": false
       }
     },
     "addOnMeta": {
+      "ceramic-protection-1yr": {
+        "id": "ceramic-protection-1yr",
+        "visible": true,
+        "deleted": false
+      },
+      "ceramic-coating-2yr": {
+        "id": "ceramic-coating-2yr",
+        "visible": true,
+        "deleted": false
+      },
       "ceramic-coating": {
         "id": "ceramic-coating",
         "visible": false,
@@ -232,28 +230,13 @@
         "visible": true,
         "deleted": false
       },
-      "clay-bar-decon": {
-        "id": "clay-bar-decon",
-        "visible": true,
-        "deleted": false
-      },
       "deep-interior": {
         "id": "deep-interior",
         "visible": false,
         "deleted": false
       },
-      "eco-package": {
-        "id": "eco-package",
-        "visible": false,
-        "deleted": false
-      },
       "engine-bay": {
         "id": "engine-bay",
-        "visible": true,
-        "deleted": false
-      },
-      "engine-detail": {
-        "id": "engine-detail",
         "visible": true,
         "deleted": false
       },
@@ -292,11 +275,6 @@
         "visible": false,
         "deleted": false
       },
-      "pet-hair-removal": {
-        "id": "pet-hair-removal",
-        "visible": true,
-        "deleted": false
-      },
       "pet-hair": {
         "id": "pet-hair",
         "visible": true,
@@ -312,30 +290,15 @@
         "visible": true,
         "deleted": false
       },
-      "wheel-rim-detailing": {
-        "id": "wheel-rim-detailing",
-        "visible": true,
-        "deleted": false
-      },
       "wheel-cleaning": {
         "id": "wheel-cleaning",
-        "visible": true,
-        "deleted": false
-      },
-      "ceramic-protection-1yr": {
-        "id": "ceramic-protection-1yr",
-        "visible": true,
-        "deleted": false
-      },
-      "ceramic-coating-2yr": {
-        "id": "ceramic-coating-2yr",
         "visible": true,
         "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1778173490567
+    "version": 1778269163817
   },
   "vehicleTypesLive": [
     {

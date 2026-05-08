@@ -114,6 +114,16 @@ const Settings = () => {
   const [nukeStatus, setNukeStatus] = useState("");
   const [nukeError, setNukeError] = useState<string | null>(null);
 
+  const [hideChatBot, setHideChatBot] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setHideChatBot(localStorage.getItem('hide_chat_bot') === 'true');
+    };
+    window.addEventListener('hide-chat-bot-updated', handleUpdate);
+    return () => window.removeEventListener('hide-chat-bot-updated', handleUpdate);
+  }, []);
+
   // Supabase diagnostics block state
   const [diag, setDiag] = useState<{ authMode: string; urlPresent: boolean; keyPresent: boolean; configured: boolean; uid: string | null; appUserReadable: boolean | null; lastChecked: string }>({
     authMode: String(import.meta.env.VITE_AUTH_MODE || 'unset'),
@@ -738,6 +748,33 @@ const Settings = () => {
               {isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
             </Button>
           </CardHeader>
+          <CardContent className="pt-2 border-t border-zinc-800/50 mt-2">
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-900/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <MessageCircle className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <Label htmlFor="hide-chat-bot" className="text-white font-semibold cursor-pointer">Hide AI Chat Bot</Label>
+                  <p className="text-[10px] text-zinc-500">Globally hide the floating chat assistant button</p>
+                </div>
+              </div>
+              <Switch 
+                id="hide-chat-bot"
+                checked={hideChatBot}
+                onCheckedChange={(val) => {
+                  setHideChatBot(val);
+                  localStorage.setItem('hide_chat_bot', String(val));
+                  window.dispatchEvent(new CustomEvent('hide-chat-bot-updated'));
+                  toast({
+                    title: val ? "Chat Bot Hidden" : "Chat Bot Restored",
+                    description: val ? "The AI assistant button has been removed from view." : "The AI assistant button is now visible.",
+                  });
+                }}
+                className="data-[state=checked]:bg-blue-600"
+              />
+            </div>
+          </CardContent>
         </Card>
 
         {/* Supabase Diagnostics */}

@@ -216,36 +216,46 @@ function Lightbox({
 }
 
 // ─── media tile ───────────────────────────────────────────────────────────────
-function MediaTile({ item, onClick }: { item: MediaItem; onClick: () => void }) {
+function MediaTile({ item, onClick, small = false }: { item: MediaItem; onClick: () => void; small?: boolean }) {
     return (
         <div
             onClick={onClick}
-            className="group relative aspect-square rounded-2xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-blue-500/60 hover:shadow-xl hover:shadow-blue-900/20 transition-all cursor-pointer"
+            className={`group relative aspect-square rounded-xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-blue-500/60 hover:shadow-xl hover:shadow-blue-900/20 transition-all cursor-pointer ${small ? 'h-20 w-20' : ''}`}
         >
             {item.type === "image" ? (
                 <img src={item.url} alt={item.vehicleLabel} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
-                <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center gap-2">
-                    <Video className="h-8 w-8 text-pink-400" />
-                    <p className="text-[9px] text-zinc-500 font-black uppercase px-2 text-center truncate max-w-full">{item.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</p>
+                <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center gap-1">
+                    <div className="relative">
+                        <Video className="h-6 w-6 text-pink-400" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-3 h-3 bg-white rounded-full flex items-center justify-center">
+                                <div className="w-0 h-0 border-t-[2px] border-t-transparent border-l-[4px] border-l-black border-b-[2px] border-b-transparent ml-0.5" />
+                            </div>
+                        </div>
+                    </div>
+                    <p className="text-[7px] text-zinc-500 font-black uppercase px-1 text-center truncate max-w-full">
+                        {item.url.includes('youtube.com') || item.url.includes('youtu.be') ? 'YouTube' : 
+                         item.url.includes('vimeo.com') ? 'Vimeo' : 'Video'}
+                    </p>
                 </div>
             )}
 
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                <p className="text-[9px] font-black uppercase text-white truncate">{item.vehicleLabel}</p>
+            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
+                <p className="text-[8px] font-black uppercase text-white truncate">{item.vehicleLabel}</p>
             </div>
 
             {/* Category badge */}
-            <div className="absolute top-2 left-2 z-10">
-                <span className={`${categoryColors[item.category]} text-white text-[7px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded`}>
+            <div className="absolute top-1.5 left-1.5 z-10">
+                <span className={`${categoryColors[item.category]} text-white text-[6px] font-black uppercase tracking-widest px-1 py-0.5 rounded-sm`}>
                     {item.category}
                 </span>
             </div>
 
             {/* Zoom icon */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <Maximize2 className="h-3 w-3 text-white drop-shadow-lg" />
+            <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <Maximize2 className="h-2.5 w-2.5 text-white drop-shadow-lg" />
             </div>
         </div>
     );
@@ -254,74 +264,107 @@ function MediaTile({ item, onClick }: { item: MediaItem; onClick: () => void }) 
 // ─── customer card ────────────────────────────────────────────────────────────
 function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; onOpen: (items: MediaItem[], idx: number) => void; onAddMedia: (customer: Customer) => void }) {
     const [expanded, setExpanded] = useState(false);
+    const [videoUrl, setVideoUrl] = useState("");
+    const [showVideoInput, setShowVideoInput] = useState(false);
+    const { toast } = useToast();
+
     const allMedia = useMemo(() => buildMediaForCustomer(customer), [customer]);
 
     if (allMedia.length === 0) return null;
 
-    const preview = allMedia.slice(0, 6);
+    const vehicleTypes = (customer.vehicles || []).map(v => v.type).filter(Boolean);
+    const vehicleLabel = vehicleTypes.length > 0 ? Array.from(new Set(vehicleTypes)).join(", ") : "No Vehicles";
+
+    const handleAddVideo = async () => {
+        if (!videoUrl) return;
+        try {
+            const updated = { ...customer };
+            if (!updated.vehicles || updated.vehicles.length === 0) {
+                // Add to customer level if no vehicles
+                (updated as any).videoUrl = videoUrl;
+            } else {
+                // Add to first vehicle as default
+                const v = { ...updated.vehicles[0] };
+                v.videoUrls = [...(v.videoUrls || []), videoUrl];
+                updated.vehicles = [v, ...updated.vehicles.slice(1)];
+            }
+            await upsertSupabaseCustomer(updated);
+            toast({ title: "Video Added", description: "The video link has been saved to the gallery." });
+            setVideoUrl("");
+            setShowVideoInput(false);
+            window.location.reload(); // Refresh to show new media
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to save video link.", variant: "destructive" });
+        }
+    };
 
     return (
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
             {/* Header */}
-            <button
-                onClick={() => setExpanded(p => !p)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-zinc-800/30 transition-colors"
-            >
-                <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                        <User className="h-4 w-4 text-blue-400" />
+            <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                        <User className="h-3.5 w-3.5 text-blue-400" />
                     </div>
-                    <div className="text-left">
-                        <p className="font-bold text-white text-sm">{customer.name}</p>
-                        <p className="text-[10px] text-zinc-500">
-                            {allMedia.length} media item{allMedia.length !== 1 ? "s" : ""} ·{" "}
-                            {(customer.vehicles || []).length} vehicle{(customer.vehicles || []).length !== 1 ? "s" : ""}
-                        </p>
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <p className="font-bold text-white text-sm truncate">{customer.name}</p>
+                        <span className="text-zinc-600 font-bold">|</span>
+                        <p className="text-[10px] text-zinc-500 font-medium truncate uppercase tracking-wider">{vehicleLabel}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 text-[9px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
-                      onClick={(e) => { e.stopPropagation(); onAddMedia(customer); }}
-                    >
-                        <Plus className="w-3 h-3" /> ADD MEDIA
-                    </Button>
-                    <div className="flex items-center gap-2 mr-2">
-                        {allMedia.filter(m => m.type === "video").length > 0 && (
-                            <Badge className="bg-pink-600/20 text-pink-400 border-pink-600/30 text-[9px]">
-                                {allMedia.filter(m => m.type === "video").length} video{allMedia.filter(m => m.type === "video").length !== 1 ? "s" : ""}
-                            </Badge>
-                        )}
-                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px]">
-                            {allMedia.filter(m => m.type === "image").length} photo{allMedia.filter(m => m.type === "image").length !== 1 ? "s" : ""}
-                        </Badge>
-                    </div>
-                    {expanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
-                </div>
-            </button>
 
-            {/* Preview strip (always visible) */}
-            {!expanded && (
-                <div className="px-5 pb-4 grid grid-cols-6 gap-2">
-                    {preview.map((item, i) => (
-                        <MediaTile key={i} item={item} onClick={() => onOpen(allMedia, i)} />
-                    ))}
-                    {allMedia.length > 6 && (
-                        <button
-                            onClick={() => setExpanded(true)}
-                            className="aspect-square rounded-2xl bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center text-zinc-400 hover:bg-zinc-700 transition-colors text-[10px] font-black uppercase"
+                <div className="flex items-center gap-3">
+                    {/* Action Buttons */}
+                    <div className="hidden sm:flex items-center gap-2">
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-7 text-[9px] font-black text-pink-400 hover:bg-pink-500/10 gap-1.5"
+                            onClick={(e) => { e.stopPropagation(); setShowVideoInput(p => !p); }}
                         >
-                            +{allMedia.length - 6}
-                        </button>
-                    )}
+                            <Video className="w-3 h-3" /> {showVideoInput ? 'CANCEL' : 'ADD VIDEO LINK'}
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-[9px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                            onClick={(e) => { e.stopPropagation(); onAddMedia(customer); }}
+                        >
+                            <Plus className="w-3 h-3" /> ADD PHOTOS
+                        </Button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[8px] px-1.5 py-0">
+                            {allMedia.length}
+                        </Badge>
+                        {expanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                    </div>
+                </div>
+            </div>
+
+            {/* Video Link Input (Collapseable) */}
+            {showVideoInput && (
+                <div className="px-4 pb-3 flex gap-2 animate-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
+                    <Input 
+                        placeholder="Paste Video URL (YouTube, Vimeo, etc.)"
+                        className="h-8 bg-zinc-950 border-zinc-800 text-xs"
+                        value={videoUrl}
+                        onChange={e => setVideoUrl(e.target.value)}
+                    />
+                    <Button 
+                        size="sm" 
+                        className="h-8 bg-pink-600 hover:bg-pink-500 text-white text-[10px] font-bold"
+                        onClick={handleAddVideo}
+                    >
+                        SAVE
+                    </Button>
                 </div>
             )}
 
             {/* Full grid (expanded) */}
             {expanded && (
-                <div className="px-5 pb-5 space-y-4">
+                <div className="px-4 pb-4 space-y-4 pt-2 border-t border-zinc-800/50">
                     {/* Group by vehicle */}
                     {(() => {
                         const groups: { label: string; items: MediaItem[] }[] = [];
@@ -332,22 +375,23 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
 
                         // Per vehicle
                         for (const v of customer.vehicles || []) {
-                            const vehicleLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
-                            const vItems = allMedia.filter(m => m.vehicleLabel === vehicleLabel);
-                            if (vItems.length > 0) groups.push({ label: vehicleLabel, items: vItems });
+                            const vLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
+                            const vItems = allMedia.filter(m => m.vehicleLabel === vLabel);
+                            if (vItems.length > 0) groups.push({ label: vLabel, items: vItems });
                         }
 
                         return groups.map((group, gi) => (
                             <div key={gi} className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <Car className="h-3 w-3 text-zinc-500" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{group.label}</p>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{group.label}</p>
                                 </div>
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                                     {group.items.map((item, i) => (
                                         <MediaTile
                                             key={i}
                                             item={item}
+                                            small
                                             onClick={() => onOpen(allMedia, allMedia.indexOf(item))}
                                         />
                                     ))}
