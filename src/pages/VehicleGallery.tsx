@@ -341,9 +341,9 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                     </div>
                 </div>
 
-                {/* Line 2: Vehicle Description (Forced Wrap) */}
-                <div className="pl-11 mt-0.5 max-w-full overflow-hidden">
-                    <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium uppercase tracking-wider line-clamp-2 leading-tight whitespace-normal break-words">
+                {/* Line 2: Vehicle Description (Full Wrap) */}
+                <div className="pl-11 mt-0.5 w-full overflow-hidden">
+                    <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium uppercase tracking-wider whitespace-normal break-words leading-tight">
                         {vehicleLabel}
                     </p>
                 </div>
