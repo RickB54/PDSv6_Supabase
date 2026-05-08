@@ -303,17 +303,17 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
             {/* Header (Two-Line Layout) */}
             <div className="w-full p-3 sm:p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
                 {/* Line 1: Name & Actions */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 overflow-hidden">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
                             <User className="h-3.5 w-3.5 text-blue-400" />
                         </div>
-                        <p className="font-bold text-white text-sm sm:text-base truncate">{customer.name}</p>
+                        <p className="font-bold text-white text-sm sm:text-base truncate flex-1 min-w-0">{customer.name}</p>
                     </div>
                     
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <div className="flex items-center gap-1 shrink-0">
                         {/* Action Buttons (Restored to top) */}
-                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
@@ -334,16 +334,16 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                             </Button>
                         </div>
 
-                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-1.5 py-0.5 min-w-[1.5rem] justify-center">
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-1.5 py-0.5 min-w-[1.2rem] justify-center">
                             {allMedia.length}
                         </Badge>
                         {expanded ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
                     </div>
                 </div>
 
-                {/* Line 2: Vehicle Description (Wraps to 2 lines) */}
-                <div className="pl-11 mt-0.5">
-                    <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium uppercase tracking-wider line-clamp-2 leading-relaxed">
+                {/* Line 2: Vehicle Description (Forced Wrap) */}
+                <div className="pl-11 mt-0.5 max-w-full overflow-hidden">
+                    <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium uppercase tracking-wider line-clamp-2 leading-tight whitespace-normal break-words">
                         {vehicleLabel}
                     </p>
                 </div>
