@@ -300,10 +300,10 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
 
     return (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
-            {/* Header (Refactored for Mobile) */}
+            {/* Header (Two-Line Layout) */}
             <div className="w-full p-3 sm:p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
-                {/* Top Row: Name & Media Info */}
-                <div className="flex items-center justify-between mb-2">
+                {/* Line 1: Name & Actions */}
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
                             <User className="h-3.5 w-3.5 text-blue-400" />
@@ -311,39 +311,41 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                         <p className="font-bold text-white text-sm sm:text-base truncate">{customer.name}</p>
                     </div>
                     
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-2 py-0.5 min-w-[2rem] justify-center">
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {/* Action Buttons (Restored to top) */}
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-pink-400 hover:bg-pink-500/10"
+                                onClick={() => setShowVideoInput(p => !p)}
+                                title="Add Video"
+                            >
+                                <Video className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10"
+                                onClick={() => onAddMedia(customer)}
+                                title="Add Photos"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-1.5 py-0.5 min-w-[1.5rem] justify-center">
                             {allMedia.length}
                         </Badge>
                         {expanded ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
                     </div>
                 </div>
 
-                {/* Second Row: Vehicles (Indented) */}
-                <div className="pl-11 mb-3">
-                    <p className="text-[10px] sm:text-xs text-zinc-500 font-medium uppercase tracking-wider line-clamp-1">
+                {/* Line 2: Vehicle Description (Wraps to 2 lines) */}
+                <div className="pl-11 mt-0.5">
+                    <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium uppercase tracking-wider line-clamp-2 leading-relaxed">
                         {vehicleLabel}
                     </p>
-                </div>
-
-                {/* Third Row: Action Buttons (Indented) */}
-                <div className="pl-11 flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 px-3 text-[10px] font-bold border-pink-600/30 text-pink-400 hover:bg-pink-500/10 gap-2"
-                        onClick={() => setShowVideoInput(p => !p)}
-                    >
-                        <Video className="w-3.5 h-3.5" /> {showVideoInput ? 'CANCEL' : 'ADD VIDEO'}
-                    </Button>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-8 px-3 text-[10px] font-bold border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-2"
-                        onClick={() => onAddMedia(customer)}
-                    >
-                        <Plus className="w-3.5 h-3.5" /> ADD PHOTOS
-                    </Button>
                 </div>
             </div>
 
