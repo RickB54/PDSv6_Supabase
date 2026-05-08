@@ -299,16 +299,17 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
     };
 
     return (
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
+    return (
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg w-full max-w-full">
             {/* Header (Two-Line Layout) */}
             <div className="w-full p-3 sm:p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
                 {/* Line 1: Name & Actions */}
-                <div className="flex items-center justify-between gap-2 overflow-hidden">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                            <User className="h-3.5 w-3.5 text-blue-400" />
+                <div className="flex items-center justify-between gap-1 overflow-hidden w-full">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                        <div className="h-7 w-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                            <User className="h-3 w-3 text-blue-400" />
                         </div>
-                        <p className="font-bold text-white text-sm sm:text-base truncate flex-1 min-w-0">{customer.name}</p>
+                        <p className="font-bold text-white text-xs sm:text-base truncate min-w-0">{customer.name}</p>
                     </div>
                     
                     <div className="flex items-center gap-1 shrink-0">
@@ -317,27 +318,27 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-8 w-8 text-pink-400 hover:bg-pink-500/10"
+                                className="h-7 w-7 text-pink-400 hover:bg-pink-500/10"
                                 onClick={() => setShowVideoInput(p => !p)}
                                 title="Add Video"
                             >
-                                <Video className="w-4 h-4" />
+                                <Video className="w-3.5 h-3.5" />
                             </Button>
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10"
+                                className="h-7 w-7 text-emerald-400 hover:bg-emerald-500/10"
                                 onClick={() => onAddMedia(customer)}
                                 title="Add Photos"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
                             </Button>
                         </div>
 
-                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-1.5 py-0.5 min-w-[1.2rem] justify-center">
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[8px] px-1 py-0.5 min-w-[1.2rem] justify-center">
                             {allMedia.length}
                         </Badge>
-                        {expanded ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
+                        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-zinc-600" /> : <ChevronDown className="h-3.5 w-3.5 text-zinc-600" />}
                     </div>
                 </div>
 
@@ -392,7 +393,7 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                                     <Car className="h-3 w-3 text-zinc-500" />
                                     <p className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{group.label}</p>
                                 </div>
-                                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                                     {group.items.map((item, i) => (
                                         <MediaTile
                                             key={i}
@@ -549,7 +550,7 @@ export default function VehicleGallery() {
     return (
         <div className="min-h-screen bg-black text-white">
             <Navbar />
-            <main className="container mx-auto px-4 pt-4 sm:pt-10 pb-16 overflow-x-hidden">
+            <main className="container mx-auto px-2 sm:px-4 pt-4 sm:pt-10 pb-16 overflow-x-hidden w-full max-w-[100vw]">
                 {/* Title */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 sm:mb-10">
                     <div>
