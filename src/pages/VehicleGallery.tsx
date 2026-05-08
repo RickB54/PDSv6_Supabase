@@ -302,43 +302,43 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
             {/* Header */}
             <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                        <User className="h-3.5 w-3.5 text-blue-400" />
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="h-7 w-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                        <User className="h-3 w-3 text-blue-400" />
                     </div>
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <p className="font-bold text-white text-sm truncate">{customer.name}</p>
-                        <span className="text-zinc-600 font-bold">|</span>
-                        <p className="text-[10px] text-zinc-500 font-medium truncate uppercase tracking-wider">{vehicleLabel}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 overflow-hidden">
+                        <p className="font-bold text-white text-xs sm:text-sm truncate">{customer.name}</p>
+                        <span className="hidden sm:inline text-zinc-600 font-bold">|</span>
+                        <p className="text-[9px] sm:text-[10px] text-zinc-500 font-medium truncate uppercase tracking-wider">{vehicleLabel}</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     {/* Action Buttons */}
-                    <div className="hidden sm:flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 text-[9px] font-black text-pink-400 hover:bg-pink-500/10 gap-1.5"
+                            className="h-7 px-2 text-[9px] font-black text-pink-400 hover:bg-pink-500/10 gap-1"
                             onClick={(e) => { e.stopPropagation(); setShowVideoInput(p => !p); }}
                         >
-                            <Video className="w-3 h-3" /> {showVideoInput ? 'CANCEL' : 'ADD VIDEO LINK'}
+                            <Video className="w-3 h-3" /> <span className="hidden xs:inline">{showVideoInput ? 'CANCEL' : 'VIDEO'}</span>
                         </Button>
                         <Button 
                             variant="outline" 
                             size="sm" 
-                            className="h-7 text-[9px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+                            className="h-7 px-2 text-[9px] font-black border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-1"
                             onClick={(e) => { e.stopPropagation(); onAddMedia(customer); }}
                         >
-                            <Plus className="w-3 h-3" /> ADD PHOTOS
+                            <Plus className="w-3 h-3" /> <span className="hidden xs:inline">PHOTOS</span>
                         </Button>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[8px] px-1.5 py-0">
+                    <div className="flex items-center gap-1">
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[8px] px-1 py-0 min-w-[1.5rem] justify-center">
                             {allMedia.length}
                         </Badge>
-                        {expanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
+                        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-zinc-500" /> : <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />}
                     </div>
                 </div>
             </div>
@@ -543,14 +543,14 @@ export default function VehicleGallery() {
     return (
         <div className="min-h-screen bg-black text-white">
             <Navbar />
-            <main className="container mx-auto px-4 pt-24 pb-16">
+            <main className="container mx-auto px-4 pt-16 sm:pt-24 pb-16">
                 {/* Title */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-10">
                     <div>
-                        <h1 className="text-3xl font-black uppercase tracking-tighter">
+                        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
                             Media <span className="text-blue-500">Library</span>
                         </h1>
-                        <p className="text-zinc-500 text-sm mt-1">All customer vehicle photos and videos in one place.</p>
+                        <p className="text-zinc-500 text-xs sm:text-sm mt-0.5">Vehicle photos and videos.</p>
                     </div>
 
                     {/* Search */}
@@ -567,7 +567,7 @@ export default function VehicleGallery() {
 
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
-                    <TabsList className="bg-zinc-900 border border-zinc-800 p-1 rounded-xl mb-8">
+                    <TabsList className="bg-zinc-900 border border-zinc-800 p-1 rounded-xl mb-4 sm:mb-8">
                         <TabsTrigger
                             value="customers"
                             className="px-6 data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg uppercase font-bold tracking-tighter text-xs h-9"
