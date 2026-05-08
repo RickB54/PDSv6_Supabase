@@ -408,6 +408,7 @@ const ServiceChecklist = () => {
   const [totalElapsedMs, setTotalElapsedMs] = useState(0);
   const [lastActionTime, setLastActionTime] = useState<number>(Date.now());
   const [itemDurations, setItemDurations] = useState<Record<string, number>>({}); // stepId -> ms
+  const [sectionDurations, setSectionDurations] = useState<Record<string, number>>({}); // category -> minutes
   const [liveNow, setLiveNow] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
 
@@ -1143,6 +1144,7 @@ const ServiceChecklist = () => {
         if (state.totalElapsedMs) setTotalElapsedMs(state.totalElapsedMs);
         if (state.elapsedTime) setElapsedTime(state.elapsedTime);
         if (state.itemDurations) setItemDurations(state.itemDurations);
+        if (state.sectionDurations) setSectionDurations(state.sectionDurations);
         if (state.chemRows) setChemRows(state.chemRows);
         if (state.matRows) setMatRows(state.matRows);
         if (state.toolRows) setToolRows(state.toolRows);
@@ -1230,6 +1232,7 @@ const ServiceChecklist = () => {
       totalElapsedMs,
       elapsedTime,
       itemDurations,
+      sectionDurations,
       chemRows,
       matRows,
       toolRows,
@@ -1266,7 +1269,7 @@ const ServiceChecklist = () => {
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
     discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
-    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent
+    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent, sectionDurations
   ]);
 
   // 4. Force Save on Page Exit
@@ -1285,6 +1288,7 @@ const ServiceChecklist = () => {
         discountType,
         jobStartTime,
         itemDurations,
+        sectionDurations,
         chemRows,
         matRows,
         toolRows,
@@ -1311,7 +1315,7 @@ const ServiceChecklist = () => {
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
     discountValue, discountType, jobStartTime, itemDurations,
-    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd
+    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, sectionDurations
   ]);
 
   // --- PERSISTENCE LOGIC END ---
@@ -2365,6 +2369,7 @@ const ServiceChecklist = () => {
                       setTotalElapsedMs(state.totalElapsedMs || 0);
                       setElapsedTime(state.elapsedTime || "00:00:00");
                       setItemDurations(state.itemDurations || {});
+                      setSectionDurations(state.sectionDurations || {});
                       setChemRows(state.chemRows || []);
                       setMatRows(state.matRows || []);
                       setToolRows(state.toolRows || []);
@@ -2605,6 +2610,23 @@ const ServiceChecklist = () => {
                                 )}
                               </span>
                             )}
+                            <div className="flex items-center gap-2 ml-auto mr-4" onClick={(e) => e.stopPropagation()}>
+                              <div className="relative">
+                                <Input 
+                                  type="text"
+                                  value={sectionDurations[section] !== undefined ? sectionDurations[section] : Math.floor(steps.reduce((acc, s) => acc + getAvgTime(s.name), 0) / 60000)}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    setSectionDurations(prev => ({ ...prev, [section]: isNaN(val) ? 0 : val }));
+                                  }}
+                                  className="h-7 w-12 bg-zinc-900 border-zinc-700 text-[10px] text-center font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 pr-1 pl-1"
+                                />
+                                <div className="absolute -top-3 left-0 right-0 text-center">
+                                  <span className="text-[7px] text-zinc-500 uppercase font-black tracking-tighter">Time</span>
+                                </div>
+                              </div>
+                              <span className="text-[8px] text-zinc-500 uppercase font-black">mins</span>
+                            </div>
                           </div>
                           {!isLocked && (collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />)}
                         </button>
