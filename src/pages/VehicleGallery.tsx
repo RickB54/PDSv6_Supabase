@@ -300,60 +300,65 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
 
     return (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
-            {/* Header */}
-            <div className="w-full flex items-center justify-between px-4 py-3 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
-                <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
-                    <div className="h-7 w-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
-                        <User className="h-3 w-3 text-blue-400" />
+            {/* Header (Refactored for Mobile) */}
+            <div className="w-full p-3 sm:p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
+                {/* Top Row: Name & Media Info */}
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-8 w-8 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+                            <User className="h-3.5 w-3.5 text-blue-400" />
+                        </div>
+                        <p className="font-bold text-white text-sm sm:text-base truncate">{customer.name}</p>
                     </div>
-                    <div className="flex flex-col gap-0 overflow-hidden">
-                        <p className="font-bold text-white text-[11px] sm:text-sm truncate leading-tight">{customer.name}</p>
-                        <p className="text-[8px] sm:text-[10px] text-zinc-500 font-medium truncate uppercase tracking-wider">{vehicleLabel}</p>
+                    
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[9px] px-2 py-0.5 min-w-[2rem] justify-center">
+                            {allMedia.length}
+                        </Badge>
+                        {expanded ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-1">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-pink-400 hover:bg-pink-500/10"
-                            onClick={(e) => { e.stopPropagation(); setShowVideoInput(p => !p); }}
-                            title="Add Video Link"
-                        >
-                            <Video className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-emerald-400 hover:bg-emerald-500/10"
-                            onClick={(e) => { e.stopPropagation(); onAddMedia(customer); }}
-                            title="Add Photos"
-                        >
-                            <Plus className="w-4 h-4" />
-                        </Button>
-                    </div>
+                {/* Second Row: Vehicles (Indented) */}
+                <div className="pl-11 mb-3">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-medium uppercase tracking-wider line-clamp-1">
+                        {vehicleLabel}
+                    </p>
+                </div>
 
-                    <div className="flex items-center gap-1 pl-1 border-l border-zinc-800">
-                        <span className="text-[10px] font-bold text-blue-400">{allMedia.length}</span>
-                        {expanded ? <ChevronUp className="h-4 w-4 text-zinc-600" /> : <ChevronDown className="h-4 w-4 text-zinc-600" />}
-                    </div>
+                {/* Third Row: Action Buttons (Indented) */}
+                <div className="pl-11 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 px-3 text-[10px] font-bold border-pink-600/30 text-pink-400 hover:bg-pink-500/10 gap-2"
+                        onClick={() => setShowVideoInput(p => !p)}
+                    >
+                        <Video className="w-3.5 h-3.5" /> {showVideoInput ? 'CANCEL' : 'ADD VIDEO'}
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 px-3 text-[10px] font-bold border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 gap-2"
+                        onClick={() => onAddMedia(customer)}
+                    >
+                        <Plus className="w-3.5 h-3.5" /> ADD PHOTOS
+                    </Button>
                 </div>
             </div>
 
             {/* Video Link Input (Collapseable) */}
             {showVideoInput && (
-                <div className="px-4 pb-3 flex gap-2 animate-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
+                <div className="px-4 pb-4 pl-11 flex gap-2 animate-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
                     <Input 
-                        placeholder="Paste Video URL (YouTube, Vimeo, etc.)"
-                        className="h-8 bg-zinc-950 border-zinc-800 text-xs"
+                        placeholder="Paste Video URL"
+                        className="h-9 bg-zinc-950 border-zinc-800 text-xs"
                         value={videoUrl}
                         onChange={e => setVideoUrl(e.target.value)}
                     />
                     <Button 
                         size="sm" 
-                        className="h-8 bg-pink-600 hover:bg-pink-500 text-white text-[10px] font-bold"
+                        className="h-9 bg-pink-600 hover:bg-pink-500 text-white text-[10px] font-bold"
                         onClick={handleAddVideo}
                     >
                         SAVE
