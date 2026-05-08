@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -413,6 +414,8 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
 
 // ─── main page ────────────────────────────────────────────────────────────────
 export default function VehicleGallery() {
+    const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
     const user = getCurrentUser();
     const { isDemoMode } = useDemoMode();

@@ -828,7 +828,7 @@ Precision. Protection. Perfection.`;
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Invoicing & Payments" showBack />
+      <PageHeader title="Invoicing & Payments" />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
         {/* Help Modal */}
@@ -1779,7 +1779,6 @@ Precision. Protection. Perfection.`;
               onClick={async () => {
                 if (editingCustomer) {
                   try {
-                    const { upsertSupabaseCustomer } = await import("@/lib/supabase");
                     await upsertSupabaseCustomer(editingCustomer);
                     toast({ title: "Success", description: "Customer profile updated." });
                     loadData();
