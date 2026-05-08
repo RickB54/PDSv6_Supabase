@@ -299,7 +299,6 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
     };
 
     return (
-    return (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-lg w-full max-w-full">
             {/* Header (Two-Line Layout) */}
             <div className="w-full p-3 sm:p-4 hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => setExpanded(p => !p)}>
