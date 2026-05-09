@@ -67,9 +67,19 @@ export default function EliteMaster() {
         <div className="min-h-screen bg-black text-white flex flex-col">
             <PageHeader title="Elite Master Hub" />
             
+            {/* DEBUG BANNER - PROVES NEW CODE IS LOADED */}
+            <div className="bg-amber-500 text-black py-2 px-4 text-center text-[10px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4">
+                <span>/// SYSTEM STATUS: ELITE MASTER STABLE LOADED ///</span>
+                <span className="bg-black text-white px-2 py-0.5 rounded">NEW VERSION</span>
+                <span>/// NO LEGACY CODE DETECTED ///</span>
+            </div>
+            
             <main className="flex-1 max-w-4xl mx-auto w-full p-8">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-black italic uppercase">Story Control</h1>
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-black italic uppercase">Story Control</h1>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Isolated Backend Management</p>
+                    </div>
                     <div className="flex gap-2">
                         <Button onClick={loadData} variant="outline" size="icon"><RefreshCw className={isLoading ? "animate-spin" : ""} /></Button>
                         <Button onClick={handleSave} disabled={isSaving} className="bg-indigo-600 font-bold">

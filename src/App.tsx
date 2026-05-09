@@ -396,6 +396,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/sticker-maker" element={<ProtectedRoute allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/demo/sticker-maker" element={<ProtectedRoute allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
           <Route path="/elite-master" element={<ProtectedRoute allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
+          <Route path="/blog-reorder" element={<Navigate to="/elite-master" replace />} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
           <Route path="/job-history" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
