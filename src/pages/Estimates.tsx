@@ -81,6 +81,34 @@ const Estimates = () => {
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
     const formatPart = (val: any) => (val && val !== 'null' && val !== 'undefined') ? val : '';
+    const formatDisplayDate = (dStr: string) => {
+        if (!dStr) return '';
+        if (dStr.includes('-')) {
+            const parts = dStr.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}/${parts[0]}`;
+            }
+        }
+        return dStr;
+    };
+    
+    const getValidUntilDate = (dStr: string) => {
+        if (!dStr) return '';
+        let d = new Date();
+        if (dStr.includes('-')) {
+            const parts = dStr.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            } else {
+                d = new Date(dStr);
+            }
+        } else {
+            d = new Date(dStr);
+        }
+        d.setDate(d.getDate() + 30);
+        return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+    };
+
     const getLocalDateString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -320,8 +348,9 @@ const Estimates = () => {
 
         const contentStartY = 45;
         doc.setFontSize(10);
-        doc.text(`Estimate Date: ${estimate.estimateDate || estimate.date}`, 20, contentStartY);
-        doc.text(`Quote Valid Until: ${new Date(new Date(estimate.estimateDate || estimate.date).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}`, 20, contentStartY + 6);
+        const targetDateStr = estimate.estimateDate || estimate.date;
+        doc.text(`Estimate Date: ${formatDisplayDate(targetDateStr)}`, 20, contentStartY);
+        doc.text(`Quote Valid Until: ${getValidUntilDate(targetDateStr)}`, 20, contentStartY + 6);
         
         // Move Customer and Vehicle to the right side
         doc.setFont("helvetica", "bold");
@@ -755,7 +784,7 @@ const Estimates = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-white text-lg">#{est.estimateNumber}</span>
-                                                <span className="text-zinc-500 text-sm">• {est.date}</span>
+                                                <span className="text-zinc-500 text-sm">• {formatDisplayDate(est.estimateDate || est.date)}</span>
                                                 {(est as any).created_at && (
                                                     <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 font-mono">
                                                         STAMP: {new Date((est as any).created_at).toLocaleString()}
