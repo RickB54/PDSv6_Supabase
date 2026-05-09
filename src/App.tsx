@@ -86,7 +86,7 @@ import UserSettings from "./pages/UserSettings";
 import SectionLanding from "./pages/SectionLanding";
 import LearningLibrary from "./pages/LearningLibrary";
 import PrimeBlog from "./pages/PrimeBlog";
-import VisualBlogArchitect from "./pages/VisualBlogArchitect";
+import EliteMaster from "./pages/EliteMaster";
 import ChemicalsLibrary from "./pages/ChemicalsLibrary";
 import ChemicalTraining from "./pages/ChemicalTraining";
 import AdminChemicals from "@/pages/AdminChemicals";
@@ -395,7 +395,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/follow-up-center" element={<ProtectedRoute allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
           <Route path="/sticker-maker" element={<ProtectedRoute allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/demo/sticker-maker" element={<ProtectedRoute allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
-          <Route path="/blog-reorder" element={<ProtectedRoute allowedRoles={['admin']}><VisualBlogArchitect /></ProtectedRoute>} />
+          <Route path="/elite-master" element={<ProtectedRoute allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="/active-jobs" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
           <Route path="/job-history" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
