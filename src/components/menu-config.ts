@@ -179,7 +179,7 @@ export const getMenuGroups = (counts: {
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
                 { title: "Business Card Stickers", url: `/sticker-maker`, role: "admin", key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper, helpTopicId: 'blog' },
-                { title: "Blog Layout Architect", url: "/blog-reorder", role: "admin", key: "blog-reorder", icon: ListOrdered, helpTopicId: 'blog-reorder' },
+                { title: "Elite Story Master", url: "/blog-reorder", role: "admin", key: "blog-reorder", icon: ListOrdered, helpTopicId: 'blog-reorder' },
             ]
         },
         {

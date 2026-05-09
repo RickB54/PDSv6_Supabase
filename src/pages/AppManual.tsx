@@ -294,11 +294,11 @@ export default function AppManual() {
                         </h2>
                         <Card className="bg-zinc-900/50 border-zinc-800 p-6 print:border print:bg-transparent print:shadow-none">
                             <p className="mb-4 text-zinc-300 print:text-black">
-                                The <strong>AI Content Strategist</strong> is a built-in writing assistant inside the Prime Blog. It helps you generate viral titles, engaging story drafts, and social media hooks for any detailing job — directly from the Blog Layout Architect.
+                                The <strong>AI Content Strategist</strong> is a built-in writing assistant inside the Prime Blog. It helps you generate viral titles, engaging story drafts, and social media hooks for any detailing job — directly from the Elite Story Master.
                             </p>
                             <h3 className="text-xl font-semibold text-white mb-2 print:text-black">How to Access</h3>
                             <ul className="list-disc pl-5 space-y-2 text-zinc-300 mb-4 print:text-black">
-                                <li>Navigate to <strong>Prime Blog</strong> (the Blog Layout Architect page).</li>
+                                <li>Navigate to <strong>Prime Blog</strong> (the Elite Story Master page).</li>
                                 <li>Click the <strong>✨ Sparkles button</strong> in the top-right toolbar (admin only).</li>
                                 <li>The AI Content Strategist modal opens.</li>
                             </ul>

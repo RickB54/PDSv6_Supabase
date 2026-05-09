@@ -1071,7 +1071,7 @@ export const adminMenuTopics: HelpTopic[] = [
   },
   {
     id: 'blog-reorder',
-    title: 'Blog Layout Architect',
+    title: 'Elite Story Master',
     summary: 'Organize your blog categories and featured posts.',
     content: [
       '**Overview**: Custom control over how your blog content is presented.',

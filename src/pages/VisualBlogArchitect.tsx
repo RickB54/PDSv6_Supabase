@@ -197,13 +197,13 @@ export default function VisualBlogArchitect() {
 
     return (
         <div className="min-h-screen bg-[#020202] text-zinc-100 flex flex-col font-sans">
-            <PageHeader title="Blog Layout Architect" />
+            <PageHeader title="Elite Story Master" />
 
             <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-10">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
                     <div className="space-y-2">
                         <h1 className="text-5xl font-black tracking-tighter uppercase italic text-white flex items-center gap-4">
-                            Visual Blog Architect
+                            Elite Story Master
                             <span className="text-xl text-indigo-500/40 not-italic font-medium bg-indigo-500/5 px-4 py-1 rounded-full border border-indigo-500/10">
                                 {items.length} Posts
                             </span>
