@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Pencil, CheckCircle, XCircle, RotateCcw, Search, Calendar } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_ESTIMATES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
+import logo from "@/assets/pds-final-logo.png";
 
 interface Estimate {
     id?: string;
@@ -256,35 +257,110 @@ const Estimates = () => {
 
     const generatePDF = (estimate: Estimate, action: 'print' | 'download' | 'archive') => {
         const doc = new jsPDF();
-        doc.setFontSize(20);
-        doc.setTextColor(245, 158, 11); // Amber
-        doc.text("ESTIMATE", 105, 20, { align: "center" });
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.text("Prime Auto Detail", 105, 28, { align: "center" });
+        
+        // PROFESSIONAL STYLE (Identical to Invoice but for Estimates)
+        try {
+            const logoWidth = 28;
+            const logoHeight = 28;
+            doc.addImage(logo, 'PNG', 20, 10, logoWidth, logoHeight);
+            
+            // Contact Info next to logo
+            doc.setFontSize(13);
+            doc.setTextColor(16, 185, 129); // Emerald color
+            doc.setFont("helvetica", "bold");
+            doc.text("Rick Berube", 52, 18);
+            
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.setFont("helvetica", "normal");
+            doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
+            doc.text("978-566-1008", 52, 29);
+            
+            // Company Name on the Right
+            doc.setFontSize(14);
+            doc.setTextColor(16, 185, 129);
+            doc.setFont("helvetica", "bold");
+            doc.text("Prime Auto Detail", 190, 18, { align: "right" });
+            
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.text("ESTIMATE / QUOTE", 190, 24, { align: "right" });
+            doc.text(`Estimate #${estimate.estimateNumber || 'N/A'}`, 190, 29, { align: "right" });
+        } catch (e) {
+            console.warn("Professional header failed", e);
+            doc.setFontSize(16);
+            doc.text("Prime Auto Detail", 105, 15, { align: "center" });
+        }
+
+        const contentStartY = 45;
+        doc.setFontSize(10);
+        doc.text(`Estimate Date: ${estimate.estimateDate || estimate.date}`, 20, contentStartY);
+        doc.text(`Quote Valid Until: ${new Date(new Date(estimate.estimateDate || estimate.date).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}`, 20, contentStartY + 6);
+        
+        // Move Customer and Vehicle to the right side
+        doc.setFont("helvetica", "bold");
+        doc.text(`Prospect: ${estimate.customerName}`, 130, contentStartY);
+        doc.text(`Vehicle: ${estimate.vehicle}`, 130, contentStartY + 6);
+        doc.setFont("helvetica", "normal");
+
+        let y = contentStartY + 16;
+        doc.setFontSize(11);
+        doc.text("Proposed Services:", 20, y);
+        y += 6;
 
         doc.setFontSize(10);
-        doc.text(`Estimate #${estimate.estimateNumber || 'N/A'}`, 20, 45);
-        doc.text(`Date: ${estimate.date}`, 20, 52);
-
-        let y = 80;
-        doc.text("Services:", 20, y);
-        y += 8;
-        estimate.services.forEach(service => {
-            doc.text(`${service.name}`, 25, y);
-            doc.text(`$${service.price.toFixed(2)}`, 180, y, { align: "right" });
-            y += 7;
+        estimate.services.forEach((s) => {
+            doc.text(`${s.name}`, 25, y);
+            doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
+            y += 6;
         });
 
-        y += 5;
-        doc.setFontSize(14);
-        doc.text("Total:", 140, y);
-        doc.text(`$${estimate.total.toFixed(2)}`, 180, y, { align: "right" });
+        y += 3;
+        doc.line(20, y, 190, y);
+        y += 8;
 
-        // ... actions logic
+        doc.setFontSize(12);
+        
+        if (estimate.discount && estimate.discount > 0) {
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
+            const discountAmount = subtotal * (estimate.discount / 100);
+            doc.text(`Promotional Discount (${estimate.discount}%):`, 140, y);
+            doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
+            y += 7;
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+        }
+
+        doc.text("Estimated Total:", 125, y);
+        doc.text(`$${estimate.total.toFixed(2)}`, 180, y, { align: "right" });
+        y += 12;
+
+        if (estimate.notes) {
+            if (y > 230) {
+                doc.addPage();
+                y = 20;
+            }
+            doc.setFontSize(10);
+            doc.setTextColor(60, 60, 60); 
+            doc.setFont("helvetica", "bold");
+            doc.text("Notes & Conversation Details:", 20, y);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(80, 80, 80);
+            const splitNotes = doc.splitTextToSize(estimate.notes, 170);
+            doc.text(splitNotes, 20, y + 5);
+            y += (splitNotes.length * 5) + 10;
+        }
+
+        y += 10;
+        doc.setTextColor(100);
+        doc.setFontSize(10);
+        doc.text("This is an estimate for detailing services. Prices may vary based on actual vehicle condition upon arrival.", 105, y, { align: "center" });
+        doc.text("Thank you for considering Prime Auto Detail for your vehicle's protection and care!", 105, y + 6, { align: "center" });
+
         if (action === 'download') doc.save(`Estimate_${estimate.estimateNumber}.pdf`);
         else if (action === 'print') window.open(doc.output('bloburl'), '_blank');
-        else { /* archive logic */ }
     };
 
     const filterItems = () => {
