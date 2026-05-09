@@ -86,8 +86,11 @@ export default function BlogReorder() {
 
     const loadItems = async () => {
         setIsLoading(true);
+        console.log("BlogReorder: Loading items...");
         try {
             const data = await getLibraryItems();
+            console.log("BlogReorder: Data received", data?.length);
+            
             // We only manage blog-related items here, filtering out Chemical Training
             const blogItems = data.filter(item => item.category !== 'Chemical Training');
 
@@ -112,6 +115,20 @@ export default function BlogReorder() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCreateNew = () => {
+        setEditingItem(null);
+        setFormData({
+            title: "New Blog Post",
+            description: "",
+            category: "General",
+            type: "image",
+            is_published: false,
+            is_pinned: false,
+            is_verified: true
+        });
+        setIsEditModalOpen(true);
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -256,6 +273,12 @@ export default function BlogReorder() {
                                 className="bg-zinc-900/50 border-zinc-800 pl-10 h-11 w-64 rounded-xl focus:ring-indigo-500/20"
                             />
                         </div>
+                        <Button
+                            onClick={handleCreateNew}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl h-11 px-6 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
+                        >
+                            <Plus className="w-4 h-4 mr-2" /> NEW POST
+                        </Button>
                         <Button
                             onClick={handleSaveOrder}
                             disabled={isSaving || isLoading}
