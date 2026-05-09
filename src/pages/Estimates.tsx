@@ -75,7 +75,15 @@ const Estimates = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [discount, setDiscount] = useState(0);
-    const [estimateDate, setEstimateDate] = useState(new Date().toISOString().split('T')[0]);
+    const getLocalDateString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const [estimateDate, setEstimateDate] = useState(getLocalDateString());
     const [notes, setNotes] = useState("");
 
     const { isDemoMode } = useDemoMode();
@@ -202,7 +210,7 @@ const Estimates = () => {
         setSelectedVehicleId("");
         setDiscount(0);
         setNotes("");
-        setEstimateDate(new Date().toISOString().split('T')[0]);
+        setEstimateDate(getLocalDateString());
         loadData();
     };
 
@@ -217,7 +225,7 @@ const Estimates = () => {
         setSelectedVehicleId((est as any).vehicleId || "");
         setDiscount(est.discount || 0);
         setNotes(est.notes || "");
-        setEstimateDate(est.estimateDate || new Date().toISOString().split('T')[0]);
+        setEstimateDate(est.estimateDate || getLocalDateString());
         setShowCreateForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -324,6 +332,10 @@ const Estimates = () => {
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Estimates & Quotes</h2>
                                 <p className="text-zinc-400 text-sm">Create, track, and approve estimates</p>
+                                <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-amber-500/50 uppercase tracking-tighter">
+                                    <Clock className="h-3 w-3" />
+                                    <span>System Time: {new Date().toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
 
