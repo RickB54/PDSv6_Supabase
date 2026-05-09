@@ -22,7 +22,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
-import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers } from "@/lib/supa-data";
+import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers, getSupabaseBookings, getSupabaseEmployees } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING, MOCK_PROSPECTS } from "@/lib/demoMockData";
 
@@ -36,6 +36,7 @@ const Reports = () => {
   const [materials, setMaterials] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [estimates, setEstimates] = useState<any[]>([]);
   const [payrollHistory, setPayrollHistory] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>("");
@@ -97,21 +98,20 @@ const Reports = () => {
     const chems = await getChemicals();
     const mats = await getMaterials();
     const tls = await getTools();
-    let jobsData = (await localforage.getItem<any[]>("completed-jobs")) || [];
-    if (!jobsData || jobsData.length === 0) {
-      try {
-        const ls = localStorage.getItem("completedJobs");
-        jobsData = ls ? JSON.parse(ls) : [];
-      } catch {
-        jobsData = [];
-      }
-    }
+    
+    // Fetch bookings to populate jobs for Employee report
+    const bookingsData = await getSupabaseBookings();
+    const allEmps = await getSupabaseEmployees();
+    // Show all jobs except cancelled ones for comprehensive employee reporting
+    const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
+    
     setCustomers(cust);
     setInvoices(inv);
     setChemicals(chems);
     setMaterials(mats);
     setTools(tls);
-    setJobs(jobsData);
+    setJobs(activeJobs);
+    setEmployees(allEmps);
     setEstimates(estimatesData);
     setIncome(incomeData);
     setExpenses(expenseData);
@@ -122,8 +122,14 @@ const Reports = () => {
   const filterByDate = (items: any[], dateField = "createdAt") => {
     const now = new Date();
     return items.filter(item => {
-      const itemDate = new Date(item[dateField] || item.date || item.createdAt || item.finishedAt);
-      if (!itemDate || isNaN(itemDate.getTime())) return false;
+      const itemDate = new Date(item[dateField] || item.date || item.createdAt || item.finishedAt || item.created_at);
+      const isInvalidDate = !itemDate || isNaN(itemDate.getTime());
+
+      // If "All Time" and no custom range, show everything (even items with invalid dates)
+      if (dateFilter === "all" && !dateRange.from && !dateRange.to) return true;
+      
+      // If a specific filter is set but the date is invalid, hide it
+      if (isInvalidDate) return false;
 
       let passQuick = true;
       if (dateFilter === "daily") passQuick = itemDate.toDateString() === now.toDateString();
@@ -131,8 +137,16 @@ const Reports = () => {
       else if (dateFilter === "monthly") passQuick = itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
 
       let passRange = true;
-      if (dateRange.from) passRange = itemDate >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-      if (passRange && dateRange.to) passRange = itemDate <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+      if (dateRange.from) {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        passRange = itemDate >= fromDate;
+      }
+      if (passRange && dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        passRange = itemDate <= toDate;
+      }
 
       return passQuick && passRange;
     });
@@ -181,8 +195,8 @@ const Reports = () => {
     doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
 
     let y = 40;
-    // Only Prospects
-    const filteredProspects = customers.filter(c => (c.type || '').toLowerCase() === 'prospect');
+    // Only Prospects + Date Filter
+    const filteredProspects = filterByDate(customers.filter(c => (c.type || '').toLowerCase() === 'prospect'), 'created_at');
 
     filteredProspects.forEach((prospect) => {
       if (y > 270) { doc.addPage(); y = 20; }
@@ -211,6 +225,43 @@ const Reports = () => {
     });
 
     if (download) doc.save(`ProspectReport_${new Date().toISOString().split('T')[0]}.pdf`);
+    else window.open(doc.output('bloburl'), '_blank');
+  };
+
+  const generateInvoicesReport = (download = false) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.setTextColor(181, 142, 21); // Yellow/Gold
+    doc.text("Invoice Performance Report", 105, 20, { align: "center" });
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
+
+    let y = 40;
+    const filteredInvoices = filterByDate(invoices, 'date');
+
+    const invoiceRows = filteredInvoices.map(inv => [
+      inv.invoiceNumber || inv.id?.substring(0, 8) || 'N/A',
+      inv.customerName || 'N/A',
+      new Date(inv.date || inv.createdAt).toLocaleDateString(),
+      `$${(inv.total || 0).toFixed(2)}`,
+      `$${(inv.paidAmount || 0).toFixed(2)}`,
+      inv.isPaid ? 'PAID' : 'PENDING'
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Inv #', 'Customer', 'Date', 'Total', 'Paid', 'Status']],
+      body: invoiceRows,
+      theme: 'striped',
+      headStyles: { fillColor: [181, 142, 21] }, // Yellow/Gold
+      columnStyles: { 
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'right' }
+      }
+    });
+
+    if (download) doc.save(`InvoiceReport_${new Date().toISOString().split('T')[0]}.pdf`);
     else window.open(doc.output('bloburl'), '_blank');
   };
 
@@ -394,28 +445,39 @@ const Reports = () => {
   const generateEmployeeReport = (download = false) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
+    doc.setTextColor(181, 142, 21);
     doc.text("Employee Performance Report", 105, 20, { align: "center" });
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
-    let y = 40;
-    const filteredJobs = filterByDate(jobs, 'finishedAt');
+    // Ensure all employees are included, even if they have 0 stats
+    const employeeStats: Record<string, { jobs: number, revenue: number }> = {};
+    employees.forEach(emp => {
+      employeeStats[emp.name] = { jobs: 0, revenue: 0 };
+    });
+    
+    jobs.forEach(job => {
+      const empName = job.employeeId || job.employee || job.employeeName || 'Unknown';
+      if (!employeeStats[empName]) {
+        employeeStats[empName] = { jobs: 0, revenue: 0 };
+      }
+      employeeStats[empName].jobs += 1;
+      employeeStats[empName].revenue += (job.totalRevenue || job.total || 0);
+    });
 
-    doc.setFontSize(12);
-    doc.text(`Total Jobs Completed: ${filteredJobs.length}`, 20, y);
-    y += 10;
+    const empData = Object.entries(employeeStats).map(([name, stats]: any) => [
+      name,
+      stats.jobs.toString(),
+      `$${stats.revenue.toFixed(2)}`
+    ]);
 
-    filteredJobs.forEach(job => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(10);
-      doc.text(`Employee: ${job.employeeId || job.employee || job.employeeName || 'N/A'}`, 20, y);
-      y += 5;
-      doc.text(`Customer: ${job.customerName || job.customer || 'N/A'} | Vehicle: ${job.vehicleType || job.vehicle || 'N/A'}`, 20, y);
-      y += 5;
-      doc.text(`Service: ${job.packageId || job.service || 'N/A'} | Time: ${job.estimatedTime || job.totalTime || 'N/A'}`, 20, y);
-      y += 5;
-      doc.text(`Date: ${job.createdAt || job.finishedAt ? new Date(job.createdAt || job.finishedAt).toLocaleString() : 'N/A'}`, 20, y);
-      y += 8;
+    autoTable(doc, {
+      startY: 40,
+      head: [['Employee Name', 'Jobs Completed', 'Total Revenue Produced']],
+      body: empData,
+      theme: 'striped',
+      headStyles: { fillColor: [181, 142, 21] }
     });
 
     if (download) doc.save(`EmployeeReport_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -425,27 +487,33 @@ const Reports = () => {
   const generateEstimatesReport = (download = false) => {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text("Estimates & Quotes Report", 105, 20, { align: "center" });
+    doc.setTextColor(181, 142, 21);
+    doc.text("Estimates Performance Report", 105, 20, { align: "center" });
+    
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
-    let y = 40;
-    const filteredEstimates = filterByDate(estimates);
+    const fEstimates = filterByDate(estimates);
+    const rows = fEstimates.map(est => [
+      est.estimateNumber || est.id?.substring(0, 6) || 'N/A',
+      est.customerName || 'N/A',
+      Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A'),
+      `$${(est.total || 0).toFixed(2)}`,
+      est.status || 'Draft',
+      est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'
+    ]);
 
-    doc.setFontSize(12);
-    doc.text(`Total Estimates: ${filteredEstimates.length}`, 20, y);
-    y += 10;
-
-    filteredEstimates.forEach(est => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(10);
-      doc.text(`#${est.id || 'N/A'} - ${est.customerName || 'N/A'}`, 20, y);
-      y += 5;
-      const serviceList = Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A');
-      doc.text(`Service: ${serviceList} | Total: $${est.total || 0}`, 20, y);
-      y += 5;
-      doc.text(`Status: ${est.status || 'Draft'}`, 20, y);
-      y += 8;
+    autoTable(doc, {
+      startY: 40,
+      head: [['ID', 'Customer', 'Services', 'Amount', 'Status', 'Date']],
+      body: rows,
+      theme: 'striped',
+      headStyles: { fillColor: [181, 142, 21] },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'center' }
+      }
     });
 
     if (download) doc.save(`EstimatesReport_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -876,6 +944,50 @@ const Reports = () => {
 
   const totalAddonRevenue = addonsData.reduce((sum, a) => sum + a.price, 0);
 
+  const servicesData = useMemo(() => {
+    const fInvoices = filterByDate(invoices);
+    const services: any[] = [];
+    fInvoices.forEach(inv => {
+      (inv.services || []).forEach((s: any) => {
+        const isAddon = s.isAddon || s.type === 'addon' || (s.name && s.name.toLowerCase().includes('add-on'));
+        if (!isAddon) {
+          services.push({
+            name: s.name,
+            price: Number(s.price || 0),
+            date: inv.date || inv.createdAt,
+            customerName: inv.customerName,
+            invoiceNumber: inv.invoiceNumber,
+            id: inv.id
+          });
+        }
+      });
+    });
+    return services;
+  }, [invoices, dateFilter, dateRange]);
+
+  const totalServiceRevenue = servicesData.reduce((sum, s) => sum + s.price, 0);
+
+  const employeeStats = useMemo(() => {
+    const stats: any = {};
+    
+    // Initialize with all known employees from Supabase to ensure "Paul" etc. show up even with 0 jobs
+    employees.forEach(emp => {
+      stats[emp.name] = { jobs: 0, revenue: 0, email: emp.email };
+    });
+
+    // Add "Unassigned" as a fallback
+    stats['Unassigned'] = { jobs: 0, revenue: 0 };
+
+    filterByDate(jobs, "finishedAt").forEach((job: any) => {
+      const emp = job.employee || 'Unassigned';
+      if (!stats[emp]) stats[emp] = { jobs: 0, revenue: 0 };
+      stats[emp].jobs += 1;
+      stats[emp].revenue += job.totalRevenue || 0;
+    });
+
+    return stats;
+  }, [jobs, employees, dateFilter, dateRange]);
+
   const tabList = [
     { id: 'customers', label: 'Customers' },
     { id: 'prospects', label: 'Prospects' },
@@ -886,6 +998,7 @@ const Reports = () => {
     { id: 'accounting', label: 'Accounting' },
     { id: 'tax-report', label: 'Tax Report' },
     { id: 'addons', label: 'Add-ons' },
+    { id: 'services', label: 'Services' },
   ]
 
   const tab = searchParams.get('tab') || 'customers';
@@ -1286,30 +1399,67 @@ const Reports = () => {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Invoice Performance</h3>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
-                  <Button variant="outline" size="sm" onClick={() => generateCustomerReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateInvoicesReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+                  <Button variant="outline" size="sm" onClick={() => generateInvoicesReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Count</p>
-                  <p className="text-3xl font-bold text-white mt-1">{filterByDate(invoices).length}</p>
+                  <p className="text-3xl font-bold text-white mt-1">{filterByDate(invoices, 'date').length}</p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Revenue</p>
-                  <p className="text-3xl font-bold text-emerald-400 mt-1">${filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-emerald-400 mt-1">${filterByDate(invoices, 'date').reduce((sum, inv) => sum + (inv.total || 0), 0).toFixed(2)}</p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Collected</p>
-                  <p className="text-3xl font-bold text-blue-400 mt-1">${filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0).toFixed(2)}</p>
+                  <p className="text-3xl font-bold text-blue-400 mt-1">${filterByDate(invoices, 'date').reduce((sum, inv) => sum + (inv.paidAmount || 0), 0).toFixed(2)}</p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Outstanding</p>
                   <p className="text-3xl font-bold text-red-400 mt-1">
-                    ${(filterByDate(invoices).reduce((sum, inv) => sum + (inv.total || 0), 0) - filterByDate(invoices).reduce((sum, inv) => sum + (inv.paidAmount || 0), 0)).toFixed(2)}
+                    ${(filterByDate(invoices, 'date').reduce((sum, inv) => sum + (inv.total || 0), 0) - filterByDate(invoices, 'date').reduce((sum, inv) => sum + (inv.paidAmount || 0), 0)).toFixed(2)}
                   </p>
                 </div>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+                <Table>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400">Invoice #</TableHead>
+                      <TableHead className="text-zinc-400">Customer</TableHead>
+                      <TableHead className="text-zinc-400">Date</TableHead>
+                      <TableHead className="text-zinc-400">Amount</TableHead>
+                      <TableHead className="text-zinc-400">Paid</TableHead>
+                      <TableHead className="text-zinc-400">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filterByDate(invoices, 'date').length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-zinc-500 italic">No invoices found for the selected period.</TableCell>
+                      </TableRow>
+                    ) : (
+                      filterByDate(invoices, 'date').map((inv, idx) => (
+                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                          <TableCell className="font-mono text-zinc-400">#{inv.invoiceNumber || inv.id?.substring(0, 8)}</TableCell>
+                          <TableCell className="font-medium text-zinc-200">{inv.customerName || 'N/A'}</TableCell>
+                          <TableCell className="text-zinc-400">{new Date(inv.date || inv.createdAt).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-zinc-200 font-bold">${(inv.total || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-emerald-400">${(inv.paidAmount || 0).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${inv.isPaid ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                              {inv.isPaid ? 'PAID' : 'PENDING'}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </Card>
           </TabsContent>
@@ -1427,6 +1577,29 @@ const Reports = () => {
                 )
               })()}
 
+              <h4 className="text-md font-bold text-zinc-300 mb-3">Staff Performance Summary</h4>
+              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+                <Table>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400">Employee Name</TableHead>
+                      <TableHead className="text-zinc-400">Jobs Completed</TableHead>
+                      <TableHead className="text-zinc-400">Revenue Generated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(employeeStats).filter(([name]) => name !== 'Unassigned').map(([name, stats]: any) => (
+                      <TableRow key={name} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium text-zinc-200">{name}</TableCell>
+                        <TableCell className="text-zinc-300">{stats.jobs}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold">${stats.revenue.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <h4 className="text-md font-bold text-zinc-300 mb-3">Detailed Job History</h4>
               <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
                   <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Employee</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Service</TableHead><TableHead className="text-zinc-400">Time</TableHead><TableHead className="text-zinc-400">Date</TableHead></TableRow></TableHeader>
@@ -1519,15 +1692,27 @@ const Reports = () => {
                   <Button variant="outline" size="sm" onClick={() => generateAccountingReport(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Save className="h-4 w-4 mr-2" /> PDF</Button>
                   <Button variant="outline" size="sm" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
                     const within = (d: string) => {
+                      if (!d) return dateFilter === 'all' && !dateRange.from && !dateRange.to;
                       const dt = new Date(d);
+                      if (isNaN(dt.getTime())) return dateFilter === 'all' && !dateRange.from && !dateRange.to;
+                      
                       let okQuick = true;
                       const now = new Date();
                       if (dateFilter === 'daily') okQuick = dt.toDateString() === now.toDateString();
                       else if (dateFilter === 'weekly') okQuick = dt >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                       else if (dateFilter === 'monthly') okQuick = dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+                      
                       let okRange = true;
-                      if (dateRange.from) okRange = dt >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-                      if (okRange && dateRange.to) okRange = dt <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+                      if (dateRange.from) {
+                        const f = new Date(dateRange.from);
+                        f.setHours(0, 0, 0, 0);
+                        okRange = dt >= f;
+                      }
+                      if (okRange && dateRange.to) {
+                        const t = new Date(dateRange.to);
+                        t.setHours(23, 59, 59, 999);
+                        okRange = dt <= t;
+                      }
                       return okQuick && okRange;
                     };
                     const lines = ['Type,Date,Amount,Category,Description,Customer,Method'];
@@ -1972,6 +2157,94 @@ const Reports = () => {
                           <TableCell className="text-zinc-300">{a.customerName || 'N/A'}</TableCell>
                           <TableCell className="text-zinc-400">#{a.invoiceNumber || 'N/A'}</TableCell>
                           <TableCell className="text-emerald-400 text-right font-bold">${a.price.toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* SERVICES TAB */}
+          <TabsContent value="services" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-zinc-200">Services Performance</h3>
+                  <p className="text-xs text-zinc-500 mt-1 italic">* This data focuses on core service packages (Essential, Elite, etc.).</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    const doc = new jsPDF();
+                    doc.setFontSize(18);
+                    doc.setTextColor(181, 142, 21);
+                    doc.text("Core Services Analysis Report", 105, 20, { align: "center" });
+                    doc.setFontSize(10);
+                    doc.setTextColor(100, 100, 100);
+                    doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
+
+                    autoTable(doc, {
+                      startY: 35,
+                      head: [['Date', 'Service', 'Customer', 'Invoice', 'Revenue']],
+                      body: servicesData.map(s => [
+                        new Date(s.date).toLocaleDateString(),
+                        s.name,
+                        s.customerName || 'N/A',
+                        `#${s.invoiceNumber || 'N/A'}`,
+                        `$${s.price.toFixed(2)}`
+                      ]),
+                      theme: 'striped',
+                      headStyles: { fillColor: [181, 142, 21] }
+                    });
+                    window.open(doc.output('bloburl'), '_blank');
+                  }} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300">
+                    <Printer className="h-4 w-4 mr-2" /> Print Analysis
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Services Sold</p>
+                  <p className="text-3xl font-bold text-blue-400 mt-1">{servicesData.length}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Total Service Revenue</p>
+                  <p className="text-3xl font-bold text-emerald-400 mt-1">${totalServiceRevenue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
+                  <p className="text-xs text-zinc-500 uppercase">Avg Service Value</p>
+                  <p className="text-3xl font-bold text-purple-400 mt-1">
+                    ${servicesData.length > 0 ? (totalServiceRevenue / servicesData.length).toFixed(2) : '0.00'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400">Date</TableHead>
+                      <TableHead className="text-zinc-400">Service Package</TableHead>
+                      <TableHead className="text-zinc-400">Customer</TableHead>
+                      <TableHead className="text-zinc-400">Invoice</TableHead>
+                      <TableHead className="text-zinc-400 text-right">Revenue</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {servicesData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-zinc-500 italic">No services found for the selected period.</TableCell>
+                      </TableRow>
+                    ) : (
+                      servicesData.map((s, idx) => (
+                        <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
+                          <TableCell className="text-zinc-400">{new Date(s.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-zinc-200">{s.name}</TableCell>
+                          <TableCell className="text-zinc-300">{s.customerName || 'N/A'}</TableCell>
+                          <TableCell className="text-zinc-400">#{s.invoiceNumber || 'N/A'}</TableCell>
+                          <TableCell className="text-emerald-400 text-right font-bold">${s.price.toFixed(2)}</TableCell>
                         </TableRow>
                       ))
                     )}

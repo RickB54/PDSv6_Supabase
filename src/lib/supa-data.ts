@@ -904,28 +904,40 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
             vehicleId: e.vehicle_id,
             services: e.services || [],
             total: e.total,
-            date: e.date,
+            date: e.date || e.created_at?.split('T')[0],
             status: e.status,
+            createdAt: e.created_at,
             created_at: e.created_at,
             notes: e.notes,
             vehicleType: e.vehicle_type,
             packageId: e.package_id,
+            addonIds: e.addon_ids || [],
             discount: e.discount
         }));
 
-        // Merge Local Mock Estimates
+        // Merge Local Estimates (Offline or Legacy)
         try {
             const localEst = await localforage.getItem<any[]>('estimates') || [];
-            localEst.forEach(e => {
-                if (e.isStaticMock) {
-                    results.push(e);
+            localEst.forEach(le => {
+                // If it's a static mock from demo or if it's already in results, skip
+                if (le.isStaticMock) return;
+                const exists = results.some(re => re.id === le.id || (re.estimateNumber && re.estimateNumber === le.estimateNumber));
+                if (!exists) {
+                    results.push({
+                        ...le,
+                        id: le.id || `local_est_${Date.now()}_${Math.random()}`,
+                        customerName: le.customerName || "Local Prospect",
+                        date: le.date || le.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+                    });
                 }
             });
-        } catch { }
+        } catch (e) {
+            console.warn("Local estimates merge failed", e);
+        }
 
         return results.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
     } catch (err) {
-        console.error('Exception getSupabaseEstimates', err);
+        console.error('getSupabaseEstimates exception:', err);
         return [];
     }
 };
@@ -1161,63 +1173,82 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
-        return (data || []).map(i => {
-            console.log('📦 Processing invoice from DB:', i.id, 'with services:', i.services?.length);
-        
-        // Unpack virtualized fields from services if they exist
-        let notes = i.notes || "";
-        let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
-        if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
-        let discount = i.discount || null;
-        let isSent = false;
-        let sentDate = "";
-        
-        const filteredServices = (i.services || []).filter((s: any) => {
-          if (!s || !s.name) return true;
-          if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
-            vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
-            return false;
-          }
-          if (s.name.startsWith("VIRTUAL_NOTES:")) {
-            notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
-            return false;
-          }
-          if (s.name.startsWith("VIRTUAL_DISCOUNT:")) {
-            try {
-              discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
-            } catch (e) { console.error("Failed to parse virtual discount", e); }
-            return false;
-          }
-          if (s.name.startsWith("VIRTUAL_SENT:")) {
-            isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
-            return false;
-          }
-          if (s.name.startsWith("VIRTUAL_SENT_DATE:")) {
-            sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
-            return false;
-          }
-          return true;
+        const supaInvoices = (data || []).map(i => {
+            // Unpack virtualized fields from services if they exist
+            let notes = i.notes || "";
+            let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
+            if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
+            let discount = i.discount || null;
+            let isSent = false;
+            let sentDate = "";
+            
+            const filteredServices = (i.services || []).filter((s: any) => {
+              if (!s || !s.name) return true;
+              if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
+                vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_NOTES:")) {
+                notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_DISCOUNT:")) {
+                try {
+                  discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
+                } catch (e) { console.error("Failed to parse virtual discount", e); }
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_SENT:")) {
+                isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_SENT_DATE:")) {
+                sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
+                return false;
+              }
+              return true;
+            });
+
+            return {
+              id: i.id,
+              invoiceNumber: i.invoice_number,
+              customerId: i.customer_id,
+              customerName: i.customers?.full_name || i.customerName || "Unknown",
+              vehicle: vehicle || "Unknown Vehicle",
+              date: i.date || i.created_at?.split('T')[0],
+              total: i.total || 0,
+              services: filteredServices,
+              paymentStatus: i.status || "unpaid",
+              paidAmount: i.paid_amount || 0,
+              paidDate: i.paid_date,
+              notes: notes || "",
+              discount: discount,
+              isSent: isSent,
+              sentDate: sentDate,
+              createdAt: i.created_at
+            };
         });
 
-        return {
-          id: i.id,
-          invoiceNumber: i.invoice_number,
-          customerId: i.customer_id,
-          customerName: i.customers?.full_name || i.customerName || "Unknown",
-          vehicle: vehicle || "Unknown Vehicle",
-          date: i.date || i.created_at?.split('T')[0],
-          total: i.total || 0,
-          services: filteredServices,
-          paymentStatus: i.status || "unpaid",
-          paidAmount: i.paid_amount || 0,
-          paidDate: i.paid_date,
-          notes: notes || "",
-          discount: discount,
-          isSent: isSent,
-          sentDate: sentDate,
-          createdAt: i.created_at
-        };
-      });
+        // Merge Local Invoices (Offline or Legacy)
+        try {
+            const localInvs = await localforage.getItem<any[]>('invoices') || [];
+            localInvs.forEach(li => {
+                // If it doesn't have a Supabase-like UUID or isn't already in supaInvoices
+                if (!supaInvoices.some(si => si.id === li.id || (si.invoiceNumber && si.invoiceNumber === li.invoiceNumber))) {
+                    supaInvoices.push({
+                        ...li,
+                        id: li.id || `local_${Date.now()}_${Math.random()}`,
+                        customerName: li.customerName || "Local Customer",
+                        paymentStatus: li.paymentStatus || li.status || "unpaid",
+                        date: li.date || li.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+                    });
+                }
+            });
+        } catch (e) {
+            console.warn("Local invoices merge failed", e);
+        }
+
+        return supaInvoices;
     } catch (err) {
         console.error('getSupabaseInvoices exception:', err);
         return [];
@@ -1882,7 +1913,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
     try {
         let query = supabase
             .from('bookings')
-            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type)');
+            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type), employee:profiles!assigned_employee_id(full_name)');
 
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1933,6 +1964,10 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
+
+                // Employee Name from Profile Join
+                employee: b.employee?.full_name || b.assigned_employee_id || 'N/A',
+                employeeName: b.employee?.full_name || b.assigned_employee_id || 'N/A',
 
                 // Vehicle Relations
                 vehicleId: b.vehicle_id || meta.vehicle_id,
