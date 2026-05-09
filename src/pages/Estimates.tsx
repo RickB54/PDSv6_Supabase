@@ -109,6 +109,7 @@ const Estimates = () => {
     useEffect(() => {
         const customerId = searchParams.get('customerId');
         const customerName = searchParams.get('customerName');
+        const discountParam = searchParams.get('discount');
         if (customerName) {
             const found = customers.find(c => c.name.toLowerCase().includes(customerName.toLowerCase()));
             if (found) {
