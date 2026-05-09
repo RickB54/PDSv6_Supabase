@@ -968,7 +968,10 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
         notes: p.notes,
         vehicle_type: p.vehicleType,
         package_id: p.packageId,
-        discount: p.discount || 0
+        discount: p.discount || 0,
+        estimate_number: p.estimateNumber,
+        estimate_date: p.estimateDate,
+        discount_type: p.discountType
     };
 
     // HANDLE LOCAL MOCK ESTIMATES

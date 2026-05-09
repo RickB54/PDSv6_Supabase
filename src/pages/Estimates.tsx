@@ -128,10 +128,8 @@ const Estimates = () => {
                 setShowCreateForm(true);
                 if (discountParam) setDiscount(parseFloat(discountParam));
                 
-                // Auto-apply discount for Forrest
-                if (!discountParam && customer.name?.toLowerCase().includes('forrest')) {
-                    setDiscount(10);
-                }
+                // Auto-apply logic removed as requested
+                setDiscount(0);
 
                 if (customer.vehicles && customer.vehicles.length > 0) {
                     if (customer.vehicles.length === 1) {
@@ -360,18 +358,19 @@ const Estimates = () => {
             
             doc.text(discountLabel, 140, y);
             doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
-            y += 12; // INCREASED SPACING FURTHER TO AVOID OVERLAP
+            y += 12;
             doc.setFontSize(12);
             doc.setTextColor(0, 0, 0);
         } else {
-            y += 6;
+            // NO DISCOUNT: Remove the extra gap
+            y += 2; 
         }
 
         doc.setFont("helvetica", "bold");
         doc.text("Estimated Total:", 125, y);
         doc.text(`$${(estimate.total || 0).toFixed(2)}`, 180, y, { align: "right" });
         doc.setFont("helvetica", "normal");
-        y += 15;
+        y += 12;
 
         if (estimate.notes) {
             if (y > 230) {
