@@ -34,8 +34,9 @@ export const Footer = () => {
         return () => window.removeEventListener('content-changed', handleContentChange as any);
     }, []);
 
-    // Create marquee items array
-    const marqueeItems = footerData.marqueeText.split('.').filter(Boolean).map(s => s.trim() + '.');
+    // Create marquee items array with safety check
+    const marqueeText = footerData?.marqueeText || 'Precision. Protection. Perfection.';
+    const marqueeItems = String(marqueeText).split('.').filter(Boolean).map(s => s.trim() + '.');
 
     return (
         <footer className="bg-zinc-950 text-white border-t border-zinc-900 select-none overflow-hidden">
