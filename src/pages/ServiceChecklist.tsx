@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Lock } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -118,6 +118,53 @@ function buildAddOnServices(): DisplayService[] {
     return !hiddenByDefault.includes(a.id);
   });
 }
+
+const AVG_TIMES: Array<{ keywords: string[]; ms: number }> = [
+  { keywords: ['inspect', 'walkaround', 'expectation'], ms: 120000 },
+  { keywords: ['gather', 'prep', 'setup', 'tools', 'chemicals'], ms: 180000 },
+  { keywords: ['pre-rinse', 'rinse', 'foam'], ms: 300000 },
+  { keywords: ['wheels', 'tires', 'wheel'], ms: 600000 },
+  { keywords: ['wash', 'soap', 'scrub', 'hand wash'], ms: 900000 },
+  { keywords: ['dry', 'blow', 'towel'], ms: 480000 },
+  { keywords: ['clay', 'decontaminate', 'iron'], ms: 900000 },
+  { keywords: ['polish', 'compound', 'machine'], ms: 1800000 },
+  { keywords: ['wax', 'sealant', 'coating', 'ceramic'], ms: 1200000 },
+  { keywords: ['glass', 'window', 'windshield'], ms: 480000 },
+  { keywords: ['vacuum', 'vacuuming'], ms: 900000 },
+  { keywords: ['shampoo', 'steam', 'carpet', 'upholstery', 'fabric'], ms: 1200000 },
+  { keywords: ['leather', 'condition'], ms: 600000 },
+  { keywords: ['dashboard', 'console', 'interior', 'panel', 'steering'], ms: 600000 },
+  { keywords: ['door', 'jamb', 'sill'], ms: 300000 },
+  { keywords: ['engine', 'bay', 'hood'], ms: 900000 },
+  { keywords: ['trim', 'plastic', 'dressing'], ms: 300000 },
+  { keywords: ['final', 'inspect', 'quality', 'check'], ms: 180000 },
+  { keywords: ['exhaust', 'chrome', 'metal'], ms: 300000 },
+  { keywords: ['headlight', 'light', 'restore'], ms: 600000 },
+];
+
+const getAvgTime = (stepName: string): number => {
+  const lower = stepName.toLowerCase();
+  for (const entry of AVG_TIMES) {
+    if (entry.keywords.some(k => lower.includes(k))) return entry.ms;
+  }
+  return 300000;
+};
+
+const parseTimeToMinutes = (val: string): number => {
+  const v = val.toLowerCase().trim();
+  if (!v) return 0;
+  if (v.includes('h') || v.includes('hour')) {
+    const num = parseFloat(v.replace(/[^\d.]/g, '')) || 0;
+    return Math.round(num * 60);
+  }
+  if (v.includes(':')) {
+    const parts = v.split(':').map(n => parseInt(n) || 0);
+    if (parts.length === 2) return parts[0] + Math.floor(parts[1] / 60);
+    if (parts.length === 3) return (parts[0] * 60) + parts[1] + Math.floor(parts[2] / 3600);
+  }
+  const result = parseInt(v);
+  return isNaN(result) ? 0 : result;
+};
 
 const ServiceChecklist = () => {
   const { toast } = useToast();
@@ -396,7 +443,7 @@ const ServiceChecklist = () => {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
-  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'final'; checked: boolean; instructions?: string; stepChemicals?: string[] };
+  type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'addons' | 'final'; checked: boolean; instructions?: string; stepChemicals?: string[] };
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
   const isRestoringDraft = useRef(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -411,6 +458,8 @@ const ServiceChecklist = () => {
   const [sectionDurations, setSectionDurations] = useState<Record<string, number>>({}); // category -> minutes
   const [liveNow, setLiveNow] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const [editSectionValue, setEditSectionValue] = useState<string>("");
 
   const updateElapsedTime = (now: number, startTime: number | null, accumulated: number) => {
     const diff = (now - (startTime || now)) + accumulated;
@@ -493,7 +542,8 @@ const ServiceChecklist = () => {
     }
   };
 
-  const formatDuration = (ms: number) => {
+  const formatDuration = (ms: any) => {
+    if (typeof ms !== 'number' || isNaN(ms) || ms === 0) return "0s";
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -545,6 +595,37 @@ const ServiceChecklist = () => {
     }
     setItemDurations(prev => ({ ...prev, [stepId]: ms }));
     setEditingDurationId(null);
+  };
+
+  const handleSaveSectionActualTime = (section: string, directValue?: string) => {
+    const val = directValue !== undefined ? directValue : editSectionValue;
+    const mins = parseTimeToMinutes(val);
+    const ms = mins * 60 * 1000;
+
+    if (ms >= 0) {
+      // Distribute this time among checked items in this section
+      const sectionSteps = checklistSteps.filter(s => s.category === section && s.checked);
+      if (sectionSteps.length > 0) {
+        const msPerStep = Math.floor(ms / sectionSteps.length);
+        setItemDurations(prev => {
+          const next = { ...prev };
+          sectionSteps.forEach(s => {
+            next[s.id] = msPerStep;
+          });
+          return next;
+        });
+      }
+    }
+    setEditingSectionId(null);
+  };
+
+  const handleCheckAllSection = (section: string) => {
+    const sectionSteps = checklistSteps.filter(s => s.category === section);
+    const allChecked = sectionSteps.every(s => s.checked);
+    
+    setChecklistSteps(prev => prev.map(step => 
+      step.category === section ? { ...step, checked: !allChecked } : step
+    ));
   };
 
   // Materials Used state
@@ -873,7 +954,13 @@ const ServiceChecklist = () => {
       if (isCategoryStart) {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text(step.category.toUpperCase(), 20, y);
+        const sectionTitle = step.category === 'final' ? 'FINAL INSPECTION' : step.category === 'addons' ? 'ADD-ON SERVICES' : step.category.toUpperCase();
+        const sectionSteps = checklistSteps.filter(s => s.category === step.category);
+        const budgetTime = sectionDurations[step.category] !== undefined 
+          ? parseTimeToMinutes(String(sectionDurations[step.category])) 
+          : Math.floor(sectionSteps.reduce((acc, s) => acc + getAvgTime(s.name), 0) / 60000);
+        
+        doc.text(`${sectionTitle} (Budget: ${budgetTime}m)`, 20, y);
         y += 6;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
@@ -922,9 +1009,9 @@ const ServiceChecklist = () => {
 
     if (saveToArchive) {
       savePDFToArchive(
-        'Job Reports', 
+        'Job', 
         customer?.name || genericCustomerName || 'Guest', 
-        checklistId || generateInvoiceNumber(), 
+        checklistId || String(generateInvoiceNumber()), 
         pdfDataUrl, 
         { fileName, path: 'Reports/' }
       );
@@ -1069,7 +1156,7 @@ const ServiceChecklist = () => {
       // Overrides for this package
       const addonSteps = selectedAddOns.map(aid => {
         const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
-        return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
+        return { id: `addon-${aid}`, name: found?.name || aid, category: 'addons', checked: false } as ChecklistStep;
       });
       nextSteps = [...prep, ...globalOverrides[selectedPackage], ...addonSteps, ...final];
     } else {
@@ -1079,7 +1166,7 @@ const ServiceChecklist = () => {
       }
       const addonSteps = selectedAddOns.map(aid => {
         const found = (liveAddOns || []).find((a: any) => a.id === aid) || addOns.find(a => a.id === aid);
-        return { id: `addon-${aid}`, name: found?.name || aid, category: (found as any)?.category || 'exterior', checked: false } as ChecklistStep;
+        return { id: `addon-${aid}`, name: found?.name || aid, category: 'addons', checked: false } as ChecklistStep;
       });
       nextSteps = [...prep, ...baseSteps, ...addonSteps, ...final];
     }
@@ -1148,7 +1235,6 @@ const ServiceChecklist = () => {
         if (state.chemRows) setChemRows(state.chemRows);
         if (state.matRows) setMatRows(state.matRows);
         if (state.toolRows) setToolRows(state.toolRows);
-        if (state.milesTraveled) setMilesTraveled(state.milesTraveled);
         if (state.odometerStart) setOdometerStart(state.odometerStart);
         if (state.odometerEnd) setOdometerEnd(state.odometerEnd);
 
@@ -1657,7 +1743,16 @@ const ServiceChecklist = () => {
     try {
       // 1. Sync Customer (Auth -> CRM)
       const customer = customers.find(c => c.id === selectedCustomer);
-      const customerName = customer?.name || genericCustomerName || 'Generic Customer';
+      const customerName = customer?.name || genericCustomerName;
+      
+      if (!customerName || customerName.trim().toLowerCase() === 'generic customer') {
+        toast({ 
+          title: "Customer Name Required", 
+          description: "Please provide a customer name or select one from the CRM to create an invoice. Test/Generic jobs without names are not sent to accounting.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       let targetCustomerId = selectedCustomer;
       if (!targetCustomerId) {
@@ -1926,6 +2021,81 @@ const ServiceChecklist = () => {
 
     doc.save(`service-estimate-${new Date().getTime()}.pdf`);
     toast({ title: "PDF Generated", description: "Service estimate has been downloaded." });
+  };
+
+  const generateColorfulChecklistPDF = () => {
+    const doc = new jsPDF();
+    const customer = customers.find(c => c.id === selectedCustomer);
+    const customerName = customer?.name || genericCustomerName || 'Guest';
+
+    // Header Branding
+    doc.setFillColor(31, 31, 31); // Dark background
+    doc.rect(0, 0, 210, 45, 'F');
+    
+    try {
+      doc.addImage(logo, 'PNG', 15, 5, 30, 30);
+    } catch(e) {}
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text("SERVICE CHECKLIST", 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${customerName} | ${selectedPackage || 'Custom Package'} | ${new Date().toLocaleDateString()}`, 105, 30, { align: 'center' });
+
+    let y = 55;
+    const categories = ['preparation', 'exterior', 'interior', 'addons', 'final'];
+    const categoryLabels: any = { preparation: 'PREPARATION', exterior: 'EXTERIOR', interior: 'INTERIOR', addons: 'ADD-ON SERVICES', final: 'FINAL INSPECTION' };
+    const categoryColors: any = { preparation: [59, 130, 246], exterior: [16, 185, 129], interior: [249, 115, 22], addons: [139, 92, 246], final: [239, 68, 68] };
+
+    categories.forEach(cat => {
+      const steps = checklistSteps.filter(s => s.category === cat);
+      if (steps.length === 0) return;
+
+      // Section Header
+      const color = categoryColors[cat];
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.rect(15, y - 5, 180, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(categoryLabels[cat], 20, y);
+      y += 10;
+
+      // Items
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      steps.forEach(step => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+
+        // Checkbox
+        doc.setDrawColor(200, 200, 200);
+        doc.rect(20, y - 4, 5, 5);
+        if (step.checked) {
+          doc.setDrawColor(color[0], color[1], color[2]);
+          doc.line(20, y - 4, 25, y + 1);
+          doc.line(25, y - 4, 20, y + 1);
+        }
+
+        // Text
+        doc.text(step.name, 30, y);
+        y += 8;
+      });
+      y += 5;
+    });
+
+    // Open in new window
+    window.open(doc.output('bloburl'), '_blank');
+
+    doc.save(`Checklist_${customerName.replace(/\s+/g, '_')}.pdf`);
+    toast({ title: "Checklist Generated", description: "Clean colorful PDF is ready." });
   };
 
   return (
@@ -2495,41 +2665,14 @@ const ServiceChecklist = () => {
                 }}>
                   {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
                 </Button>
+                <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-lg" onClick={generateColorfulChecklistPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Checklist PDF
+                </Button>
                 <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
                   const now = Date.now();
                   const anyUnchecked = checklistSteps.some(s => !s.checked);
                   const targetState = anyUnchecked;
-
-                  const AVG_TIMES: Array<{ keywords: string[]; ms: number }> = [
-                    { keywords: ['inspect', 'walkaround', 'expectation'], ms: 120000 },
-                    { keywords: ['gather', 'prep', 'setup', 'tools', 'chemicals'], ms: 180000 },
-                    { keywords: ['pre-rinse', 'rinse', 'foam'], ms: 300000 },
-                    { keywords: ['wheels', 'tires', 'wheel'], ms: 600000 },
-                    { keywords: ['wash', 'soap', 'scrub', 'hand wash'], ms: 900000 },
-                    { keywords: ['dry', 'blow', 'towel'], ms: 480000 },
-                    { keywords: ['clay', 'decontaminate', 'iron'], ms: 900000 },
-                    { keywords: ['polish', 'compound', 'machine'], ms: 1800000 },
-                    { keywords: ['wax', 'sealant', 'coating', 'ceramic'], ms: 1200000 },
-                    { keywords: ['glass', 'window', 'windshield'], ms: 480000 },
-                    { keywords: ['vacuum', 'vacuuming'], ms: 900000 },
-                    { keywords: ['shampoo', 'steam', 'carpet', 'upholstery', 'fabric'], ms: 1200000 },
-                    { keywords: ['leather', 'condition'], ms: 600000 },
-                    { keywords: ['dashboard', 'console', 'interior', 'panel', 'steering'], ms: 600000 },
-                    { keywords: ['door', 'jamb', 'sill'], ms: 300000 },
-                    { keywords: ['engine', 'bay', 'hood'], ms: 900000 },
-                    { keywords: ['trim', 'plastic', 'dressing'], ms: 300000 },
-                    { keywords: ['final', 'inspect', 'quality', 'check'], ms: 180000 },
-                    { keywords: ['exhaust', 'chrome', 'metal'], ms: 300000 },
-                    { keywords: ['headlight', 'light', 'restore'], ms: 600000 },
-                  ];
-
-                  const getAvgTime = (stepName: string): number => {
-                    const lower = stepName.toLowerCase();
-                    for (const entry of AVG_TIMES) {
-                      if (entry.keywords.some(k => lower.includes(k))) return entry.ms;
-                    }
-                    return 300000;
-                  };
 
                   setChecklistSteps(prev => prev.map(s => ({ ...s, checked: targetState })));
 
@@ -2565,61 +2708,133 @@ const ServiceChecklist = () => {
             <div className="p-3 md:p-6">
               {selectedPackage && (
                 <div className="space-y-6 pr-2">
-                  {['preparation', 'exterior', 'interior', 'final'].map((section, idx) => {
+                  {['preparation', 'exterior', 'interior', 'addons', 'final'].map((section, idx) => {
                     const steps = checklistSteps.filter(s => s.category === section);
                     if (steps.length === 0) return null;
 
-                    // Locking logic: Lock if running AND previous section is incomplete
-                    let isLocked = false;
-                    const checklistOrder = ['preparation', 'exterior', 'interior', 'final'] as const;
-                    if (isTimerRunning && idx > 0) {
-                      for (let i = 0; i < idx; i++) {
-                        const prevSteps = checklistSteps.filter(s => s.category === checklistOrder[i]);
-                        if (prevSteps.length > 0 && !prevSteps.every(s => s.checked)) {
-                          isLocked = true;
-                          break;
-                        }
-                      }
-                    }
-
                     const isCompleted = steps.every(s => s.checked);
+                    const isExpanded = !collapsedSections[section];
 
                     return (
-                      <div key={section} className={`space-y-3 transition-all duration-500 ${isLocked ? 'opacity-30 grayscale blur-[1px] pointer-events-none' : 'opacity-100'}`}>
+                      <div key={section} className="space-y-3 transition-all duration-500 opacity-100">
                         <button
                           type="button"
-                          disabled={isLocked}
-                          className={`w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group ${isLocked ? 'cursor-not-allowed' : ''}`}
+                          className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
                           onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
                         >
                           <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                             <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : 'group-hover:text-primary'}`}>
-                              {section === 'final' ? 'Final Inspection' : section.charAt(0).toUpperCase() + section.slice(1)}
+                              {section === 'final' ? 'Final Inspection' : section === 'addons' ? 'Add-On Services' : section.charAt(0).toUpperCase() + section.slice(1)}
                             </span>
-                            {isLocked ? (
-                              <Lock className="h-3.5 w-3.5 text-zinc-600 animate-pulse" />
-                            ) : isCompleted ? (
+                            {isCompleted ? (
                               <CheckCircle2 className="h-4 w-4 text-green-500 animate-in zoom-in" />
                             ) : null}
-                            {!isLocked && section !== 'preparation' && jobStartTime && (
-                              <span className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)]">
-                                {formatDuration(
-                                  steps
-                                    .filter(s => s.checked)
-                                    .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                            {section !== 'preparation' && jobStartTime && (
+                              <div className="flex items-center gap-2">
+                                {editingSectionId === section ? (
+                                  <div className="flex items-center gap-1 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                          <Clock className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-zinc-300 w-48">
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "2:00")}>2 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "10:00")}>10 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "15:00")}>15 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "20:00")}>20 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "30:00")}>30 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "45:00")}>45 min</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "1:00:00")}>1 hour</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "1:30:00")}>1.5 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "2:00:00")}>2 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "2:30:00")}>2.5 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "3:00:00")}>3 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "3:30:00")}>3.5 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "4:00:00")}>4 hours</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-xs cursor-pointer hover:bg-zinc-800 hover:text-white" onClick={() => handleSaveSectionActualTime(section, "4:30:00")}>4.5 hours</DropdownMenuItem>
+                                        <DropdownMenuSeparator className="bg-zinc-800" />
+                                        <DropdownMenuItem className="text-xs font-bold text-blue-400">Custom (Use Input)</DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+
+                                    <Input 
+                                      value={editSectionValue}
+                                      onChange={(e) => setEditSectionValue(e.target.value)}
+                                      className="h-7 w-20 bg-white text-black text-[10px] font-bold text-center border-2 border-zinc-300"
+                                      placeholder="mm:ss"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveSectionActualTime(section);
+                                        if (e.key === 'Escape') setEditingSectionId(null);
+                                      }}
+                                    />
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      className="h-7 w-7 p-0 text-green-600 hover:bg-green-50"
+                                      onClick={() => handleSaveSectionActualTime(section)}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span 
+                                    className="text-xs md:text-sm font-bold font-mono bg-white text-black px-2 py-0.5 rounded border-2 border-zinc-300 shadow-[0_0_10px_rgba(255,255,255,0.3)] cursor-pointer hover:scale-105 transition-transform"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingSectionId(section);
+                                      const totalSecs = Math.floor(steps.filter(s => s.checked).reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0) / 1000);
+                                      const m = Math.floor(totalSecs / 60);
+                                      const s = totalSecs % 60;
+                                      setEditSectionValue(`${m}:${s.toString().padStart(2, '0')}`);
+                                    }}
+                                    title="Click to edit actual elapsed time for this section"
+                                  >
+                                    {formatDuration(
+                                      steps
+                                        .filter(s => s.checked)
+                                        .reduce((acc, s) => acc + (itemDurations[s.id] || 0), 0)
+                                    )}
+                                  </span>
                                 )}
-                              </span>
+                              </div>
                             )}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] uppercase font-black text-zinc-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-colors ml-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCheckAllSection(section);
+                              }}
+                            >
+                              {checklistSteps.filter(s => s.category === section).every(s => s.checked) ? 'Uncheck All' : 'Check All'}
+                            </Button>
                             <div className="flex items-center gap-2 ml-auto mr-4" onClick={(e) => e.stopPropagation()}>
                               <div className="relative">
                                 <Input 
                                   type="text"
                                   value={sectionDurations[section] !== undefined ? sectionDurations[section] : Math.floor(steps.reduce((acc, s) => acc + getAvgTime(s.name), 0) / 60000)}
                                   onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    setSectionDurations(prev => ({ ...prev, [section]: isNaN(val) ? 0 : val }));
+                                    const val = e.target.value;
+                                    // Allow typing numbers/colons/h without immediate parsing which breaks flow
+                                    setSectionDurations(prev => ({ ...prev, [section]: val as any }));
                                   }}
-                                  className="h-7 w-12 bg-zinc-900 border-zinc-700 text-[10px] text-center font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 pr-1 pl-1"
+                                  onBlur={(e) => {
+                                    const mins = parseTimeToMinutes(e.target.value);
+                                    setSectionDurations(prev => ({ ...prev, [section]: mins }));
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const mins = parseTimeToMinutes((e.target as HTMLInputElement).value);
+                                      setSectionDurations(prev => ({ ...prev, [section]: mins }));
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  className="h-7 w-14 bg-zinc-900 border-zinc-700 text-[10px] text-center font-bold text-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 pr-1 pl-1"
                                 />
                                 <div className="absolute -top-3 left-0 right-0 text-center">
                                   <span className="text-[7px] text-zinc-500 uppercase font-black tracking-tighter">Time</span>
@@ -2628,10 +2843,10 @@ const ServiceChecklist = () => {
                               <span className="text-[8px] text-zinc-500 uppercase font-black">mins</span>
                             </div>
                           </div>
-                          {!isLocked && (collapsedSections[section] ? <ChevronDown className="h-5 w-5 text-zinc-500" /> : <ChevronUp className="h-5 w-5 text-zinc-500" />)}
+                          {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                         </button>
 
-                        {!isLocked && !collapsedSections[section] && (
+                        {isExpanded && (
                           <div className="space-y-2 animate-in slide-in-from-top-1 duration-300">
                             {steps.map((step) => {
                               const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
@@ -2976,7 +3191,7 @@ const ServiceChecklist = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                onClick={() => handleAddStep(section)}
+                                onClick={() => handleAddStep(section as ChecklistStep['category'])}
                                 className="w-full justify-start text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 border border-dashed border-zinc-800 mt-2 h-9 group"
                               >
                                 <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
@@ -3539,7 +3754,19 @@ const ServiceChecklist = () => {
                           <p className="text-sm font-medium">{c.name}</p>
                           <p className="text-xs text-muted-foreground">{c.phone} {c.email}</p>
                         </div>
-                        <Button size="sm" onClick={() => linkJobToCustomer(String(c.id))}>Link Job</Button>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => linkJobToCustomer(String(c.id))}>Link Job</Button>
+                          <Button size="sm" variant="ghost" className="text-zinc-500 hover:text-red-400 p-2" onClick={async () => {
+                            if (confirm(`Are you sure you want to delete ${c.name}? This will remove them from your CRM permanently.`)) {
+                              await api(`/api/customers/${c.id}`, { method: 'DELETE' });
+                              setCustomers(prev => prev.filter(cust => cust.id !== c.id));
+                              setCustomerSearchResults(prev => prev.filter(cust => cust.id !== c.id));
+                              toast({ title: "Customer Deleted", description: "Record removed from CRM." });
+                            }
+                          }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3560,7 +3787,7 @@ const ServiceChecklist = () => {
           <CustomerModal
             open={customerModalOpen}
             onOpenChange={setCustomerModalOpen}
-            onSuccess={async (saved) => {
+            onSave={async (saved) => {
               const list = await getUnifiedCustomers();
               setCustomers(list as CustomerType[]);
               setSelectedCustomer((saved as any).id);
