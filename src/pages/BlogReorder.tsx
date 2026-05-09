@@ -304,9 +304,15 @@ export default function BlogReorder() {
                         <p className="text-[10px] font-black uppercase tracking-widest">Synchronizing Vault...</p>
                     </div>
                 ) : filteredItems.length === 0 ? (
-                    <div className="py-24 text-center border border-dashed border-zinc-800 rounded-[40px] bg-zinc-900/10">
-                        <ImageIcon className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-                        <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">No entries found in this view</p>
+                    <div className="py-24 text-center border border-dashed border-zinc-800 rounded-[40px] bg-zinc-900/10 flex flex-col items-center justify-center gap-4">
+                        <ImageIcon className="w-12 h-12 text-zinc-800 mx-auto" />
+                        <div className="space-y-1">
+                            <p className="text-zinc-600 font-bold uppercase tracking-widest text-xs">The story archive is currently empty</p>
+                            <p className="text-zinc-700 text-[10px] font-bold uppercase">Click "NEW POST" above to start building your blog</p>
+                        </div>
+                        <Button onClick={handleCreateNew} variant="outline" className="mt-4 rounded-xl border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10">
+                            Create Your First Post
+                        </Button>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -316,10 +322,10 @@ export default function BlogReorder() {
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
-                                items={filteredItems.map(i => i.id)}
+                                items={filteredItems.map(i => i.id).filter(id => !!id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {filteredItems.map((item) => (
+                                {filteredItems.map((item) => item.id ? (
                                     <SortablePostItem 
                                         key={item.id} 
                                         item={item} 
@@ -327,7 +333,7 @@ export default function BlogReorder() {
                                         onDelete={() => handleDelete(item.id)}
                                         onToggleStatus={(f) => toggleStatus(item, f)}
                                     />
-                                ))}
+                                ) : null)}
                             </SortableContext>
                         </DndContext>
                     </div>
