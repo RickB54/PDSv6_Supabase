@@ -92,8 +92,7 @@ function SortablePostCard({
         padding: '15px 30px', 
         borderRadius: '16px', 
         border: isDragging ? '1px solid #3b82f6' : '1px solid #111',
-        display: 'grid',
-        gridTemplateColumns: '80px 1fr 200px 250px',
+        gridTemplateColumns: '80px 80px 1fr 200px 250px',
         alignItems: 'center',
         marginBottom: '8px'
     };
@@ -123,6 +122,17 @@ function SortablePostCard({
                         style={{ background: 'none', border: 'none', color: isLast ? '#111' : '#333', cursor: 'pointer', padding: '1px' }}
                     ><ArrowDown size={12} /></button>
                 </div>
+            </div>
+
+            {/* THUMBNAIL PREVIEW */}
+            <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid #111' }}>
+                {item.thumbnail_url ? (
+                    <img src={item.thumbnail_url} alt="Post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111' }}>
+                        <FileText size={20} />
+                    </div>
+                )}
             </div>
 
             {/* TITLE & CATEGORY */}
@@ -511,8 +521,9 @@ export default function EliteMaster() {
                 </div>
 
                 {/* LIST HEADERS */}
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 200px 250px', padding: '0 30px 15px', borderBottom: '1px solid #111', color: '#333', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 200px 250px', padding: '0 30px 15px', borderBottom: '1px solid #111', color: '#333', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '2px' }}>
                     <div>Order</div>
+                    <div>Pic</div>
                     <div>Content Details</div>
                     <div>Status & Pin</div>
                     <div style={{ textAlign: 'right' }}>Actions</div>
