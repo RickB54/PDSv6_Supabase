@@ -80,6 +80,7 @@ const Estimates = () => {
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+    const formatPart = (val: any) => (val && val !== 'null' && val !== 'undefined') ? val : '';
     const getLocalDateString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -190,12 +191,13 @@ const Estimates = () => {
 
             const vehicleObj = customer.vehicles?.find(v => v.id === selectedVehicleId);
             let vehicleStr = vehicleObj 
-                ? `${vehicleObj.year || ''} ${vehicleObj.make || ''} ${vehicleObj.model || ''}`.trim()
-                : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim();
+                ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)}`.replace(/\s+/g, ' ').trim()
+                : `${formatPart(customer.year)} ${formatPart(customer.vehicle)} ${formatPart(customer.model)}`.replace(/\s+/g, ' ').trim();
 
             if (selectedVehicleId === "primary") {
-                vehicleStr = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''} (Primary)`.trim();
+                vehicleStr = `${vehicleStr} (Primary)`.trim();
             }
+            if (!vehicleStr) vehicleStr = "Unknown Vehicle";
 
             const estimateData: any = {
                 id: editingEstimateId || undefined,
@@ -570,12 +572,12 @@ const Estimates = () => {
                                          <SelectContent>
                                              {customers.find(c => c.id === selectedCustomer)?.vehicles?.map(v => (
                                                  <SelectItem key={v.id} value={v.id!}>
-                                                     {v.year} {v.make} {v.model} ({v.type})
+                                                     {`${formatPart(v.year)} ${formatPart(v.make)} ${formatPart(v.model)}`.trim()} ({v.type})
                                                  </SelectItem>
                                              )) || (
                                                  ((cust) => (cust && (cust.vehicle || cust.model) ? (
                                                      <SelectItem value="primary">
-                                                         {cust.year || ''} {cust.vehicle || ''} {cust.model || ''} (Primary)
+                                                         {`${formatPart(cust.year)} ${formatPart(cust.vehicle)} ${formatPart(cust.model)}`.trim()} (Primary)
                                                      </SelectItem>
                                                  ) : (
                                                      <SelectItem value="none" disabled>No vehicles in garage</SelectItem>
