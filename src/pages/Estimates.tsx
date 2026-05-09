@@ -360,18 +360,18 @@ const Estimates = () => {
             
             doc.text(discountLabel, 140, y);
             doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
-            y += 10; // INCREASED SPACING TO AVOID OVERLAP
+            y += 12; // INCREASED SPACING FURTHER TO AVOID OVERLAP
             doc.setFontSize(12);
             doc.setTextColor(0, 0, 0);
         } else {
-            y += 4;
+            y += 6;
         }
 
         doc.setFont("helvetica", "bold");
         doc.text("Estimated Total:", 125, y);
         doc.text(`$${estimate.total.toFixed(2)}`, 180, y, { align: "right" });
         doc.setFont("helvetica", "normal");
-        y += 12;
+        y += 15;
 
         if (estimate.notes) {
             if (y > 230) {
@@ -657,7 +657,18 @@ const Estimates = () => {
                              <div>
                                  <Label className="text-zinc-400">Add-ons</Label>
                                  <div className="flex flex-wrap gap-2 mt-2">
-                                     {addOns.map(addon => {
+                                     {addOns.filter(a => [
+                                         'wheel-cleaning', 
+                                         'clay-bar', 
+                                         'headlight-restoration', 
+                                         'leather-conditioning', 
+                                         'ceramic-trim-coat', 
+                                         'engine-bay', 
+                                         'pet-hair', 
+                                         'stain-treatment', 
+                                         'scratch-repair', 
+                                         'deep-interior'
+                                     ].includes(a.id)).map(addon => {
                                          const isSelected = selectedAddons.includes(addon.id);
                                          return (
                                              <Button
@@ -848,6 +859,9 @@ const Estimates = () => {
                                         <XCircle className="h-4 w-4 mr-2" /> Mark Declined
                                     </Button>
                                 )}
+                                 <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedEstimate, 'download')}>
+                                    <Save className="h-4 w-4 mr-2" /> Save PDF
+                                </Button>
                                 <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedEstimate, 'print')}>
                                     <Printer className="h-4 w-4 mr-2" /> Print
                                 </Button>
