@@ -420,8 +420,8 @@ const Estimates = () => {
                                 <div className="mt-2 flex items-center gap-2 text-xs font-bold font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 w-fit">
                             <Clock className="h-4 w-4" />
                             <span>SYSTEM STAMP: {new Date().toLocaleString()}</span>
-                        </div>        </div>
-                            </div>
+                        </div>
+                    </div>
                         </div>
 
                         <div className="flex gap-8">
