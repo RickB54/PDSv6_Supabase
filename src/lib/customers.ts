@@ -31,6 +31,7 @@ export interface UnifiedCustomer {
   conditionInside?: string;
   conditionOutside?: string;
   lastService?: string;
+  activity_log?: any[];
 }
 
 /**
@@ -88,9 +89,14 @@ function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
       Object.assign(existing, {
         ...c,
         id: finalId,
-        // CRITICAL: If the user says they are a prospect, keep that if possible, 
-        // but if either source explicitly says 'customer', we usually lean there. 
-        // User just said Forrest is a prospect.
+        // Preserve arrays if they exist in either source
+        vehicles: (c.vehicles && c.vehicles.length > 0) ? c.vehicles : (existing.vehicles || []),
+        activity_log: (c.activity_log && c.activity_log.length > 0) ? c.activity_log : (existing.activity_log || []),
+        generalPhotos: (c.generalPhotos && c.generalPhotos.length > 0) ? c.generalPhotos : (existing.generalPhotos || []),
+        beforePhotos: (c.beforePhotos && c.beforePhotos.length > 0) ? c.beforePhotos : (existing.beforePhotos || []),
+        afterPhotos: (c.afterPhotos && c.afterPhotos.length > 0) ? c.afterPhotos : (existing.afterPhotos || []),
+        
+        // CRITICAL: If the user says they are a prospect, keep that if possible
         type: (c.type === 'prospect' || existing.type === 'prospect') ? 'prospect' : 'customer',
         phone: c.phone || existing.phone,
         email: c.email || existing.email,

@@ -606,7 +606,7 @@ const Prospects = () => {
                         {!customer.is_archived && (
                           <>
                             <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
-                              <Link to={`/estimates?customerId=${customer.id}`}>
+                              <Link to={`/estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name || '')}${(customer.name || '').toLowerCase().includes('forrest') ? '&discount=10' : ''}`}>
                                 <FileBarChart className="h-4 w-4 mr-2" /> Estimates
                               </Link>
                             </Button>

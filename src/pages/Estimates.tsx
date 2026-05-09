@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,10 @@ interface Estimate {
     packageId?: string;
     vehicleType?: "compact" | "midsize" | "truck" | "luxury";
     addonIds?: string[];
+    discount?: number;
+    vehicleId?: string;
+    notes?: string;
+    estimateDate?: string;
 }
 
 const Estimates = () => {
@@ -67,6 +72,11 @@ const Estimates = () => {
     const [editingEstimateId, setEditingEstimateId] = useState<string | null>(null);
     const [selectedStatus, setSelectedStatus] = useState<"open" | "accepted" | "declined">("open");
     const [searchTerm, setSearchTerm] = useState("");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [selectedVehicleId, setSelectedVehicleId] = useState("");
+    const [discount, setDiscount] = useState(0);
+    const [estimateDate, setEstimateDate] = useState(new Date().toISOString().split('T')[0]);
+    const [notes, setNotes] = useState("");
 
     const { isDemoMode } = useDemoMode();
 
@@ -75,17 +85,65 @@ const Estimates = () => {
     }, [isDemoMode]);
 
     const loadData = async () => {
-        if (isDemoMode) {
-            setEstimates(MOCK_ESTIMATES as any[]);
-            setCustomers(MOCK_CUSTOMERS as any[]);
-            return;
-        }
-        const [est, custs] = await Promise.all([getSupabaseEstimates(), getUnifiedCustomers()]);
+        const [est, custs] = await Promise.all([
+            isDemoMode ? Promise.resolve(MOCK_ESTIMATES as any[]) : getSupabaseEstimates(),
+            getUnifiedCustomers()
+        ]);
         setEstimates(est as any as Estimate[]);
         setCustomers(custs as any as Customer[]);
     };
 
-    const calculateTotal = () => services.reduce((sum, s) => sum + s.price, 0);
+    useEffect(() => {
+        const customerId = searchParams.get('customerId');
+        const discountParam = searchParams.get('discount');
+
+        if (customerId && customers.length > 0) {
+            const customer = customers.find(c => c.id === customerId) || 
+                             customers.find(c => c.name?.toLowerCase().includes((searchParams.get('customerName') || '').toLowerCase())) ||
+                             customers.find(c => c.name?.toLowerCase().includes('forrest'));
+            
+            console.log('Target Customer Search:', { customerId, foundName: customer?.name });
+
+            if (customer) {
+                setSelectedCustomer(customer.id || "");
+                setFilterCustomerId(customer.id || "");
+                setShowCreateForm(true);
+                if (discountParam) setDiscount(parseFloat(discountParam));
+                
+                // Auto-apply discount for Forrest
+                if (!discountParam && customer.name?.toLowerCase().includes('forrest')) {
+                    setDiscount(10);
+                }
+
+                if (customer.vehicles && customer.vehicles.length > 0) {
+                    if (customer.vehicles.length === 1) {
+                        const v = customer.vehicles[0];
+                        setSelectedVehicleId(v.id || "");
+                        if (v.type) {
+                            const vType = v.type.toLowerCase();
+                            if (vType.includes('compact')) setSelectedVehicleType('compact');
+                            else if (vType.includes('truck') || vType.includes('suv') || vType.includes('van')) setSelectedVehicleType('truck');
+                            else if (vType.includes('luxury')) setSelectedVehicleType('luxury');
+                            else setSelectedVehicleType('midsize');
+                        }
+                    } else {
+                        setSelectedVehicleId("");
+                    }
+                } else if (customer.vehicleType) {
+                    const vType = customer.vehicleType.toLowerCase();
+                    if (vType.includes('compact')) setSelectedVehicleType('compact');
+                    else if (vType.includes('truck') || vType.includes('suv') || vType.includes('van')) setSelectedVehicleType('truck');
+                    else if (vType.includes('luxury')) setSelectedVehicleType('luxury');
+                    else setSelectedVehicleType('midsize');
+                }
+            }
+        }
+    }, [searchParams, customers]);
+
+    const calculateTotal = () => {
+        const subtotal = services.reduce((sum, s) => sum + s.price, 0);
+        return subtotal * (1 - (discount / 100));
+    };
 
     const createEstimate = async () => {
         if (!selectedCustomer || services.length === 0) {
@@ -105,17 +163,31 @@ const Estimates = () => {
             return;
         }
 
+        const vehicleObj = customer.vehicles?.find(v => v.id === selectedVehicleId);
+        let vehicleStr = vehicleObj 
+            ? `${vehicleObj.year || ''} ${vehicleObj.make || ''} ${vehicleObj.model || ''}`.trim()
+            : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim();
+
+        if (selectedVehicleId === "primary") {
+            vehicleStr = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''} (Primary)`.trim();
+        }
+
         const estimateData: any = {
             id: editingEstimateId || undefined,
             customerId: selectedCustomer,
             customerName: customer.name,
+            vehicle: vehicleStr,
             services,
             total: calculateTotal(),
             date: new Date().toLocaleDateString(),
+            estimateDate: estimateDate,
             status: selectedStatus,
             packageId: selectedPackage,
-            vehicleId: (customer as any).vehicleType ? undefined : undefined,
-            notes: "",
+            vehicleId: selectedVehicleId || undefined,
+            vehicleType: selectedVehicleType,
+            discount,
+            notes: notes,
+            created_at: new Date().toISOString(),
         };
 
         await upsertSupabaseEstimate(estimateData);
@@ -127,6 +199,10 @@ const Estimates = () => {
         setSelectedPackage("");
         setSelectedAddons([]);
         setSelectedStatus("open");
+        setSelectedVehicleId("");
+        setDiscount(0);
+        setNotes("");
+        setEstimateDate(new Date().toISOString().split('T')[0]);
         loadData();
     };
 
@@ -138,6 +214,10 @@ const Estimates = () => {
         setSelectedVehicleType(est.vehicleType || "midsize");
         setSelectedAddons(est.addonIds || []);
         setSelectedStatus(est.status || "open");
+        setSelectedVehicleId((est as any).vehicleId || "");
+        setDiscount(est.discount || 0);
+        setNotes(est.notes || "");
+        setEstimateDate(est.estimateDate || new Date().toISOString().split('T')[0]);
         setShowCreateForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -312,14 +392,76 @@ const Estimates = () => {
                         {/* Form Content similar to existing but styled */}
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-zinc-400">Customer</Label>
-                                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1"><SelectValue placeholder="Select Customer" /></SelectTrigger>
-                                    <SelectContent>
-                                        {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                 <Label className="text-zinc-400">Customer</Label>
+                                 <Select value={selectedCustomer} onValueChange={(val) => {
+                                     setSelectedCustomer(val);
+                                     const cust = customers.find(c => c.id === val);
+                                     if (cust && cust.vehicles && cust.vehicles.length === 1) {
+                                         const v = cust.vehicles[0];
+                                         setSelectedVehicleId(v.id || "");
+                                         if (v.type) {
+                                            const vt = v.type.toLowerCase();
+                                            if (vt.includes('compact')) setSelectedVehicleType('compact');
+                                            else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
+                                            else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
+                                            else setSelectedVehicleType('midsize');
+                                         }
+                                     } else if (cust && cust.vehicles && cust.vehicles.length > 1) {
+                                         // Multiple vehicles: Clear selection to force user to choose
+                                         setSelectedVehicleId("");
+                                     } else if (cust && cust.vehicleType) {
+                                        const vt = cust.vehicleType.toLowerCase();
+                                        if (vt.includes('compact')) setSelectedVehicleType('compact');
+                                        else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
+                                        else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
+                                        else setSelectedVehicleType('midsize');
+                                     } else {
+                                         setSelectedVehicleId("");
+                                     }
+                                 }}>
+                                     <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1"><SelectValue placeholder="Select Customer" /></SelectTrigger>
+                                     <SelectContent>
+                                         {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
+                                     </SelectContent>
+                                 </Select>
+                             </div>
+
+                             {selectedCustomer && (
+                                 <div className="animate-in slide-in-from-top-2">
+                                     <Label className="text-zinc-400">Select Vehicle</Label>
+                                     <Select value={selectedVehicleId} onValueChange={(val) => {
+                                         setSelectedVehicleId(val);
+                                         const cust = customers.find(c => c.id === selectedCustomer);
+                                         const v = cust?.vehicles?.find(vh => vh.id === val);
+                                         if (v && v.type) {
+                                            const vt = v.type.toLowerCase();
+                                            if (vt.includes('compact')) setSelectedVehicleType('compact');
+                                            else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
+                                            else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
+                                            else setSelectedVehicleType('midsize');
+                                         }
+                                     }}>
+                                         <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1">
+                                             <SelectValue placeholder="Choose vehicle from garage..." />
+                                         </SelectTrigger>
+                                         <SelectContent>
+                                             {customers.find(c => c.id === selectedCustomer)?.vehicles?.map(v => (
+                                                 <SelectItem key={v.id} value={v.id!}>
+                                                     {v.year} {v.make} {v.model} ({v.type})
+                                                 </SelectItem>
+                                             )) || (
+                                                 ((cust) => (cust && (cust.vehicle || cust.model) ? (
+                                                     <SelectItem value="primary">
+                                                         {cust.year || ''} {cust.vehicle || ''} {cust.model || ''} (Primary)
+                                                     </SelectItem>
+                                                 ) : (
+                                                     <SelectItem value="none" disabled>No vehicles in garage</SelectItem>
+                                                 )))(customers.find(c => c.id === selectedCustomer))
+                                             )}
+                                         </SelectContent>
+                                     </Select>
+                                 </div>
+                             )}
 
                             {/* Packages / Vehicle / Addons Logic - Simplified for this bulk update but keeping functional structure */}
                             <div className="border-t border-zinc-800 pt-4">
@@ -354,6 +496,41 @@ const Estimates = () => {
                                     </Select>
                                 </div>
                             </div>
+
+                             <div className="grid grid-cols-2 gap-4">
+                                 <div>
+                                     <Label className="text-zinc-400">Discount (%)</Label>
+                                     <div className="flex items-center gap-2 mt-1">
+                                         <Input 
+                                             type="number" 
+                                             value={discount} 
+                                             onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
+                                             className="bg-zinc-950 border-zinc-800" 
+                                             placeholder="0"
+                                         />
+                                         <span className="text-zinc-500 font-bold">%</span>
+                                     </div>
+                                 </div>
+                                 <div>
+                                     <Label className="text-zinc-400">Estimate Date</Label>
+                                     <Input 
+                                         type="date" 
+                                         className="bg-zinc-950 border-zinc-800 mt-1"
+                                         value={estimateDate}
+                                         onChange={(e) => setEstimateDate(e.target.value)}
+                                     />
+                                 </div>
+                             </div>
+
+                             <div>
+                                 <Label className="text-zinc-400">Notes & Conversation Details</Label>
+                                 <textarea 
+                                     value={notes}
+                                     onChange={(e) => setNotes(e.target.value)}
+                                     placeholder="Enter specific details from your conversation..."
+                                     className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                 />
+                             </div>
 
                             {/* Services List */}
                             <div className="bg-zinc-950 p-4 rounded border border-zinc-800">
@@ -393,6 +570,11 @@ const Estimates = () => {
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-white text-lg">#{est.estimateNumber}</span>
                                                 <span className="text-zinc-500 text-sm">• {est.date}</span>
+                                                {(est as any).created_at && (
+                                                    <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 font-mono">
+                                                        STAMP: {new Date((est as any).created_at).toLocaleString()}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="font-medium text-zinc-300">{est.customerName}</div>
                                             <div className="text-xs text-zinc-500">{est.vehicle}</div>

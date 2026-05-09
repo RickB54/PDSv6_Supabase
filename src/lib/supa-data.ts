@@ -70,12 +70,13 @@ export interface Customer {
     learningCenterUrl?: string;
     videoNote?: string;
     // Frontend-specific fields that might be packed into vehicle_info or notes
+    vehicleType?: string;
+    addonIds?: string[];
     vehicle?: string;
     model?: string;
     year?: string;
     color?: string;
     mileage?: string;
-    vehicleType?: string;
     conditionInside?: string;
     conditionOutside?: string;
     services?: string[];
@@ -855,6 +856,7 @@ export interface Estimate {
     notes?: string;
     packageId?: string; // optional metadata
     addonIds?: string[]; // optional metadata
+    discount?: number;
 }
 
 export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
@@ -902,7 +904,10 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
             date: e.date,
             status: e.status,
             created_at: e.created_at,
-            notes: e.notes
+            notes: e.notes,
+            vehicleType: e.vehicle_type,
+            packageId: e.package_id,
+            discount: e.discount
         }));
 
         // Merge Local Mock Estimates
@@ -956,11 +961,14 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     const payload = {
         customer_id: customerId,
         vehicle_id: vehicleId,
-        services: p.services, // ensure this is valid json or use JSON.stringify if needed, Supabase client handles array/obj -> jsonb usually
+        services: p.services, 
         total: p.total,
         date: p.date,
         status: p.status || 'open',
         notes: p.notes,
+        vehicle_type: p.vehicleType,
+        package_id: p.packageId,
+        discount: p.discount || 0
     };
 
     // HANDLE LOCAL MOCK ESTIMATES

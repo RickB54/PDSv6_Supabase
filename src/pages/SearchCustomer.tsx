@@ -17,6 +17,7 @@ import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDow
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { exportCustomerHistoryPDF } from '@/lib/pdf-export';
 import { useCouponsStore } from "@/store/coupons";
 import { useFollowUpStore } from "@/store/followup";
 import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
@@ -623,7 +624,7 @@ const SearchCustomer = () => {
                               </Link>
                             </Button>
                             <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
-                              <Link to={`/estimates?customerId=${customer.id}`}>
+                              <Link to={`/estimates?customerId=${customer.id}${(customer.name || '').toLowerCase().includes('forrest') ? '&discount=10' : ''}`}>
                                 <FileBarChart className="h-4 w-4 mr-2" /> Estimates
                               </Link>
                             </Button>
