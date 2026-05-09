@@ -601,34 +601,85 @@ export default function EliteMaster() {
             {/* QUICK EDIT MODAL */}
             {isEditOpen && activeItem && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div style={{ width: '100%', maxWidth: '500px', backgroundColor: '#0a0a0a', borderRadius: '24px', border: '1px solid #222', padding: '40px' }}>
-                        <h2 style={{ margin: '0 0 30px', fontSize: '24px', fontWeight: '900', fontStyle: 'italic', textTransform: 'uppercase' }}>Quick <span style={{ color: '#3b82f6' }}>Edit</span></h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ width: '100%', maxWidth: '800px', backgroundColor: '#0a0a0a', borderRadius: '32px', border: '1px solid #222', padding: '40px', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
                             <div>
-                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Post Title</label>
-                                <input 
-                                    value={editFormData.title}
-                                    onChange={e => setEditFormData({...editFormData, title: e.target.value})}
-                                    style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '12px', borderRadius: '10px', color: 'white' }}
+                                <h2 style={{ margin: 0, fontSize: '28px', fontWeight: '900', fontStyle: 'italic', textTransform: 'uppercase' }}>Edit <span style={{ color: '#3b82f6' }}>Post Content</span></h2>
+                                <p style={{ fontSize: '10px', color: '#444', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '2px', marginTop: '5px' }}>Prime Archive Editor v4.3</p>
+                            </div>
+                            <button onClick={() => setIsEditOpen(false)} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer' }}><X size={32} /></button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+                                <div>
+                                    <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Post Title</label>
+                                    <input 
+                                        value={editFormData.title}
+                                        onChange={e => setEditFormData({...editFormData, title: e.target.value})}
+                                        style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '15px', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: 'bold' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Category</label>
+                                    <input 
+                                        value={editFormData.category}
+                                        onChange={e => setEditFormData({...editFormData, category: e.target.value})}
+                                        style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '15px', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: 'bold' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Story Content / Body Text</label>
+                                <textarea 
+                                    value={editFormData.description}
+                                    onChange={e => setEditFormData({...editFormData, description: e.target.value})}
+                                    rows={12}
+                                    style={{ 
+                                        width: '100%', 
+                                        backgroundColor: '#050505', 
+                                        border: '1px solid #222', 
+                                        padding: '20px', 
+                                        borderRadius: '16px', 
+                                        color: '#ccc', 
+                                        fontSize: '15px', 
+                                        lineHeight: '1.6',
+                                        fontFamily: 'inherit',
+                                        resize: 'vertical'
+                                    }}
+                                    placeholder="Write your story here..."
                                 />
                             </div>
-                            <div>
-                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Category</label>
-                                <input 
-                                    value={editFormData.category}
-                                    onChange={e => setEditFormData({...editFormData, category: e.target.value})}
-                                    style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '12px', borderRadius: '10px', color: 'white' }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+
+                            <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
                                 <button 
                                     onClick={() => setIsEditOpen(false)}
-                                    style={{ flex: 1, padding: '15px', borderRadius: '12px', background: '#111', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                                    style={{ flex: 1, padding: '18px', borderRadius: '16px', background: '#111', color: '#fff', border: '1px solid #222', fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase' }}
                                 >CANCEL</button>
                                 <button 
                                     onClick={handleEditSubmit}
-                                    style={{ flex: 2, padding: '15px', borderRadius: '12px', background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 'black', cursor: 'pointer', fontStyle: 'italic' }}
-                                >SAVE CHANGES</button>
+                                    style={{ 
+                                        flex: 2, 
+                                        padding: '18px', 
+                                        borderRadius: '16px', 
+                                        background: '#3b82f6', 
+                                        color: '#fff', 
+                                        border: 'none', 
+                                        fontWeight: 'black', 
+                                        cursor: 'pointer', 
+                                        fontStyle: 'italic',
+                                        textTransform: 'uppercase',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px',
+                                        boxShadow: '0 10px 20px rgba(59, 130, 246, 0.2)'
+                                    }}
+                                >
+                                    <Save size={18} />
+                                    SAVE ARCHIVE UPDATES
+                                </button>
                             </div>
                         </div>
                     </div>
