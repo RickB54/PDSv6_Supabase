@@ -237,16 +237,6 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         }
     }
 
-    // Record as expense in budget if this is a new purchase
-    if (isNew && chemical.costPerBottle && chemical.currentStock) {
-        const totalCost = chemical.costPerBottle * chemical.currentStock;
-        await upsertExpense({
-            amount: totalCost,
-            category: 'Supplies',
-            description: `Purchased ${chemical.name} (${chemical.currentStock} bottles @ $${chemical.costPerBottle})`,
-            createdAt: new Date().toISOString()
-        } as any);
-    }
 }
 
 export async function deleteChemical(id: string): Promise<void> {
@@ -540,18 +530,6 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         console.warn('[InventoryData] Local cache sync failed:', cacheErr);
     }
 
-    // Record as expense in budget if this is a new purchase
-    if (isNew && material.costPerItem && material.quantity) {
-        const totalCost = material.costPerItem * material.quantity;
-        await upsertExpense({
-            date: new Date().toISOString().split('T')[0],
-            amount: totalCost,
-            category: 'Supplies',
-            description: `Stock Purchase: ${material.name} (Qty: ${material.quantity})`,
-            type: 'expense'
-        } as any);
-    }
-
     return savedItem;
 }
 
@@ -661,15 +639,6 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         }
     }
 
-    // Record as expense in budget if this is a new purchase
-    if (isNew && tool.price) {
-        await upsertExpense({
-            amount: tool.price,
-            category: 'Supplies',
-            description: `Purchased ${tool.name} - Tool`,
-            createdAt: new Date().toISOString()
-        } as any);
-    }
 }
 
 export async function deleteTool(id: string): Promise<void> {

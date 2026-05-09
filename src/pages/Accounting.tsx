@@ -205,6 +205,35 @@ const Accounting = () => {
     }
   };
 
+  const cleanupDuplicates = async () => {
+    try {
+      const suspicious = expenseList.filter(e => e.description === 'Inventory Purchase' || e.description?.startsWith('Purchased ') || e.description?.startsWith('Stock Purchase') || e.vendor === 'Inventory Purchase' || e.vendor?.startsWith('Purchased ') || e.vendor?.startsWith('Stock Purchase')); 
+      const toDelete = [];
+      for (const e of suspicious) {
+        const desc = e.description || e.vendor;
+        if (desc?.startsWith('Purchased ') || desc?.startsWith('Stock Purchase')) {
+            const dateStr = new Date(e.createdAt || e.date).toDateString();
+            const match = suspicious.find(s => (s.description === 'Inventory Purchase' || s.vendor === 'Inventory Purchase') && s.amount === e.amount && new Date(s.createdAt || s.date).toDateString() === dateStr && s.id !== e.id);
+            if (match) {
+                toDelete.push(e);
+            }
+        }
+      }
+      if (toDelete.length > 0) {
+          for (const item of toDelete) {
+              await deleteExpense(item.id!);
+          }
+          toast({ title: "Cleaned up duplicate ledgers", description: `Removed ${toDelete.length} duplicate entries.` });
+          loadData();
+      } else {
+          toast({ title: "No duplicates found" });
+      }
+    } catch(err) {
+      console.error(err);
+      toast({ title: "Cleanup failed", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadCustomCategories();
@@ -791,7 +820,12 @@ const Accounting = () => {
             <AccordionItem value="ledger" className="border-none">
               <Card className="bg-gradient-card border-border">
                 <AccordionTrigger className="px-6 pt-6 pb-4 hover:no-underline">
-                  <h2 className="text-2xl font-bold text-foreground">Transaction Ledger</h2>
+                  <h2 className="text-2xl font-bold text-foreground flex items-center justify-between w-full">
+                    Transaction Ledger
+                    <Button variant="outline" size="sm" onClick={cleanupDuplicates} className="text-xs ml-4 border-red-500/50 hover:bg-red-500/10 text-red-500">
+                      Fix Duplicate Inventory Ledgers
+                    </Button>
+                  </h2>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
                   <div className="space-y-6">
