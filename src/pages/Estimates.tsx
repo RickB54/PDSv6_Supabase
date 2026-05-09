@@ -355,7 +355,7 @@ const Estimates = () => {
         // Move Customer and Vehicle to the right side
         doc.setFont("helvetica", "bold");
         doc.text(`Prospect: ${estimate.customerName}`, 130, contentStartY);
-        doc.text(`Vehicle: ${estimate.vehicle}`, 130, contentStartY + 6);
+        doc.text(`Vehicle: ${(estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}`, 130, contentStartY + 6);
         doc.setFont("helvetica", "normal");
 
         let y = contentStartY + 16;
@@ -792,7 +792,7 @@ const Estimates = () => {
                                                 )}
                                             </div>
                                             <div className="font-medium text-zinc-300">{est.customerName}</div>
-                                            <div className="text-xs text-zinc-500">{est.vehicle}</div>
+                                            <div className="text-xs text-zinc-500">{(est.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}</div>
                                         </div>
                                     </div>
 
