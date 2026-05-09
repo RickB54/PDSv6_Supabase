@@ -276,10 +276,10 @@ export default function BlogReorder() {
     const { isFullScreen } = useFullScreen();
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="w-full flex flex-col min-h-0 bg-black text-white">
             <PageHeader title="Blog Layout Architect" />
 
-            <main className="w-full max-w-7xl mx-auto px-4 pb-24 pt-8 relative">
+            <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-24 pt-8 relative min-h-[500px]">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
@@ -440,7 +440,7 @@ export default function BlogReorder() {
                         <p className="text-zinc-600 mt-2">Try adjusting your search or publishing a story.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4 pt-4">
+                    <div className="space-y-4 pt-4 min-h-0">
                         <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
@@ -448,22 +448,22 @@ export default function BlogReorder() {
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
-                                items={filteredItems.map(i => i.id)}
+                                items={filteredItems.map(i => i.id).filter(Boolean)}
                                 strategy={verticalListSortingStrategy}
                             >
                                 <div className="space-y-3">
-                                    {filteredItems.map((item) => (
+                                    {filteredItems.map((item) => item.id ? (
                                         <SortableItem
                                             key={item.id}
                                             item={item}
                                             onEdit={() => handleEdit(item)}
-                                            onDelete={() => handleDelete(item.id, item)}
+                                            onDelete={() => handleDelete(item.id!, item)}
                                             onArchive={() => handleArchiveToggle(item)}
                                             onPin={() => handlePinToggle(item)}
                                             onSocialBlast={() => { setSocialItem(item); setIsSocialBlastOpen(true); logActivity('social', item, 'Social Blast opened'); }}
                                             onAIAssist={() => { setEditingItem(item); setFormData({ ...item }); setIsAIAssistantOpen(true); }}
                                         />
-                                    ))}
+                                    ) : null)}
                                 </div>
                             </SortableContext>
                             
