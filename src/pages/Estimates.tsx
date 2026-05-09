@@ -161,58 +161,67 @@ const Estimates = () => {
         }
 
         const customer = customers.find(c => c.id === selectedCustomer);
-        if (!customer) return;
+        if (!customer) {
+            console.error('Customer not found for ID:', selectedCustomer);
+            toast({ title: "Error", description: "Customer record not found. Please try re-selecting the customer.", variant: "destructive" });
+            return;
+        }
 
-        if (isDemoMode) {
-            toast({ title: "Simulation Mode", description: "Estimate simulated locally. No real data was created." });
+        try {
+            if (isDemoMode) {
+                toast({ title: "Simulation Mode", description: "Estimate simulated locally. No real data was created." });
+                setShowCreateForm(false);
+                setEditingEstimateId(null);
+                setSelectedCustomer("");
+                setServices([]);
+                return;
+            }
+
+            const vehicleObj = customer.vehicles?.find(v => v.id === selectedVehicleId);
+            let vehicleStr = vehicleObj 
+                ? `${vehicleObj.year || ''} ${vehicleObj.make || ''} ${vehicleObj.model || ''}`.trim()
+                : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim();
+
+            if (selectedVehicleId === "primary") {
+                vehicleStr = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''} (Primary)`.trim();
+            }
+
+            const estimateData: any = {
+                id: editingEstimateId || undefined,
+                customerId: selectedCustomer,
+                customerName: customer.name,
+                vehicle: vehicleStr,
+                services,
+                total: calculateTotal(),
+                date: new Date().toLocaleDateString(),
+                estimateDate: estimateDate,
+                status: selectedStatus,
+                packageId: selectedPackage,
+                vehicleId: selectedVehicleId || undefined,
+                vehicleType: selectedVehicleType,
+                discount,
+                notes: notes,
+                created_at: new Date().toISOString(),
+            };
+
+            await upsertSupabaseEstimate(estimateData);
+            toast({ title: "Success", description: editingEstimateId ? "Estimate updated successfully!" : "Estimate created successfully!" });
             setShowCreateForm(false);
             setEditingEstimateId(null);
             setSelectedCustomer("");
             setServices([]);
-            return;
+            setSelectedPackage("");
+            setSelectedAddons([]);
+            setSelectedStatus("open");
+            setSelectedVehicleId("");
+            setDiscount(0);
+            setNotes("");
+            setEstimateDate(getLocalDateString());
+            loadData();
+        } catch (error: any) {
+            console.error('Error saving estimate:', error);
+            toast({ title: "Error", description: `Failed to save estimate: ${error.message || 'Unknown error'}`, variant: "destructive" });
         }
-
-        const vehicleObj = customer.vehicles?.find(v => v.id === selectedVehicleId);
-        let vehicleStr = vehicleObj 
-            ? `${vehicleObj.year || ''} ${vehicleObj.make || ''} ${vehicleObj.model || ''}`.trim()
-            : `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim();
-
-        if (selectedVehicleId === "primary") {
-            vehicleStr = `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''} (Primary)`.trim();
-        }
-
-        const estimateData: any = {
-            id: editingEstimateId || undefined,
-            customerId: selectedCustomer,
-            customerName: customer.name,
-            vehicle: vehicleStr,
-            services,
-            total: calculateTotal(),
-            date: new Date().toLocaleDateString(),
-            estimateDate: estimateDate,
-            status: selectedStatus,
-            packageId: selectedPackage,
-            vehicleId: selectedVehicleId || undefined,
-            vehicleType: selectedVehicleType,
-            discount,
-            notes: notes,
-            created_at: new Date().toISOString(),
-        };
-
-        await upsertSupabaseEstimate(estimateData);
-        toast({ title: "Success", description: editingEstimateId ? "Estimate updated successfully!" : "Estimate created successfully!" });
-        setShowCreateForm(false);
-        setEditingEstimateId(null);
-        setSelectedCustomer("");
-        setServices([]);
-        setSelectedPackage("");
-        setSelectedAddons([]);
-        setSelectedStatus("open");
-        setSelectedVehicleId("");
-        setDiscount(0);
-        setNotes("");
-        setEstimateDate(getLocalDateString());
-        loadData();
     };
 
     const handleModify = (est: Estimate) => {
@@ -408,10 +417,10 @@ const Estimates = () => {
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Estimates & Quotes</h2>
                                 <p className="text-zinc-400 text-sm">Create, track, and approve estimates</p>
-                                <div className="mt-1 flex items-center gap-2 text-[10px] font-mono text-amber-500/50 uppercase tracking-tighter">
-                                    <Clock className="h-3 w-3" />
-                                    <span>System Time: {new Date().toLocaleString()}</span>
-                                </div>
+                                <div className="mt-2 flex items-center gap-2 text-xs font-bold font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 w-fit">
+                            <Clock className="h-4 w-4" />
+                            <span>SYSTEM STAMP: {new Date().toLocaleString()}</span>
+                        </div>        </div>
                             </div>
                         </div>
 
