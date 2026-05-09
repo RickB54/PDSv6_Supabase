@@ -245,7 +245,7 @@ const Estimates = () => {
         setSelectedCustomer(est.customerId);
         setServices(est.services);
         setSelectedPackage(est.packageId || "");
-        setSelectedVehicleType(est.vehicleType || "midsize");
+        setSelectedVehicleType((est.vehicleType as any) || "midsize");
         setSelectedAddons(est.addonIds || []);
         setSelectedStatus(est.status || "open");
         setSelectedVehicleId((est as any).vehicleId || "");
@@ -404,15 +404,15 @@ const Estimates = () => {
         return estimates.filter(e => {
             if (filterCustomerId && e.customerId !== filterCustomerId) return false;
 
-            const estDate = new Date(e.createdAt);
+            const estDate = new Date(e.created_at || e.date);
             let passQuick = true;
             if (dateFilter === "daily") passQuick = estDate.toDateString() === now.toDateString();
             else if (dateFilter === "weekly") passQuick = estDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             else if (dateFilter === "monthly") passQuick = estDate.getMonth() === now.getMonth() && estDate.getFullYear() === now.getFullYear();
 
             let passRange = true;
-            if (dateRange.from) passRange = estDate >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-            if (passRange && dateRange.to) passRange = estDate <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+            if (dateRange.from) passRange = estDate >= new Date(new Date(dateRange.from).setHours(0, 0, 0, 0));
+            if (passRange && dateRange.to) passRange = estDate <= new Date(new Date(dateRange.to).setHours(23, 59, 59, 999));
 
             let passSearch = true;
             if (searchTerm) {
@@ -692,13 +692,15 @@ const Estimates = () => {
                                                      
                                                      const addonServices = newAddons.map(id => {
                                                          const a = addOns.find(add => add.id === id);
-                                                         return a ? { name: a.name, price: a.price } : null;
+                                                         if (!a) return null;
+                                                         const price = a.pricing[selectedVehicleType] || a.basePrice || 0;
+                                                         return { name: a.name, price };
                                                      }).filter(Boolean) as { name: string, price: number }[];
                                                      
                                                      setServices([...baseService, ...addonServices]);
                                                  }}
                                              >
-                                                 {addon.name} (+${addon.price})
+                                                 {addon.name} (+${addon.pricing[selectedVehicleType] || addon.basePrice})
                                              </Button>
                                          );
                                      })}
@@ -720,7 +722,7 @@ const Estimates = () => {
                                 {services.map((s, i) => (
                                     <div key={i} className="flex justify-between items-center text-zinc-300 mb-2">
                                         <span>{s.name}</span>
-                                        <span className="font-mono">${s.price}</span>
+                                        <span className="font-mono">${(s.price || 0).toFixed(2)}</span>
                                     </div>
                                 ))}
                                 <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-white">
