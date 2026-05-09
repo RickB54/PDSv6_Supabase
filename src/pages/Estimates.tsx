@@ -337,7 +337,7 @@ const Estimates = () => {
         doc.setFontSize(10);
         estimate.services.forEach((s) => {
             doc.text(`${s.name}`, 25, y);
-            doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
+            doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
             y += 6;
         });
 
@@ -369,7 +369,7 @@ const Estimates = () => {
 
         doc.setFont("helvetica", "bold");
         doc.text("Estimated Total:", 125, y);
-        doc.text(`$${estimate.total.toFixed(2)}`, 180, y, { align: "right" });
+        doc.text(`$${(estimate.total || 0).toFixed(2)}`, 180, y, { align: "right" });
         doc.setFont("helvetica", "normal");
         y += 15;
 
@@ -769,7 +769,7 @@ const Estimates = () => {
                                     <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto">
                                         <div className="text-right">
                                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Total</div>
-                                            <div className="text-xl font-bold text-white">${est.total.toFixed(2)}</div>
+                                            <div className="text-xl font-bold text-white">${(est.total || 0).toFixed(2)}</div>
                                         </div>
 
                                         <div className="text-right min-w-[100px]">
@@ -841,12 +841,12 @@ const Estimates = () => {
                                 {selectedEstimate.services.map((s, i) => (
                                     <div key={i} className="flex justify-between items-center text-sm">
                                         <span className="text-zinc-300">{s.name}</span>
-                                        <span className="font-mono text-zinc-200">${s.price.toFixed(2)}</span>
+                                        <span className="font-mono text-zinc-200">${(s.price || 0).toFixed(2)}</span>
                                     </div>
                                 ))}
                                 <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
                                     <span className="text-lg font-bold text-white">Total</span>
-                                    <span className="text-2xl font-bold text-amber-500">${selectedEstimate.total.toFixed(2)}</span>
+                                    <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
                                 </div>
                             </div>
 
