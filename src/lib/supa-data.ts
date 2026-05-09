@@ -851,12 +851,15 @@ export interface Estimate {
     services: { name: string; price: number }[];
     total: number;
     date: string;
+    estimateDate?: string;
     status: string; // open, accepted, declined
     created_at?: string;
     notes?: string;
     packageId?: string; // optional metadata
     addonIds?: string[]; // optional metadata
     discount?: number;
+    discountType?: "percent" | "amount";
+    vehicleType?: string;
 }
 
 export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
