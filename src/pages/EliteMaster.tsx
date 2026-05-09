@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem } from "@/lib/supa-data";
+import { getLibraryItems, upsertLibraryItem, deleteLibraryItem, LibraryItem, supabase } from "@/lib/supa-data";
 import { 
     Save, Trash2, ArrowUp, ArrowDown, RefreshCw, Loader2, Database, 
     Sparkles, Rocket, Pencil, Star, Globe, Lock, History, Search, 
@@ -365,15 +365,37 @@ export default function EliteMaster() {
 
     const handleSaveOrder = async () => {
         setIsSaving(true);
-        setStatus("COMMITTING...");
+        setStatus("LOCKING SEQUENCE...");
         try {
-            await Promise.all(items.map((it, i) => upsertLibraryItem({ ...it, sort_order: i + 1 })));
-            setStatus("LAYOUT SECURED.");
+            // Bulk upsert for performance
+            const payloads = items.map((it, i) => ({
+                id: it.id,
+                title: it.title,
+                content: it.description,
+                description: it.description,
+                type: it.type,
+                category: it.category,
+                thumbnail_url: it.thumbnail_url,
+                resource_url: it.resource_url,
+                is_published: it.is_published,
+                is_pinned: it.is_pinned,
+                sort_order: i + 1,
+                updated_at: new Date().toISOString()
+            }));
+
+            const { error } = await (supabase as any)
+                .from('learning_library_items')
+                .upsert(payloads);
+
+            if (error) throw error;
+
+            setStatus("SEQUENCE SECURED.");
             logAction('Reorder', 'Multiple Posts', `New sequence locked for ${items.length} items`);
             setTimeout(() => setStatus(`STABLE: ${items.length} ARCHIVES.`), 2000);
             toast({ title: "Sequence Locked", description: "The new blog layout is now live." });
         } catch (e) {
-            setError("SAVE FAILED.");
+            console.error("Save Error:", e);
+            setError("SYNC FAILED.");
             toast({ title: "Sync Error", description: "Could not persist order to database.", variant: "destructive" });
         } finally {
             setIsSaving(false);
