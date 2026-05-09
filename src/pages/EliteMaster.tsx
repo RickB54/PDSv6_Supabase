@@ -4,7 +4,8 @@ import {
     Save, Trash2, ArrowUp, ArrowDown, RefreshCw, Loader2, Database, 
     Sparkles, Rocket, Pencil, Star, Globe, Lock, History, Search, 
     X, Filter, ChevronRight, CheckCircle2, Wand2, Info, GripVertical,
-    FileText, Calendar, Clock, Share2, Facebook, Instagram, Music, AlertTriangle
+    FileText, Calendar, Clock, Share2, Facebook, Instagram, Music, AlertTriangle,
+    ChevronDown, ChevronUp
 } from "lucide-react";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
@@ -31,14 +32,14 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 /**
- * ELITE STORY MASTER v4.3 - "THE COMMAND CENTER"
+ * ELITE STORY MASTER v4.4 - "MOBILE OPTIMIZED COMMAND CENTER"
  * 
  * FEATURES:
- * 1. Drag & Drop Reordering: Grab the handle to reorganize.
- * 2. Precision Arrows: Move items up/down one by one.
- * 3. Robust Deletion: New warning dialog to prevent accidental data loss.
- * 4. Activity History: Persistent localStorage log of all admin actions.
- * 5. AI & Social Integration: Direct hooks to production modules.
+ * 1. Accordion Layout: Each post is collapsed by default for maximum screen real estate.
+ * 2. Visual First: 1.5x larger thumbnails with responsive multi-line titles.
+ * 3. Mobile Optimized: No horizontal scrolling; action buttons expand when needed.
+ * 4. Drag & Drop: Grab handles remain active for quick reordering.
+ * 5. Full Context: Expanded view shows all meta-controls (AI, Social, Stats).
  */
 
 interface HistoryItem {
@@ -73,6 +74,7 @@ function SortablePostCard({
     onTogglePin: (item: LibraryItem) => void;
     onTogglePublish: (item: LibraryItem) => void;
 }) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const {
         attributes,
         listeners,
@@ -86,127 +88,180 @@ function SortablePostCard({
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 100 : 1,
-        opacity: isDragging ? 0.5 : (item.is_published ? 1 : 0.6),
+        opacity: isDragging ? 0.5 : 1,
         backgroundColor: isDragging ? '#111' : '#050505',
         boxShadow: isDragging ? '0 20px 40px rgba(0,0,0,0.5)' : 'none',
-        padding: '15px 30px', 
-        borderRadius: '16px', 
+        borderRadius: '20px', 
         border: isDragging ? '1px solid #3b82f6' : '1px solid #111',
-        gridTemplateColumns: '80px 80px 1fr 200px 250px',
-        alignItems: 'center',
-        marginBottom: '8px'
+        marginBottom: '10px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column' as const
     };
 
     return (
         <div ref={setNodeRef} style={style}>
-            {/* GRIP & ORDER */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* --- COLLAPSED HEADER (SUMMARY) --- */}
+            <div 
+                onClick={() => setIsExpanded(!isExpanded)}
+                style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    padding: '15px 20px', 
+                    gap: '15px', 
+                    cursor: 'pointer',
+                    background: isExpanded ? '#080808' : 'transparent',
+                    borderBottom: isExpanded ? '1px solid #111' : 'none',
+                    transition: 'background 0.2s'
+                }}
+            >
+                {/* GRIP HANDLE */}
                 <div 
                     {...attributes} 
                     {...listeners} 
-                    style={{ cursor: 'grab', color: '#222' }}
-                    title="Drag to Reorder"
+                    onClick={e => e.stopPropagation()} 
+                    style={{ cursor: 'grab', color: '#1a1a1a', padding: '10px 5px' }}
                 >
                     <GripVertical size={20} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <button 
-                        onClick={() => onMove(idx, 'up')} 
-                        disabled={idx === 0}
-                        style={{ background: 'none', border: 'none', color: idx === 0 ? '#111' : '#333', cursor: 'pointer', padding: '1px' }}
-                    ><ArrowUp size={12} /></button>
-                    <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#3b82f6', textAlign: 'center' }}>{idx + 1}</div>
-                    <button 
-                        onClick={() => onMove(idx, 'down')} 
-                        disabled={isLast}
-                        style={{ background: 'none', border: 'none', color: isLast ? '#111' : '#333', cursor: 'pointer', padding: '1px' }}
-                    ><ArrowDown size={12} /></button>
-                </div>
-            </div>
 
-            {/* THUMBNAIL PREVIEW */}
-            <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#0a0a0a', border: '1px solid #111' }}>
-                {item.thumbnail_url ? (
-                    <img src={item.thumbnail_url} alt="Post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111' }}>
-                        <FileText size={20} />
+                {/* THUMBNAIL (1.5x larger -> 75px) */}
+                <div style={{ width: '75px', height: '75px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#020202', border: '1px solid #111', flexShrink: 0 }}>
+                    {(item.thumbnail_url || item.resource_url) ? (
+                        <img 
+                            src={item.thumbnail_url || item.resource_url} 
+                            alt="Post" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => {
+                                // Fallback if image fails to load
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;color:#111"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                            }}
+                        />
+                    ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111' }}>
+                            <FileText size={24} />
+                        </div>
+                    )}
+                </div>
+
+                {/* TITLE & CATEGORY */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '900', color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>{item.category || 'General'}</span>
+                        {item.is_pinned && <div style={{ backgroundColor: '#f59e0b', color: 'black', fontSize: '8px', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>FEATURED</div>}
+                        {!item.is_published && <div style={{ backgroundColor: '#111', color: '#555', fontSize: '8px', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>DRAFT</div>}
                     </div>
-                )}
-            </div>
-
-            {/* TITLE & CATEGORY */}
-            <div style={{ minWidth: 0, paddingRight: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                    <span style={{ fontSize: '9px', fontWeight: '900', color: '#444', textTransform: 'uppercase', letterSpacing: '1px' }}>{item.category || 'General'}</span>
-                    {item.is_pinned && <div style={{ backgroundColor: '#f59e0b', color: 'black', fontSize: '8px', padding: '1px 5px', borderRadius: '4px', fontWeight: 'bold' }}>FEATURED</div>}
+                    <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '900', 
+                        textTransform: 'uppercase', 
+                        color: isExpanded ? '#3b82f6' : '#fff', 
+                        fontStyle: 'italic',
+                        lineHeight: 1.2,
+                        wordWrap: 'break-word' as const,
+                        whiteSpace: 'normal' as const
+                    }}>
+                        {item.title}
+                    </div>
                 </div>
-                <div style={{ fontSize: '15px', fontWeight: '900', textTransform: 'uppercase', color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontStyle: 'italic' }}>
-                    {item.title}
+
+                {/* ACCORDION INDICATOR */}
+                <div style={{ color: isExpanded ? '#3b82f6' : '#111', marginLeft: '5px' }}>
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
             </div>
 
-            {/* STATUS & PIN */}
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                    onClick={() => onTogglePublish(item)}
-                    style={{ 
-                        background: item.is_published ? '#064e3b' : '#18181b', 
-                        border: 'none', 
-                        padding: '6px 12px', 
-                        borderRadius: '6px', 
-                        color: item.is_published ? '#34d399' : '#52525b',
-                        fontSize: '9px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                    }}
-                >
-                    {item.is_published ? <Globe size={10} /> : <Lock size={10} />}
-                    {item.is_published ? 'PUBLIC' : 'PRIVATE'}
-                </button>
-                <button 
-                    onClick={() => onTogglePin(item)}
-                    style={{ 
-                        background: item.is_pinned ? '#78350f' : '#18181b', 
-                        border: 'none', 
-                        padding: '6px 12px', 
-                        borderRadius: '6px', 
-                        color: item.is_pinned ? '#fbbf24' : '#52525b',
-                        fontSize: '9px',
-                        fontWeight: 'bold',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <Star size={10} style={{ fill: item.is_pinned ? '#fbbf24' : 'none' }} />
-                </button>
-            </div>
+            {/* --- EXPANDED CONTROLS --- */}
+            {isExpanded && (
+                <div style={{ padding: '20px', backgroundColor: '#030303', borderTop: '1px solid #000' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center', justifyContent: 'space-between' }}>
+                        
+                        {/* PRECISION REORDERING */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#0a0a0a', padding: '8px 15px', borderRadius: '12px', border: '1px solid #151515' }}>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onMove(idx, 'up'); }} 
+                                disabled={idx === 0}
+                                style={{ background: 'none', border: 'none', color: idx === 0 ? '#111' : '#555', cursor: 'pointer' }}
+                            ><ArrowUp size={16} /></button>
+                            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#3b82f6', minWidth: '20px', textAlign: 'center' }}>{idx + 1}</span>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onMove(idx, 'down'); }} 
+                                disabled={isLast}
+                                style={{ background: 'none', border: 'none', color: isLast ? '#111' : '#555', cursor: 'pointer' }}
+                            ><ArrowDown size={16} /></button>
+                        </div>
 
-            {/* ACTIONS */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button 
-                    onClick={() => onAI(item)}
-                    style={{ background: '#1e1b4b', border: '1px solid #312e81', color: '#818cf8', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
-                    title="AI Strategist"
-                ><Sparkles size={16} /></button>
-                <button 
-                    onClick={() => onSocial(item)}
-                    style={{ background: '#172554', border: '1px solid #1e3a8a', color: '#60a5fa', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
-                    title="Social Blast"
-                ><Rocket size={16} /></button>
-                <button 
-                    onClick={() => onEdit(item)}
-                    style={{ background: '#18181b', border: '1px solid #27272a', color: '#a1a1aa', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
-                    title="Edit Metadata"
-                ><Pencil size={16} /></button>
-                <button 
-                    onClick={() => onDelete(item)}
-                    style={{ background: '#450a0a', border: '1px solid #7f1d1d', color: '#f87171', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
-                    title="Delete Permanently"
-                ><Trash2 size={16} /></button>
-            </div>
+                        {/* STATUS TOGGLES */}
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onTogglePublish(item); }}
+                                style={{ 
+                                    background: item.is_published ? '#064e3b' : '#18181b', 
+                                    border: 'none', 
+                                    padding: '10px 15px', 
+                                    borderRadius: '10px', 
+                                    color: item.is_published ? '#34d399' : '#52525b',
+                                    fontSize: '10px',
+                                    fontWeight: '900',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    textTransform: 'uppercase'
+                                }}
+                            >
+                                {item.is_published ? <Globe size={12} /> : <Lock size={12} />}
+                                {item.is_published ? 'Public' : 'Private'}
+                            </button>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onTogglePin(item); }}
+                                style={{ 
+                                    background: item.is_pinned ? '#78350f' : '#18181b', 
+                                    border: 'none', 
+                                    padding: '10px 15px', 
+                                    borderRadius: '10px', 
+                                    color: item.is_pinned ? '#fbbf24' : '#52525b',
+                                    fontSize: '10px',
+                                    fontWeight: '900',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    textTransform: 'uppercase'
+                                }}
+                            >
+                                <Star size={12} style={{ fill: item.is_pinned ? '#fbbf24' : 'none' }} />
+                                {item.is_pinned ? 'Pinned' : 'Pin'}
+                            </button>
+                        </div>
+
+                        {/* CORE ACTION BUTTONS */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onAI(item); }}
+                                style={{ background: '#1e1b4b', border: '1px solid #312e81', color: '#818cf8', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
+                                title="AI Strategist"
+                            ><Sparkles size={18} /></button>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onSocial(item); }}
+                                style={{ background: '#172554', border: '1px solid #1e3a8a', color: '#60a5fa', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
+                                title="Social Blast"
+                            ><Rocket size={18} /></button>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onEdit(item); }}
+                                style={{ background: '#18181b', border: '1px solid #27272a', color: '#a1a1aa', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
+                                title="Edit Metadata"
+                            ><Pencil size={18} /></button>
+                            <button 
+                                onClick={e => { e.stopPropagation(); onDelete(item); }}
+                                style={{ background: '#450a0a', border: '1px solid #7f1d1d', color: '#f87171', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}
+                                title="Delete Permanently"
+                            ><Trash2 size={18} /></button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -444,7 +499,7 @@ export default function EliteMaster() {
                         <span style={{ fontWeight: '900', textTransform: 'uppercase', fontStyle: 'italic', fontSize: '16px', letterSpacing: '-1px', display: 'block', lineHeight: 1 }}>
                             Elite <span style={{ color: '#3b82f6' }}>Story Master</span>
                         </span>
-                        <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase', letterSpacing: '2px' }}>Command Center v4.3</span>
+                        <span style={{ fontSize: '8px', fontWeight: 'bold', color: '#333', textTransform: 'uppercase', letterSpacing: '2px' }}>Command Center v4.4</span>
                     </div>
                 </div>
 
@@ -462,11 +517,11 @@ export default function EliteMaster() {
             </header>
 
             {/* --- MAIN CONTENT --- */}
-            <main style={{ flex: 1, width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+            <main style={{ flex: 1, width: '100%', maxWidth: '900px', margin: '0 auto', padding: '40px 15px' }}>
                 
                 {/* TOOLBAR */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                    <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: '280px' }}>
                         <Search style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#333' }} size={16} />
                         <input 
                             placeholder="SEARCH ARCHIVES..."
@@ -477,7 +532,7 @@ export default function EliteMaster() {
                                 backgroundColor: '#0a0a0a', 
                                 border: '1px solid #151515', 
                                 padding: '12px 15px 12px 45px', 
-                                borderRadius: '12px',
+                                borderRadius: '15px',
                                 color: 'white',
                                 fontSize: '12px',
                                 fontWeight: 'bold',
@@ -503,12 +558,12 @@ export default function EliteMaster() {
                                 color: 'white',
                                 border: 'none',
                                 padding: '12px 24px',
-                                borderRadius: '12px',
+                                borderRadius: '15px',
                                 fontWeight: '900',
                                 textTransform: 'uppercase',
                                 fontStyle: 'italic',
                                 cursor: 'pointer',
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px'
@@ -518,15 +573,6 @@ export default function EliteMaster() {
                             SAVE SEQUENCE
                         </button>
                     </div>
-                </div>
-
-                {/* LIST HEADERS */}
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 200px 250px', padding: '0 30px 15px', borderBottom: '1px solid #111', color: '#333', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                    <div>Order</div>
-                    <div>Pic</div>
-                    <div>Content Details</div>
-                    <div>Status & Pin</div>
-                    <div style={{ textAlign: 'right' }}>Actions</div>
                 </div>
 
                 {/* ITEMS LIST (SORTABLE) */}
@@ -568,7 +614,7 @@ export default function EliteMaster() {
             </main>
 
             <footer style={{ padding: '40px', textAlign: 'center', color: '#111', fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '4px' }}>
-                PRIME SYSTEMS // ELITE MASTER v4.3 // PURE ISOLATION BUILD
+                PRIME SYSTEMS // ELITE MASTER v4.4 // MOBILE ACCORDION BUILD
             </footer>
 
             {/* --- MODALS --- */}
