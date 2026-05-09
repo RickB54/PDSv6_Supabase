@@ -274,7 +274,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
               </div>
 
               <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-2 sm:pr-6 space-y-4 sm:space-y-6 custom-scrollbar text-lg sm:text-xl leading-relaxed text-slate-300 pb-12">
-                {topic.content.map((p, i) => (
+                {(topic.content || []).map((p, i) => (
                   <p key={i} className={p.startsWith('**') ? 'text-white font-bold' : ''}>
                     {p.split(/(\*\*.*?\*\*)/g).map((chunk, j) => 
                       chunk.startsWith('**') ? <strong key={j} className="text-emerald-400">{chunk.replace(/\*\*/g, '')}</strong> : chunk

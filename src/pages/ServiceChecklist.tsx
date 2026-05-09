@@ -1971,11 +1971,11 @@ const ServiceChecklist = () => {
     doc.setFontSize(18);
     doc.text("Prime Auto Detail - Service Estimate", 105, 25, { align: 'center' });
     doc.setFontSize(12);
-    doc.text(`Customer: ${customer?.name || "N/A"}`, 20, 50);
     doc.text(`Vehicle Type: ${vehicleLabels[vehicleType] || vehicleType}`, 20, 42);
     doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 49);
+    doc.text(`Customer: ${customer?.name || "N/A"}`, 20, 56);
 
-    let y = 60;
+    let y = 68;
     doc.setFontSize(14);
     doc.text("Selected Services:", 20, y);
     y += 8;
@@ -1987,8 +1987,10 @@ const ServiceChecklist = () => {
         doc.setFontSize(11);
         const vkey = toVehKey(vehicleType);
         const price = service.kind === 'package' ? getServicePrice(service.id, vkey) : (service.kind === 'addon' ? getAddOnPrice(service.id, vkey) : destinationFee);
-        doc.text(`${service.name}: $${price}`, 25, y);
-        y += 6;
+        const serviceText = `${service.name}: $${price}`;
+        const lines = doc.splitTextToSize(serviceText, 170);
+        doc.text(lines, 25, y);
+        y += (lines.length * 6);
       }
     });
 

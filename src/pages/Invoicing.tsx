@@ -606,9 +606,11 @@ const Invoicing = () => {
 
     doc.setFontSize(10);
     invoice.services.forEach((s) => {
-      doc.text(`${s.name}`, 25, y);
+      const serviceName = s.name || s.title || 'Service';
+      const lines = doc.splitTextToSize(serviceName, 140);
+      doc.text(lines, 25, y);
       doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
-      y += 6;
+      y += (lines.length * 7);
     });
 
     y += 3;

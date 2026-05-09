@@ -95,13 +95,13 @@ const Reports = () => {
 
     const inv = await getSupabaseInvoices();
     // Load Inventory from Supabase
-    const chems = await getChemicals();
-    const mats = await getMaterials();
-    const tls = await getTools();
+    const chems = (await getChemicals()) || [];
+    const mats = (await getMaterials()) || [];
+    const tls = (await getTools()) || [];
     
     // Fetch bookings to populate jobs for Employee report
     const bookingsData = await getSupabaseBookings();
-    const allEmps = await getSupabaseEmployees();
+    const allEmps = (await getSupabaseEmployees()) || [];
     // Show all jobs except cancelled ones for comprehensive employee reporting
     const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
     
@@ -121,7 +121,7 @@ const Reports = () => {
 
   const filterByDate = (items: any[], dateField = "createdAt") => {
     const now = new Date();
-    return items.filter(item => {
+    return (items || []).filter(item => {
       const itemDate = new Date(item[dateField] || item.date || item.createdAt || item.finishedAt || item.created_at);
       const isInvalidDate = !itemDate || isNaN(itemDate.getTime());
 
@@ -161,7 +161,7 @@ const Reports = () => {
 
     let y = 40;
     // Only Active Customers (not prospects)
-    const filteredCustomers = customers.filter(c => (c.type || '').toLowerCase() !== 'prospect');
+    const filteredCustomers = (customers || []).filter(c => (c.type || '').toLowerCase() !== 'prospect');
 
     filteredCustomers.forEach((cust) => {
       if (y > 270) { doc.addPage(); y = 20; }
@@ -196,7 +196,7 @@ const Reports = () => {
 
     let y = 40;
     // Only Prospects + Date Filter
-    const filteredProspects = filterByDate(customers.filter(c => (c.type || '').toLowerCase() === 'prospect'), 'created_at');
+    const filteredProspects = filterByDate((customers || []).filter(c => (c.type || '').toLowerCase() === 'prospect'), 'created_at');
 
     filteredProspects.forEach((prospect) => {
       if (y > 270) { doc.addPage(); y = 20; }
@@ -240,7 +240,7 @@ const Reports = () => {
     let y = 40;
     const filteredInvoices = filterByDate(invoices, 'date');
 
-    const invoiceRows = filteredInvoices.map(inv => [
+    const invoiceRows = (filteredInvoices || []).map(inv => [
       inv.invoiceNumber || inv.id?.substring(0, 8) || 'N/A',
       inv.customerName || 'N/A',
       new Date(inv.date || inv.createdAt).toLocaleDateString(),
@@ -278,9 +278,9 @@ const Reports = () => {
     doc.text(`Strategic Asset Report | Generated: ${new Date().toLocaleString()}`, 14, 27);
 
     // 1. Valuation Graphic Summary (THE POP!)
-    const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
-    const matVal = materials.reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
-    const tlsTotal = tools.reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
+    const chemVal = (chemicals || []).reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+    const matVal = (materials || []).reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
+    const tlsTotal = (tools || []).reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
     const gTotal = chemVal + matVal + tlsTotal;
 
     doc.setFillColor(248, 250, 252);
@@ -331,7 +331,7 @@ const Reports = () => {
     doc.text("Chemical Inventory", 14, y);
     y += 5;
 
-    const chemRows = chemicals.map(chem => {
+    const chemRows = (chemicals || []).map(chem => {
       const cost = chem.costPerBottle || 0;
       const stock = chem.currentStock || 0;
       const total = cost * stock;
@@ -372,7 +372,7 @@ const Reports = () => {
     doc.text("Materials Inventory", 14, y);
     y += 5;
 
-    const matRows = materials.map(mat => {
+    const matRows = (materials || []).map(mat => {
       const cost = mat.costPerItem || 0;
       const qty = mat.quantity || 0;
       const total = cost * qty;
@@ -413,7 +413,7 @@ const Reports = () => {
     doc.text("Tools & Equipment", 14, y);
     y += 5;
 
-    const toolRows = tools.map(tool => {
+    const toolRows = (tools || []).map(tool => {
       const cost = tool.price || 0;
       const qty = tool.quantity || 1;
       const total = cost * qty;
@@ -451,6 +451,17 @@ const Reports = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
+    const employeeStats: any = {};
+    (employees || []).forEach((emp: any) => {
+        employeeStats[emp.name] = { jobs: 0, revenue: 0 };
+    });
+    filterByDate(jobs, "finishedAt").forEach((job: any) => {
+        const empName = job.employeeName || 'Unassigned';
+        if (!employeeStats[empName]) employeeStats[empName] = { jobs: 0, revenue: 0 };
+        employeeStats[empName].jobs += 1;
+        employeeStats[empName].revenue += Number(job.totalRevenue || job.total || 0);
+    });
+
     const empData = Object.entries(employeeStats).map(([name, stats]: any) => [
       name,
       stats.jobs.toString(),
@@ -480,7 +491,7 @@ const Reports = () => {
     doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
     const fEstimates = filterByDate(estimates);
-    const rows = fEstimates.map(est => [
+    const rows = (fEstimates || []).map(est => [
       est.estimateNumber || est.id?.substring(0, 6) || 'N/A',
       est.customerName || 'N/A',
       Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A'),
@@ -520,9 +531,9 @@ const Reports = () => {
     let y = 35;
 
     // 1. Inventory Assets (Calculated from live data)
-    const chemVal = chemicals.reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
-    const matVal = materials.reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
-    const toolVal = tools.reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
+    const chemVal = (chemicals || []).reduce((s, c) => s + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+    const matVal = (materials || []).reduce((s, m) => s + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
+    const toolVal = (tools || []).reduce((s, t) => s + ((t.price || 0) * (t.quantity || 1)), 0);
     const totalAssets = chemVal + matVal + toolVal;
 
     doc.setFontSize(14);
@@ -553,8 +564,8 @@ const Reports = () => {
     // 2. Financial Summary
     // @ts-ignore
     y = doc.lastAutoTable.finalY + 15;
-    const activeIncome = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length);
-    const activeExpenses = expenses.filter(e => filterByDate([e]).length);
+    const activeIncome = (income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length);
+    const activeExpenses = (expenses || []).filter(e => filterByDate([e]).length);
 
     const totalInc = activeIncome.reduce((s, i) => s + (i.amount || 0), 0);
     const totalExp = activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
@@ -598,7 +609,7 @@ const Reports = () => {
     doc.text("Income (Credits)", 14, y);
     y += 5;
 
-    const incomeRows = activeIncome.map(i => [
+    const incomeRows = (activeIncome || []).map(i => [
       (i.date || i.createdAt || '').slice(0, 10),
       i.category || 'General',
       i.description || '-',
@@ -627,7 +638,7 @@ const Reports = () => {
     doc.text("Expenses (Debits)", 14, y);
     y += 5;
 
-    const expenseRows = activeExpenses.map(e => [
+    const expenseRows = (activeExpenses || []).map(e => [
       (e.createdAt || '').slice(0, 10),
       e.category || 'General',
       e.description || '-',
@@ -685,7 +696,7 @@ const Reports = () => {
       doc.text(`Add-ons: ${addOnsStr}`, 20, y); y += 5;
       doc.text(`Duration: ${durationStr} | Total: ${totalStr}`, 20, y); y += 8;
 
-      const svc = servicePackages.find(sp => sp.id === job.serviceId || sp.name === job.service);
+      const svc = (servicePackages || []).find(sp => sp.id === job.serviceId || sp.name === job.service);
       if (svc) {
         const stepCount = (svc.steps || []).length;
         doc.text(`Checklist Tasks: ${stepCount}`, 20, y); y += 8;
@@ -720,7 +731,7 @@ const Reports = () => {
 
       // 1. Gather Income
       const invs = await getSupabaseInvoices();
-      const yearInvoices = invs.filter(inv => {
+      const yearInvoices = (invs || []).filter(inv => {
         const d = inv.date || inv.createdAt;
         return d && d >= yearStart && d <= yearEnd;
       });
@@ -729,7 +740,7 @@ const Reports = () => {
       // Breakdown by services
       const revenueByService: Record<string, number> = {};
       yearInvoices.forEach(inv => {
-        (inv.services || []).forEach((s: any) => {
+        ((inv.services || []) as any[]).forEach((s: any) => {
           const name = s.name || 'Other';
           revenueByService[name] = (revenueByService[name] || 0) + (s.price || 0);
         });
@@ -737,18 +748,18 @@ const Reports = () => {
 
       // 2. Gather Expenses
       const exps = await getSupabaseTaxExpenses(taxYear);
-      const totalExpenses = exps.reduce((sum, e) => sum + e.amount, 0);
-      const deductibleExpenses = exps.filter(e => e.is_deductible).reduce((sum, e) => sum + e.amount, 0);
+      const totalExpenses = (exps || []).reduce((sum, e) => sum + e.amount, 0);
+      const deductibleExpenses = (exps || []).filter(e => e.is_deductible).reduce((sum, e) => sum + e.amount, 0);
       const nonDeductibleExpenses = totalExpenses - deductibleExpenses;
 
       const expensesByCategory: Record<string, number> = {};
-      exps.forEach(e => {
+      (exps || []).forEach(e => {
         expensesByCategory[e.category] = (expensesByCategory[e.category] || 0) + e.amount;
       });
 
       // 3. Gather Mileage
       const logs = await getSupabaseMileageLogs();
-      const yearLogs = logs.filter(l => l.date >= yearStart && l.date <= yearEnd);
+      const yearLogs = (logs || []).filter(l => l.date >= yearStart && l.date <= yearEnd);
       const totalMiles = yearLogs.reduce((sum, l) => sum + Number(l.miles_driven), 0);
       const mileageDeduction = totalMiles * mileageRate;
 
@@ -760,7 +771,7 @@ const Reports = () => {
       });
 
       // 4. Inventory/Assets (already in tax expenses if tagged, but we can verify)
-      const assetExpenses = exps.filter(e => e.asset_id).reduce((sum, e) => sum + e.amount, 0);
+      const assetExpenses = (exps || []).filter(e => e.asset_id).reduce((sum, e) => sum + e.amount, 0);
 
       const report = {
         year: taxYear,
@@ -806,7 +817,7 @@ const Reports = () => {
         notes: `Generated on ${new Date(taxReport.generatedAt).toLocaleString()}`
       });
       const updated = await getSupabaseTaxReports();
-      setTaxHistory(updated);
+      setTaxHistory(updated || []);
       toast.success("Report archived for historical reference");
     } catch (err) {
       toast.error("Failed to archive report");
@@ -886,22 +897,22 @@ const Reports = () => {
     doc.save(`Tax_Report_${taxReport.year}.pdf`);
   };
 
-  const lowStockChemicals = chemicals.filter(c => c.currentStock < c.threshold);
-  const lowStockMaterials = materials.filter(m => (m.quantity || 0) < (m.threshold || m.lowThreshold || 0));
-  const lowStockTools = tools.filter(t => (t.quantity || 0) < (t.threshold || 0));
-  const totalInventoryValue = chemicals.reduce((sum, c) => sum + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
-  const totalMaterialsValue = materials.reduce((sum, m) => sum + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
-  const totalToolsValue = tools.reduce((sum, t) => sum + ((t.price || 0) * (t.quantity || 1)), 0);
-  const chemicalsSorted = [...chemicals].sort((a, b) => {
+  const lowStockChemicals = (chemicals || []).filter(c => c.currentStock < c.threshold);
+  const lowStockMaterials = (materials || []).filter(m => (m.quantity || 0) < (m.threshold || m.lowThreshold || 0));
+  const lowStockTools = (tools || []).filter(t => (t.quantity || 0) < (t.threshold || 0));
+  const totalInventoryValue = (chemicals || []).reduce((sum, c) => sum + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
+  const totalMaterialsValue = (materials || []).reduce((sum, m) => sum + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
+  const totalToolsValue = (tools || []).reduce((sum, t) => sum + ((t.price || 0) * (t.quantity || 1)), 0);
+  const chemicalsSorted = [...(chemicals || [])].sort((a, b) => {
     const alow = a.currentStock < a.threshold; const blow = b.currentStock < b.threshold;
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
-  const materialsSorted = [...materials].sort((a, b) => {
+  const materialsSorted = [...(materials || [])].sort((a, b) => {
     const alow = (a.quantity || 0) < (a.threshold || a.lowThreshold || 0);
     const blow = (b.quantity || 0) < (b.threshold || b.lowThreshold || 0);
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
-  const toolsSorted = [...tools].sort((a, b) => {
+  const toolsSorted = [...(tools || [])].sort((a, b) => {
     const alow = (a.quantity || 0) < (a.threshold || 0);
     const blow = (b.quantity || 0) < (b.threshold || 0);
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
@@ -910,8 +921,8 @@ const Reports = () => {
   const addonsData = useMemo(() => {
     const fInvoices = filterByDate(invoices);
     const addons: any[] = [];
-    fInvoices.forEach(inv => {
-      (inv.services || []).forEach((s: any) => {
+    (fInvoices || []).forEach(inv => {
+      ((inv.services || []) as any[]).forEach((s: any) => {
         if (s.isAddon || s.type === 'addon' || (s.name && s.name.toLowerCase().includes('add-on'))) {
           addons.push({
             name: s.name,
@@ -927,13 +938,13 @@ const Reports = () => {
     return addons;
   }, [invoices, dateFilter, dateRange]);
 
-  const totalAddonRevenue = addonsData.reduce((sum, a) => sum + a.price, 0);
+  const totalAddonRevenue = (addonsData || []).reduce((sum, a) => sum + a.price, 0);
 
   const servicesData = useMemo(() => {
     const fInvoices = filterByDate(invoices);
     const services: any[] = [];
-    fInvoices.forEach(inv => {
-      (inv.services || []).forEach((s: any) => {
+    (fInvoices || []).forEach(inv => {
+      ((inv.services || []) as any[]).forEach((s: any) => {
         const isAddon = s.isAddon || s.type === 'addon' || (s.name && s.name.toLowerCase().includes('add-on'));
         if (!isAddon) {
           services.push({
@@ -950,13 +961,13 @@ const Reports = () => {
     return services;
   }, [invoices, dateFilter, dateRange]);
 
-  const totalServiceRevenue = servicesData.reduce((sum, s) => sum + s.price, 0);
+  const totalServiceRevenue = (servicesData || []).reduce((sum, s) => sum + s.price, 0);
 
   const employeeStats = useMemo(() => {
     const stats: any = {};
     
     // Initialize with all known employees from Supabase to ensure "Paul" etc. show up even with 0 jobs
-    employees.filter(emp => emp.name && emp.name !== 'N/A' && emp.name !== 'Unassigned').forEach(emp => {
+    ((employees || [])).filter(emp => emp.name && emp.name !== 'N/A' && emp.name !== 'Unassigned').forEach(emp => {
       stats[emp.name] = { jobs: 0, revenue: 0, email: emp.email };
     });
 
@@ -965,12 +976,12 @@ const Reports = () => {
       if (empIdOrName === 'N/A') empIdOrName = 'Unassigned';
 
       // Resolve actual name from employees list
-      const empProfile = employees.find(e => e.id === empIdOrName || e.name === empIdOrName);
+      const empProfile = (employees || []).find(e => e.id === empIdOrName || e.name === empIdOrName);
       let targetName = empProfile ? empProfile.name : 'Unassigned';
 
       // If still Unassigned or N/A, attribute to primary admin per user request
       if (targetName === 'Unassigned' || targetName === 'N/A') {
-        const primaryAdmin = employees.find(e => 
+        const primaryAdmin = (employees || []).find(e => 
           e.role === 'Admin' || 
           e.name.toLowerCase().includes('rick') || 
           e.email?.toLowerCase().includes('rberube')
@@ -1067,7 +1078,7 @@ const Reports = () => {
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Customer Overview</h3>
-                  <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{customers.filter(c => (c.type || '').toLowerCase() !== 'prospect').length}</span></p>
+                  <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{(customers || []).filter(c => (c.type || '').toLowerCase() !== 'prospect').length}</span></p>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateCustomerReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -1083,22 +1094,22 @@ const Reports = () => {
                     <SelectValue placeholder="Select a customer..." />
                   </SelectTrigger>
                   <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200 max-h-[300px]">
-                    {Array.from(new Map(customers.map(c => [c.id || c.name, c])).values()).map(c => (
+                    {(Array.from(new Map((customers || []).map(c => [c.id || c.name, c])).values())).map(c => (
                       <SelectItem key={c.id || c.name} value={c.id || c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 {selectedCustomer && (() => {
-                  const cust = customers.find(c => c.id === selectedCustomer);
-                  const custInvoices = invoices.filter(inv => inv.customerId === selectedCustomer);
+                  const cust = (customers || []).find(c => c.id === selectedCustomer);
+                  const custInvoices = (invoices || []).filter(inv => inv.customerId === selectedCustomer);
                   const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
                   const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
                   return (
                     <div className="mt-6 p-6 bg-zinc-950 rounded-xl border border-zinc-800">
                       <h4 className="text-lg font-bold text-white mb-4 underline decoration-zinc-700 underline-offset-4 cursor-pointer hover:text-blue-400 transition-colors"
                         onClick={() => {
-                          const jobsForCustomer = jobs.filter(j => (j.customerId || j.customer?.id) === cust?.id || (j.customer || j.customerName) === cust?.name);
+                          const jobsForCustomer = (jobs || []).filter(j => (j.customerId || j.customer?.id) === cust?.id || (j.customer || j.customerName) === cust?.name);
                           setCustomerJobs(jobsForCustomer);
                           setCustomerJobsCustomer(cust);
                           setCustomerJobsOpen(true);
@@ -1143,11 +1154,11 @@ const Reports = () => {
                     <TableBody>
                       {(() => {
                         const debtors = Array.from(new Map(
-                          customers
+                            (customers || [])
                             .filter(c => (c.type || '').toLowerCase() !== 'prospect')
                             .map(c => [c.id || c.name, c])
                         ).values()).map(cust => {
-                          const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
+                          const custInvoices = (invoices || []).filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
                           const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
                           const totalOwed = custInvoices.reduce((sum, inv) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0);
                           return { ...cust, totalSpent, totalOwed };
@@ -1185,11 +1196,11 @@ const Reports = () => {
                   <div className="space-y-4">
                     {(() => {
                       const ltvData = Array.from(new Map(
-                        customers
+                        (customers || [])
                           .filter(c => (c.type || '').toLowerCase() !== 'prospect')
                           .map(c => [c.id || c.name, c])
                       ).values()).map(cust => {
-                        const custInvoices = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
+                        const custInvoices = (invoices || []).filter(inv => inv.customerId === cust.id || inv.customerName === cust.name);
                         const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
                         return { ...cust, totalSpent };
                       })
@@ -1223,8 +1234,8 @@ const Reports = () => {
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     {(() => {
-                      const customerStats = customers.filter(c => (c.type || '').toLowerCase() !== 'prospect').map(cust => {
-                        const count = invoices.filter(inv => inv.customerId === cust.id || inv.customerName === cust.name).length;
+                      const customerStats = (customers || []).filter(c => (c.type || '').toLowerCase() !== 'prospect').map(cust => {
+                        const count = (invoices || []).filter(inv => inv.customerId === cust.id || inv.customerName === cust.name).length;
                         return count;
                       });
                       const repeatCustomers = customerStats.filter(c => c > 1).length;
@@ -1280,7 +1291,7 @@ const Reports = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {customers
+                    {(customers || [])
                       .filter(c => (c.type || '').toLowerCase() === 'prospect')
                       .map((p, i) => (
                         <TableRow key={i} className="border-zinc-800 hover:bg-zinc-900/50">
@@ -1301,7 +1312,7 @@ const Reports = () => {
                           </TableCell>
                         </TableRow>
                       ))}
-                    {customers.filter(c => (c.type || '').toLowerCase() === 'prospect').length === 0 && (
+                    {(customers || []).filter(c => (c.type || '').toLowerCase() === 'prospect').length === 0 && (
                       <TableRow><TableCell colSpan={5} className="text-center py-8 text-zinc-500">No prospects found.</TableCell></TableRow>
                     )}
                   </TableBody>
@@ -1315,7 +1326,7 @@ const Reports = () => {
                   </h4>
                   <div className="space-y-3">
                     {(() => {
-                      const prospectsList = customers.filter(c => (c.type || '').toLowerCase() === 'prospect');
+                      const prospectsList = (customers || []).filter(c => (c.type || '').toLowerCase() === 'prospect');
                       const sources: Record<string, number> = {};
                       prospectsList.forEach(p => {
                         const s = p.howFound || 'Unknown';
@@ -1353,7 +1364,7 @@ const Reports = () => {
                       const thirtyDaysAgo = new Date();
                       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                       
-                      const staleLeads = customers
+                      const staleLeads = (customers || [])
                         .filter(c => (c.type || '').toLowerCase() === 'prospect')
                         .filter(p => new Date(p.created_at || 0) < thirtyDaysAgo)
                         .slice(0, 5);
@@ -1470,7 +1481,7 @@ const Reports = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Items Tracked</p>
-                  <p className="text-3xl font-bold text-white mt-1">{chemicals.length + materials.length + tools.length}</p>
+                  <p className="text-3xl font-bold text-white mt-1">{(chemicals || []).length + (materials || []).length + (tools || []).length}</p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Low Stock Alerts</p>
@@ -1602,10 +1613,10 @@ const Reports = () => {
                           <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline underline-offset-2" onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}>
                             {(() => {
                               const empIdOrName = job.employee || 'Unassigned';
-                              const profile = employees.find(e => e.id === empIdOrName || e.name === empIdOrName);
+                              const profile = (employees || []).find(e => e.id === empIdOrName || e.name === empIdOrName);
                               if (profile) return profile.name;
                               if (empIdOrName === 'Unassigned' || empIdOrName === 'N/A') {
-                                const primaryAdmin = employees.find(e => e.role === 'Admin' || e.name.toLowerCase().includes('rick') || e.email?.toLowerCase().includes('rberube'));
+                                const primaryAdmin = (employees || []).find(e => e.role === 'Admin' || e.name.toLowerCase().includes('rick') || e.email?.toLowerCase().includes('rberube'));
                                 return primaryAdmin ? primaryAdmin.name : 'Admin';
                               }
                               return empIdOrName;
@@ -1719,8 +1730,8 @@ const Reports = () => {
                       return okQuick && okRange;
                     };
                     const lines = ['Type,Date,Amount,Category,Description,Customer,Method'];
-                    income.filter(i => within(i.date || i.createdAt)).forEach(i => lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`));
-                    expenses.filter(e => within(e.createdAt)).forEach(e => lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`));
+                    (income || []).filter(i => within(i.date || i.createdAt)).forEach(i => lines.push(`Income,${(i.date || i.createdAt || '').slice(0, 10)},${i.amount || 0},${i.category || ''},${String(i.description || '').replace(/,/g, ';')},${i.customerName || ''},${i.paymentMethod || ''}`));
+                    (expenses || []).filter(e => within(e.createdAt)).forEach(e => lines.push(`Expense,${(e.createdAt || '').slice(0, 10)},${e.amount || 0},${e.category || ''},${String(e.description || '').replace(/,/g, ';')},,`));
                     const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a'); a.href = url; a.download = `accounting_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
@@ -1783,7 +1794,7 @@ const Reports = () => {
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Service Revenue</p>
                   <p className="text-xl font-bold text-emerald-300 mt-1">
-                    ${income.reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
+                    ${(income || []).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}
                   </p>
                 </div>
                 <div className="p-4 bg-zinc-900 rounded border border-zinc-700">
@@ -1791,7 +1802,7 @@ const Reports = () => {
                   <p className="text-xl font-bold text-orange-400 mt-1">
                     {(() => {
                       const invest = (totalInventoryValue + totalMaterialsValue + totalToolsValue);
-                      const rev = income.reduce((s, i) => s + (i.amount || 0), 0);
+                      const rev = (income || []).reduce((s, i) => s + (i.amount || 0), 0);
                       const rem = invest - rev;
                       return rem > 0 ? `$${rem.toFixed(2)}` : 'PROFITABLE';
                     })()}
@@ -1803,14 +1814,14 @@ const Reports = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Income</p>
-                  <p className="text-2xl font-bold text-emerald-400 mt-1">${income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-emerald-400 mt-1">${(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0).toFixed(2)}</p>
                 </div>
                 <div className="p-4 bg-zinc-950 rounded border border-zinc-800">
                   <p className="text-xs text-zinc-500 uppercase">Total Expenses</p>
                   <p className="text-2xl font-bold text-red-400 mt-1">
                     ${(() => {
                       const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
-                      const filtered = expenses.filter(e => {
+                      const filtered = (expenses || []).filter(e => {
                         const passDate = filterByDate([e]).length > 0;
                         const cat = (e.category || '').toLowerCase();
                         return passDate && !inventoryCategories.includes(cat);
@@ -1823,9 +1834,9 @@ const Reports = () => {
                   <p className="text-xs text-zinc-500 uppercase">Net Profit</p>
                   <p className="text-2xl font-bold text-white mt-1">
                     {(() => {
-                      const inc = income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
+                      const inc = (income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).reduce((s, i) => s + (i.amount || 0), 0);
                       const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
-                      const exp = expenses.filter(e => {
+                      const exp = (expenses || []).filter(e => {
                         const passDate = filterByDate([e]).length > 0;
                         const cat = (e.category || '').toLowerCase();
                         return passDate && !inventoryCategories.includes(cat);
@@ -1843,7 +1854,7 @@ const Reports = () => {
                 <Table>
                   <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
+                    {(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
                         <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
@@ -1853,7 +1864,7 @@ const Reports = () => {
                         <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
                       </TableRow>
                     ))}
-                    {income.filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
+                    {(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>
@@ -1864,7 +1875,7 @@ const Reports = () => {
                 <Table>
                   <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {expenses.filter(e => {
+                    {(expenses || []).filter(e => {
                       const passDate = filterByDate([e]).length > 0;
                       const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
                       const cat = (e.category || '').toLowerCase();
@@ -1877,7 +1888,7 @@ const Reports = () => {
                         <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
                       </TableRow>
                     ))}
-                    {expenses.filter(e => {
+                    {(expenses || []).filter(e => {
                       const passDate = filterByDate([e]).length > 0;
                       const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory"];
                       const cat = (e.category || '').toLowerCase();
@@ -2104,7 +2115,7 @@ const Reports = () => {
                     autoTable(doc, {
                       startY: 25,
                       head: [['Date', 'Add-on', 'Customer', 'Invoice', 'Revenue']],
-                      body: addonsData.map(a => [
+                      body: (addonsData || []).map(a => [
                         new Date(a.date).toLocaleDateString(),
                         a.name,
                         a.customerName || 'N/A',
@@ -2153,7 +2164,7 @@ const Reports = () => {
                         <TableCell colSpan={5} className="text-center py-8 text-zinc-500 italic">No add-ons found for the selected period.</TableCell>
                       </TableRow>
                     ) : (
-                      addonsData.map((a, idx) => (
+                      (addonsData || []).map((a, idx) => (
                         <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
                           <TableCell className="text-zinc-400">{new Date(a.date).toLocaleDateString()}</TableCell>
                           <TableCell className="font-medium text-zinc-200">{a.name}</TableCell>
@@ -2190,7 +2201,7 @@ const Reports = () => {
                     autoTable(doc, {
                       startY: 35,
                       head: [['Date', 'Service', 'Customer', 'Invoice', 'Revenue']],
-                      body: servicesData.map(s => [
+                      body: (servicesData || []).map(s => [
                         new Date(s.date).toLocaleDateString(),
                         s.name,
                         s.customerName || 'N/A',
@@ -2241,7 +2252,7 @@ const Reports = () => {
                         <TableCell colSpan={5} className="text-center py-8 text-zinc-500 italic">No services found for the selected period.</TableCell>
                       </TableRow>
                     ) : (
-                      servicesData.map((s, idx) => (
+                      (servicesData || []).map((s, idx) => (
                         <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
                           <TableCell className="text-zinc-400">{new Date(s.date).toLocaleDateString()}</TableCell>
                           <TableCell className="font-medium text-zinc-200">{s.name}</TableCell>
@@ -2291,7 +2302,7 @@ const Reports = () => {
                   <Table>
                     <TableHeader className="bg-zinc-900"><TableRow><TableHead>Date</TableHead><TableHead>Service</TableHead><TableHead>Total</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {customerJobs.map((j, idx) => (
+                      {(customerJobs || []).map((j, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{j.finishedAt ? new Date(j.finishedAt).toLocaleDateString() : '-'}</TableCell>
                           <TableCell>{j.service || j.package}</TableCell>

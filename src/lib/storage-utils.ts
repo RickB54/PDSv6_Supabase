@@ -72,7 +72,12 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
                 );
 
                 if (createError) {
-                    console.warn(`Failed to create bucket "${bucket.name}":`, createError);
+                    if ((createError as any).code === '42501') {
+                        // Silence RLS errors in production as buckets are likely already created by admin
+                        console.log(`ℹ️ Bucket "${bucket.name}" could not be created/verified (RLS). Skipping.`);
+                    } else {
+                        console.warn(`Failed to create bucket "${bucket.name}":`, createError);
+                    }
                 } else {
                     console.log(`✅ Created storage bucket: ${bucket.name}`);
                 }

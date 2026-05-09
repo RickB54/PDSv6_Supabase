@@ -384,9 +384,11 @@ const Estimates = () => {
 
         doc.setFontSize(10);
         estimate.services.forEach((s) => {
-            doc.text(`${s.name}`, 25, y);
+            const serviceName = s.name || s.title || 'Service';
+            const lines = doc.splitTextToSize(serviceName, 140);
+            doc.text(lines, 25, y);
             doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
-            y += 6;
+            y += (lines.length * 7);
         });
 
         y += 3;
@@ -403,8 +405,8 @@ const Estimates = () => {
                 ? subtotal * (estimate.discount / 100)
                 : estimate.discount;
             const discountLabel = estimate.discountType === 'percent'
-                ? `Promotional Discount (${estimate.discount}%):`
-                : `Promotional Discount:`;
+                ? `Discount (${estimate.discount}%):`
+                : `Discount:`;
             
             doc.text(discountLabel, 140, y);
             doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
