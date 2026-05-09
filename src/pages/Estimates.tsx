@@ -34,6 +34,8 @@ import {
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_ESTIMATES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
 import logo from "@/assets/pds-final-logo.png";
+import { getCustomPackages } from "@/lib/servicesMeta";
+import { generateInvoiceNumber } from "@/lib/utils";
 
 interface Estimate {
     id?: string;
@@ -44,15 +46,16 @@ interface Estimate {
     services: { name: string; price: number }[];
     total: number;
     date: string;
-    createdAt: string;
-    status?: "open" | "accepted" | "declined";
-    packageId?: string;
-    vehicleType?: "compact" | "midsize" | "truck" | "luxury";
-    addonIds?: string[];
-    discount?: number;
-    vehicleId?: string;
-    notes?: string;
     estimateDate?: string;
+    status: "open" | "accepted" | "declined";
+    packageId?: string;
+    addonIds?: string[];
+    vehicleId?: string;
+    vehicleType?: string;
+    discount?: number;
+    discountType?: "percent" | "amount";
+    notes?: string;
+    created_at?: string;
 }
 
 const Estimates = () => {
@@ -68,14 +71,15 @@ const Estimates = () => {
     const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
     const [filterCustomerId, setFilterCustomerId] = useState("");
     const [selectedPackage, setSelectedPackage] = useState("");
-    const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
     const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-    const [editingEstimateId, setEditingEstimateId] = useState<string | null>(null);
+    const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
     const [selectedStatus, setSelectedStatus] = useState<"open" | "accepted" | "declined">("open");
+    const [editingEstimateId, setEditingEstimateId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [discount, setDiscount] = useState(0);
+    const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
     const getLocalDateString = () => {
         const d = new Date();
         const year = d.getFullYear();
@@ -104,15 +108,19 @@ const Estimates = () => {
 
     useEffect(() => {
         const customerId = searchParams.get('customerId');
-        const discountParam = searchParams.get('discount');
+        const customerName = searchParams.get('customerName');
+        if (customerName) {
+            const found = customers.find(c => c.name.toLowerCase().includes(customerName.toLowerCase()));
+            if (found) {
+                setSelectedCustomer(found.id!);
+                setShowCreateForm(true);
+            }
+        }
+        setDiscount(0);
+        setDiscountType("percent");
 
         if (customerId && customers.length > 0) {
-            const customer = customers.find(c => c.id === customerId) || 
-                             customers.find(c => c.name?.toLowerCase().includes((searchParams.get('customerName') || '').toLowerCase())) ||
-                             customers.find(c => c.name?.toLowerCase().includes('forrest'));
-            
-            console.log('Target Customer Search:', { customerId, foundName: customer?.name });
-
+            const customer = customers.find(c => c.id === customerId);
             if (customer) {
                 setSelectedCustomer(customer.id || "");
                 setFilterCustomerId(customer.id || "");
@@ -151,7 +159,11 @@ const Estimates = () => {
 
     const calculateTotal = () => {
         const subtotal = services.reduce((sum, s) => sum + s.price, 0);
-        return subtotal * (1 - (discount / 100));
+        if (discountType === 'percent') {
+            return subtotal * (1 - (discount / 100));
+        } else {
+            return Math.max(0, subtotal - discount);
+        }
     };
 
     const createEstimate = async () => {
@@ -188,6 +200,7 @@ const Estimates = () => {
 
             const estimateData: any = {
                 id: editingEstimateId || undefined,
+                estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : generateInvoiceNumber(),
                 customerId: selectedCustomer,
                 customerName: customer.name,
                 vehicle: vehicleStr,
@@ -197,11 +210,13 @@ const Estimates = () => {
                 estimateDate: estimateDate,
                 status: selectedStatus,
                 packageId: selectedPackage,
+                addonIds: selectedAddons,
                 vehicleId: selectedVehicleId || undefined,
                 vehicleType: selectedVehicleType,
                 discount,
+                discountType,
                 notes: notes,
-                created_at: new Date().toISOString(),
+                created_at: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
             };
 
             await upsertSupabaseEstimate(estimateData);
@@ -234,6 +249,7 @@ const Estimates = () => {
         setSelectedStatus(est.status || "open");
         setSelectedVehicleId((est as any).vehicleId || "");
         setDiscount(est.discount || 0);
+        setDiscountType(est.discountType || "percent");
         setNotes(est.notes || "");
         setEstimateDate(est.estimateDate || getLocalDateString());
         setShowCreateForm(true);
@@ -334,16 +350,26 @@ const Estimates = () => {
             doc.setFontSize(10);
             doc.setTextColor(150, 150, 150);
             const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
-            const discountAmount = subtotal * (estimate.discount / 100);
-            doc.text(`Promotional Discount (${estimate.discount}%):`, 140, y);
+            const discountAmount = estimate.discountType === 'percent' 
+                ? subtotal * (estimate.discount / 100)
+                : estimate.discount;
+            const discountLabel = estimate.discountType === 'percent'
+                ? `Promotional Discount (${estimate.discount}%):`
+                : `Promotional Discount:`;
+            
+            doc.text(discountLabel, 140, y);
             doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
-            y += 7;
+            y += 10; // INCREASED SPACING TO AVOID OVERLAP
             doc.setFontSize(12);
             doc.setTextColor(0, 0, 0);
+        } else {
+            y += 4;
         }
 
+        doc.setFont("helvetica", "bold");
         doc.text("Estimated Total:", 125, y);
         doc.text(`$${estimate.total.toFixed(2)}`, 180, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
         y += 12;
 
         if (estimate.notes) {
@@ -596,8 +622,17 @@ const Estimates = () => {
 
                              <div className="grid grid-cols-2 gap-4">
                                  <div>
-                                     <Label className="text-zinc-400">Discount (%)</Label>
+                                     <Label className="text-zinc-400">Discount</Label>
                                      <div className="flex items-center gap-2 mt-1">
+                                         <Select value={discountType} onValueChange={(val: any) => setDiscountType(val)}>
+                                             <SelectTrigger className="w-24 bg-zinc-950 border-zinc-800">
+                                                 <SelectValue />
+                                             </SelectTrigger>
+                                             <SelectContent>
+                                                 <SelectItem value="percent">%</SelectItem>
+                                                 <SelectItem value="amount">$</SelectItem>
+                                             </SelectContent>
+                                         </Select>
                                          <Input 
                                              type="number" 
                                              value={discount} 
@@ -605,7 +640,6 @@ const Estimates = () => {
                                              className="bg-zinc-950 border-zinc-800" 
                                              placeholder="0"
                                          />
-                                         <span className="text-zinc-500 font-bold">%</span>
                                      </div>
                                  </div>
                                  <div>
@@ -616,6 +650,46 @@ const Estimates = () => {
                                          value={estimateDate}
                                          onChange={(e) => setEstimateDate(e.target.value)}
                                      />
+                                 </div>
+                             </div>
+
+                             <div>
+                                 <Label className="text-zinc-400">Add-ons</Label>
+                                 <div className="flex flex-wrap gap-2 mt-2">
+                                     {addOns.map(addon => {
+                                         const isSelected = selectedAddons.includes(addon.id);
+                                         return (
+                                             <Button
+                                                 key={addon.id}
+                                                 variant={isSelected ? "default" : "outline"}
+                                                 size="sm"
+                                                 className={isSelected ? "bg-amber-600" : "border-zinc-800 text-zinc-400"}
+                                                 onClick={() => {
+                                                     let newAddons;
+                                                     if (isSelected) {
+                                                         newAddons = selectedAddons.filter(id => id !== addon.id);
+                                                     } else {
+                                                         newAddons = [...selectedAddons, addon.id];
+                                                     }
+                                                     setSelectedAddons(newAddons);
+                                                     
+                                                     // Update services list
+                                                     const pkg = servicePackages.find(p => p.id === selectedPackage);
+                                                     const basePrice = pkg ? pkg.pricing[selectedVehicleType] || 0 : 0;
+                                                     const baseService = pkg ? [{ name: pkg.name, price: basePrice }] : services.filter(s => !addOns.some(a => a.name === s.name));
+                                                     
+                                                     const addonServices = newAddons.map(id => {
+                                                         const a = addOns.find(add => add.id === id);
+                                                         return a ? { name: a.name, price: a.price } : null;
+                                                     }).filter(Boolean) as { name: string, price: number }[];
+                                                     
+                                                     setServices([...baseService, ...addonServices]);
+                                                 }}
+                                             >
+                                                 {addon.name} (+${addon.price})
+                                             </Button>
+                                         );
+                                     })}
                                  </div>
                              </div>
 
