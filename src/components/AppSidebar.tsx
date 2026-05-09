@@ -365,10 +365,10 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   // Standalone Top Items
   const TOP_ITEMS = [
     ...CONFIGURED_TOP_ITEMS,
-    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes' },
-    { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics' },
-    { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery' },
-    { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined }
+    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes', iconColor: 'text-yellow-500', helpTopicId: 'personal-notes' },
+    { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics', iconColor: 'text-amber-500', helpTopicId: 'bookings-analytics' },
+    { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery', iconColor: 'text-purple-500', helpTopicId: 'media-library' },
+    { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined, iconColor: 'text-emerald-500', helpTopicId: 'file-manager' }
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
     
@@ -511,8 +511,15 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { 
                   detail: { 
                     topicId: location.pathname === '/chemicals' ? 'chemical-cards' : 
-                             location.pathname === '/chemical-training' ? 'chemical-decision-system' : 
-                             location.pathname === '/inventory-control' ? 'inventory-control' : undefined,
+                         location.pathname === '/chemical-training' ? 'chemical-decision-system' : 
+                         location.pathname === '/inventory-control' ? 'inventory-control' : 
+                         location.pathname === '/reports' ? 'reports-global-summary' :
+                         location.pathname === '/bookings-analytics' ? 'bookings-analytics' :
+                         location.pathname === '/notes' ? 'personal-notes' :
+                         location.pathname === '/vehicle-gallery' ? 'media-library' :
+                         location.pathname === '/file-manager' ? 'file-manager' :
+                         location.pathname === '/dashboard/admin' ? 'admin-dashboard' :
+                         location.pathname === '/website-admin' ? 'website-admin' : undefined,
                     role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
                   } 
                 }))}
@@ -587,7 +594,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
                       {targetUrl.startsWith('#') ? (
-                        <button onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                        <button onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} className={cn('group', isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full'))}>
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
@@ -614,7 +621,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                           )}
                         </button>
                       ) : (
-                        <Link to={targetUrl} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} style={{ color: isActive ? '#2563eb' : undefined }} className={isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full')}>
+                        <Link to={targetUrl} onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)} style={{ color: isActive ? '#2563eb' : undefined }} className={cn('group', isChatAlert ? 'font-bold text-red-500 animate-pulse flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : (isActive ? 'font-black !text-[#2563eb] bg-transparent flex items-center gap-2 px-2 py-1.5 rounded-md w-full' : 'text-zinc-100 font-bold hover:text-white hover:bg-zinc-800 flex items-center gap-2 px-2 py-1.5 rounded-md w-full'))}>
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
@@ -676,7 +683,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                             navigate(`/section/${sectionId}`);
                           }}
                         >
-                          <group.icon className={cn("h-4 w-4 mr-2", isGroupActive ? "text-[#2563eb]" : "")} />
+                          <group.icon className={cn("h-4 w-4 mr-2", isGroupActive ? "text-[#2563eb]" : (group.iconColor || ""))} />
                           {(open || openMobile) && (
                             <>
                               <span>{group.title}</span>
@@ -743,7 +750,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                       to={targetUrl} 
                                       style={{ color: isActive ? '#2563eb' : undefined }}
                                       className={cn(
-                                        "flex items-center gap-2 py-2 h-auto text-[11px]",
+                                        "flex items-center gap-2 py-2 h-auto text-[11px] group",
                                         isActive ? "!text-[#2563eb] font-black" : "text-zinc-400 font-bold hover:text-white transition-colors"
                                       )} 
                                       onClick={(e) => handleNavClick(e, targetUrl, item.helpTopicId)}

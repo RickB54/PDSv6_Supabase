@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { HelpCircle, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface DateRangeValue {
@@ -15,9 +15,10 @@ interface Props {
   onChange: (v: DateRangeValue) => void;
   storageKey?: string;
   className?: string;
+  helpId?: string;
 }
 
-export default function DateRangeFilter({ value, onChange, storageKey, className }: Props) {
+export default function DateRangeFilter({ value, onChange, storageKey, className, helpId }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -48,9 +49,21 @@ export default function DateRangeFilter({ value, onChange, storageKey, className
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className={cn("whitespace-nowrap", className)}>
+        <Button variant="outline" className={cn("whitespace-nowrap flex items-center", className)}>
           <CalendarIcon className="mr-2 h-4 w-4" />
           {label}
+          {helpId && (
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('open-help', { detail: helpId }));
+              }}
+              className="ml-2 p-1 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition-all cursor-help"
+              title="About this filter"
+            >
+              <HelpCircle className="h-3 w-3" />
+            </div>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

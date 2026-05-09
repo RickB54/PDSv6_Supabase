@@ -1913,7 +1913,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
     try {
         let query = supabase
             .from('bookings')
-            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type), employee:profiles!assigned_employee_id(full_name)');
+            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type)');
 
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
@@ -1965,9 +1965,14 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 endTime: b.end_time || meta.end_time,
                 status: b.status || 'confirmed',
 
-                // Employee Name from Profile Join
-                employee: b.employee?.full_name || b.assigned_employee_id || 'N/A',
-                employeeName: b.employee?.full_name || b.assigned_employee_id || 'N/A',
+                // Employee Info
+                assignedEmployee: b.assigned_employee_id || 'Unassigned',
+                employee: b.assigned_employee_id || 'Unassigned',
+                employeeName: b.assigned_employee_id || 'Unassigned',
+
+                // Service & Time consistency for Reports
+                service: b.service_package || b.title || meta.title || b.service || 'N/A',
+                totalTime: b.estimated_time || meta.estimated_time || 'N/A',
 
                 // Vehicle Relations
                 vehicleId: b.vehicle_id || meta.vehicle_id,

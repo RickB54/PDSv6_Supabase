@@ -934,18 +934,7 @@ export const adminMenuTopics: HelpTopic[] = [
     route: '/detailing-vendors',
     section: 'menu',
   },
-  {
-    id: 'reports-dashboard',
-    title: 'Business Analytics Dashboard',
-    summary: 'High-level overview of shop performance and growth.',
-    content: [
-      '**Overview**: Data-driven insights for detailing business owners.',
-      '• **Metrics**: Track Average Ticket Value, New Leads, and Employee Efficiency.',
-      '• **Visuals**: Review growth charts to identify seasonal peaks.',
-    ],
-    route: '/reports',
-    section: 'menu',
-  },
+
   {
     id: 'website-admin',
     title: 'Website Administration',

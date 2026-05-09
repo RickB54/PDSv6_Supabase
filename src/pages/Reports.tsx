@@ -451,21 +451,6 @@ const Reports = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
-    // Ensure all employees are included, even if they have 0 stats
-    const employeeStats: Record<string, { jobs: number, revenue: number }> = {};
-    employees.forEach(emp => {
-      employeeStats[emp.name] = { jobs: 0, revenue: 0 };
-    });
-    
-    jobs.forEach(job => {
-      const empName = job.employeeId || job.employee || job.employeeName || 'Unknown';
-      if (!employeeStats[empName]) {
-        employeeStats[empName] = { jobs: 0, revenue: 0 };
-      }
-      employeeStats[empName].jobs += 1;
-      employeeStats[empName].revenue += (job.totalRevenue || job.total || 0);
-    });
-
     const empData = Object.entries(employeeStats).map(([name, stats]: any) => [
       name,
       stats.jobs.toString(),
@@ -971,18 +956,32 @@ const Reports = () => {
     const stats: any = {};
     
     // Initialize with all known employees from Supabase to ensure "Paul" etc. show up even with 0 jobs
-    employees.forEach(emp => {
+    employees.filter(emp => emp.name && emp.name !== 'N/A' && emp.name !== 'Unassigned').forEach(emp => {
       stats[emp.name] = { jobs: 0, revenue: 0, email: emp.email };
     });
 
-    // Add "Unassigned" as a fallback
-    stats['Unassigned'] = { jobs: 0, revenue: 0 };
-
     filterByDate(jobs, "finishedAt").forEach((job: any) => {
-      const emp = job.employee || 'Unassigned';
-      if (!stats[emp]) stats[emp] = { jobs: 0, revenue: 0 };
-      stats[emp].jobs += 1;
-      stats[emp].revenue += job.totalRevenue || 0;
+      let empIdOrName = job.employee || job.assignedEmployee || 'Unassigned';
+      if (empIdOrName === 'N/A') empIdOrName = 'Unassigned';
+
+      // Resolve actual name from employees list
+      const empProfile = employees.find(e => e.id === empIdOrName || e.name === empIdOrName);
+      let targetName = empProfile ? empProfile.name : 'Unassigned';
+
+      // If still Unassigned or N/A, attribute to primary admin per user request
+      if (targetName === 'Unassigned' || targetName === 'N/A') {
+        const primaryAdmin = employees.find(e => 
+          e.role === 'Admin' || 
+          e.name.toLowerCase().includes('rick') || 
+          e.email?.toLowerCase().includes('rberube')
+        );
+        if (primaryAdmin) targetName = primaryAdmin.name;
+        else targetName = 'Admin'; // Absolute fallback
+      }
+
+      if (!stats[targetName]) stats[targetName] = { jobs: 0, revenue: 0 };
+      stats[targetName].jobs += 1;
+      stats[targetName].revenue += Number(job.totalRevenue || job.total || 0);
     });
 
     return stats;
@@ -1044,14 +1043,7 @@ const Reports = () => {
                   <SelectItem value="monthly">This Month</SelectItem>
                 </SelectContent>
               </Select>
-              <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="reports-range" />
-              <button 
-                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'reports-temporal-scan' }))}
-                className="p-2 rounded-full hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition-all"
-                title="About Temporal Scans"
-              >
-                <HelpCircle className="h-5 w-5" />
-              </button>
+              <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="reports-range" helpId="reports-temporal-scan" />
             </div>
           </div>
         </Card>
@@ -1588,7 +1580,7 @@ const Reports = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(employeeStats).filter(([name]) => name !== 'Unassigned').map(([name, stats]: any) => (
+                    {Object.entries(employeeStats).filter(([name]) => name !== 'Unassigned' && name !== 'N/A').map(([name, stats]: any) => (
                       <TableRow key={name} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium text-zinc-200">{name}</TableCell>
                         <TableCell className="text-zinc-300">{stats.jobs}</TableCell>
@@ -1607,7 +1599,18 @@ const Reports = () => {
                     {filterByDate(jobs, 'finishedAt').map((job, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium">
-                          <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline underline-offset-2" onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}>{job.employee || 'N/A'}</span>
+                          <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline underline-offset-2" onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}>
+                            {(() => {
+                              const empIdOrName = job.employee || 'Unassigned';
+                              const profile = employees.find(e => e.id === empIdOrName || e.name === empIdOrName);
+                              if (profile) return profile.name;
+                              if (empIdOrName === 'Unassigned' || empIdOrName === 'N/A') {
+                                const primaryAdmin = employees.find(e => e.role === 'Admin' || e.name.toLowerCase().includes('rick') || e.email?.toLowerCase().includes('rberube'));
+                                return primaryAdmin ? primaryAdmin.name : 'Admin';
+                              }
+                              return empIdOrName;
+                            })()}
+                          </span>
                         </TableCell>
                         <TableCell className="text-zinc-300">{job.customer || 'N/A'}</TableCell>
                         <TableCell className="text-zinc-300">{job.service || 'N/A'}</TableCell>

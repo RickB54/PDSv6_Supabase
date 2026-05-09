@@ -52,8 +52,8 @@ export type MenuGroup = {
 };
 
 export const TOP_ITEMS: MenuItem[] = [
-    { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, helpTopicId: 'admin-dashboard' },
-    { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red", helpTopicId: 'website-admin' },
+    { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'admin-dashboard' },
+    { title: "Website Administration", url: "/website-admin", role: "admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
 ];
 
 // Note: Badge counts like todoCount, payrollDueCount, etc. are dynamic and passed from the component.
@@ -70,14 +70,14 @@ export const getMenuGroups = (counts: {
 }): MenuGroup[] => [
 
         {
-            title: "View As", icon: Globe,
+            title: "View As", icon: Globe, iconColor: "text-zinc-400",
             items: [
                 { title: "View As Customer", url: "/customer-dashboard", role: "admin", key: "customer-view-dashboard", icon: LayoutDashboard, helpTopicId: 'customer-view' },
                 { title: "View As Employee", url: "/dashboard/employee", role: "admin", key: "employee-view-dashboard", icon: GraduationCap, helpTopicId: 'employee-dashboard' },
             ]
         },
         {
-            title: "Customer Intake", icon: UserPlus,
+            title: "Customer Intake", icon: UserPlus, iconColor: "text-blue-400",
             items: [
                 { title: "Phone Assistant", url: "#call-assistant", key: "phone-assistant", icon: Phone, helpTopicId: 'phone-assistant' },
                 { title: "Package Comparison", url: "/package-selection", key: "package-selection", icon: Package, helpTopicId: 'package-selection' },
@@ -87,7 +87,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Operations", icon: ClipboardCheck,
+            title: "Operations", icon: ClipboardCheck, iconColor: "text-emerald-400",
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "employee", key: "employee-schedule", icon: CalendarDays, helpTopicId: 'staff-schedule' },
                 { title: "Bookings", url: "/bookings", key: "bookings", icon: CalendarDays, badge: counts.tentativeBookingsCount, badgeColor: counts.bookingsBadgeColor, helpTopicId: 'bookings' },
@@ -100,7 +100,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Finance & Sales", icon: DollarSign,
+            title: "Finance & Sales", icon: DollarSign, iconColor: "text-green-400",
             items: [
                 { title: "Quick Pay", url: "#quick-pay", key: "quick-pay", icon: DollarSign, highlight: "green", iconColor: "text-emerald-500", helpTopicId: "quick-pay" },
                 { title: "Estimates", url: "/estimates", role: "admin", key: "estimates", highlight: "green", icon: FileText, helpTopicId: 'estimates' },
@@ -114,9 +114,9 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Reports", icon: FileBarChart,
+            title: "Reports", icon: FileBarChart, iconColor: "text-amber-400",
             items: [
-                { title: "Reports Dashboard", url: "/reports", role: "admin", key: "reports", icon: FileBarChart, helpTopicId: 'reports-dashboard' },
+                { title: "Reports Dashboard", url: "/reports", role: "admin", key: "reports", icon: FileBarChart, helpTopicId: 'reports-global-summary' },
                 { title: "Customers", url: "/reports?tab=customers", role: "admin", key: "reports-customers", icon: Users, helpTopicId: 'reports-customers' },
                 { title: "Invoices", url: "/reports?tab=invoices", role: "admin", key: "reports-invoices", icon: FileText, helpTopicId: 'reports-invoices' },
                 { title: "Inventory", url: "/reports?tab=inventory", role: "admin", key: "reports-inventory", icon: Package, helpTopicId: 'reports-inventory' },
@@ -127,7 +127,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Chemicals", icon: Beaker,
+            title: "Chemicals", icon: Beaker, iconColor: "text-purple-400",
             items: [
                 { title: "Chemical Cards", url: "/chemicals", key: "chemical-cards", icon: Package, helpTopicId: 'chemical-cards' },
                 { title: "Dilution Ratio Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer, helpTopicId: 'dilution-chart-reference' },
@@ -137,7 +137,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Label System", icon: Tag,
+            title: "Label System", icon: Tag, iconColor: "text-rose-400",
             items: [
                 { title: "Chemical Labels", url: "/chemicals?labels=open", key: "chemical-labels", icon: Tag, helpTopicId: 'chemical-cards' },
                 { title: "Mixed Labels", url: "/chemicals?mixed=open", key: "mixed-labels", icon: FlaskConical, helpTopicId: 'chemical-cards' },
@@ -145,7 +145,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Inventory & Assets", icon: Package,
+            title: "Inventory & Assets", icon: Package, iconColor: "text-cyan-400",
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
                 { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
@@ -155,7 +155,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Prime Learning Center", icon: GraduationCap,
+            title: "Prime Learning Center", icon: GraduationCap, iconColor: "text-indigo-400",
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield, helpTopicId: 'employee-certification' },
                 { title: "Interactive App Demo", url: "/learning-library?tab=demo", key: "interactive-demo", icon: Globe, highlight: "green", helpTopicId: "interactive-training-demo" },
@@ -165,7 +165,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Staff Management", icon: Users,
+            title: "Staff Management", icon: Users, iconColor: "text-orange-400",
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "admin", key: "staff-schedule", icon: CalendarDays, helpTopicId: 'staff-schedule' },
                 { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users, helpTopicId: 'company-employees' },
@@ -173,7 +173,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Marketing & Retention", icon: TicketPercent,
+            title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400",
             items: [
                 { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
@@ -183,7 +183,7 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Settings", icon: Settings,
+            title: "Settings", icon: Settings, iconColor: "text-zinc-500",
             items: [
                 { title: "Application Settings", url: "/settings", key: "settings", icon: Settings, helpTopicId: 'application-settings' },
                 { title: "My Profile", url: "/user-settings", key: "user-settings", icon: UserCircle, helpTopicId: 'user-profile' },
