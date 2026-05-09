@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2 } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
+import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { servicePackages, addOns } from "@/lib/services";
@@ -119,6 +120,24 @@ const Estimates = () => {
 
     const [estimateDate, setEstimateDate] = useState(getLocalDateString());
     const [notes, setNotes] = useState("");
+    const [isRefiningNotes, setIsRefiningNotes] = useState(false);
+
+    const handleAIEnhance = async () => {
+        if (!notes.trim()) {
+            toast({ title: "No text found", description: "Please enter some notes to enhance.", variant: "destructive" });
+            return;
+        }
+        setIsRefiningNotes(true);
+        try {
+            const refined = await refineTextWithAI(notes);
+            setNotes(refined);
+            toast({ title: "Notes Enhanced", description: "Your notes have been professionally polished." });
+        } catch (error) {
+            toast({ title: "Error", description: "Failed to enhance notes.", variant: "destructive" });
+        } finally {
+            setIsRefiningNotes(false);
+        }
+    };
 
     const { isDemoMode } = useDemoMode();
 
@@ -738,12 +757,24 @@ const Estimates = () => {
                              </div>
 
                              <div>
-                                 <Label className="text-zinc-400">Notes & Conversation Details</Label>
+                                 <div className="flex items-center justify-between">
+                                     <Label className="text-zinc-400">Notes & Conversation Details</Label>
+                                     <Button 
+                                         variant="ghost" 
+                                         size="sm" 
+                                         onClick={handleAIEnhance} 
+                                         disabled={isRefiningNotes || !notes.trim()}
+                                         className="h-6 px-2 text-xs bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 hover:text-amber-400 border border-amber-500/20"
+                                     >
+                                         {isRefiningNotes ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                                         {isRefiningNotes ? 'Enhancing...' : 'Enhance with AI'}
+                                     </Button>
+                                 </div>
                                  <textarea 
                                      value={notes}
                                      onChange={(e) => setNotes(e.target.value)}
                                      placeholder="Enter specific details from your conversation..."
-                                     className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                     className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
                                  />
                              </div>
 

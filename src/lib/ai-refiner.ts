@@ -61,6 +61,11 @@ export async function refineTextWithAI(text: string): Promise<string> {
         refined = `Professional Assessment: ${refined}.`;
     }
 
+    // Specific rule for review requests
+    if (refined.toLowerCase().includes("review") && refined.toLowerCase().includes("hope")) {
+        refined = "We hope you were completely satisfied with your recent detailing service. If you have a moment, we would greatly appreciate it if you could share your experience by leaving us a review. Your feedback is invaluable to our team.";
+    }
+
     // Replace "I" with "We" or "The team" for professional weight
     refined = refined.replace(/\b(I am|I'm)\b/gi, "We are");
     refined = refined.replace(/\b(I have)\b/gi, "Our team has");
