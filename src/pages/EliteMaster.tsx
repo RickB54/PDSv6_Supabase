@@ -5,7 +5,7 @@ import {
     Sparkles, Rocket, Pencil, Star, Globe, Lock, History, Search, 
     X, Filter, ChevronRight, CheckCircle2, Wand2, Info, GripVertical,
     FileText, Calendar, Clock, Share2, Facebook, Instagram, Music, AlertTriangle,
-    ChevronDown, ChevronUp
+    ChevronDown, ChevronUp, Play
 } from "lucide-react";
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
