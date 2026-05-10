@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -1249,13 +1249,35 @@ Precision. Protection. Perfection.`;
                     <div className="text-center py-4 text-zinc-600 italic text-sm">No items added yet</div>
                   )}
 
-                  <Button onClick={createInvoice} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer || isCreating}>
-                    {isCreating ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
-                    ) : (
-                      "Generate Invoice"
-                    )}
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button onClick={createInvoice} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer || isCreating}>
+                      {isCreating ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...</>
+                      ) : (
+                        "Generate Invoice"
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-zinc-700 text-zinc-300"
+                      disabled={services.length === 0 || !selectedCustomer}
+                      onClick={() => {
+                        const tempInv: Invoice = {
+                          invoiceNumber: 9999,
+                          customerId: selectedCustomer,
+                          customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Customer",
+                          vehicle: customVehicle || "Current Vehicle",
+                          services,
+                          total: calculateTotal(),
+                          date: new Date().toLocaleDateString(),
+                          notes: customNotes,
+                        };
+                        generatePDF(tempInv, false);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-2" /> Preview
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1351,6 +1373,9 @@ Precision. Protection. Perfection.`;
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-400/10 border border-emerald-500/20" onClick={() => generatePDF(invoice, false)} title="Preview PDF">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, false)} title="Print PDF">
                         <Printer className="h-4 w-4" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(invoice, true)} title="Download PDF">
@@ -1650,6 +1675,18 @@ Precision. Protection. Perfection.`;
 
                 <div className="flex gap-2 justify-between pt-4 border-t border-zinc-800">
                   <div className="flex gap-2">
+                    <Button variant="outline" className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10" onClick={() => {
+                      const currentInv = {
+                        ...selectedInvoice,
+                        services: editServices,
+                        vehicle: editVehicle,
+                        notes: editNotes,
+                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
+                      };
+                      generatePDF(currentInv as Invoice, false);
+                    }}>
+                      <Eye className="h-4 w-4 mr-2" /> Preview
+                    </Button>
                     <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
                       const currentInv = {
                         ...selectedInvoice,

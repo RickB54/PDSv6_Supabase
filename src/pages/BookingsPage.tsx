@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid } from "lucide-react"; // Added LayoutGrid
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye } from "lucide-react"; // Added LayoutGrid
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -37,6 +37,7 @@ import { MOCK_BOOKINGS } from "@/lib/demoMockData";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import { exportCustomerHistoryPDF } from "@/lib/pdf-export";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import supabase from "@/lib/supabase"; // Realtime import
 import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } from "@/lib/unifiedCalendar";
@@ -2889,13 +2890,33 @@ export default function BookingsPage() {
                                       </Badge>
                                     </div>
                                   </div>
+                                  </div>
                               </div>
-                              <ChevronDown
-                                className={cn(
-                                  "h-5 w-5 text-muted-foreground transition-transform",
-                                  selectedHistoryCustomer === customer.name && "transform rotate-180"
-                                )}
-                              />
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 text-primary hover:text-primary/80"
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const relatedBookings = items.filter(b => 
+                                      (b.customerId === customer.id) || 
+                                      (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                      (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                    );
+                                    exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                                  }}
+                                  title="Preview History Report"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <ChevronDown
+                                  className={cn(
+                                    "h-5 w-5 text-muted-foreground transition-transform",
+                                    selectedHistoryCustomer === customer.name && "transform rotate-180"
+                                  )}
+                                />
+                              </div>
                             </div>
                           </CollapsibleTrigger>
 
@@ -3160,7 +3181,18 @@ export default function BookingsPage() {
                                               >
                                                 <Copy className="h-2.5 w-2.5" /> Duplicate
                                               </Button>
-                                              {isAdmin && (
+                                              <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="h-6 text-[10px] gap-1 ml-1 text-blue-400 hover:text-blue-300"
+                                                  onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    exportCustomerHistoryPDF(customer, [event], true); 
+                                                  }}
+                                                >
+                                                  <Eye className="h-2.5 w-2.5" /> Preview
+                                                </Button>
+                                                {isAdmin && (
                                                 <Button
                                                   size="sm"
                                                   variant="ghost"

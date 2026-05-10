@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2 } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -794,9 +794,34 @@ const Estimates = () => {
                                 </div>
                             </div>
 
-                            <Button onClick={createEstimate} className="w-full bg-amber-600 hover:bg-amber-700 text-white">
-                                {editingEstimateId ? "Save Changes" : "Create Estimate"}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={createEstimate} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
+                                    {editingEstimateId ? "Save Changes" : "Create Estimate"}
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    className="border-zinc-700 text-zinc-300"
+                                    onClick={() => {
+                                        const tempEst: Estimate = {
+                                            estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : 9999,
+                                            customerId: selectedCustomer,
+                                            customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Prospect",
+                                            vehicle: "Current Vehicle",
+                                            services,
+                                            total: calculateTotal(),
+                                            date: new Date().toLocaleDateString(),
+                                            estimateDate: estimateDate,
+                                            status: selectedStatus,
+                                            discount,
+                                            discountType,
+                                            notes: notes,
+                                        };
+                                        generatePDF(tempEst, 'print');
+                                    }}
+                                >
+                                    <Eye className="h-4 w-4 mr-2" /> Preview
+                                </Button>
+                            </div>
                         </div>
                     </Card>
                 )}
@@ -847,7 +872,10 @@ const Estimates = () => {
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => generatePDF(est, 'print')} title="Preview PDF">
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/20" onClick={() => generatePDF(est, 'print')} title="Preview PDF">
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(est, 'print')} title="Print PDF">
                                                 <Printer className="h-4 w-4" />
                                             </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(est, 'download')} title="Download PDF">

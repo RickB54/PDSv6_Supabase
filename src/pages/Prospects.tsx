@@ -26,7 +26,7 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye
 } from "lucide-react";
 import {
   AlertDialog,
@@ -589,6 +589,23 @@ const Prospects = () => {
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            const relatedBookings = allBookings.filter(b => 
+                              (b.customerId === customer.id) || 
+                              (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                              (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                            );
+                            exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                          }} 
+                          className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300"
+                          title="Preview Prospect Report"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                         {isAdmin && (
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
@@ -774,6 +791,17 @@ const Prospects = () => {
                                                  <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
                                                  <span className="text-zinc-600 text-xs">•</span>
                                                  <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                                 <Button 
+                                                   variant="ghost" 
+                                                   size="sm" 
+                                                   className="h-6 w-6 p-0 text-purple-400 hover:text-purple-300 ml-2"
+                                                   onClick={(e) => { 
+                                                      e.stopPropagation(); 
+                                                      exportCustomerHistoryPDF(customer, [booking], true); 
+                                                   }}
+                                                 >
+                                                   <Eye className="h-3 w-3" />
+                                                 </Button>
                                                </div>
                                                <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-purple-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
                                                <div className="grid grid-cols-2 gap-2">

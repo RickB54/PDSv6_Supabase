@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -596,6 +596,23 @@ const SearchCustomer = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            const relatedBookings = allBookings.filter(b => 
+                              (b.customerId === customer.id) || 
+                              (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                              (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                            );
+                            exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                          }}
+                          className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
+                          title="Preview Activity Report"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }}
                           className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_archived ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-400 hover:text-amber-400")}
                           title={customer.is_archived ? "Restore" : "Archive"}
@@ -886,14 +903,27 @@ const SearchCustomer = () => {
                                            
                                            <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
                                               <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
-                                              <Button 
-                                               variant="ghost" 
-                                               size="sm" 
-                                               className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
-                                               onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
-                                              >
-                                                Inspect <ExternalLink className="h-2.5 w-2.5" />
-                                              </Button>
+                                               <div className="flex items-center gap-2">
+                                                 <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 p-0 gap-1.5"
+                                                  onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    exportCustomerHistoryPDF(customer, [booking], true); 
+                                                  }}
+                                                 >
+                                                   <Eye className="h-3 w-3" /> Preview
+                                                 </Button>
+                                                 <Button 
+                                                  variant="ghost" 
+                                                  size="sm" 
+                                                  className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
+                                                  onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
+                                                 >
+                                                   Inspect <ExternalLink className="h-2.5 w-2.5" />
+                                                 </Button>
+                                               </div>
                                            </div>
                                        </div>
                                      );

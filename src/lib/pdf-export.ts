@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
-export const exportCustomerHistoryPDF = (customer: any, bookings: any[]) => {
+export const exportCustomerHistoryPDF = (customer: any, bookings: any[], preview = false) => {
   const doc = jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -52,8 +52,8 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[]) => {
 
   // Combined Timeline Table
   const items: any[] = [];
-  bookings.forEach(b => items.push({ 
-    date: b.date, 
+  (bookings || []).forEach(b => items.push({ 
+    date: b.date || b.created_at || new Date().toISOString(), 
     type: 'Booking', 
     title: b.title || 'Premium Service', 
     details: `Vehicle: ${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}\nStatus: ${b.status}\nValue: $${b.price?.toFixed(2) || '0.00'}`,
@@ -62,17 +62,17 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[]) => {
 
   const activityLog = customer.activity_log || [];
   activityLog.forEach((a: any) => items.push({
-    date: a.created_at,
+    date: a.created_at || new Date().toISOString(),
     type: 'Interaction',
-    title: a.type.replace('_', ' ').toUpperCase(),
-    details: `Type: ${a.type}`,
+    title: (a.type || 'note').replace('_', ' ').toUpperCase(),
+    details: `Type: ${a.type || 'General Note'}`,
     notes: a.note || '-'
   }));
 
   items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const tableBody = items.map(item => [
-    format(new Date(item.date), 'MMM dd, yyyy\np'),
+    item.date ? format(new Date(item.date), 'MMM dd, yyyy\np') : 'N/A',
     item.type,
     item.title,
     item.details,
@@ -101,7 +101,7 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[]) => {
 
   // Summary Footer
   const finalY3 = (doc as any).lastAutoTable.finalY || 200;
-  const totalSpend = bookings.reduce((sum, b) => sum + (b.price || 0), 0);
+  const totalSpend = (bookings || []).reduce((sum, b) => sum + (b.price || 0), 0);
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
@@ -110,7 +110,11 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[]) => {
   doc.setFont('helvetica', 'normal');
   doc.text(`Total Sessions: ${bookings.length}  |  Total Manual Interactions: ${activityLog.length}`, pageWidth - 14, finalY3 + 22, { align: 'right' });
 
-  // Save the PDF
-  const filename = `${customer.name.replace(/\s+/g, '_')}_Activity_Report_${format(new Date(), 'yyyyMMdd')}.pdf`;
-  doc.save(filename);
+  // Save or Preview
+  if (preview) {
+    window.open(doc.output('bloburl'), '_blank');
+  } else {
+    const filename = `${(customer.name || 'Customer').replace(/\s+/g, '_')}_Activity_Report_${format(new Date(), 'yyyyMMdd')}.pdf`;
+    doc.save(filename);
+  }
 };
