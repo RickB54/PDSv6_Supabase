@@ -1069,19 +1069,17 @@ const Reports = () => {
         </Card>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-        <div className="bg-zinc-900/50 p-1.5 rounded-xl border border-zinc-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="flex w-max min-w-full h-11 bg-transparent border-0 p-0 gap-1">
-            {tabList.map(t => (
-              <TabsTrigger
-                key={t.id}
-                value={t.id}
-                className="px-6 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 rounded-lg transition-all h-full text-[10px] uppercase font-black tracking-widest whitespace-nowrap"
-              >
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
+        <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 w-full flex flex-wrap h-auto gap-1">
+          {tabList.map(t => (
+            <TabsTrigger
+              key={t.id}
+              value={t.id}
+              className="flex-1 min-w-[120px] sm:min-w-[100px] data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 hover:text-zinc-200 transition-colors h-10 text-[10px] uppercase font-black tracking-widest"
+            >
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
           {/* CUSTOMERS TAB */}
           <TabsContent value="customers" className="space-y-4 animate-in fade-in-50">
