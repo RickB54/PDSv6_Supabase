@@ -1,5 +1,6 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import html2canvas from "html2canvas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +27,8 @@ import { getPriceChangeHistory, PriceChangeRecord } from "@/lib/servicesMeta";
 import { LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import localforage from "localforage";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -54,6 +57,222 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     useEffect(() => {
         setPriceHistory(getPriceChangeHistory());
     }, []);
+
+    const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
+    const [searchQuery, setSearchQuery] = useState("");
+    const volumeChartRef = useRef<HTMLDivElement>(null);
+    const serviceChartRef = useRef<HTMLDivElement>(null);
+
+    const generateAnalyticsPDF = async () => {
+        toast.info("Preparing your performance report with charts...");
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const dateStr = format(new Date(), "yyyy-MM-dd");
+
+        // Helper to add chart images
+        const addChartToPDF = async (ref: React.RefObject<HTMLDivElement>, y: number, title: string) => {
+            if (!ref.current) return y;
+            try {
+                const canvas = await html2canvas(ref.current, {
+                    backgroundColor: '#09090b',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = pageWidth - 30;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                doc.setFontSize(14);
+                doc.setTextColor(40, 40, 40);
+                doc.text(title, 15, y);
+                doc.addImage(imgData, 'PNG', 15, y + 5, imgWidth, imgHeight, undefined, 'FAST');
+                return y + imgHeight + 20;
+            } catch (e) {
+                console.error("Chart capture failed", e);
+                return y + 10;
+            }
+        };
+
+        // 1. Fetch Goals Data
+        const goals = await localforage.getItem<any>('prime-business-goals') || {
+            weeklyRevenue: 2500, monthlyRevenue: 10000,
+            weeklyServices: 10, monthlyServices: 40,
+            weeklyAddons: 5, monthlyAddons: 20
+        };
+
+        // 2. Calculate Goals Actuals
+        const now = new Date();
+        const weekStart = startOfWeek(now);
+        const weekEnd = endOfWeek(now);
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+
+        const weekBookings = bookings.filter(b => {
+            const d = b.date ? parseISO(b.date) : null;
+            return d && isWithinInterval(d, { start: weekStart, end: weekEnd }) && (b.status === 'done' || b.status === 'completed');
+        });
+
+        const monthBookings = bookings.filter(b => {
+            const d = b.date ? parseISO(b.date) : null;
+            return d && isWithinInterval(d, { start: monthStart, end: monthEnd }) && (b.status === 'done' || b.status === 'completed');
+        });
+
+        const actuals = {
+            weekRevenue: weekBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0),
+            monthRevenue: monthBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0),
+            weekServices: weekBookings.length,
+            monthServices: monthBookings.length,
+            weekAddons: weekBookings.reduce((sum, b) => sum + (b.addOns?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0),
+            monthAddons: monthBookings.reduce((sum, b) => sum + (b.addOns?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0)
+        };
+
+        // Header Styling
+        doc.setFillColor(24, 24, 27); // Zinc 900
+        doc.rect(0, 0, pageWidth, 45, 'F');
+        
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.text("PRIME AUTO DETAIL", 15, 20);
+        
+        doc.setFontSize(14);
+        doc.setTextColor(161, 161, 170); // Zinc 400
+        doc.setFont("helvetica", "normal");
+        doc.text("Business Analytics & Performance Report", 15, 30);
+        
+        doc.setFontSize(10);
+        doc.text(`Generated: ${format(new Date(), "PPPP p")}`, 15, 38);
+
+        // Summary Statistics Box (Similar to Budget Page)
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(15, 55, pageWidth - 30, 35, 3, 3, 'FD');
+
+        doc.setFontSize(11);
+        doc.setTextColor(100, 116, 139);
+        doc.text("TOTAL BOOKINGS", 30, 68);
+        doc.text("COMPLETED JOBS", 85, 68);
+        doc.text("PENDING", 140, 68);
+
+        doc.setFontSize(18);
+        doc.setTextColor(24, 24, 27);
+        doc.text(stats.totalBookings.toString(), 30, 78);
+        doc.setTextColor(22, 163, 74);
+        doc.text(stats.completed.toString(), 85, 78);
+        doc.setTextColor(59, 130, 246);
+        doc.text(stats.pending.toString(), 140, 78);
+
+        let yPos = 105;
+
+        // Goals & Performance Section
+        doc.setFontSize(16);
+        doc.setTextColor(24, 24, 27);
+        doc.text("Business Goals vs Actual Performance", 15, yPos);
+        yPos += 8;
+
+        const goalRows = [
+            ["Weekly Revenue", `$${goals.weeklyRevenue}`, `$${actuals.weekRevenue}`, `${Math.round((actuals.weekRevenue / goals.weeklyRevenue) * 100)}%`],
+            ["Monthly Revenue", `$${goals.monthlyRevenue}`, `$${actuals.monthRevenue}`, `${Math.round((actuals.monthRevenue / goals.monthlyRevenue) * 100)}%`],
+            ["Weekly Services", goals.weeklyServices, actuals.weekServices, `${Math.round((actuals.weekServices / goals.weeklyServices) * 100)}%`],
+            ["Monthly Services", goals.monthlyServices, actuals.monthServices, `${Math.round((actuals.monthServices / goals.monthlyServices) * 100)}%`],
+            ["Weekly Add-ons", goals.weeklyAddons, actuals.weekAddons, `${Math.round((actuals.weekAddons / goals.weeklyAddons) * 100)}%`],
+            ["Monthly Add-ons", goals.monthlyAddons, actuals.monthAddons, `${Math.round((actuals.monthAddons / goals.monthlyAddons) * 100)}%`]
+        ];
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Metric', 'Target', 'Actual', 'Achievement']],
+            body: goalRows,
+            theme: 'striped',
+            headStyles: { fillColor: [14, 165, 233] }, // Sky 500
+            columnStyles: {
+                1: { halign: 'right' },
+                2: { halign: 'right' },
+                3: { halign: 'center', fontStyle: 'bold' }
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const val = parseInt(data.cell.text[0]);
+                    if (val >= 100) data.cell.styles.textColor = [22, 163, 74];
+                    else if (val < 50) data.cell.styles.textColor = [220, 38, 38];
+                }
+            }
+        });
+
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY + 15;
+
+        // Add Charts
+        yPos = (doc as any).lastAutoTable.finalY + 20;
+        
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
+        yPos = await addChartToPDF(volumeChartRef, yPos, "Monthly Booking Volume Trends");
+        
+        if (yPos > 200) { doc.addPage(); yPos = 20; }
+        yPos = await addChartToPDF(serviceChartRef, yPos, "Service Distribution & Market Share");
+
+        // Service Distribution Data Table (Briefly)
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(14);
+        doc.text("Service Breakdown Data", 15, yPos);
+        yPos += 8;
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Package / Service', 'Total Jobs', 'Market Share']],
+            body: pieData.map(d => [d.name, d.value, `${Math.round((d.value / (stats.totalBookings || 1)) * 100)}%`]),
+            theme: 'striped',
+            headStyles: { fillColor: [16, 185, 129] } // Emerald 500
+        });
+
+        // Detailed Service Log (New Page)
+        doc.addPage();
+        yPos = 20;
+        doc.setFontSize(16);
+        doc.text("Detailed Service Records", 15, yPos);
+        yPos += 10;
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Date', 'Customer', 'Service', 'Revenue', 'Status']],
+            body: serviceDetailsData.slice(0, 100).map(s => [
+                format(parseISO(s.date), "MMM d, yyyy"),
+                s.customer,
+                s.service,
+                `$${s.revenue.toFixed(2)}`,
+                s.status.toUpperCase()
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: [51, 65, 85] },
+            columnStyles: {
+                3: { halign: 'right' }
+            }
+        });
+
+        // Reminders & Follow-ups
+        doc.addPage();
+        yPos = 20;
+        doc.setFontSize(16);
+        doc.text("Active Reminders & Follow-ups", 15, yPos);
+        yPos += 10;
+
+        autoTable(doc, {
+            startY: yPos,
+            head: [['Customer', 'Follow-up Type', 'Due Date', 'Description']],
+            body: dashboardReminders.map(r => [
+                r.customer,
+                r.title,
+                format(parseISO(r.date), "MMM d"),
+                r.description
+            ]),
+            theme: 'striped',
+            headStyles: { fillColor: [245, 158, 11] } // Amber 500
+        });
+
+        doc.save(`Prime_Analytics_Full_Report_${dateStr}.pdf`);
+        toast.success("Comprehensive report generated successfully.");
+    };
 
     const generatePriceHistoryPDF = () => {
         const doc = new jsPDF();
@@ -639,6 +858,31 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
+            {/* Global Actions Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50 backdrop-blur-md">
+                <div>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
+                    <p className="text-xs text-zinc-500">Comprehensive overview of operational performance and revenue goals.</p>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button 
+                        onClick={generateAnalyticsPDF}
+                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-6 gap-2 shadow-lg shadow-blue-900/20 w-full sm:w-auto"
+                    >
+                        <Printer className="w-4 h-4" />
+                        Print Performance Report
+                    </Button>
+                    <Button 
+                        variant="outline"
+                        onClick={generatePriceHistoryPDF}
+                        className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-10 gap-2 w-full sm:w-auto"
+                    >
+                        <FileBarChart className="w-4 h-4" />
+                        Price Audit
+                    </Button>
+                </div>
+            </div>
+
             {/* KPI Cards - Mobile Optimized (Single Line) */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <Card className="bg-zinc-900 border-zinc-800 p-2 sm:p-4 flex flex-col items-center justify-center text-center h-24">
@@ -660,7 +904,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Booking Volume Chart */}
-                <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                <Card ref={volumeChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
                     <CardHeader>
                         <CardTitle className="text-zinc-100 flex items-center gap-2">
                             <BarChart3 className="w-4 h-4 text-violet-400" />
@@ -691,7 +935,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </Card>
 
                 {/* Service Distribution Pie Chart */}
-                <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                <Card ref={serviceChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
                     <CardHeader>
                         <CardTitle className="text-zinc-100 flex items-center gap-2">
                             <Package className="w-4 h-4 text-emerald-400" />
