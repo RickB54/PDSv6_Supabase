@@ -140,6 +140,16 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     return url;
   };
 
+  useEffect(() => {
+    const handleForceOpen = () => {
+      console.log("[AppSidebar] Force opening sidebar...");
+      setOpen(true);
+      if (isMobile) setOpenMobile(true);
+    };
+    window.addEventListener('force-sidebar-open', handleForceOpen);
+    return () => window.removeEventListener('force-sidebar-open', handleForceOpen);
+  }, [setOpen, setOpenMobile, isMobile]);
+
   // Keep local user in sync with prop
   useEffect(() => {
     if (userProp) {

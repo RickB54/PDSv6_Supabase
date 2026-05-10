@@ -142,8 +142,11 @@ function MenuVisibilityControls() {
             setHiddenMenuItems([]);
             localStorage.removeItem("demo_mode_active");
             localStorage.removeItem("admin_demo_preview");
+            localStorage.removeItem("hiddenMenuItems");
+            localStorage.removeItem("view_as_mode");
+            localStorage.removeItem("sidebar_groups"); 
             window.dispatchEvent(new Event('storage'));
-            window.location.reload(); // Force full refresh to clear any stuck states
+            window.location.reload(); 
           }}
         >
           <RotateCcw className="h-3 w-3 mr-1" />
