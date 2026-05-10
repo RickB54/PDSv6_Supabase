@@ -542,31 +542,47 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 </div>
             )}
 
-            {/* NUCLEAR RESET OPTION - ONLY VISIBLE IF MENU IS RESTRICTED */}
-            {(localStorage.getItem('hiddenMenuItems') || localStorage.getItem('view_as_mode') || localStorage.getItem('demo_mode_active')) && (
-                <div className="flex flex-col items-center justify-center p-12 bg-zinc-900 border-2 border-dashed border-red-500/50 rounded-2xl gap-6 my-4">
-                    <div className="text-center space-y-2">
-                        <h2 className="text-3xl font-black text-white uppercase italic">System Interface Lock Detected</h2>
-                        <p className="text-zinc-400">If your sidebar is stuck, collapsed, or missing items, use this nuclear reset button.</p>
-                    </div>
-                    <Button 
-                        size="lg"
-                        className="h-16 px-12 text-lg font-black bg-red-600 hover:bg-red-700 shadow-[0_0_50px_rgba(220,38,38,0.3)] animate-bounce"
-                        onClick={() => {
-                            const keys = [
-                                'demo_mode_active', 'admin_demo_preview', 'hiddenMenuItems', 
-                                'view_as_mode', 'sidebar_groups', 'hide_chat_bot', 'sidebar_open'
-                            ];
-                            keys.forEach(k => localStorage.removeItem(k));
-                            localStorage.setItem('sidebar:state', 'true'); // Force shadcn sidebar open
-                            window.dispatchEvent(new Event('storage'));
-                            window.location.reload();
-                        }}
-                    >
-                        FIX EVERYTHING & RESTORE SIDEBAR
-                    </Button>
+            {/* NUCLEAR RESET OPTION - PERMANENT FAILSAFE */}
+            <div className="flex flex-col items-center justify-center p-12 bg-zinc-900 border-2 border-dashed border-red-500/50 rounded-2xl gap-6 my-4">
+                <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-black text-white uppercase italic">System Interface Recovery</h2>
+                    <p className="text-zinc-400">If your sidebar is stuck, collapsed, or missing items, use this nuclear reset button to restore your full Admin privileges.</p>
                 </div>
-            )}
+                <Button 
+                    size="lg"
+                    className="h-20 px-16 text-xl font-black bg-red-600 hover:bg-red-700 shadow-[0_0_50px_rgba(220,38,38,0.4)] animate-bounce border-4 border-white/10"
+                    onClick={() => {
+                        console.log("[Recovery] Triggering absolute hard reset...");
+                        const keys = [
+                            'demo_mode_active', 'admin_demo_preview', 'hiddenMenuItems', 
+                            'view_as_mode', 'sidebar_groups', 'hide_chat_bot', 'sidebar_open'
+                        ];
+                        keys.forEach(k => localStorage.removeItem(k));
+                        localStorage.setItem('sidebar:state', 'true'); // Force shadcn sidebar open
+                        
+                        // Force a valid admin user object if the email matches
+                        const currentUserRaw = localStorage.getItem('currentUser');
+                        if (currentUserRaw) {
+                            try {
+                                const u = JSON.parse(currentUserRaw);
+                                if (u.email === 'rberube54@gmail.com' || u.email === 'Rick.PrimeAutoDetail@gmail.com') {
+                                    u.role = 'admin';
+                                    localStorage.setItem('currentUser', JSON.stringify(u));
+                                }
+                            } catch {}
+                        }
+
+                        window.dispatchEvent(new Event('storage'));
+                        window.dispatchEvent(new Event('force-sidebar-open'));
+                        
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 150);
+                    }}
+                >
+                    FIX EVERYTHING & RESTORE SIDEBAR
+                </Button>
+            </div>
 
             {/* Section 1: Context Header */}
             <header className="flex flex-col gap-6">
