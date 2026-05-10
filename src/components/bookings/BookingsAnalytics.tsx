@@ -329,26 +329,146 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             headStyles: { fillColor: [245, 158, 11] }
         });
 
-        // Price Evolution (Brief)
+        // Comprehensive Price Evolution Audit Trail (Replacing Brief Summary)
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 10;
+        yPos = doc.lastAutoTable.finalY + 15;
         if (yPos > 240) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(13);
-        doc.text("PRICE EVOLUTION SUMMARY", 15, yPos);
-        yPos += 5;
+        doc.setFontSize(14);
+        doc.setTextColor(24, 24, 27);
+        doc.setFont("helvetica", "bold");
+        doc.text("OFFICIAL PRICE EVOLUTION AUDIT TRAIL", 15, yPos);
+        yPos += 8;
 
-        const history = [...priceHistory].reverse().slice(0, 10);
-        autoTable(doc, {
-            startY: yPos,
-            head: [['Date', 'Type', 'Description']],
-            body: history.map(h => [
-                format(parseISO(h.date), "MMM d, yyyy"),
-                h.type.toUpperCase(),
-                h.description
-            ]),
-            theme: 'grid',
-            headStyles: { fillColor: [16, 185, 129] }
+        const pkgMeta = getAllPackageMeta();
+        const addonMeta = getAllAddOnMeta();
+        const allPkgs = [...servicePackages, ...getCustomPackages()].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+        const allAddons = [...addOns, ...getCustomAddOns()].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+        const vehicleTypes = ['compact', 'midsize', 'truck', 'luxury'];
+        const fullHistory = [...priceHistory].reverse();
+
+        const categories = [
+            { id: 'exterior', title: "EXTERIOR SERVICES", color: [16, 185, 129] },
+            { id: 'interior', title: "INTERIOR SERVICES", color: [59, 130, 246] },
+            { id: 'full', title: "FULL DETAIL SERVICES", color: [139, 92, 246] }
+        ];
+
+        categories.forEach(cat => {
+            const pkgs = allPkgs.filter(p => p.id.toLowerCase().includes(cat.id));
+            if (pkgs.length === 0) return;
+
+            if (yPos > 260) { doc.addPage(); yPos = 20; }
+            
+            doc.setFillColor(...(cat.color as [number, number, number]));
+            doc.rect(14, yPos, 182, 7, 'F');
+            doc.setFontSize(10);
+            doc.setTextColor(255);
+            doc.text(cat.title, 18, yPos + 5);
+            yPos += 10;
+
+            pkgs.forEach(pkg => {
+                const body = vehicleTypes.map(v => {
+                    const key = `package:${pkg.id}:${v}`;
+                    const snapshots = fullHistory.filter(h => h.snapshot && h.snapshot[key]);
+                    const changes: {price: string, date: string}[] = [];
+                    snapshots.forEach(h => {
+                        const price = `$${h.snapshot![key]}`;
+                        if (changes.length === 0 || changes[changes.length - 1].price !== price) {
+                            changes.push({ price, date: format(parseISO(h.date), "MMM d, h:mm a") });
+                        }
+                    });
+
+                    const currentPrice = (pkg.pricing as any)[v];
+                    const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
+                    const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
+                    let influxList = "-";
+                    let timestampList = "Stable";
+                    let newPriceList = "-";
+
+                    if (changes.length > 1) {
+                        const instances = [];
+                        for (let i = 1; i < changes.length; i++) {
+                            instances.push({ from: changes[i-1].price, to: changes[i].price, when: changes[i].date });
+                        }
+                        influxList = instances.map(inst => inst.from).join('\n');
+                        timestampList = instances.map(inst => inst.when).join('\n');
+                        newPriceList = instances.map(inst => inst.to).join('\n');
+                    }
+
+                    return [v.toUpperCase(), original, current, influxList, timestampList, newPriceList];
+                });
+
+                autoTable(doc, {
+                    startY: yPos,
+                    head: [[pkg.name, 'Initial', 'Current', 'Price Influx', 'Timestamp', 'New Price']],
+                    body: body,
+                    headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 8 },
+                    columnStyles: { 
+                        0: { fontStyle: 'bold', cellWidth: 35 }, 1: { cellWidth: 15 }, 2: { cellWidth: 15, fontStyle: 'bold' },
+                        3: { cellWidth: 20 }, 4: { cellWidth: 35 }, 5: { cellWidth: 20, fontStyle: 'bold' }
+                    },
+                    margin: { left: 14, right: 14 },
+                    theme: 'grid',
+                    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' }
+                });
+                yPos = (doc as any).lastAutoTable.finalY + 10;
+            });
         });
+
+        if (allAddons.length > 0) {
+            doc.addPage();
+            yPos = 20;
+            doc.setFillColor(245, 158, 11); // Amber
+            doc.rect(14, yPos, 182, 7, 'F');
+            doc.setFontSize(10);
+            doc.setTextColor(255);
+            doc.text("ADD-ONS & UPGRADES AUDIT", 18, yPos + 5);
+            yPos += 10;
+
+            const addonRows = allAddons.map(a => {
+                const key = `addon:${a.id}:compact`;
+                const snapshots = fullHistory.filter(h => h.snapshot && h.snapshot[key]);
+                const changes: {price: string, date: string}[] = [];
+                snapshots.forEach(h => {
+                    const price = `$${h.snapshot![key]}`;
+                    if (changes.length === 0 || changes[changes.length - 1].price !== price) {
+                        changes.push({ price, date: format(parseISO(h.date), "MMM d, h:mm a") });
+                    }
+                });
+
+                const currentPrice = a.basePrice || (a.pricing as any).compact;
+                const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
+                const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
+                let influxList = "-";
+                let timestampList = "Stable";
+                let newPriceList = "-";
+
+                if (changes.length > 1) {
+                    const instances = [];
+                    for (let i = 1; i < changes.length; i++) {
+                        instances.push({ from: changes[i-1].price, to: changes[i].price, when: changes[i].date });
+                    }
+                    influxList = instances.map(inst => inst.from).join('\n');
+                    timestampList = instances.map(inst => inst.when).join('\n');
+                    newPriceList = instances.map(inst => inst.to).join('\n');
+                }
+
+                return [a.name, original, current, influxList, timestampList, newPriceList];
+            });
+
+            autoTable(doc, {
+                startY: yPos,
+                head: [['Add-on Item', 'Initial', 'Current', 'Price Influx', 'Timestamp', 'New Price']],
+                body: addonRows,
+                headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 8 },
+                columnStyles: { 
+                    0: { fontStyle: 'bold', cellWidth: 35 }, 1: { cellWidth: 15 }, 2: { cellWidth: 15, fontStyle: 'bold' },
+                    3: { cellWidth: 20 }, 4: { cellWidth: 35 }, 5: { cellWidth: 20, fontStyle: 'bold' }
+                },
+                margin: { left: 14, right: 14 },
+                theme: 'striped',
+                styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' }
+            });
+        }
 
         doc.save(`Prime_Analytics_Full_Report_${dateStr}.pdf`);
         toast.success("Optimized comprehensive report generated.");
