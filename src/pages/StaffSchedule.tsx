@@ -359,15 +359,15 @@ export default function StaffSchedule() {
 
             {/* Navigation */}
             <div className="flex items-center gap-2 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 w-full sm:w-auto justify-between sm:justify-start">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateDate('prev')}><ChevronLeft className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="h-7 text-[10px] px-2">Today</Button>
-                <span className="font-bold text-[11px] sm:text-sm px-1 sm:px-3 flex-1 text-center text-white whitespace-nowrap">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateDate('prev')}><ChevronLeft className="w-5 h-5" /></Button>
+                <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="h-8 text-[10px] px-3 font-black uppercase">Today</Button>
+                <span className="font-bold text-[12px] sm:text-sm px-1 sm:px-3 flex-1 text-center text-white whitespace-nowrap uppercase tracking-tighter">
                     {view === 'day' && format(currentDate, 'MMM do, yyyy')}
                     {view === 'week' && `Week of ${format(startOfWeek(currentDate), 'MMM do')}`}
                     {view === 'month' && format(currentDate, 'MMMM yyyy')}
                     {view === 'year' && format(currentDate, 'yyyy')}
                 </span>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateDate('next')}><ChevronRight className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigateDate('next')}><ChevronRight className="w-5 h-5" /></Button>
             </div>
 
             {/* View Switcher */}
@@ -512,7 +512,7 @@ export default function StaffSchedule() {
                 <main className="flex-1 flex flex-col p-4 relative min-w-0">
                     {renderHeader()}
 
-                    <div className="flex-1 overflow-y-auto min-h-0 bg-black/20 rounded-xl relative">
+                    <div className="flex-1 overflow-y-auto overflow-x-auto no-scrollbar min-h-0 bg-black/20 rounded-xl relative">
                         {view === 'week' && renderTimeline(eachDayOfInterval({ start: startOfWeek(currentDate), end: endOfWeek(currentDate) }))}
                         {view === 'day' && renderTimeline([currentDate])}
                         {view === 'month' && renderMonthGrid()}

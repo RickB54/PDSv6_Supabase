@@ -1299,10 +1299,10 @@ Precision. Protection. Perfection.`;
               {sortedInvoices.map(invoice => (
                 <div 
                   key={invoice.id} 
-                  className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer" 
+                  className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/5 cursor-pointer gap-4" 
                   onClick={() => handleEditInvoice(invoice)}
                 >
-                  <div className="flex items-center gap-4 mb-4 md:mb-0">
+                  <div className="flex items-center gap-4">
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center border ${(invoice.paymentStatus === 'paid')
                       ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
                       : 'bg-zinc-800 border-zinc-700 text-zinc-400'
@@ -1326,8 +1326,8 @@ Precision. Protection. Perfection.`;
                           : invoice.vehicle}
                       </div>
                     </div>
-                  </div>                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-between md:justify-end w-full md:w-auto mt-4 md:mt-0" onClick={e => e.stopPropagation()}>
-                    <div className="text-right flex-1 sm:flex-none">
+                  </div>                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 sm:gap-6 justify-between md:justify-end w-full md:w-auto mt-4 md:mt-0" onClick={e => e.stopPropagation()}>
+                    <div className="text-left sm:text-right flex-1 sm:flex-none">
                       <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
                       <div className="flex flex-col items-end">
                         {invoice.discount && invoice.discount.amount > 0 && (

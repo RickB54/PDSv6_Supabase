@@ -956,47 +956,80 @@ const Prospects = () => {
             })}
         </div>
 
-        {/* Mobile List View */}
         <div className="md:hidden space-y-4">
           {[...filteredCustomers]
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
-            .map(c => (
-              <div key={c.id} className="bg-zinc-900 border border-purple-500/20 p-4 rounded-xl space-y-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
-                      {<span>{(c.name || 'U').charAt(0).toUpperCase()}</span>}
+            .map(c => {
+              const isExpanded = expandedCustomers.includes(c.id!);
+              return (
+                <div key={c.id} className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden transition-all duration-300">
+                  {/* Header - Click to toggle */}
+                  <div 
+                    className={cn(
+                      "p-4 flex justify-between items-center cursor-pointer active:bg-zinc-800 transition-colors",
+                      isExpanded && "bg-zinc-800/30 border-b border-zinc-800"
+                    )}
+                    onClick={() => toggleCustomer(c.id!)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
+                        <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-zinc-200 text-base">{c.name}</h3>
+                        <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-black">{c.phone || "No Phone"}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-zinc-200 text-lg">{c.name}</h3>
-                      <p className="text-zinc-400 text-sm">{c.phone}</p>
+                    <div className="flex items-center gap-2">
+                       {!c.is_archived && (
+                        <Button 
+                          asChild 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 px-3 text-[10px] font-black border-purple-500/30 text-purple-400 bg-purple-500/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                        </Button>
+                      )}
+                      <ChevronDown className={cn("h-5 w-5 text-zinc-600 transition-transform duration-300", isExpanded && "rotate-180")} />
                     </div>
                   </div>
-                  {!c.is_archived && (
-                    <Button asChild variant="outline" size="sm" className="h-8 text-xs border-purple-500/30 text-purple-400 bg-purple-500/10">
-                      <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
-                    </Button>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                      {c.notes && (
+                        <div className="text-sm text-zinc-400 italic bg-black/20 p-3 rounded-lg border-l-2 border-purple-500/50">
+                          {c.notes}
+                        </div>
+                      )}
+                      
+                      <div className="pt-2">
+                         <RetentionHub customer={c} />
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">
+                          {c.is_archived ? <RotateCcw className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+                          {c.is_archived ? "Restore" : "Archive"}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(c.id!); }} className="h-9 px-4 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-                {c.notes && <div className="text-sm text-zinc-500 italic border-l-2 border-zinc-700 pl-2">{c.notes}</div>}
-                
-                <div className="pt-2 border-t border-zinc-800">
-                   <RetentionHub customer={c} />
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
-                  <Button variant="ghost" size="sm" onClick={() => handleArchiveId(c)} className="h-8 text-zinc-400">
-                    {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 text-zinc-400"><Pencil className="h-4 w-4" /></Button>
-                {isAdmin && (
-                  <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 text-red-500">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
       </main>
 
