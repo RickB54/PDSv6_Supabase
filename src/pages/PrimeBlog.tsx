@@ -1512,7 +1512,7 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
                         <p className="text-sm font-medium italic">No comments yet. Share your thoughts!</p>
                     </div>
                 ) : (
-                    {(rootComments || []).map(c => (
+                    (rootComments || []).map(c => (
                         <div key={c.id} className="space-y-4">
                             <div className="flex gap-4 p-4 rounded-[24px] bg-zinc-900/50 border border-zinc-800/50 group hover:border-indigo-500/30 transition-all">
                                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-indigo-500/20 shrink-0">
