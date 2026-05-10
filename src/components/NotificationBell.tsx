@@ -9,6 +9,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getEmployeeNotifications, markAllEmployeeNotificationsRead, markEmployeeNotificationRead } from "@/lib/employeeNotifications";
 import supabase from "@/lib/supabase";
 import { notify } from "@/store/alerts";
+import { toast } from "@/hooks/use-toast";
+import { performGlobalSync } from "@/lib/adminAlerts";
 
 export default function NotificationBell() {
   const { alerts, latest, unreadCount, markAllRead, markRead, dismissAll, refresh } = useAlertsStore();
@@ -184,29 +186,34 @@ export default function NotificationBell() {
 
     const syncBookings = async () => {
       try {
+        // 1. Sync global AdminAlerts state from DB
+        await performGlobalSync();
+        refresh();
+
+        // 2. Sync 'tentative' bookings and deduplicate via DB flag
         const { data } = await supabase
           .from('bookings')
-          .select('id, scheduled_at, service_package, booking_vehicle')
+          .select('id, scheduled_at, service_package, booking_vehicle, customer_name')
           .eq('status', 'tentative')
           .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
           .limit(10);
 
-        if (data && data.length > 0) {
-          const localAlerts = JSON.parse(localStorage.getItem('admin_alerts') || '[]');
-          
-          data.forEach(b => {
+          let addedAny = false;
+
+          for (const b of (data || [])) {
             let meta = b.booking_vehicle || {};
             if (typeof meta === 'string') {
               try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
             }
-            const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
-            const syncId = `sync_book_${b.id}`;
-            const alreadyNotified = localAlerts.some((a: any) => 
-              (a.type === 'booking_created' && String(a.payload?.recordId || '') === String(b.id)) ||
-              (a.id === syncId)
-            );
+            
+            // SYNCHRONIZED DEDUPLICATION:
+            // Check if this specific booking record has already been notified globally
+            const isAlreadyNotifiedGlobally = meta.notified === true;
+            
+            if (!isAlreadyNotifiedGlobally) {
+              const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
+              const syncId = `sync_book_${b.id}`;
 
-            if (!alreadyNotified) {
               toast({
                 title: "New Online Booking!",
                 description: `${custName} just booked a ${b.service_package}.`,
@@ -219,11 +226,19 @@ export default function NotificationBell() {
                 'Customer Web',
                 { id: syncId, recordId: b.id, bookingId: b.id }
               );
+              
+              // MARK AS NOTIFIED IN DB (Syncs to all devices)
+              await supabase.from('bookings').update({
+                booking_vehicle: { ...meta, notified: true }
+              }).eq('id', b.id);
+
+              addedAny = true;
             }
-          });
+          }
           
-          if (addedAny) refresh();
-        }
+          if (addedAny) {
+            refresh();
+          }
       } catch (err) {
         console.warn("[AlertSync] Failed to poll bookings:", err);
       }

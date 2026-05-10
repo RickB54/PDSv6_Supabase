@@ -22,9 +22,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { addOns } from "@/lib/services";
+import { addOns, servicePackages } from "@/lib/services";
 import { cn } from "@/lib/utils";
-import { getPriceChangeHistory, PriceChangeRecord } from "@/lib/servicesMeta";
+import { getPriceChangeHistory, PriceChangeRecord, getAllPackageMeta, getAllAddOnMeta, getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -356,68 +356,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const generatePriceHistoryPDF = () => {
         const doc = new jsPDF();
-        const history = [...priceHistory].reverse(); // Oldest to newest
+        const history = [...priceHistory].reverse();
         
         if (history.length === 0) {
             toast.error("No price history data available to export.");
             return;
         }
 
-        // Find all unique item keys across all snapshots
-        const itemKeys = new Set<string>();
-        history.forEach(h => {
-            if (h.snapshot) {
-                Object.keys(h.snapshot).forEach(k => itemKeys.add(k));
-            }
-        });
+        const pkgMeta = getAllPackageMeta();
+        const addonMeta = getAllAddOnMeta();
+        const allPkgs = [...servicePackages, ...getCustomPackages()].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+        const allAddons = [...addOns, ...getCustomAddOns()].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
 
-        const sortedKeys = Array.from(itemKeys).sort();
-        const packageKeys = sortedKeys.filter(k => k.startsWith('package:'));
-        const addonKeys = sortedKeys.filter(k => k.startsWith('addon:'));
-
-        const getRowData = (keys: string[]) => {
-            return keys.map(key => {
-                const snapshots = history.filter(h => h.snapshot && h.snapshot[key]);
-                if (snapshots.length === 0) return null;
-
-                let label = key;
-                if (key.startsWith('package:')) {
-                    const parts = key.split(':');
-                    const pkgName = parts[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                    label = `${pkgName} (${parts[2].toUpperCase()})`;
-                } else if (key.startsWith('addon:')) {
-                    label = key.replace('addon:', '').split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-                    if (label.includes(':')) {
-                        const lparts = label.split(':');
-                        label = `${lparts[0].trim()} (${lparts[1].trim().toUpperCase()})`;
-                    }
-                }
-
-                // Filter consecutive duplicate prices and capture change dates
-                const changes: {price: string, date: string}[] = [];
-                snapshots.forEach(h => {
-                    const price = `$${h.snapshot![key]}`;
-                    const dateStr = format(parseISO(h.date), "MMM d, h:mm a");
-                    if (changes.length === 0 || changes[changes.length - 1].price !== price) {
-                        changes.push({ price, date: dateStr });
-                    }
-                });
-
-                const original = changes[0].price;
-                const current = changes[changes.length - 1].price;
-                
-                let evolution = "";
-                if (changes.length <= 1) {
-                    evolution = "Stable (No changes recorded)";
-                } else {
-                    // Show full timeline with dates
-                    evolution = changes.map(c => `${c.price} (${c.date})`).join(' → ');
-                }
-
-                return [label, original, current, evolution];
-            }).filter(Boolean) as any[][];
-        };
-
+        const vehicleTypes = ['compact', 'midsize', 'truck', 'luxury'];
+        
         // Header
         doc.setFillColor(16, 185, 129); // Emerald
         doc.rect(0, 0, 210, 45, 'F');
@@ -433,52 +385,120 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         let currentY = 55;
 
-        if (packageKeys.length > 0) {
-            doc.setFontSize(14);
-            doc.setTextColor(31, 41, 55);
-            doc.text("SERVICE PACKAGES", 14, currentY);
+        const categories = [
+            { id: 'exterior', title: "EXTERIOR SERVICES", color: [16, 185, 129] },
+            { id: 'interior', title: "INTERIOR SERVICES", color: [59, 130, 246] },
+            { id: 'full', title: "FULL DETAIL SERVICES", color: [139, 92, 246] }
+        ];
+
+        categories.forEach(cat => {
+            const pkgs = allPkgs.filter(p => p.id.toLowerCase().includes(cat.id));
+            if (pkgs.length === 0) return;
+
+            if (currentY > 260) { doc.addPage(); currentY = 20; }
             
-            autoTable(doc, {
-                startY: currentY + 5,
-                head: [['Package Name', 'Initial', 'Current', 'Price Influx / Timeline']],
-                body: getRowData(packageKeys),
-                headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
-                columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 50 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 20, fontStyle: 'bold' },
-                    3: { cellWidth: 'auto' }
-                },
-                margin: { left: 14, right: 14 },
-                theme: 'striped'
+            // Sub-header bar
+            doc.setFillColor(...(cat.color as [number, number, number]));
+            doc.rect(14, currentY, 182, 8, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(255);
+            doc.setFont("helvetica", "bold");
+            doc.text(cat.title, 18, currentY + 6);
+            currentY += 12;
+
+            pkgs.forEach(pkg => {
+                const body = vehicleTypes.map(v => {
+                    const key = `package:${pkg.id}:${v}`;
+                    const snapshots = history.filter(h => h.snapshot && h.snapshot[key]);
+                    const changes: {price: string, date: string}[] = [];
+                    
+                    snapshots.forEach(h => {
+                        const price = `$${h.snapshot![key]}`;
+                        if (changes.length === 0 || changes[changes.length - 1].price !== price) {
+                            changes.push({ price, date: format(parseISO(h.date), "MMM d, h:mm a") });
+                        }
+                    });
+
+                    const currentPrice = (pkg.pricing as any)[v];
+                    const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
+                    const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
+                    const evolution = changes.length > 1 
+                        ? changes.map(c => `${c.price} (${c.date})`).join(' → ') 
+                        : "Stable (No changes recorded)";
+
+                    return [v.toUpperCase(), original, current, evolution];
+                });
+
+                autoTable(doc, {
+                    startY: currentY,
+                    head: [[pkg.name, 'Initial', 'Current', 'Price Influx / Timeline']],
+                    body: body,
+                    headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 9 },
+                    columnStyles: { 
+                        0: { fontStyle: 'bold', cellWidth: 45 },
+                        1: { cellWidth: 20 },
+                        2: { cellWidth: 20, fontStyle: 'bold' },
+                        3: { cellWidth: 'auto' }
+                    },
+                    margin: { left: 14, right: 14 },
+                    theme: 'grid', // Grid theme for divider lines
+                    styles: { fontSize: 8, cellPadding: 2 }
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
             });
-            currentY = (doc as any).lastAutoTable.finalY + 20;
-        }
+        });
 
-        if (addonKeys.length > 0) {
-            if (currentY > 250) { doc.addPage(); currentY = 20; }
-            doc.setFontSize(14);
-            doc.setTextColor(31, 41, 55);
-            doc.text("ADD-ONS & UPGRADES", 14, currentY);
+        if (allAddons.length > 0) {
+            if (currentY > 260) { doc.addPage(); currentY = 20; }
+            doc.setFillColor(245, 158, 11); // Amber
+            doc.rect(14, currentY, 182, 8, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(255);
+            doc.setFont("helvetica", "bold");
+            doc.text("ADD-ONS & UPGRADES", 18, currentY + 6);
+            currentY += 12;
+
+            const addonRows = allAddons.map(a => {
+                const key = `addon:${a.id}:compact`;
+                const snapshots = history.filter(h => h.snapshot && h.snapshot[key]);
+                const changes: {price: string, date: string}[] = [];
+                
+                snapshots.forEach(h => {
+                    const price = `$${h.snapshot![key]}`;
+                    if (changes.length === 0 || changes[changes.length - 1].price !== price) {
+                        changes.push({ price, date: format(parseISO(h.date), "MMM d, h:mm a") });
+                    }
+                });
+
+                const currentPrice = a.basePrice || (a.pricing as any).compact;
+                const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
+                const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
+                const evolution = changes.length > 1 
+                    ? changes.map(c => `${c.price} (${c.date})`).join(' → ') 
+                    : "Stable (No changes recorded)";
+
+                return [a.name, original, current, evolution];
+            });
 
             autoTable(doc, {
-                startY: currentY + 5,
+                startY: currentY,
                 head: [['Add-on Item', 'Initial', 'Current', 'Price Influx / Timeline']],
-                body: getRowData(addonKeys),
-                headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' }, // Blue
-                columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 50 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 20, fontStyle: 'bold' },
-                    3: { cellWidth: 'auto' }
+                body: addonRows,
+                headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 9 },
+                columnStyles: { 
+                    0: { fontStyle: 'bold', cellWidth: 45 }, 
+                    1: { cellWidth: 20 }, 
+                    2: { cellWidth: 20, fontStyle: 'bold' }, 
+                    3: { cellWidth: 'auto' } 
                 },
                 margin: { left: 14, right: 14 },
-                theme: 'striped'
+                theme: 'striped',
+                styles: { fontSize: 8 }
             });
         }
 
-        doc.save(`Prime_Price_Evolution_${format(new Date(), "yyyy-MM-dd")}.pdf`);
-        toast.success("Price evolution report downloaded.");
+        doc.save(`Prime_Price_Audit_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+        toast.success("Price evolution audit trail generated.");
     };
 
     const [bookingReviews, setBookingReviews] = useState<Record<string, any>>(() => {

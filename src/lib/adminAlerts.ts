@@ -1,3 +1,5 @@
+import supabase from './supabase';
+
 export type AdminAlertType =
   | "video_checked"
   | "tip_checked"
@@ -42,6 +44,71 @@ export interface AdminAlert {
 }
 
 const STORAGE_KEY = "admin_alerts";
+const DUMMY_BOOKING_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Pushes alerts to the global database storage (dummy booking)
+ */
+async function syncToDB(alerts: AdminAlert[]): Promise<void> {
+  try {
+    // Keep only last 200 for DB storage to keep it lightweight
+    const trimmed = alerts.slice(Math.max(0, alerts.length - 200));
+    await supabase.from('bookings').upsert({
+      id: DUMMY_BOOKING_ID,
+      service_package: 'SYSTEM_ALERTS_STORAGE',
+      status: 'system',
+      booking_vehicle: { alerts: trimmed },
+      notes: `LAST_SYNC:${new Date().toISOString()}`
+    });
+  } catch (err) {
+    console.error("[AdminAlerts] DB Sync Failed:", err);
+  }
+}
+
+/**
+ * Fetches alerts from the global database storage
+ */
+export async function fetchAlertsFromDB(): Promise<AdminAlert[]> {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('booking_vehicle')
+      .eq('id', DUMMY_BOOKING_ID)
+      .maybeSingle();
+    
+    if (error || !data?.booking_vehicle?.alerts) return [];
+    return data.booking_vehicle.alerts as AdminAlert[];
+  } catch (err) {
+    console.warn("[AdminAlerts] DB Fetch Failed:", err);
+    return [];
+  }
+}
+
+/**
+ * Synchronizes local alerts with database alerts (Merge & Re-persist)
+ */
+export async function performGlobalSync(): Promise<AdminAlert[]> {
+  const local = getAdminAlerts();
+  const remote = await fetchAlertsFromDB();
+
+  // Merge logic: Map by ID, Remote wins if exists, otherwise keep local
+  const mergedMap = new Map<string, AdminAlert>();
+  local.forEach(a => mergedMap.set(a.id, a));
+  remote.forEach(a => mergedMap.set(a.id, a));
+
+  const merged = Array.from(mergedMap.values())
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 500);
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  
+  // Proactively notify the current tab to refresh alerts
+  try {
+    window.dispatchEvent(new CustomEvent('admin_alerts_updated'));
+  } catch { }
+
+  return merged;
+}
 
 export function pushAdminAlert(
   type: AdminAlertType,
@@ -62,11 +129,12 @@ export function pushAdminAlert(
   const existing: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   existing.push(alert);
 
-  // keep last 500 alerts
   const trimmed = existing.slice(Math.max(0, existing.length - 500));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
 
-  // Proactively notify the current tab to refresh alerts (storage events don't fire in same tab)
+  // Background Sync
+  syncToDB(trimmed);
+
   try {
     window.dispatchEvent(new CustomEvent('admin_alerts_updated'));
   } catch { }
@@ -74,7 +142,6 @@ export function pushAdminAlert(
 
 export function getAdminAlerts(): AdminAlert[] {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  // Backfill read=false for older records without the flag
   return list.map(a => ({ ...a, read: !!a.read }));
 }
 
@@ -82,37 +149,39 @@ export function markAlertRead(id: string): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const next = list.map(a => (a.id === id ? { ...a, read: true } : a));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  syncToDB(next);
 }
 
 export function markAllAlertsRead(): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const next = list.map(a => ({ ...a, read: true }));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  syncToDB(next);
 }
 
 export function dismissAlert(id: string): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const next = list.filter(a => a.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  syncToDB(next);
 }
 
 export function clearAllAlerts(): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+  syncToDB([]);
 }
 
-// Dismiss all alerts associated with a specific record (e.g., a PDF in File Manager)
 export function dismissAlertsForRecord(recordType: string, recordId: string): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const next = list.filter(a => {
     const payload = a.payload || {};
     if (typeof payload !== 'object') return true;
-    // Match either by recordId or bookingId to cover older entries
     const matchesRecordId = String(payload.recordId || '') === String(recordId);
     const matchesBookingId = String(payload.bookingId || '') === String(recordId);
-    // Also support matching by archive record id for per-file targeting
     const matchesArchiveId = String(payload.id || '') === String(recordId);
     const matchesType = !recordType || String(payload.recordType || '') === String(recordType);
     return !(matchesType && (matchesRecordId || matchesBookingId || matchesArchiveId));
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  syncToDB(next);
 }
