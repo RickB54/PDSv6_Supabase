@@ -558,7 +558,9 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             'view_as_mode', 'sidebar_groups', 'hide_chat_bot', 'sidebar_open'
                         ];
                         keys.forEach(k => localStorage.removeItem(k));
-                        localStorage.setItem('sidebar:state', 'true'); // Force shadcn sidebar open
+                        
+                        // Force Sidebar Cookie (shadcn/ui uses this)
+                        document.cookie = "sidebar:state=true; path=/; max-age=31536000";
                         
                         // Force a valid admin user object if the email matches
                         const currentUserRaw = localStorage.getItem('currentUser');
