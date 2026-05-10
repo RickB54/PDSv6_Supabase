@@ -1326,37 +1326,35 @@ Precision. Protection. Perfection.`;
                           : invoice.vehicle}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto" onClick={e => e.stopPropagation()}>
-                    <div className="text-right">
-                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
+                  </div>                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 justify-between md:justify-end w-full md:w-auto mt-4 md:mt-0" onClick={e => e.stopPropagation()}>
+                    <div className="text-right flex-1 sm:flex-none">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
                       <div className="flex flex-col items-end">
                         {invoice.discount && invoice.discount.amount > 0 && (
                           <span className="text-[10px] text-zinc-500 line-through decoration-zinc-700">
                             ${(invoice.total + invoice.discount.amount).toFixed(2)}
                           </span>
                         )}
-                        <div className="text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
+                        <div className="text-lg sm:text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
                       </div>
                     </div>
 
-                    <div className="text-right min-w-[100px]">
-                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
-                      <div className={`font-medium ${ (invoice.paymentStatus === 'paid' || invoice.total === 0) ? 'text-emerald-400' :
+                    <div className="text-right min-w-[90px] flex-1 sm:flex-none">
+                      <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Status</div>
+                      <div className={`font-bold text-xs ${ (invoice.paymentStatus === 'paid' || invoice.total === 0) ? 'text-emerald-400' :
                         invoice.paymentStatus === 'partially-paid' ? 'text-amber-400' : 'text-red-400'
                         }`}>
                         {(invoice.total === 0 ? 'paid' : (invoice.paymentStatus || 'unpaid')).toUpperCase()}
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1 min-w-[60px]" onClick={e => e.stopPropagation()}>
-                       <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider mb-1">Sent?</div>
+                    <div className="flex flex-col items-center gap-1 min-w-[50px]" onClick={e => e.stopPropagation()}>
+                       <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider mb-0.5">Sent?</div>
                        <Button 
                         size="icon" 
                         variant="ghost" 
                         className={cn(
-                          "h-8 w-8 rounded-full border transition-all",
+                          "h-7 w-7 rounded-full border transition-all",
                           invoice.isSent 
                             ? "bg-blue-500/20 border-blue-500/50 text-blue-400" 
                             : "bg-zinc-900 border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
@@ -1364,28 +1362,29 @@ Precision. Protection. Perfection.`;
                         onClick={(e) => toggleSentStatus(e, invoice)}
                         title={invoice.isSent ? `Sent on ${invoice.sentDate ? new Date(invoice.sentDate).toLocaleDateString() : 'N/A'}` : "Mark as Sent"}
                        >
-                         <Send className={cn("h-4 w-4", invoice.isSent && "fill-blue-400/20")} />
+                         <Send className={cn("h-3.5 w-3.5", invoice.isSent && "fill-blue-400/20")} />
                        </Button>
                     </div>
 
-                    <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleEditInvoice(invoice)} title="Edit Invoice">
-                        <Pencil className="h-4 w-4" />
+                    <div className="flex gap-1.5 items-center justify-end w-full sm:w-auto" onClick={e => e.stopPropagation()}>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleEditInvoice(invoice)} title="Edit Invoice">
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-400/10 border border-emerald-500/20" onClick={() => generatePDF(invoice, false)} title="Preview PDF">
-                        <Eye className="h-4 w-4" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-400/10 border border-emerald-500/20" onClick={() => generatePDF(invoice, false)} title="Preview PDF">
+                        <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, false)} title="Print PDF">
-                        <Printer className="h-4 w-4" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => generatePDF(invoice, false)} title="Print PDF">
+                        <Printer className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(invoice, true)} title="Download PDF">
-                        <Save className="h-4 w-4" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(invoice, true)} title="Download PDF">
+                        <Save className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-500 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(invoice.id!)} title="Delete Invoice">
-                        <Trash2 className="h-4 w-4" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(invoice.id!)} title="Delete Invoice">
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
+>
                 </div>
               ))}
             </div>

@@ -323,9 +323,9 @@ export default function StaffSchedule() {
     // --- RENDERERS ---
 
     const renderHeader = () => (
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-zinc-950/80 p-4 border-b border-zinc-800 sticky top-0 z-20 backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row justify-between items-center mb-4 gap-4 bg-zinc-950/80 p-4 border-b border-zinc-800 sticky top-0 z-20 backdrop-blur-md">
             {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 w-full lg:w-auto">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -336,11 +336,11 @@ export default function StaffSchedule() {
                 >
                     <RotateCcw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/payroll')} className="h-8 text-xs">
-                    <DollarSign className="w-3 h-3 mr-2" /> Payroll
+                <Button variant="outline" size="sm" onClick={() => navigate('/payroll')} className="h-8 text-[10px] sm:text-xs">
+                    <DollarSign className="w-3 h-3 mr-1 sm:mr-2" /> Payroll
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/user-management')} className="h-8 text-xs">
-                    <Users className="w-3 h-3 mr-2" /> Users
+                <Button variant="outline" size="sm" onClick={() => navigate('/user-management')} className="h-8 text-[10px] sm:text-xs">
+                    <Users className="w-3 h-3 mr-1 sm:mr-2" /> Users
                 </Button>
                 {isAdmin && (
                     <Button
@@ -350,33 +350,33 @@ export default function StaffSchedule() {
                             setClearTimeRange(view === 'year' ? 'month' : view);
                             setClearScheduleOpen(true);
                         }}
-                        className="h-8 text-xs bg-red-900/70 hover:bg-red-800"
+                        className="h-8 text-[10px] sm:text-xs bg-red-900/70 hover:bg-red-800"
                     >
-                        <ShieldAlert className="w-3 h-3 mr-2" /> Clear Schedule
+                        <ShieldAlert className="w-3 h-3 mr-1 sm:mr-2" /> Clear
                     </Button>
                 )}
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center gap-2 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800">
+            <div className="flex items-center gap-2 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 w-full sm:w-auto justify-between sm:justify-start">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateDate('prev')}><ChevronLeft className="w-4 h-4" /></Button>
-                <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="h-7 text-xs px-2">Today</Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateDate('next')}><ChevronRight className="w-4 h-4" /></Button>
-                <span className="font-bold text-sm px-3 min-w-[140px] text-center text-white">
+                <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="h-7 text-[10px] px-2">Today</Button>
+                <span className="font-bold text-[11px] sm:text-sm px-1 sm:px-3 flex-1 text-center text-white whitespace-nowrap">
                     {view === 'day' && format(currentDate, 'MMM do, yyyy')}
                     {view === 'week' && `Week of ${format(startOfWeek(currentDate), 'MMM do')}`}
                     {view === 'month' && format(currentDate, 'MMMM yyyy')}
                     {view === 'year' && format(currentDate, 'yyyy')}
                 </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigateDate('next')}><ChevronRight className="w-4 h-4" /></Button>
             </div>
 
             {/* View Switcher */}
-            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+            <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 w-full sm:w-auto overflow-x-auto no-scrollbar">
                 {(['day', 'week', 'month', 'year'] as ViewMode[]).map(m => (
                     <button
                         key={m}
                         onClick={() => setView(m)}
-                        className={`px-3 py-1 text-[10px] font-medium rounded transition-all uppercase tracking-wide ${view === m ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`flex-1 sm:flex-none px-3 py-1 text-[9px] sm:text-[10px] font-black rounded transition-all uppercase tracking-widest ${view === m ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
                     >
                         {m}
                     </button>
@@ -522,66 +522,66 @@ export default function StaffSchedule() {
                     {/* Bottom Detail Panel */}
                     <div className="mt-2 h-auto min-h-[140px] md:h-[140px] shrink-0 bg-[#0f0f13] border border-zinc-800 rounded-xl flex shadow-2xl relative overflow-hidden transition-all">
                         {!selectedShift ? (
-                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic py-4">
+                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic py-8">
                                 Select a shift to view details, notes, and status.
                             </div>
                         ) : (
-                            <div className="flex flex-1 p-4 gap-4 md:gap-6 animate-in slide-in-from-bottom-5">
+                            <div className="flex flex-1 p-4 sm:p-6 gap-4 sm:gap-6 animate-in slide-in-from-bottom-5 overflow-y-auto">
                                 <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
 
                                 {/* Content Wrapper */}
-                                <div className="flex flex-1 flex-col md:flex-row gap-4 md:gap-6 min-w-0">
+                                <div className="flex flex-1 flex-col lg:flex-row gap-6 min-w-0">
                                     {/* Info Column */}
                                     <div className="space-y-1 min-w-[150px]">
-                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Employee</div>
-                                        <div className="text-xl font-bold text-white flex items-center gap-2">
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Employee</div>
+                                        <div className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
                                             {selectedShift.employeeName}
-                                            {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[10px] h-5">SICK</Badge>}
-                                            {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[10px] h-5">NO SHOW</Badge>}
+                                            {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">SICK</Badge>}
+                                            {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">NO SHOW</Badge>}
                                         </div>
-                                        <div className="text-sm text-zinc-400">{selectedShift.role}</div>
+                                        <div className="text-xs font-bold text-zinc-500 uppercase tracking-tight">{selectedShift.role}</div>
                                     </div>
 
                                     {/* Time Column */}
-                                    <div className="space-y-1 min-w-[150px] border-t pt-4 md:border-t-0 md:pt-0 md:border-l border-zinc-800 md:pl-6">
-                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold">Time</div>
-                                        <div className="text-lg text-zinc-200 font-mono flex items-center gap-2">
-                                            <Clock className="w-4 h-4 text-blue-400" />
+                                    <div className="space-y-1 min-w-[150px] border-t lg:border-t-0 pt-4 lg:pt-0 lg:border-l border-zinc-800 lg:pl-6">
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Shift Schedule</div>
+                                        <div className="text-lg text-zinc-200 font-black flex items-center gap-2">
+                                            <Clock className="w-4 h-4 text-blue-500" />
                                             {formatTime12(selectedShift.startTime)} - {formatTime12(selectedShift.endTime)}
                                         </div>
-                                        <div className="text-xs text-zinc-500">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
+                                        <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
                                     </div>
 
                                     {/* Notes Column */}
-                                    <div className="flex-1 border-t pt-4 md:border-t-0 md:pt-0 md:border-l border-zinc-800 md:pl-6 bg-transparent md:bg-zinc-900/30 rounded-r-lg md:p-2">
-                                        <div className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-1">Shift Notes</div>
-                                        <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">
-                                            {selectedShift.notes || <span className="text-zinc-600 italic">No notes added.</span>}
+                                    <div className="flex-1 border-t lg:border-t-0 pt-4 lg:pt-0 lg:border-l border-zinc-800 lg:pl-6 bg-transparent lg:bg-zinc-900/30 rounded-r-xl lg:p-4">
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Shift Notes & Intel</div>
+                                        <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed font-medium">
+                                            {selectedShift.notes || <span className="text-zinc-600 italic">No operational notes provided for this shift.</span>}
                                         </p>
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex flex-col gap-2 justify-center pt-2 md:pt-0 md:ml-4 min-w-[140px]">
+                                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 justify-center pt-4 lg:pt-0 lg:ml-4 min-w-full lg:min-w-[160px]">
                                         {isAdmin && (
-                                            <Button variant="ghost" size="sm" className="bg-green-900/20 text-green-400 hover:bg-green-900/40 hover:text-green-300 w-full" onClick={() => {
+                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
                                                 navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
                                             }}>
-                                                <DollarSign className="w-4 h-4 mr-2" /> Pay
+                                                <DollarSign className="w-4 h-4 mr-2" /> Payroll Sync
                                             </Button>
                                         )}
-                                        <Button variant="ghost" size="sm" className="bg-indigo-900/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 w-full" onClick={() => {
+                                        <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
                                             navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
                                         }}>
-                                            <CheckSquare className="w-4 h-4 mr-2" /> Start Job
+                                            <CheckSquare className="w-4 h-4 mr-2" /> Launch Job
                                         </Button>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 w-full">
                                             {isAdmin && (
                                                 <>
-                                                    <Button variant="destructive" size="sm" className="px-2" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
-                                                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEditShift(selectedShift)}>Edit</Button>
+                                                    <Button variant="destructive" size="sm" className="h-10 sm:h-12 px-3 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
+                                                    <Button variant="outline" size="sm" className="h-10 sm:h-12 flex-1 font-black uppercase tracking-widest text-[10px] border-zinc-800" onClick={() => handleEditShift(selectedShift)}>Edit Shift</Button>
                                                 </>
                                             )}
-                                            <Button variant="ghost" size="sm" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4" /></Button>
+                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 border border-zinc-800" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4 text-zinc-500" /></Button>
                                         </div>
                                     </div>
                                 </div>
@@ -600,28 +600,28 @@ export default function StaffSchedule() {
                         <DialogTitle>{editingShift ? 'Edit Shift' : 'New Shift'}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Employee</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Employee</Label>
                                 <Select value={formData.employeeId} onValueChange={(val) => {
                                     const e = employees.find(x => x.id === val || x.email === val);
                                     setFormData({ ...formData, employeeId: val, role: e?.role || formData.role })
                                 }}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-700">
-                                        <SelectValue placeholder="Select..." />
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-700 h-12">
+                                        <SelectValue placeholder="Select Team Member" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
                                         {employees.map(e => <SelectItem key={e.id} value={e.id || e.email}>{e.name || e.email}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Status</Label>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Status</Label>
                                 <Select value={formData.status || 'scheduled'} onValueChange={(val) => setFormData({ ...formData, status: val as any })}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-700">
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-700 h-12">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
                                         <SelectItem value="scheduled">Scheduled</SelectItem>
                                         <SelectItem value="sick" className="text-red-400">Called Out (Sick)</SelectItem>
                                         <SelectItem value="no-show" className="text-zinc-500">No Show</SelectItem>
@@ -631,10 +631,10 @@ export default function StaffSchedule() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="space-y-2"><Label>Date</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="bg-zinc-950 border-zinc-700" /></div>
-                            <div className="space-y-2"><Label>Start</Label><Input type="time" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="bg-zinc-950 border-zinc-700" /></div>
-                            <div className="space-y-2"><Label>End</Label><Input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="bg-zinc-950 border-zinc-700" /></div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Date</Label><Input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="bg-zinc-950 border-zinc-700 h-11" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Start Time</Label><Input type="time" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="bg-zinc-950 border-zinc-700 h-11" /></div>
+                            <div className="space-y-2"><Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">End Time</Label><Input type="time" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="bg-zinc-950 border-zinc-700 h-11" /></div>
                         </div>
 
                         <div className="space-y-2">

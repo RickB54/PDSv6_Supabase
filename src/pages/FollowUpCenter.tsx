@@ -294,55 +294,55 @@ export default function FollowUpCenter() {
       <Navbar />
       <main className="container mx-auto px-4 pr-[70px] lg:pr-4 pt-32 pb-12">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-              <Zap className="h-8 w-8 text-blue-500 fill-blue-500" />
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 sm:p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+                  <Zap className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 fill-blue-500" />
+                </div>
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tighter leading-none italic">
+                    Retention <span className="text-blue-500">Hub</span>
+                  </h1>
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-[9px] sm:text-[10px] mt-1.5 flex items-center gap-2">
+                    <ShieldCheck className="h-3 w-3" /> Professional Growth Engine
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter leading-none italic">
-                Retention <span className="text-blue-500">Hub</span>
-              </h1>
-              <p className="text-zinc-500 font-medium uppercase tracking-widest text-[10px] mt-1.5 flex items-center gap-2">
-                <ShieldCheck className="h-3 w-3" /> Professional Growth Engine
-              </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
+                  className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-emerald-400 group h-10 text-xs flex-1 sm:flex-none"
+                >
+                  <HelpCircle className="mr-2 h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                  Hub Guide
+                </Button>
+               
+               <Button 
+                 variant="outline" 
+                 onClick={loadProspects}
+                 className="bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 border-zinc-800 font-bold uppercase tracking-tight h-10 rounded-xl text-xs flex-1 sm:flex-none"
+               >
+                 <RotateCcw className={cn("mr-2 h-4 w-4", loadingProspects && "animate-spin")} />
+                 Sync All
+               </Button>
+
+               <div className="hidden lg:block h-8 w-[1px] bg-zinc-800 mx-2" />
+
+               <Button 
+                 variant="ghost" 
+                 size="icon"
+                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
+                 className="hidden sm:flex text-zinc-600 hover:text-white transition-all group"
+                 title="Help Guide"
+               >
+                 <HelpCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
+               </Button>
             </div>
-          </div>
         </div>
-
-        <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
-              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700 hover:text-emerald-400 group"
-            >
-              <HelpCircle className="mr-2 h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              Hub Guide
-            </Button>
-           
-           <Button 
-             variant="outline" 
-             onClick={loadProspects}
-             className="bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 border-zinc-800 font-bold uppercase tracking-tight h-12 rounded-xl"
-           >
-             <RotateCcw className={cn("mr-2 h-4 w-4", loadingProspects && "animate-spin")} />
-             Sync All Data
-           </Button>
-
-           <div className="hidden md:block h-8 w-[1px] bg-zinc-800 mx-2" />
-
-           <Button 
-             variant="ghost" 
-             size="icon"
-             onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'retention-hub' }))}
-             className="text-zinc-600 hover:text-white transition-all group"
-             title="Help Guide"
-           >
-             <HelpCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-           </Button>
-        </div>
-      </div>
 
       <Tabs defaultValue="opportunities" className="space-y-12">
         <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-2 rounded-[2rem] h-auto flex flex-col sm:flex-row w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 overflow-hidden">
@@ -364,13 +364,13 @@ export default function FollowUpCenter() {
 
         {/* SEARCH BAR (FIXED AT TOP OF ALL TABS) */}
         <div className="relative max-w-4xl">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur opacity-25" />
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-500 z-10" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl sm:rounded-[2.5rem] blur opacity-25" />
+          <Search className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-zinc-500 z-10" />
           <Input 
-            placeholder="DYNAMIC SEARCH: EMAILS, NAMES, VEHICLES OR SERVICES..." 
+            placeholder="SEARCH: EMAILS, NAMES, VEHICLES..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-16 bg-zinc-900/80 border-zinc-800/50 h-20 rounded-[2.5rem] text-xl font-black placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900 focus:border-blue-500/40 transition-all border-2 relative z-10"
+            className="pl-12 sm:pl-16 bg-zinc-900/80 border-zinc-800/50 h-14 sm:h-20 rounded-2xl sm:rounded-[2.5rem] text-sm sm:text-xl font-black placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900 focus:border-blue-500/40 transition-all border-2 relative z-10"
           />
         </div>
 
@@ -426,52 +426,52 @@ export default function FollowUpCenter() {
                 <div 
                   key={customer.id} 
                   className={cn(
-                    "group relative overflow-hidden bg-zinc-900/30 border border-zinc-800/50 rounded-[3.5rem] p-10 transition-all hover:bg-zinc-900/60 hover:border-zinc-700 shadow-xl",
-                    customer.isDue && "border-l-8 border-l-red-500/60"
+                    "group relative overflow-hidden bg-zinc-900/30 border border-zinc-800/50 rounded-3xl sm:rounded-[3.5rem] p-6 sm:p-10 transition-all hover:bg-zinc-900/60 hover:border-zinc-700 shadow-xl",
+                    customer.isDue && "border-l-4 sm:border-l-8 border-l-red-500/60"
                   )}
                 >
-                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 relative z-10">
-                      <div className="flex items-start gap-10">
+                   <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 relative z-10">
+                      <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-10">
                          <div className={cn(
-                           "h-24 w-24 rounded-[2rem] flex items-center justify-center border-2 transition-all duration-700 group-hover:scale-110 group-hover:rotate-6 shadow-2xl",
+                           "h-16 w-16 sm:h-24 sm:w-24 rounded-2xl sm:rounded-[2rem] flex items-center justify-center border-2 transition-all duration-700 group-hover:scale-110 group-hover:rotate-6 shadow-2xl shrink-0",
                            customer.isDue 
                              ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-red-900/10" 
                              : "bg-blue-500/10 border-blue-500/20 text-blue-500 shadow-blue-900/10"
                          )}>
-                            <User className={cn("h-12 w-12", customer.isDue && "animate-pulse")} />
+                            <User className={cn("h-8 w-8 sm:h-12 sm:w-12", customer.isDue && "animate-pulse")} />
                          </div>
                          
-                         <div className="space-y-3">
-                            <div className="flex items-center gap-4">
-                               <h3 className="text-3xl font-black uppercase tracking-tighter italic">{customer.customer}</h3>
+                         <div className="space-y-3 min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-3">
+                               <h3 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter italic truncate">{customer.customer}</h3>
                                {customer.isDue && (
-                                 <Badge className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full border-none shadow-[0_0_20px_rgba(239,68,68,0.4)]">Action Required</Badge>
+                                 <Badge className="bg-red-600 text-white text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border-none shadow-[0_0_20px_rgba(239,68,68,0.4)]">DUE</Badge>
                                )}
                             </div>
-                            <p className="text-zinc-500 font-bold text-base tracking-tight flex items-center gap-2">
-                                <Mail className="h-4 w-4 opacity-50 text-blue-500" /> {customer.customerEmail}
+                            <p className="text-zinc-500 font-bold text-sm sm:text-base tracking-tight flex items-center gap-2 truncate">
+                                <Mail className="h-3.5 w-3.5 opacity-50 text-blue-500 shrink-0" /> {customer.customerEmail}
                             </p>
-                            <div className="flex flex-wrap items-center gap-5 mt-6">
-                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-5 py-2.5 rounded-2xl border border-zinc-700/50 shadow-lg">
-                                  <Sparkles className="h-4 w-4 text-blue-500" />
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-5 mt-4 sm:mt-6">
+                               <div className="flex items-center gap-2 text-[9px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-4 py-2 rounded-xl border border-zinc-700/50 shadow-lg">
+                                  <Sparkles className="h-3.5 w-3.5 text-blue-500" />
                                   Last: {customer.title}
                                </div>
-                               <div className="flex items-center gap-2 text-[10px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-5 py-2.5 rounded-2xl border border-zinc-700/50 shadow-lg">
-                                  <CalendarDays className="h-4 w-4 text-emerald-500" />
+                               <div className="flex items-center gap-2 text-[9px] font-black text-zinc-300 uppercase tracking-widest bg-zinc-800/80 px-4 py-2 rounded-xl border border-zinc-700/50 shadow-lg">
+                                  <CalendarDays className="h-3.5 w-3.5 text-emerald-500" />
                                   {format(customer.lastServiceDate, 'MMM dd, yyyy')}
                                </div>
                                
-                               <div className="flex items-center gap-3 px-5 py-2 bg-zinc-950/80 border-2 border-zinc-800 rounded-2xl shadow-inner group/select">
-                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.15em]">Interval:</span>
+                               <div className="flex items-center gap-3 px-4 py-1.5 bg-zinc-950/80 border-2 border-zinc-800 rounded-xl shadow-inner group/select">
+                                <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.15em]">Freq:</span>
                                 <Select 
                                  value={String(customer.frequencyMonths)} 
                                  onValueChange={(v) => handleUpdateFrequency(customer.id, v)}
                                 >
-                                  <SelectTrigger className="h-8 w-44 border-0 bg-transparent text-blue-400 p-0 focus:ring-0 text-[12px] font-black uppercase tracking-[0.1em] hover:text-white transition-colors">
+                                  <SelectTrigger className="h-7 w-32 border-0 bg-transparent text-blue-400 p-0 focus:ring-0 text-[11px] font-black uppercase tracking-[0.1em] hover:text-white transition-colors">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200 rounded-2xl shadow-2xl">
-                                    <SelectItem value="0" className="font-black text-amber-500">Anytime / Manual</SelectItem>
+                                  <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200 rounded-xl shadow-2xl">
+                                    <SelectItem value="0" className="font-black text-amber-500">Anytime</SelectItem>
                                     <SelectItem value="1">Monthly</SelectItem>
                                     <SelectItem value="2">Bi-Monthly</SelectItem>
                                     <SelectItem value="3">Quarterly</SelectItem>
@@ -485,31 +485,31 @@ export default function FollowUpCenter() {
                          </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-center gap-12">
-                         <div className="text-right flex flex-col items-end">
-                            <p className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mb-3">Engagement Window:</p>
+                      <div className="flex flex-col sm:flex-row items-center gap-8 xl:gap-12 w-full xl:w-auto">
+                         <div className="text-center sm:text-right flex flex-col items-center sm:items-end w-full sm:w-auto">
+                            <p className="text-[9px] uppercase font-black tracking-[0.2em] text-zinc-500 mb-2">Target Date:</p>
                             {Number(customer.frequencyMonths) === 0 ? (
-                               <div className="space-y-2 flex flex-col items-end">
+                               <div className="space-y-2 flex flex-col items-center sm:items-end">
                                  <Input 
                                    type="date"
                                    value={customer.customReminderDate ? customer.customReminderDate.split('T')[0] : new Date().toISOString().split('T')[0]}
                                    onChange={(e) => handleUpdateCustomDate(customer.id, new Date(e.target.value).toISOString())}
-                                   className="h-10 w-44 bg-zinc-950 border-2 border-zinc-800 text-amber-400 font-black text-sm rounded-xl focus:ring-amber-500/20 text-center uppercase shadow-lg border-amber-500/10"
+                                   className="h-10 w-44 bg-zinc-950 border-2 border-zinc-800 text-amber-400 font-black text-xs rounded-xl focus:ring-amber-500/20 text-center uppercase shadow-lg border-amber-500/10"
                                  />
-                                 <p className="text-[10px] text-amber-500/60 font-black uppercase tracking-[0.2em]">Manual Override Active</p>
+                                 <p className="text-[9px] text-amber-500/60 font-black uppercase tracking-[0.2em]">Manual Override</p>
                                </div>
                             ) : (
                                <>
                                  <p className={cn(
-                                   "text-4xl font-black tracking-tighter leading-none mb-2",
+                                   "text-3xl sm:text-4xl font-black tracking-tighter leading-none mb-1.5",
                                    customer.isDue ? "text-red-500" : "text-white"
                                  )}>
                                     {format(customer.dueDate, 'MMM dd, yyyy')}
                                  </p>
-                                 <p className="text-[12px] text-zinc-500 font-black uppercase tracking-widest italic">
+                                 <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest italic">
                                     {customer.isDue 
                                       ? `${Math.abs(customer.daysRemaining)} Days Lagging` 
-                                      : `Approx. ${customer.daysRemaining} Days Until Due`}
+                                      : `${customer.daysRemaining} Days Until Due`}
                                  </p>
                                </>
                             )}
@@ -518,14 +518,14 @@ export default function FollowUpCenter() {
                          <Button 
                            onClick={() => openFollowUpDialog(customer)}
                            className={cn(
-                             "h-16 px-10 rounded-[1.25rem] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 text-lg shadow-2xl",
+                             "h-14 sm:h-16 w-full sm:w-auto px-8 sm:px-10 rounded-2xl sm:rounded-[1.25rem] font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 text-base sm:text-lg shadow-2xl",
                              customer.isDue 
                                ? "bg-red-600 hover:bg-red-700 text-white shadow-red-900/30" 
                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/30"
                            )}
                          >
-                            Personalize Outreach
-                            <ArrowRight className="ml-3 h-6 w-6" />
+                            Outreach
+                            <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6" />
                          </Button>
                       </div>
                    </div>

@@ -132,13 +132,13 @@ export default function DiscountCoupons() {
             <table className="w-full text-sm">
               <thead className="bg-zinc-950/50">
                 <tr className="text-left text-zinc-400">
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Code</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Description</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Type</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Value</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Uses Left</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider">Status</th>
-                  <th className="p-4 font-medium uppercase text-xs tracking-wider text-right">Actions</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Code</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Description</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Type</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Value</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Uses Left</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap">Status</th>
+                  <th className="p-4 font-black uppercase text-[10px] tracking-widest whitespace-nowrap text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">

@@ -188,48 +188,48 @@ export default function DetailingVendors() {
 
                 {view === "list" && (
                     <Card className="p-6 bg-zinc-900 border-zinc-800">
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div className="flex items-center gap-3">
                                 <Package className="w-6 h-6 text-cyan-500" />
-                                <h2 className="text-2xl font-bold text-white">Vendors Directory</h2>
+                                <h2 className="text-xl sm:text-2xl font-bold text-white">Vendors Directory</h2>
                             </div>
-                            <div className="flex gap-2">
-                                <Button onClick={handleExportPDF} className="bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700">
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <Button onClick={handleExportPDF} className="flex-1 sm:flex-none bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700 h-10 px-4">
                                     <FileDown className="mr-2 h-4 w-4" /> Save PDF
                                 </Button>
-                                <Button onClick={() => { resetForm(); setView("form"); }} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                <Button onClick={() => { resetForm(); setView("form"); }} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white h-10 px-4">
                                     <Plus className="mr-2 h-4 w-4" /> Add Vendor
                                 </Button>
                             </div>
                         </div>
 
-                        <div className="flex gap-4 mb-4">
+                        <div className="flex flex-col sm:flex-row gap-4 mb-6">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-500 w-4 h-4" />
                                 <Input
                                     placeholder="Search vendors..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-zinc-800 border-zinc-700 text-white"
+                                    className="pl-10 bg-zinc-800 border-zinc-700 text-white h-10"
                                 />
                             </div>
                             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="w-[200px] bg-zinc-800 border-zinc-700 text-white">
+                                <SelectTrigger className="w-full sm:w-[200px] bg-zinc-800 border-zinc-700 text-white h-10">
                                     <SelectValue placeholder="All Categories" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-zinc-800 border-zinc-700">
-                                    <SelectItem value="all" className="text-white">All Categories</SelectItem>
+                                <SelectContent className="bg-zinc-800 border-zinc-800 text-white">
+                                    <SelectItem value="all">All Categories</SelectItem>
                                     {VENDOR_CATEGORIES.map(cat => (
-                                        <SelectItem key={cat} value={cat} className="text-white">{cat}</SelectItem>
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        <div className="rounded-md border border-zinc-800 overflow-hidden">
+                        <div className="rounded-xl border border-zinc-800 overflow-x-auto bg-zinc-950">
                             <Table>
-                                <TableHeader className="bg-zinc-800">
-                                    <TableRow className="hover:bg-zinc-800 border-zinc-700">
+                                <TableHeader className="bg-zinc-900">
+                                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
                                         <TableHead className="w-[50px]">
                                             <Checkbox
                                                 checked={selectedIds.length === filteredVendors.length && filteredVendors.length > 0}
@@ -240,18 +240,18 @@ export default function DetailingVendors() {
                                                 className="border-zinc-700"
                                             />
                                         </TableHead>
-                                        <TableHead className="text-zinc-300">Vendor Name</TableHead>
-                                        <TableHead className="text-zinc-300">Category</TableHead>
-                                        <TableHead className="text-zinc-300">Contact</TableHead>
-                                        <TableHead className="text-zinc-300">Phone</TableHead>
-                                        <TableHead className="text-zinc-300">Email</TableHead>
-                                        <TableHead className="text-zinc-300">Location</TableHead>
-                                        <TableHead className="text-zinc-300 text-right">Actions</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Vendor Name</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Category</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Contact</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Phone</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Email</TableHead>
+                                        <TableHead className="text-zinc-400 whitespace-nowrap">Location</TableHead>
+                                        <TableHead className="text-zinc-400 text-right whitespace-nowrap">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredVendors.map((vendor) => (
-                                        <TableRow key={vendor.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                                        <TableRow key={vendor.id} className="border-zinc-800 hover:bg-zinc-800/30 transition-colors">
                                             <TableCell>
                                                 <Checkbox
                                                     checked={selectedIds.includes(vendor.id)}
@@ -262,16 +262,16 @@ export default function DetailingVendors() {
                                                     className="border-zinc-700"
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-medium text-white">{vendor.vendor_name}</TableCell>
-                                            <TableCell className="text-zinc-400">
-                                                <span className="px-2 py-1 bg-cyan-900/30 text-cyan-400 rounded text-xs">
+                                            <TableCell className="font-bold text-zinc-100 whitespace-nowrap">{vendor.vendor_name}</TableCell>
+                                            <TableCell className="whitespace-nowrap">
+                                                <span className="px-2 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-[10px] font-black uppercase tracking-widest">
                                                     {vendor.category}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="text-zinc-400">{vendor.contact_name || "-"}</TableCell>
-                                            <TableCell className="text-zinc-400">{vendor.phone || "-"}</TableCell>
-                                            <TableCell className="text-zinc-400">{vendor.email || "-"}</TableCell>
-                                            <TableCell className="text-zinc-400">{vendor.city}, {vendor.state}</TableCell>
+                                            <TableCell className="text-zinc-400 whitespace-nowrap">{vendor.contact_name || "-"}</TableCell>
+                                            <TableCell className="text-zinc-400 whitespace-nowrap">{vendor.phone || "-"}</TableCell>
+                                            <TableCell className="text-zinc-400 whitespace-nowrap">{vendor.email || "-"}</TableCell>
+                                            <TableCell className="text-zinc-500 text-xs whitespace-nowrap">{vendor.city}, {vendor.state}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
                                                     <Button
@@ -324,25 +324,29 @@ export default function DetailingVendors() {
                         <div className="space-y-6">
                             {/* Vendor Information */}
                             <div>
-                                <h3 className="text-lg font-semibold text-white mb-4">Vendor Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-zinc-400">Vendor Name *</Label>
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-cyan-500 rounded-full" />
+                                    Vendor Information
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Vendor Name *</Label>
                                         <Input
                                             value={formData.vendor_name}
                                             onChange={(e) => setFormData({ ...formData, vendor_name: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11 focus:ring-cyan-500"
+                                            placeholder="e.g. Chemical Guys"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Category</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Category</Label>
                                         <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
-                                            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                            <SelectTrigger className="bg-black/40 border-zinc-800 text-white h-11">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-zinc-800 border-zinc-700">
+                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
                                                 {VENDOR_CATEGORIES.map(cat => (
-                                                    <SelectItem key={cat} value={cat} className="text-white">{cat}</SelectItem>
+                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -352,39 +356,46 @@ export default function DetailingVendors() {
 
                             {/* Contact Information */}
                             <div>
-                                <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-zinc-400">Contact Person</Label>
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                                    Contact Details
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Contact Person</Label>
                                         <Input
                                             value={formData.contact_name}
                                             onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
+                                            placeholder="Full Name"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Phone</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Phone</Label>
                                         <Input
                                             value={formData.phone}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
+                                            placeholder="(000) 000-0000"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Email</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Email</Label>
                                         <Input
                                             type="email"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
+                                            placeholder="vendor@example.com"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Website</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Website</Label>
                                         <Input
                                             value={formData.website}
                                             onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
+                                            placeholder="https://..."
                                         />
                                     </div>
                                 </div>
@@ -392,46 +403,50 @@ export default function DetailingVendors() {
 
                             {/* Address Information */}
                             <div>
-                                <h3 className="text-lg font-semibold text-white mb-4">Address</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2">
-                                        <Label className="text-zinc-400">Street</Label>
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                                    Address Details
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="sm:col-span-2 space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Street</Label>
                                         <Input
                                             value={formData.street}
                                             onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
+                                            placeholder="123 Business Way"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">City</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">City</Label>
                                         <Input
                                             value={formData.city}
                                             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">State</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">State</Label>
                                         <Input
                                             value={formData.state}
                                             onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Zip</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Zip</Label>
                                         <Input
                                             value={formData.zip}
                                             onChange={(e) => setFormData({ ...formData, zip: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
                                         />
                                     </div>
-                                    <div>
-                                        <Label className="text-zinc-400">Country</Label>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Country</Label>
                                         <Input
                                             value={formData.country}
                                             onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                                            className="bg-zinc-800 border-zinc-700 text-white"
+                                            className="bg-black/40 border-zinc-800 text-white h-11"
                                         />
                                     </div>
                                 </div>

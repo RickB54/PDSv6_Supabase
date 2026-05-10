@@ -1069,12 +1069,12 @@ const Reports = () => {
         </Card>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 w-full flex flex-wrap h-auto">
+          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 w-full flex flex-wrap h-auto gap-1">
             {tabList.map(t => (
               <TabsTrigger
                 key={t.id}
                 value={t.id}
-                className="flex-1 min-w-[100px] data-[state=active]:bg-zinc-800 data:[state=active]:text-white data-[state=active]:shadow-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+                className="flex-1 min-w-[120px] sm:min-w-[100px] data-[state=active]:bg-zinc-800 data-[state=active]:text-white data-[state=active]:shadow-sm text-zinc-400 hover:text-zinc-200 transition-colors h-10 text-xs uppercase font-bold"
               >
                 {t.label}
               </TabsTrigger>
@@ -1150,7 +1150,7 @@ const Reports = () => {
                     <CreditCard className="h-5 w-5" /> Customers with Outstanding Balance
                   </h4>
                 </div>
-                <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+                <div className="rounded-lg border border-zinc-800 overflow-x-auto bg-zinc-950">
                   <Table>
                     <TableHeader className="bg-zinc-900">
                       <TableRow className="border-zinc-800">
@@ -1288,7 +1288,7 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto bg-zinc-950">
                 <Table>
                   <TableHeader className="bg-zinc-900">
                     <TableRow className="border-zinc-800">
@@ -1437,7 +1437,7 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 overflow-hidden bg-zinc-950">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto bg-zinc-950">
                 <Table>
                   <TableHeader className="bg-zinc-900">
                     <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
@@ -1530,18 +1530,18 @@ const Reports = () => {
 
               {/* Chemicals Table */}
               <h4 className="text-md font-bold text-red-400 mb-3 bg-red-500/10 p-2 rounded inline-block border border-red-500/20">Chemicals</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Size</TableHead><TableHead className="text-zinc-400">Stock</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">Item</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Size</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Stock</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Cost</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Value</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {chemicalsSorted.map(c => (
                       <TableRow key={c.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-medium text-zinc-200">{c.name}</TableCell>
-                        <TableCell className="text-zinc-400">{c.bottleSize}</TableCell>
-                        <TableCell className={c.currentStock < c.threshold ? "text-amber-500 font-bold" : "text-zinc-300"}>{c.currentStock}</TableCell>
-                        <TableCell className="text-zinc-400">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</TableCell>
-                        <TableCell>{c.currentStock < c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{c.name}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{c.bottleSize}</TableCell>
+                        <TableCell className={c.currentStock < c.threshold ? "text-amber-500 font-bold whitespace-nowrap" : "text-zinc-300 whitespace-nowrap"}>{c.currentStock}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{c.currentStock < c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1550,18 +1550,18 @@ const Reports = () => {
 
               {/* Materials Table */}
               <h4 className="text-md font-bold text-blue-400 mb-3 bg-blue-500/10 p-2 rounded inline-block border border-blue-500/20">Materials</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Subtype</TableHead><TableHead className="text-zinc-400">Qty</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">Item</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Subtype</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Qty</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Cost</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Value</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {materialsSorted.map(m => (
                       <TableRow key={m.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-medium text-zinc-200">{m.name}</TableCell>
-                        <TableCell className="text-zinc-400">{m.subtype || m.type || '—'}</TableCell>
-                        <TableCell className={(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? "text-amber-500 font-bold" : "text-zinc-300"}>{m.quantity || 0}</TableCell>
-                        <TableCell className="text-zinc-400">${(m.costPerItem || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</TableCell>
-                        <TableCell>{(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{m.name}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{m.subtype || m.type || '—'}</TableCell>
+                        <TableCell className={(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? "text-amber-500 font-bold whitespace-nowrap" : "text-zinc-300 whitespace-nowrap"}>{m.quantity || 0}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">${(m.costPerItem || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">${((m.costPerItem || 0) * (m.quantity || 0)).toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{(m.quantity || 0) < (m.threshold || m.lowThreshold || 0) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1570,18 +1570,18 @@ const Reports = () => {
 
               {/* Tools Table */}
               <h4 className="text-md font-bold text-orange-400 mb-3 bg-orange-500/10 p-2 rounded inline-block border border-orange-500/20">Tools</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Item</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Qty</TableHead><TableHead className="text-zinc-400">Cost</TableHead><TableHead className="text-zinc-400">Value</TableHead><TableHead className="text-zinc-400">Status</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">Item</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Category</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Qty</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Cost</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Value</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {toolsSorted.map(t => (
                       <TableRow key={t.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-medium text-zinc-200">{t.name}</TableCell>
-                        <TableCell className="text-zinc-400">{t.category || '—'}</TableCell>
-                        <TableCell className="text-zinc-300">1</TableCell>
-                        <TableCell className="text-zinc-400">${(t.price || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">${(t.price || 0).toFixed(2)}</TableCell>
-                        <TableCell><span className="text-emerald-500 text-xs">OK</span></TableCell>
+                        <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{t.name}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{t.category || '—'}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">1</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">${(t.price || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">${(t.price || 0).toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap"><span className="text-emerald-500 text-xs">OK</span></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1616,21 +1616,21 @@ const Reports = () => {
               })()}
 
               <h4 className="text-md font-bold text-zinc-300 mb-3">Staff Performance Summary</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
                   <TableHeader className="bg-zinc-900">
                     <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
-                      <TableHead className="text-zinc-400">Employee Name</TableHead>
-                      <TableHead className="text-zinc-400">Jobs Completed</TableHead>
-                      <TableHead className="text-zinc-400">Revenue Generated</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Employee Name</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Jobs Completed</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Revenue Generated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {Object.entries(employeeStats).filter(([name]) => name !== 'Unassigned' && name !== 'N/A').map(([name, stats]: any) => (
                       <TableRow key={name} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-medium text-zinc-200">{name}</TableCell>
-                        <TableCell className="text-zinc-300">{stats.jobs}</TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${stats.revenue.toFixed(2)}</TableCell>
+                        <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{name}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{stats.jobs}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold whitespace-nowrap">${stats.revenue.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1640,11 +1640,11 @@ const Reports = () => {
               <h4 className="text-md font-bold text-zinc-300 mb-3">Detailed Job History</h4>
               <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Employee</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Service</TableHead><TableHead className="text-zinc-400">Time</TableHead><TableHead className="text-zinc-400">Date</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">Employee</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Service</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Time</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filterByDate(jobs, 'finishedAt').map((job, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium whitespace-nowrap">
                           <span className="text-blue-400 hover:text-blue-300 cursor-pointer underline underline-offset-2" onClick={() => { setSelectedJob(job); setChecklistOpen(true); }}>
                             {(() => {
                               const empIdOrName = job.employee || 'Unassigned';
@@ -1658,10 +1658,10 @@ const Reports = () => {
                             })()}
                           </span>
                         </TableCell>
-                        <TableCell className="text-zinc-300">{job.customer || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-300">{job.service || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-400">{job.totalTime || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-400">{job.finishedAt ? new Date(job.finishedAt).toLocaleDateString() : '—'}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{job.customer || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{job.service || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{job.totalTime || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{job.finishedAt ? new Date(job.finishedAt).toLocaleDateString() : '—'}</TableCell>
                       </TableRow>
                     ))}
                     {filterByDate(jobs, 'finishedAt').length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8">No jobs found.</TableCell></TableRow>}
@@ -1670,17 +1670,17 @@ const Reports = () => {
               </div>
 
               <h4 className="text-md font-bold text-zinc-300 mb-3">Recent Payroll</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Employee</TableHead><TableHead className="text-zinc-400">Type</TableHead><TableHead className="text-zinc-400">Description</TableHead><TableHead className="text-zinc-400">Amount</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Employee</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Type</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Description</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Amount</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filterByDate(payrollHistory, 'date').map((p, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="text-zinc-400">{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-200 font-medium">{p.employee || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-400">{p.type || 'N/A'}</TableCell>
-                        <TableCell className="text-zinc-400 max-w-[200px] truncate" title={p.description}>{p.description || '—'}</TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${Number(p.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{p.date ? new Date(p.date).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-200 font-medium whitespace-nowrap">{p.employee || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{p.type || 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 min-w-[200px] truncate" title={p.description}>{p.description || '—'}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold whitespace-nowrap">${Number(p.amount || 0).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                     {filterByDate(payrollHistory, 'date').length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8">No payroll history found.</TableCell></TableRow>}
@@ -1704,24 +1704,24 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">ID</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Service</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Status</TableHead><TableHead className="text-zinc-400">Date</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">ID</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Service</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Amount</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {filterByDate(estimates).map(est => (
                       <TableRow key={est.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="font-mono text-zinc-500">#{est.estimateNumber || est.id?.substring(0, 6)}</TableCell>
-                        <TableCell className="text-zinc-300 font-medium">{est.customerName || 'N/A'}</TableCell>
+                        <TableCell className="font-mono text-zinc-500 whitespace-nowrap">#{est.estimateNumber || est.id?.substring(0, 6)}</TableCell>
+                        <TableCell className="text-zinc-300 font-medium whitespace-nowrap">{est.customerName || 'N/A'}</TableCell>
                         <TableCell className="text-zinc-400 max-w-[200px] truncate" title={Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || '')}>
                           {Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A')}
                         </TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${(est.total || 0).toFixed(2)}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-emerald-400 font-bold whitespace-nowrap">${(est.total || 0).toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-xs font-bold ${est.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : est.status === 'Sent' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
                             {est.status || 'Draft'}
                           </span>
                         </TableCell>
-                        <TableCell className="text-zinc-400">{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
                       </TableRow>
                     ))}
                     {filterByDate(estimates).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">No estimates found.</TableCell></TableRow>}
@@ -1885,30 +1885,44 @@ const Reports = () => {
 
               {/* Income Table */}
               <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Income Records</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden mb-6">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto mb-6">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Cat</TableHead><TableHead className="text-zinc-400">Desc</TableHead><TableHead className="text-zinc-400">Customer</TableHead><TableHead className="text-zinc-400">Method</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Ref #</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).map((i, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="text-zinc-400">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
-                        <TableCell className="text-emerald-400 font-bold">${(i.amount || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">{i.category || 'General'}</TableCell>
-                        <TableCell className="text-zinc-400 max-w-[150px] truncate">{i.description}</TableCell>
-                        <TableCell className="text-zinc-400">{i.customerName}</TableCell>
-                        <TableCell className="text-zinc-500 text-xs">{i.paymentMethod}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{(i.date || i.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-emerald-400 font-bold whitespace-nowrap">${(i.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-200 whitespace-nowrap">{i.customerName || 'Direct'}</TableCell>
+                        <TableCell className="text-zinc-400 font-mono whitespace-nowrap">{i.invoiceNumber || '—'}</TableCell>
+                        <TableCell className="text-zinc-500 text-xs whitespace-nowrap uppercase tracking-widest">{i.type || 'Payment'}</TableCell>
                       </TableRow>
                     ))}
-                    {(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
+                    {(income || []).filter(i => filterByDate([i], i.date ? 'date' : 'createdAt').length).length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-4">No income records.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Expense Table */}
               <h4 className="text-sm font-bold text-zinc-400 mb-2 uppercase">Expense Records</h4>
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400">Date</TableHead><TableHead className="text-zinc-400">Amount</TableHead><TableHead className="text-zinc-400">Category</TableHead><TableHead className="text-zinc-400">Description</TableHead></TableRow></TableHeader>
+                  <TableHeader className="bg-zinc-900">
+                    <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Category</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {(expenses || []).filter(e => {
                       const passDate = filterByDate([e]).length > 0;
@@ -1917,10 +1931,10 @@ const Reports = () => {
                       return passDate && !inventoryCategories.includes(cat);
                     }).map((e, idx) => (
                       <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                        <TableCell className="text-zinc-400">{(e.createdAt || '').slice(0, 10)}</TableCell>
-                        <TableCell className="text-red-400 font-bold">${(e.amount || 0).toFixed(2)}</TableCell>
-                        <TableCell className="text-zinc-300">{e.category || 'General'}</TableCell>
-                        <TableCell className="text-zinc-400 max-w-[200px] truncate">{e.description}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{(e.createdAt || '').slice(0, 10)}</TableCell>
+                        <TableCell className="text-red-400 font-bold whitespace-nowrap">${(e.amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{e.category || 'General'}</TableCell>
+                        <TableCell className="text-zinc-400 min-w-[200px] truncate">{e.description}</TableCell>
                       </TableRow>
                     ))}
                     {(expenses || []).filter(e => {
@@ -2023,18 +2037,18 @@ const Reports = () => {
                           <TrendingUp className="h-5 w-5 text-emerald-500" />
                           Business Income Summary
                         </h3>
-                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
+                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-x-auto">
                           <Table>
                             <TableBody>
                               {Object.entries(taxReport.income.byService).map(([name, val]: [any, any]) => (
                                 <TableRow key={name} className="border-zinc-800/50">
-                                  <TableCell className="text-zinc-300">{name}</TableCell>
-                                  <TableCell className="text-right text-emerald-400 font-mono">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell className="text-zinc-300 whitespace-nowrap">{name}</TableCell>
+                                  <TableCell className="text-right text-emerald-400 font-mono whitespace-nowrap">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                 </TableRow>
                               ))}
                               <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800 font-bold">
-                                <TableCell className="text-white">Total Gross Income</TableCell>
-                                <TableCell className="text-right text-white font-mono">${taxReport.income.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-white whitespace-nowrap">Total Gross Income</TableCell>
+                                <TableCell className="text-right text-white font-mono whitespace-nowrap">${taxReport.income.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -2046,22 +2060,22 @@ const Reports = () => {
                           <AlertTriangle className="h-5 w-5 text-red-500" />
                           Business Expenses Summary
                         </h3>
-                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
+                        <div className="bg-zinc-950 rounded-xl border border-zinc-800 overflow-x-auto">
                           <Table>
                             <TableBody>
                               {Object.entries(taxReport.expenses.byCategory).map(([name, val]: [any, any]) => (
                                 <TableRow key={name} className="border-zinc-800/50">
-                                  <TableCell className="text-zinc-300">{name}</TableCell>
-                                  <TableCell className="text-right text-red-400 font-mono">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                  <TableCell className="text-zinc-300 whitespace-nowrap">{name}</TableCell>
+                                  <TableCell className="text-right text-red-400 font-mono whitespace-nowrap">${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                 </TableRow>
                               ))}
                               <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800">
-                                <TableCell className="text-zinc-400 text-sm">Non-Deductible total included above</TableCell>
-                                <TableCell className="text-right text-zinc-400 font-mono text-sm">(${taxReport.expenses.nonDeductible.toLocaleString(undefined, { minimumFractionDigits: 2 })})</TableCell>
+                                <TableCell className="text-zinc-400 text-sm whitespace-nowrap">Non-Deductible total included above</TableCell>
+                                <TableCell className="text-right text-zinc-400 font-mono text-sm whitespace-nowrap">(${taxReport.expenses.nonDeductible.toLocaleString(undefined, { minimumFractionDigits: 2 })})</TableCell>
                               </TableRow>
                               <TableRow className="bg-zinc-900/50 border-t-2 border-zinc-800 font-bold">
-                                <TableCell className="text-white">Total Deductible (Operations)</TableCell>
-                                <TableCell className="text-right text-white font-mono">${taxReport.expenses.deductible.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-white whitespace-nowrap">Total Deductible (Operations)</TableCell>
+                                <TableCell className="text-right text-white font-mono whitespace-nowrap">${taxReport.expenses.deductible.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -2182,15 +2196,15 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-zinc-900">
                     <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
-                      <TableHead className="text-zinc-400">Date</TableHead>
-                      <TableHead className="text-zinc-400">Add-on Item</TableHead>
-                      <TableHead className="text-zinc-400">Customer</TableHead>
-                      <TableHead className="text-zinc-400">Invoice</TableHead>
-                      <TableHead className="text-zinc-400 text-right">Revenue</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Add-on Item</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Invoice</TableHead>
+                      <TableHead className="text-zinc-400 text-right whitespace-nowrap">Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2201,11 +2215,11 @@ const Reports = () => {
                     ) : (
                       (addonsData || []).map((a, idx) => (
                         <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                          <TableCell className="text-zinc-400">{new Date(a.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-medium text-zinc-200">{a.name}</TableCell>
-                          <TableCell className="text-zinc-300">{a.customerName || 'N/A'}</TableCell>
-                          <TableCell className="text-zinc-400">#{a.invoiceNumber || 'N/A'}</TableCell>
-                          <TableCell className="text-emerald-400 text-right font-bold">${a.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-zinc-400 whitespace-nowrap">{new Date(a.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{a.name}</TableCell>
+                          <TableCell className="text-zinc-300 whitespace-nowrap">{a.customerName || 'N/A'}</TableCell>
+                          <TableCell className="text-zinc-400 whitespace-nowrap">#{a.invoiceNumber || 'N/A'}</TableCell>
+                          <TableCell className="text-emerald-400 text-right font-bold whitespace-nowrap">${a.price.toFixed(2)}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -2270,15 +2284,15 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-zinc-800 overflow-hidden">
+              <div className="rounded-lg border border-zinc-800 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-zinc-900">
                     <TableRow className="border-zinc-800 hover:bg-zinc-900/50">
-                      <TableHead className="text-zinc-400">Date</TableHead>
-                      <TableHead className="text-zinc-400">Service Package</TableHead>
-                      <TableHead className="text-zinc-400">Customer</TableHead>
-                      <TableHead className="text-zinc-400">Invoice</TableHead>
-                      <TableHead className="text-zinc-400 text-right">Revenue</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Service Package</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead>
+                      <TableHead className="text-zinc-400 whitespace-nowrap">Invoice</TableHead>
+                      <TableHead className="text-zinc-400 text-right whitespace-nowrap">Revenue</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -2289,11 +2303,11 @@ const Reports = () => {
                     ) : (
                       (servicesData || []).map((s, idx) => (
                         <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/50">
-                          <TableCell className="text-zinc-400">{new Date(s.date).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-medium text-zinc-200">{s.name}</TableCell>
-                          <TableCell className="text-zinc-300">{s.customerName || 'N/A'}</TableCell>
-                          <TableCell className="text-zinc-400">#{s.invoiceNumber || 'N/A'}</TableCell>
-                          <TableCell className="text-emerald-400 text-right font-bold">${s.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-zinc-400 whitespace-nowrap">{new Date(s.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{s.name}</TableCell>
+                          <TableCell className="text-zinc-300 whitespace-nowrap">{s.customerName || 'N/A'}</TableCell>
+                          <TableCell className="text-zinc-400 whitespace-nowrap">#{s.invoiceNumber || 'N/A'}</TableCell>
+                          <TableCell className="text-emerald-400 text-right font-bold whitespace-nowrap">${s.price.toFixed(2)}</TableCell>
                         </TableRow>
                       ))
                     )}
