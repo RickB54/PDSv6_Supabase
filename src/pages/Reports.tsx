@@ -1069,7 +1069,7 @@ const Reports = () => {
         </Card>
 
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-        <div className="bg-zinc-900/50 p-1.5 rounded-xl border border-zinc-800 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="bg-zinc-900/50 p-1.5 rounded-xl border border-zinc-800 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="flex w-max min-w-full h-11 bg-transparent border-0 p-0 gap-1">
             {tabList.map(t => (
               <TabsTrigger

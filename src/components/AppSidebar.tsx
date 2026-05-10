@@ -700,8 +700,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                     key={group.title}
                     open={isOpen}
                     onOpenChange={(v) => {
-                      // Exclusive toggle: if opening (v=true), close all others.
-                      // If closing (v=false), just close it.
+                      // Exclusive toggle: only one group open at a time
                       const next = v ? { [group.title]: true } : {};
                       setOpenGroups(next);
                       localStorage.setItem('sidebar_groups', JSON.stringify(next));
@@ -717,11 +716,15 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                             "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full",
                             isGroupActive ? "text-[#2563eb] font-black" : "text-zinc-400"
                           )}
+                          onClick={() => {
+                            const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            navigate(`/section/${sectionId}`);
+                          }}
                         >
                           <group.icon className={cn("h-4 w-4 mr-2", isGroupActive ? "text-[#2563eb]" : (group.iconColor || ""))} />
                           {(open || openMobile) && (
                             <>
-                              <span>{group.title}</span>
+                              <span className="flex-1 text-left">{group.title}</span>
                               {!isOpen && groupBadgeCount > 0 && (
                                 <span className="ml-auto mr-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] text-white">
                                   {groupBadgeCount}
