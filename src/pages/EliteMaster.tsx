@@ -125,31 +125,29 @@ function SortablePostCard({
                     <GripVertical size={20} />
                 </div>
 
-                {/* THUMBNAIL (1.5x larger -> 75px) */}
+                {/* THUMBNAIL (75px) */}
                 <div style={{ width: '75px', height: '75px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#020202', border: '1px solid #111', flexShrink: 0, position: 'relative' }}>
-                    {(item.thumbnail_url || item.resource_url) ? (
-                        item.type === 'video' ? (
-                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                <video 
-                                    src={item.resource_url} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                />
-                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
-                                    <Play size={16} fill="white" color="white" />
-                                </div>
-                            </div>
-                        ) : (
+                    {item.resource_url ? (
+                        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                             <img 
-                                src={item.thumbnail_url || item.resource_url} 
-                                alt="Post" 
+                                src={item.resource_url} 
+                                alt={item.title} 
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                                 onError={(e) => {
-                                    // Fallback if image fails to load
-                                    (e.target as HTMLImageElement).style.display = 'none';
-                                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;color:#111"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = "/logo-3inch.png";
+                                    target.style.padding = "15px";
+                                    target.style.opacity = "0.2";
                                 }}
                             />
-                        )
+                            {item.type === 'video' && (
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(59, 130, 246, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+                                        <Play size={14} fill="white" color="white" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111' }}>
                             <FileText size={24} />
@@ -317,7 +315,10 @@ export default function EliteMaster() {
         try {
             const data = await getLibraryItems();
             const list = Array.isArray(data) ? data : [];
-            const blogOnly = list.filter(i => i && i.category !== 'Chemical Training');
+            // Filter: Only show items that are verified for the blog.
+            // Internal Learning Library items are NOT verified by default.
+            // When an item is "sent to blog", it becomes verified.
+            const blogOnly = list.filter(i => i && i.is_verified === true);
             
             const sorted = blogOnly.sort((a, b) => {
                 if (a.is_pinned && !b.is_pinned) return -1;

@@ -107,7 +107,10 @@ export default function PrimeBlog() {
             const data = await getLibraryItems();
 
             // Filter: Guests ONLY see Verified & Published. Auth users see everything.
-            let blogItems = data.filter(item => item.category !== 'Chemical Training');
+            // Filter: Only show items that are verified for the blog.
+            // Internal Learning Library items are NOT verified by default.
+            // This ensures employee training videos don't leak into the public blog.
+            let blogItems = data.filter(item => item && item.is_verified === true);
 
             // Filter Logic:
             // 1. Guests: Only see Verified & Published.
