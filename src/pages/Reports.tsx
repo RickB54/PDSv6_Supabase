@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText, HelpCircle, CreditCard } from "lucide-react";
+import { Printer, Save, AlertTriangle, FileBarChart, Calendar, TrendingUp, Download, History, Calculator, PieChart, FileText, HelpCircle, CreditCard, Users, UserPlus, Package, Shield, ClipboardCheck, DollarSign, ListOrdered, ChevronRight, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -1007,23 +1008,29 @@ const Reports = () => {
     return stats;
   }, [jobs, employees, dateFilter, dateRange]);
 
-  const tabList = [
-    { id: 'customers', label: 'Customers' },
-    { id: 'prospects', label: 'Prospects' },
-    { id: 'invoices', label: 'Invoices' },
-    { id: 'inventory', label: 'Inventory' },
-    { id: 'employee', label: 'Employee' },
-    { id: 'estimates', label: 'Estimates' },
-    { id: 'accounting', label: 'Accounting' },
-    { id: 'tax-report', label: 'Tax Report' },
-    { id: 'addons', label: 'Add-ons' },
-    { id: 'services', label: 'Services' },
-  ]
-
-  const tab = searchParams.get('tab') || 'customers';
-  const setTab = (newTab: string) => {
-    setSearchParams({ tab: newTab }, { replace: true });
+  const tab = searchParams.get('tab');
+  const setTab = (newTab: string | null) => {
+    if (newTab) {
+      setSearchParams({ tab: newTab }, { replace: true });
+    } else {
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
   };
+
+  const reports_list = [
+    { id: 'customers', label: 'Customers', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    { id: 'prospects', label: 'Prospects', icon: UserPlus, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+    { id: 'invoices', label: 'Invoices', icon: DollarSign, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+    { id: 'employee', label: 'Employee', icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
+    { id: 'estimates', label: 'Estimates', icon: ClipboardCheck, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
+    { id: 'accounting', label: 'Accounting', icon: Calculator, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+    { id: 'tax-report', label: 'Tax Report', icon: FileText, color: 'text-red-400', bg: 'bg-red-400/10' },
+    { id: 'addons', label: 'Add-ons', icon: Plus, color: 'text-pink-400', bg: 'bg-pink-400/10' },
+    { id: 'services', label: 'Services', icon: ListOrdered, color: 'text-teal-400', bg: 'bg-teal-400/10' },
+  ];
 
   return (
     <div className="bg-background pb-20">
@@ -1068,23 +1075,53 @@ const Reports = () => {
           </div>
         </Card>
 
-        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-        <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 w-full flex flex-wrap h-auto gap-1">
-          {tabList.map(t => (
-            <TabsTrigger
-              key={t.id}
-              value={t.id}
-              className="flex-1 min-w-[100px] data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 hover:text-zinc-200 transition-colors h-10 text-[10px] uppercase font-black tracking-widest"
-            >
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {!tab ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {reports_list.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setTab(r.id)}
+                className="group p-6 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:bg-zinc-800 hover:border-zinc-700 transition-all text-left shadow-lg hover:shadow-xl active:scale-[0.98]"
+              >
+                <div className="flex items-start justify-between">
+                  <div className={cn("p-3 rounded-xl mb-4", r.bg)}>
+                    <r.icon className={cn("h-6 w-6", r.color)} />
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-1 transition-all" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-purple-400 transition-colors">{r.label}</h3>
+                <p className="text-zinc-500 text-sm">View and manage {r.label.toLowerCase()} performance data.</p>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+            <div className="flex items-center justify-between gap-4 mb-2 overflow-x-auto no-scrollbar pb-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setTab(null)}
+                className="text-zinc-500 hover:text-white shrink-0"
+              >
+                <ChevronRight className="h-4 w-4 mr-1 rotate-180" /> Back to Center
+              </Button>
+              <TabsList className="flex flex-wrap h-auto gap-1 bg-transparent p-0 border-0">
+                {reports_list.map(t => (
+                  <TabsTrigger
+                    key={t.id}
+                    value={t.id}
+                    className="flex-1 min-w-[90px] data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 hover:text-zinc-200 transition-colors h-9 text-[9px] uppercase font-black tracking-widest border border-zinc-800/50 rounded-lg"
+                  >
+                    {t.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
           {/* CUSTOMERS TAB */}
           <TabsContent value="customers" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Customer Overview</h3>
                   <p className="text-zinc-500 text-sm">Total Customers: <span className="text-white font-mono">{(customers || []).filter(c => (c.type || '').toLowerCase() !== 'prospect').length}</span></p>
@@ -1277,7 +1314,7 @@ const Reports = () => {
 
           <TabsContent value="prospects" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Prospects & Leads</h3>
                   <p className="text-zinc-500 text-sm">Potential clients from the Prospects database</p>
@@ -1408,7 +1445,7 @@ const Reports = () => {
           {/* INVOICES TAB */}
           <TabsContent value="invoices" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Invoice Performance</h3>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateInvoicesReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -1505,7 +1542,7 @@ const Reports = () => {
           {/* INVENTORY TAB */}
           <TabsContent value="inventory" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Inventory Status</h3>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateInventoryReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -1593,7 +1630,7 @@ const Reports = () => {
           {/* EMPLOYEE TAB */}
           <TabsContent value="employee" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Employee Performance</h3>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateEmployeeReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -1693,7 +1730,7 @@ const Reports = () => {
           {/* ESTIMATES TAB */}
           <TabsContent value="estimates" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Estimates Ledger</h3>
                   <p className="text-sm text-zinc-500">Total Estimates: {filterByDate(estimates).length}</p>
@@ -1734,7 +1771,7 @@ const Reports = () => {
           {/* ACCOUNTING TAB */}
           <TabsContent value="accounting" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h3 className="text-xl font-bold text-zinc-200">Accounting Ledger</h3>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => generateAccountingReport(false)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-300"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -2090,7 +2127,7 @@ const Reports = () => {
                           Mileage Log Summary
                         </h3>
                         <div className="bg-zinc-950 rounded-xl border border-zinc-800 p-6">
-                          <div className="flex justify-between items-center mb-6">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div>
                               <p className="text-xs text-zinc-500 uppercase font-bold tracking-widest">IRS Rate ({taxReport.year})</p>
                               <p className="text-2xl font-black text-white">${taxReport.mileage.rate} / mi</p>
@@ -2152,7 +2189,7 @@ const Reports = () => {
           {/* ADD-ONS TAB */}
           <TabsContent value="addons" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Add-on Performance</h3>
                   <p className="text-xs text-zinc-500 mt-1 italic">* This data is for analysis only and is not double-counted in Accounting/Budget totals.</p>
@@ -2232,7 +2269,7 @@ const Reports = () => {
           {/* SERVICES TAB */}
           <TabsContent value="services" className="space-y-4 animate-in fade-in-50">
             <Card className="p-6 bg-zinc-900/50 border-zinc-800">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h3 className="text-xl font-bold text-zinc-200">Services Performance</h3>
                   <p className="text-xs text-zinc-500 mt-1 italic">* This data focuses on core service packages (Essential, Elite, etc.).</p>
@@ -2318,6 +2355,7 @@ const Reports = () => {
           </TabsContent>
 
         </Tabs>
+      )}
 
         {/* DIALOGS */}
         <Dialog open={checklistOpen} onOpenChange={setChecklistOpen}>
