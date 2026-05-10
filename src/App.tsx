@@ -148,7 +148,9 @@ const isAppRoute = (path: string) => {
 };
 
 const ProtectedRoute = ({ children, allowedRoles, user }: { children: React.ReactNode; allowedRoles: string[]; user: any }) => {
-  const { isDemoMode } = useDemoMode();
+  const effectiveRole = (user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com') 
+    ? 'admin' 
+    : user?.role;
 
   // If we have no user and it's a restricted route, go to login
   if (!user && allowedRoles.length > 0) {
@@ -156,9 +158,9 @@ const ProtectedRoute = ({ children, allowedRoles, user }: { children: React.Reac
   }
 
   // Enforce roles strictly if specified
-  if (user && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-    if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
-    if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
+  if (user && allowedRoles.length > 0 && !allowedRoles.includes(effectiveRole)) {
+    if (effectiveRole === 'admin') return <Navigate to="/dashboard/admin" replace />;
+    if (effectiveRole === 'employee') return <Navigate to="/dashboard/employee" replace />;
     return <Navigate to="/customer-dashboard" replace />;
   }
 
