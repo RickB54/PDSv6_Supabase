@@ -167,7 +167,7 @@ export function BlogSocialBlast({ isOpen, onOpenChange, item }: BlogSocialBlastP
 
     const allPlatforms = [
         ...PLATFORMS.filter(p => p.id !== 'custom'),
-        ...customPlatforms.map(p => ({ id: p.id, label: p.name, color: '#6366f1', isCustom: true, url: p.url })),
+        ...(customPlatforms || []).map(p => ({ id: p.id, label: p.name, color: '#6366f1', isCustom: true, url: p.url })),
         { id: 'custom', label: '+ Add', color: '#3f3f46' }
     ];
 

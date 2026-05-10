@@ -134,10 +134,10 @@ export default function PrimeBlog() {
                 return (a.sort_order || 0) - (b.sort_order || 0);
             });
 
-            setItems(blogItems);
+            setItems(blogItems || []);
 
-            const dynamicCats = Array.from(new Set(blogItems.map(i => i.category))).filter(c => c && c !== 'General');
-            setCustomCategories(dynamicCats);
+            const dynamicCats = Array.from(new Set((blogItems || []).map(i => i.category))).filter(c => c && c !== 'General');
+            setCustomCategories(dynamicCats || []);
 
             const counts = await getAllCommentCounts();
             setCommentCounts(counts);
@@ -369,7 +369,7 @@ export default function PrimeBlog() {
         return url;
     };
 
-    const displayedItems = items.filter(item => {
+    const displayedItems = (items || []).filter(item => {
         // Category filter
         const matchesCategory = activeCategory === 'All'
             ? true
@@ -378,9 +378,9 @@ export default function PrimeBlog() {
                 : item.category === activeCategory;
 
         // Search filter
-        const searchStr = searchTerm.toLowerCase();
-        const matchesSearch = item.title.toLowerCase().includes(searchStr) ||
-            item.description.toLowerCase().includes(searchStr);
+        const searchStr = (searchTerm || "").toLowerCase();
+        const matchesSearch = (item.title || "").toLowerCase().includes(searchStr) ||
+            (item.description || "").toLowerCase().includes(searchStr);
 
         // Date range filter
         const itemDate = item.created_at ? new Date(item.created_at).getTime() : 0;
@@ -392,23 +392,23 @@ export default function PrimeBlog() {
         return matchesCategory && matchesSearch && matchesDate;
     });
 
-    const filteredMgmtItems = items.filter(item =>
-        item.title.toLowerCase().includes(mgmtSearch.toLowerCase()) ||
-        item.category.toLowerCase().includes(mgmtSearch.toLowerCase()) ||
-        item.description.toLowerCase().includes(mgmtSearch.toLowerCase())
+    const filteredMgmtItems = (items || []).filter(item =>
+        (item.title || "").toLowerCase().includes(mgmtSearch.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(mgmtSearch.toLowerCase()) ||
+        (item.description || "").toLowerCase().includes(mgmtSearch.toLowerCase())
     );
 
     const handleBatchUpdate = async (ids: string[], updates: Partial<LibraryItem>) => {
         setIsProcessing(true);
         try {
-            const promises = ids.map(id => {
-                const original = items.find(i => i.id === id);
+            const promises = (ids || []).map(id => {
+                const original = (items || []).find(i => i.id === id);
                 if (!original) return null;
                 return upsertLibraryItem({ ...original, ...updates });
             }).filter(Boolean);
 
             await Promise.all(promises);
-            toast({ title: "Batch Update Successful", description: `Updated ${ids.length} posts.` });
+            toast({ title: "Batch Update Successful", description: `Updated ${(ids || []).length} posts.` });
             await loadItems();
             setSelectedPostIds([]);
         } catch (err) {
@@ -422,7 +422,7 @@ export default function PrimeBlog() {
         const updated = { ...item, [field]: !item[field] };
         const res = await upsertLibraryItem(updated);
         if (res.success) {
-            setItems(prev => prev.map(i => i.id === item.id ? { ...i, [field]: !i[field] } : i));
+            setItems(prev => (prev || []).map(i => i.id === item.id ? { ...i, [field]: !i[field] } : i));
             toast({ title: "Status Updated", description: `${field.replace('is_', '').toUpperCase()} is now ${updated[field] ? 'ON' : 'OFF'}` });
         }
     };
@@ -466,7 +466,7 @@ export default function PrimeBlog() {
                 toast({ title: "Blog Purged", description: `Removed ${res.count} items.` });
             } else {
                 // Filter unverified items
-                const unverified = items.filter(i => !i.is_verified);
+                const unverified = (items || []).filter(i => !i.is_verified);
                 for (const item of unverified) {
                     await deleteLibraryItem(item.id);
                 }
@@ -516,7 +516,7 @@ export default function PrimeBlog() {
                             <div className="flex items-center gap-3">
                                 <ShieldCheck className="w-5 h-5 text-red-500 animate-pulse" />
                                 <p className="text-xs font-black uppercase tracking-widest text-red-400">
-                                    Attention: {items.filter(i => !i.is_verified).length} blog posts are waiting for your verification.
+                                    Attention: {(items || []).filter(i => !i.is_verified).length} blog posts are waiting for your verification.
                                 </p>
                             </div>
                             <Button
@@ -622,7 +622,7 @@ export default function PrimeBlog() {
                                 )}
                                 <TabsTrigger value="General" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">UPDATES</TabsTrigger>
                                 {customCategories.map(cat => (
-                                    <TabsTrigger key={cat} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
+                                    <TabsTrigger key={cat || 'default'} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
                                 ))}
                             </TabsList>
                         </Tabs>
@@ -688,13 +688,13 @@ export default function PrimeBlog() {
                     {isLoading ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} className="aspect-[4/5] rounded-[32px] bg-zinc-900 animate-pulse border border-zinc-800" />
+                                <div key={`skeleton-${i}`} className="aspect-[4/5] rounded-[32px] bg-zinc-900 animate-pulse border border-zinc-800" />
                             ))}
                         </div>
                     ) : (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {displayedItems.slice(0, visibleCount).map(item => (
+                                {(displayedItems || []).slice(0, visibleCount).map(item => (
                                     <Card
                                         key={item.id}
                                         className="group relative bg-zinc-950 border-none rounded-[32px] overflow-hidden flex flex-col hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 border border-zinc-900/50"
@@ -750,7 +750,7 @@ export default function PrimeBlog() {
 
                                         {/* Content Section */}
                                         <div className="p-6 flex flex-col flex-1 space-y-4 text-left">
-                                            <p className="text-zinc-500 text-sm font-medium line-clamp-3 leading-relaxed">{item.description}</p>
+                                            <p className="text-zinc-500 text-sm font-medium line-clamp-3 leading-relaxed">{item.description || 'No content provided.'}</p>
 
                                             <div className="flex items-center justify-between mt-auto pt-6 border-t border-zinc-900">
                                                 <div className="flex items-center gap-3">
@@ -1036,7 +1036,7 @@ export default function PrimeBlog() {
                                                     <SelectItem value="Before & After">Elite Transformations</SelectItem>
                                                     <SelectItem value="Tips & Tricks">Pro Tips</SelectItem>
                                                     <SelectItem value="Setup">Equipment Setup</SelectItem>
-                                                    {customCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                    {(customCategories || []).map(c => <SelectItem key={c || 'new'} value={c}>{c}</SelectItem>)}
                                                     <Separator className="my-2 bg-zinc-800" />
                                                     <SelectItem value="ADD_NEW" className="text-indigo-400 font-black">➕ CREATE NEW CATEGORY</SelectItem>
                                                 </SelectContent>
@@ -1278,7 +1278,7 @@ export default function PrimeBlog() {
                                 {/* Post Table List */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                                     <div className="space-y-3">
-                                        {filteredMgmtItems.map(item => (
+                                        {(filteredMgmtItems || []).map(item => (
                                             <div
                                                 key={item.id}
                                                 className={`flex items-center gap-4 p-4 rounded-3xl border transition-all duration-300 ${selectedPostIds.includes(item.id) ? 'bg-indigo-500/10 border-indigo-500/40 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-zinc-900/30 border-zinc-900 hover:border-zinc-800'}`}
@@ -1388,7 +1388,7 @@ export default function PrimeBlog() {
                                         </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        {customCategories.map(cat => (
+                                        {(customCategories || []).map(cat => (
                                             <div key={cat} className="flex items-center justify-between p-3 bg-zinc-900/50 rounded-2xl border border-zinc-900/50 group">
                                                 <span className="font-black text-xs text-zinc-300 uppercase truncate pr-4">{cat}</span>
                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1500,8 +1500,8 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
     };
 
     // Helper to render comments recursively or grouped
-    const rootComments = comments.filter(c => !c.parent_id);
-    const getReplies = (parentId: string) => comments.filter(c => c.parent_id === parentId);
+    const rootComments = (comments || []).filter(c => !c.parent_id);
+    const getReplies = (parentId: string) => (comments || []).filter(c => c.parent_id === parentId);
 
     return (
         <div className="space-y-6 pt-4 text-left">
@@ -1512,7 +1512,7 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
                         <p className="text-sm font-medium italic">No comments yet. Share your thoughts!</p>
                     </div>
                 ) : (
-                    rootComments.map(c => (
+                    {(rootComments || []).map(c => (
                         <div key={c.id} className="space-y-4">
                             <div className="flex gap-4 p-4 rounded-[24px] bg-zinc-900/50 border border-zinc-800/50 group hover:border-indigo-500/30 transition-all">
                                 <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-indigo-500/20 shrink-0">
@@ -1559,7 +1559,7 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
                             </div>
 
                             {/* Replies */}
-                            {getReplies(c.id).map(reply => (
+                            {(getReplies(c.id) || []).map(reply => (
                                 <div key={reply.id} className="ml-12 flex gap-3 p-3 rounded-[20px] bg-indigo-500/5 border border-indigo-500/10">
                                     <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center font-black text-zinc-400 text-[10px] shrink-0">
                                         {reply.author.charAt(0).toUpperCase()}
