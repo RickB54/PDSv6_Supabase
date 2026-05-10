@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { useTasksStore } from "@/store/tasks";
+import { useDemoMode } from "@/contexts/DemoContext";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
