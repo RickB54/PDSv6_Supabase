@@ -1026,7 +1026,7 @@ const Reports = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="bg-background pb-20">
       <PageHeader title="Business Reports" />
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
 
@@ -1074,7 +1074,7 @@ const Reports = () => {
             <TabsTrigger
               key={t.id}
               value={t.id}
-              className="flex-1 min-w-[120px] sm:min-w-[100px] data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 hover:text-zinc-200 transition-colors h-10 text-[10px] uppercase font-black tracking-widest"
+              className="flex-1 min-w-[100px] data-[state=active]:bg-purple-600 data-[state=active]:text-white text-zinc-400 hover:text-zinc-200 transition-colors h-10 text-[10px] uppercase font-black tracking-widest"
             >
               {t.label}
             </TabsTrigger>

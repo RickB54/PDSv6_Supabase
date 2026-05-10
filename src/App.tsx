@@ -19,6 +19,7 @@ import { getCurrentUser, initSupabaseAuth, setAuthMode, isSupabaseEnabled, final
 import supabase from "@/lib/supabase";
 import "@/lib/storage-utils";
 import { DemoProvider, useDemoMode, DemoBanner } from "@/contexts/DemoContext";
+import { BusinessBanner } from "@/components/BusinessBanner";
 import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { contentService } from "@/lib/content";
@@ -570,6 +571,7 @@ const App = () => {
             <BrowserRouter>
               <DemoProvider>
                 <DemoBanner />
+                <BusinessBanner />
                 <PerspectiveBanner />
                 <WalkthroughProvider>
                   <Toaster />

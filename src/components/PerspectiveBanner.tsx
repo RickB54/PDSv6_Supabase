@@ -40,8 +40,8 @@ export const PerspectiveBanner = () => {
     
     const isCustomer = isViewingAsCustomer;
     // Force a re-calculation and use a higher z-index to be absolute
-    // Using a slightly larger offset (42px) for the business status banner to ensure the shadow and border don't overlap
-    const offset = (isDemoMode ? 40 : 0) + (businessStatus?.isTopBannerActive ? 40 : 0);
+    const hasBusinessBanner = businessStatus?.isTopBannerActive && businessStatus?.bannerText;
+    const offset = (isDemoMode ? 40 : 0) + (hasBusinessBanner ? 40 : 0);
     const topStyle = { 
         top: `${offset}px`,
         zIndex: 9999,

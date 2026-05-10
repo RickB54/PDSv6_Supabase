@@ -81,23 +81,6 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
           --header-total-height: ${64 + bannerOffset}px;
         }
       `}</style>
-      {hasBanner && (
-        <div 
-          style={{ top: isDemoMode ? '40px' : '0' }}
-          className={`fixed left-0 right-0 z-[150] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
-          businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
-          businessStatus.mode === 'spring-prep' ? 'bg-emerald-600' :
-          businessStatus.mode === 'emergency' ? 'bg-red-600' :
-          'bg-red-600'
-        }`}>
-          <div className="flex items-center justify-center gap-2">
-            <span className="hidden sm:inline opacity-70">///</span>
-            <span>{businessStatus.bannerText}</span>
-            <span className="hidden sm:inline opacity-70">///</span>
-          </div>
-        </div>
-      )}
-
       <header 
         style={{ top: `${bannerOffset}px` }}
         className={`fixed z-[140] left-0 right-0 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300 h-[64px]`}
