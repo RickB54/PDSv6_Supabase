@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Search, Image as ImageIcon, Video, X, Car, Loader2,
-    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2
+    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2, Download
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -138,15 +138,41 @@ function Lightbox({
                             <span className="text-zinc-400 text-xs">{idx + 1} / {items.length}</span>
                             
                             {isAdmin && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => onDelete?.(idx)}
-                                    className="text-white hover:bg-red-600/50 h-8 w-8"
-                                    title="Delete Image"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={async () => {
+                                            try {
+                                                const res = await fetch(current.url);
+                                                const blob = await res.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = current.url.split('/').pop() || 'prime-media';
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                document.body.removeChild(a);
+                                                window.URL.revokeObjectURL(url);
+                                            } catch (e) {
+                                                window.open(current.url, '_blank');
+                                            }
+                                        }}
+                                        className="text-white hover:bg-blue-600/50 h-8 w-8"
+                                        title="Download Media"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => onDelete?.(idx)}
+                                        className="text-white hover:bg-red-600/50 h-8 w-8"
+                                        title="Delete Image"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
                             )}
 
                             <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20 h-8 w-8">

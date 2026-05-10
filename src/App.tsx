@@ -64,6 +64,7 @@ import AdminUsers from "./pages/AdminUsers";
 import WebsiteAdministration from "./pages/WebsiteAdministration";
 import BookingsPage from "./pages/BookingsPage";
 import BookingsAnalyticsPage from "./pages/BookingsAnalyticsPage";
+import Goals from "./pages/Goals";
 import DiscountCoupons from "./pages/DiscountCoupons";
 import PackagePricing from "./pages/PackagePricing";
 import Payroll from "./pages/Payroll";
@@ -335,6 +336,8 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/bookings" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
           <Route path="/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
           <Route path="/demo/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/goals" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Goals /></ProtectedRoute>} />
+          <Route path="/demo/goals" element={<ProtectedRoute user={user} allowedRoles={[]}><Goals /></ProtectedRoute>} />
           <Route path="/search-customer" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/demo/search-customer" element={<ProtectedRoute user={user} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/prospects" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />

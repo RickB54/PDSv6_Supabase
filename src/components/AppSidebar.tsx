@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   Home, ClipboardCheck, Search, Calculator, BookOpen, Users,
   Settings, Package, FileBarChart, DollarSign, LayoutDashboard, Globe,
-  TicketPercent, GraduationCap, Shield, CalendarDays,
+  TicketPercent, GraduationCap, Shield, CalendarDays, Target as TargetIcon,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
   MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle,
   FileText, CheckSquare, Sparkles
@@ -382,6 +382,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     ...CONFIGURED_TOP_ITEMS,
     { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes', iconColor: 'text-yellow-500', helpTopicId: 'personal-notes' },
     { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics', iconColor: 'text-amber-500', helpTopicId: 'bookings-analytics' },
+    { title: 'Business Goals', url: '/goals', icon: TargetIcon, key: 'goals', iconColor: 'text-emerald-400', helpTopicId: 'business-goals' },
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery', iconColor: 'text-purple-500', helpTopicId: 'media-library' },
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined, iconColor: 'text-emerald-500', helpTopicId: 'file-manager' }
   ].filter(item => {
