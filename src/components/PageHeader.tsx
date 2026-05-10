@@ -237,8 +237,6 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
           </div>
         </div>
       </header>
-      {/* Dynamic spacer to prevent fixed header/banner from cutting off content */}
-      <div style={{ height: `${64 + bannerOffset}px` }} aria-hidden="true" />
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
     </>
   );

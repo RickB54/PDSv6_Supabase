@@ -320,13 +320,13 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const paddingClass = ptMap[totalBanners] || 'pt-[64px]';
 
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
-  // Use paddingClass on sidebar wrapper to avoid doubling with PageHeader
+  // Unified padding management: paddingClass handles banners + header height
   return (
     <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
         <AppSidebar key={effectiveUser?.id || 'sidebar-authenticated'} user={effectiveUser} businessStatus={businessStatus} />
       </div>
-      <div className={`flex-1 ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

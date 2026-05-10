@@ -716,12 +716,12 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                     className="group/collapsible"
                   >
                     <SidebarMenuItem>
-                      <CollapsibleTrigger asChild>
+                      <div className="flex items-center w-full group/menu-item">
                         <SidebarMenuButton 
                           tooltip={group.title} 
                           style={{ color: isGroupActive ? '#2563eb' : undefined }}
                           className={cn(
-                            "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full",
+                            "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex-1",
                             isGroupActive ? "text-[#2563eb] font-black" : "text-zinc-400"
                           )}
                           onClick={() => {
@@ -738,11 +738,24 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                   {groupBadgeCount}
                                 </span>
                               )}
-                              <ChevronRight className={cn("ml-auto h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
                             </>
                           )}
                         </SidebarMenuButton>
-                      </CollapsibleTrigger>
+                        {(open || openMobile) && (
+                          <CollapsibleTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-8 w-8 text-zinc-500 hover:text-white hover:bg-zinc-800 transition-transform duration-200",
+                                isOpen && "rotate-90"
+                              )}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </CollapsibleTrigger>
+                        )}
+                      </div>
                       <CollapsibleContent>
                         <SidebarMenuSub className="border-l border-zinc-800/50 ml-4 pl-2 mb-2">
                           {(group.items || []).map((item: any) => {
