@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Navbar } from "@/components/Navbar";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2, Newspaper } from "lucide-react";
+import { HelpCircle, Play, FileText, Video, Plus, Edit2, Trash2, Truck, Loader2, Upload, CheckCircle2, Newspaper, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { compressImage } from "@/lib/imageUtils";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { useWalkthrough } from "@/contexts/WalkthroughContext";
+import { cn } from "@/lib/utils";
 
 export default function LearningLibrary() {
     const navigate = useNavigate();
@@ -457,6 +458,8 @@ export default function LearningLibrary() {
         return null;
     };
 
+    const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <PageHeader title="Learning Library" />
@@ -490,22 +493,37 @@ export default function LearningLibrary() {
                     {/* Sidebar / Categories */}
                     <aside className="w-full lg:w-64 shrink-0">
                         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg sticky top-24">
-                            <div className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/30">
-                                <h3 className="font-bold text-zinc-200">Categories</h3>
-                                {isAdmin && (
-                                    <Button
-                                        size="icon" variant="ghost" className="h-7 w-7 text-blue-400 hover:bg-blue-900/20"
-                                        onClick={() => { setCategoryModalType('create'); setIsCategoryModalOpen(true); }}
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                )}
+                            <div 
+                                className="p-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/30 cursor-pointer hover:bg-zinc-900/50 transition-colors group"
+                                onClick={() => setCategoriesExpanded(!categoriesExpanded)}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <h3 className="font-bold text-zinc-200">Categories</h3>
+                                    <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded-full font-bold">{categories.length}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {isAdmin && (
+                                        <Button
+                                            size="icon" variant="ghost" className="h-7 w-7 text-blue-400 hover:bg-blue-900/20"
+                                            onClick={(e) => { e.stopPropagation(); setCategoryModalType('create'); setIsCategoryModalOpen(true); }}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                    <ChevronRight className={cn("h-4 w-4 text-zinc-500 transition-transform duration-200", categoriesExpanded && "rotate-90")} />
+                                </div>
                             </div>
-                            <div className="p-2 flex flex-col gap-1 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <div className={cn(
+                                "p-2 flex flex-col gap-1 transition-all duration-300 overflow-hidden",
+                                categoriesExpanded ? "max-h-[70vh] overflow-y-auto opacity-100" : "max-h-0 opacity-0"
+                            )}>
                                 {categories.map(cat => (
                                     <div key={cat} className="group flex items-center gap-1">
                                         <button
-                                            onClick={() => setActiveCategory(cat)}
+                                            onClick={() => {
+                                                setActiveCategory(cat);
+                                                if (window.innerWidth < 1024) setCategoriesExpanded(false);
+                                            }}
                                             className={`flex-1 text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${activeCategory === cat
                                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20'
                                                 : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'

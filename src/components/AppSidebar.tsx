@@ -355,13 +355,21 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   useEffect(() => {
     let activeGroupTitle = "";
     MENU_GROUPS.forEach(group => {
-      const match = group.items.find(item => {
+      // 1. Check if any sub-item is active
+      const hasSubMatch = group.items.find(item => {
         const currentFull = location.pathname + location.search;
         const targetUrl = getUrl(item.url);
         return targetUrl === currentFull ||
           (!targetUrl.includes('?') && location.pathname === targetUrl);
       });
-      if (match) activeGroupTitle = group.title;
+      
+      // 2. Check if the section landing page for this group is active
+      const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const isLandingPage = location.pathname === `/section/${sectionId}`;
+
+      if (hasSubMatch || isLandingPage) {
+        activeGroupTitle = group.title;
+      }
     });
 
     // If we are on a page that belongs to a group, ensure only that group is open.
