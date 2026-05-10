@@ -5,7 +5,7 @@ import {
   TicketPercent, GraduationCap, Shield, CalendarDays, Target as TargetIcon,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
   MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle,
-  FileText, CheckSquare, Sparkles
+  FileText, CheckSquare, Sparkles, PanelLeft
 } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ export type MenuItem = {
 
 export function AppSidebar({ user: userProp, businessStatus: businessStatusProp }: { user?: any, businessStatus?: any }) {
 
-  const { open, openMobile, setOpenMobile, setOpen, isMobile } = useSidebar();
+  const { open, openMobile, setOpenMobile, setOpen, isMobile, toggleSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(userProp || getCurrentUser());
@@ -501,8 +501,15 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         className={cn("flex flex-col border-b border-white/5")}
         style={{ paddingTop: `${bannerOffset + 64}px` }}
       >
-        <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-2">
-          <div className="flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer flex-1" onClick={handleLogoClick}>
+        <div className="p-3 flex items-center justify-between group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-12">
+          {/* Logo Section */}
+          <div 
+            className={cn(
+              "flex items-center gap-3 overflow-hidden transition-all duration-300 cursor-pointer",
+              (open || openMobile) ? "flex-1" : "w-0 opacity-0"
+            )} 
+            onClick={handleLogoClick}
+          >
             <img src={logo} alt="Prime Auto Detail" className="h-9 w-9 aspect-square object-contain" />
             {(open || openMobile) && (
               <div className="animate-in fade-in slide-in-from-left-2 duration-300">
@@ -512,7 +519,11 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
             )}
           </div>
           
-          <div className="flex items-center gap-1">
+          {/* Icons Section */}
+          <div className={cn(
+            "flex items-center gap-1 transition-all duration-300",
+            !(open || openMobile) && "absolute inset-0 justify-center w-full"
+          )}>
             {(open || openMobile) && (
               <>
                 <Button variant="ghost" size="icon" onClick={toggleAllGroups} className="h-8 w-8 text-zinc-500 hover:text-white transition-colors" title="Toggle Groups">
@@ -544,7 +555,18 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
               >
                 <HelpCircle className="h-4 w-4" />
               </Button>
-              <SidebarTrigger className="h-8 w-8 text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all relative z-[100]" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleSidebar}
+                className={cn(
+                  "text-white hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all relative z-[110]",
+                  (open || openMobile) ? "h-8 w-8" : "h-10 w-10"
+                )}
+                title={open || openMobile ? "Collapse Sidebar" : "Expand Sidebar"}
+              >
+                <PanelLeft className={cn("transition-transform duration-300", (open || openMobile) ? "h-4 w-4" : "h-6 w-6 rotate-180")} />
+              </Button>
             </div>
           </div>
         </div>
