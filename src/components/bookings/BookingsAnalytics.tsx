@@ -71,7 +71,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const dateStr = format(new Date(), "yyyy-MM-dd");
 
         // Helper to add chart images
-        const addChartToPDF = async (ref: React.RefObject<HTMLDivElement>, y: number, title: string, widthPercent: number = 100) => {
+        const addChartToPDF = async (ref: React.RefObject<HTMLDivElement>, y: number, title: string, widthPercent: number = 100, xPos: number = 15) => {
             if (!ref.current) return y;
             try {
                 const canvas = await html2canvas(ref.current, {
@@ -80,26 +80,25 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     logging: false,
                     useCORS: true,
                     onclone: (clonedDoc) => {
-                        // Force light theme text colors for the capture if possible
                         const elements = clonedDoc.querySelectorAll('*');
                         elements.forEach((el: any) => {
                             if (el.classList.contains('text-white') || el.classList.contains('text-zinc-100')) {
-                                el.style.color = '#18181b';
+                                el.style.color = '#1e293b';
                             }
                         });
                     }
                 });
                 const imgData = canvas.toDataURL('image/png');
-                const margin = 15;
-                const availableWidth = pageWidth - (margin * 2);
+                const margin = xPos;
+                const availableWidth = pageWidth - 30;
                 const imgWidth = (availableWidth * widthPercent) / 100;
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
                 
-                doc.setFontSize(11);
-                doc.setTextColor(71, 85, 105);
+                doc.setFontSize(9);
+                doc.setTextColor(148, 163, 184);
                 doc.text(title.toUpperCase(), margin, y);
                 doc.addImage(imgData, 'PNG', margin, y + 2, imgWidth, imgHeight, undefined, 'FAST');
-                return y + imgHeight + 12;
+                return y + imgHeight + 10;
             } catch (e) {
                 console.error("Chart capture failed", e);
                 return y + 5;
@@ -139,46 +138,48 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             monthAddons: monthBookings.reduce((sum, b) => sum + (b.addOns?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0)
         };
 
-        // Clean Header (No black background)
+        // Clean Header (No gray backgrounds)
         doc.setFontSize(22);
         doc.setTextColor(24, 24, 27);
         doc.setFont("helvetica", "bold");
         doc.text("PRIME AUTO DETAIL", 15, 20);
         
-        doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        doc.setFont("helvetica", "normal");
-        doc.text("Business Performance & CRM Intelligence Report", 15, 28);
+        doc.setFontSize(11);
+        doc.setTextColor(14, 165, 233); // Sky 500
+        doc.text("BUSINESS PERFORMANCE & CRM REPORT", 15, 27);
         
         doc.setFontSize(9);
-        doc.text(`Generated: ${format(new Date(), "PPPP p")}`, 15, 34);
+        doc.setTextColor(148, 163, 184); // Slate 400
+        doc.text(`Generated: ${format(new Date(), "PPPP p")}`, 15, 33);
 
-        // Summary Statistics Box
-        doc.setFillColor(248, 250, 252);
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(15, 42, pageWidth - 30, 30, 2, 2, 'FD');
-
+        // Summary Statistics (Compact & Colorful)
+        let yPos = 45;
         doc.setFontSize(10);
         doc.setTextColor(100, 116, 139);
-        doc.text("TOTAL BOOKINGS", 30, 52);
-        doc.text("COMPLETED JOBS", 85, 52);
-        doc.text("PENDING", 140, 52);
+        doc.text("TOTAL BOOKINGS", 15, yPos);
+        doc.text("COMPLETED", 65, yPos);
+        doc.text("PENDING", 115, yPos);
+        doc.text("SUCCESS RATE", 165, yPos);
 
+        yPos += 7;
         doc.setFontSize(16);
         doc.setTextColor(24, 24, 27);
-        doc.text(stats.totalBookings.toString(), 30, 62);
-        doc.setTextColor(22, 163, 74);
-        doc.text(stats.completed.toString(), 85, 62);
-        doc.setTextColor(59, 130, 246);
-        doc.text(stats.pending.toString(), 140, 62);
+        doc.text(stats.totalBookings.toString(), 15, yPos);
+        doc.setTextColor(22, 163, 74); // Green
+        doc.text(stats.completed.toString(), 65, yPos);
+        doc.setTextColor(59, 130, 246); // Blue
+        doc.text(stats.pending.toString(), 115, yPos);
+        doc.setTextColor(139, 92, 246); // Violet
+        doc.text(`${Math.round((stats.completed / (stats.totalBookings || 1)) * 100)}%`, 165, yPos);
 
-        let yPos = 82;
+        yPos += 15;
 
         // Goals & Performance Section
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setTextColor(24, 24, 27);
-        doc.text("Business Goals vs Actual Performance", 15, yPos);
-        yPos += 6;
+        doc.setFont("helvetica", "bold");
+        doc.text("GOALS VS ACTUAL PERFORMANCE", 15, yPos);
+        yPos += 5;
 
         const goalRows = [
             ["Weekly Revenue", `$${goals.weeklyRevenue}`, `$${actuals.weekRevenue}`, `${Math.round((actuals.weekRevenue / goals.weeklyRevenue) * 100)}%`],
@@ -193,8 +194,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             startY: yPos,
             head: [['Metric', 'Target', 'Actual', 'Achievement']],
             body: goalRows,
-            theme: 'striped',
-            headStyles: { fillColor: [14, 165, 233] }, // Sky 500
+            theme: 'grid',
+            headStyles: { fillColor: [14, 165, 233], textColor: 255 }, // Sky 500
             columnStyles: {
                 1: { halign: 'right' },
                 2: { halign: 'right' },
@@ -209,66 +210,65 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
         });
 
+        // Add Charts (Much Smaller & Side-by-Side)
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 15;
-
-        // Add Charts (Smaller)
-        yPos = (doc as any).lastAutoTable.finalY + 12;
+        yPos = doc.lastAutoTable.finalY + 12;
         
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        yPos = await addChartToPDF(volumeChartRef, yPos, "Monthly Volume Trends", 85);
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
         
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        yPos = await addChartToPDF(serviceChartRef, yPos, "Service Market Share", 85);
+        const chartYStart = yPos;
+        await addChartToPDF(volumeChartRef, chartYStart, "VOLUME TRENDS", 45, 15);
+        yPos = await addChartToPDF(serviceChartRef, chartYStart, "SERVICE SHARE", 45, pageWidth / 2 + 5);
 
         // Customer Insights
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(14);
-        doc.text("Customer Engagement & Loyalty", 15, yPos);
-        yPos += 6;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.setTextColor(24, 24, 27);
+        doc.text("CUSTOMER ENGAGEMENT & LOYALTY", 15, yPos);
+        yPos += 5;
 
         autoTable(doc, {
             startY: yPos,
             head: [['Customer', 'Total Jobs', 'Last Service', 'Primary Service']],
-            body: customerStats.slice(0, 15).map(c => [
+            body: customerStats.slice(0, 10).map(c => [
                 c.name,
                 c.count,
                 format(parseISO(c.lastService), "MMM d, yyyy"),
                 c.service
             ]),
-            theme: 'striped',
-            headStyles: { fillColor: [51, 65, 85] }
+            theme: 'grid',
+            headStyles: { fillColor: [30, 41, 59] } // Slate 800
         });
 
         // Add-ons & Upsells
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 12;
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(14);
-        doc.text("Add-on Service Performance", 15, yPos);
-        yPos += 6;
+        yPos = doc.lastAutoTable.finalY + 10;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.text("ADD-ON SERVICE PERFORMANCE", 15, yPos);
+        yPos += 5;
 
         autoTable(doc, {
             startY: yPos,
             head: [['Add-on Service', 'Customer', 'Date', 'Revenue']],
-            body: addonsData.slice(0, 15).map(a => [
+            body: addonsData.slice(0, 10).map(a => [
                 a.name,
                 a.customer,
                 format(parseISO(a.date), "MMM d"),
                 `$${a.revenue.toFixed(2)}`
             ]),
-            theme: 'striped',
-            headStyles: { fillColor: [14, 165, 233] },
+            theme: 'grid',
+            headStyles: { fillColor: [6, 182, 212] }, // Cyan 500
             columnStyles: { 3: { halign: 'right' } }
         });
 
         // Detailed Service Log
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 12;
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(14);
-        doc.text("Recent Service Records", 15, yPos);
-        yPos += 6;
+        yPos = doc.lastAutoTable.finalY + 10;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.text("RECENT SERVICE RECORDS", 15, yPos);
+        yPos += 5;
 
         autoTable(doc, {
             startY: yPos,
@@ -287,56 +287,57 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         // Quotes Analytics
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 12;
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(14);
-        doc.text("Quotes & Estimates Performance", 15, yPos);
-        yPos += 6;
+        yPos = doc.lastAutoTable.finalY + 10;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.text("QUOTES & ESTIMATES PERFORMANCE", 15, yPos);
+        yPos += 5;
 
         autoTable(doc, {
             startY: yPos,
             head: [['Date', 'Customer', 'Service', 'Total', 'Status']],
-            body: filteredQuotes.slice(0, 15).map(q => [
+            body: filteredQuotes.slice(0, 10).map(q => [
                 format(parseISO(q.createdAt), "MMM d"),
                 q.customer_name || q.customerName,
                 q.service_title || q.serviceTitle || 'General',
                 `$${(q.total || 0).toFixed(2)}`,
                 (q.status || 'pending').toUpperCase()
             ]),
-            theme: 'striped',
+            theme: 'grid',
             headStyles: { fillColor: [139, 92, 246] },
             columnStyles: { 3: { halign: 'right' } }
         });
 
         // Reminders
         // @ts-ignore
-        yPos = doc.lastAutoTable.finalY + 12;
-        if (yPos > 220) { doc.addPage(); yPos = 20; }
-        doc.setFontSize(14);
-        doc.text("Active Reminders & Follow-ups", 15, yPos);
-        yPos += 6;
+        yPos = doc.lastAutoTable.finalY + 10;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.text("ACTIVE REMINDERS & FOLLOW-UPS", 15, yPos);
+        yPos += 5;
 
         autoTable(doc, {
             startY: yPos,
             head: [['Customer', 'Type', 'Due Date', 'Notes']],
-            body: dashboardReminders.slice(0, 15).map(r => [
+            body: dashboardReminders.slice(0, 10).map(r => [
                 r.customer,
                 r.title,
                 format(parseISO(r.date), "MMM d"),
                 r.description
             ]),
-            theme: 'striped',
+            theme: 'grid',
             headStyles: { fillColor: [245, 158, 11] }
         });
 
         // Price Evolution (Brief)
-        doc.addPage();
-        yPos = 20;
-        doc.setFontSize(14);
-        doc.text("Price Evolution Summary", 15, yPos);
-        yPos += 6;
+        // @ts-ignore
+        yPos = doc.lastAutoTable.finalY + 10;
+        if (yPos > 240) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(13);
+        doc.text("PRICE EVOLUTION SUMMARY", 15, yPos);
+        yPos += 5;
 
-        const history = [...priceHistory].reverse().slice(0, 15);
+        const history = [...priceHistory].reverse().slice(0, 10);
         autoTable(doc, {
             startY: yPos,
             head: [['Date', 'Type', 'Description']],
@@ -345,7 +346,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 h.type.toUpperCase(),
                 h.description
             ]),
-            theme: 'striped',
+            theme: 'grid',
             headStyles: { fillColor: [16, 185, 129] }
         });
 
