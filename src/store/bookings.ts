@@ -72,16 +72,20 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     if (!isBackground) set({ loading: true });
     try {
       // Fetch from Supabase
-      const remoteItems: Booking[] = await getSupabaseBookings();
+      const allRemoteItems: Booking[] = await getSupabaseBookings();
+      
+      // CRITICAL: Filter out the internal system alert storage record so it NEVER appears in the UI/Calendar
+      const ALERT_DUMMY_ID = '00000000-0000-0000-0000-000000000000';
+      const remoteItems = allRemoteItems.filter(b => b.id !== ALERT_DUMMY_ID);
 
       // MIGRATION / FALLBACK CHECK: 
       // If Remote is empty BUT Local has data, migrate all local to remote.
-      if (remoteItems.length === 0) {
-        const localItems = loadLocal();
+      if (remoteItems.length === 0 && allRemoteItems.length === 0) {
+        const localItems = loadLocal().filter(b => b.id !== ALERT_DUMMY_ID);
         if (localItems.length > 0) {
           console.log("Migrating local bookings to Supabase...", localItems.length);
           await Promise.all(localItems.map(b => upsertSupabaseBooking(b)));
-          const migratedItems = await getSupabaseBookings();
+          const migratedItems = (await getSupabaseBookings()).filter(b => b.id !== ALERT_DUMMY_ID);
           set({
             items: migratedItems,
             pendingCount: migratedItems.filter((i: Booking) => i.status === "pending").length

@@ -1937,9 +1937,12 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
             return [];
         }
 
+        const ALERT_DUMMY_ID = '00000000-0000-0000-0000-000000000000';
+        const rawData = (data || []).filter(b => b.id !== ALERT_DUMMY_ID);
+
         console.log(`[getSupabaseBookings] Fetched ${data?.length} rows. Filtering by currentUser=${filterByCurrentUser}`);
 
-        return (data || []).map((b: any) => {
+        return rawData.map((b: any) => {
             // Priority: Columns -> Legacy meta (if migration incomplete)
             let meta = b.booking_vehicle || {};
             if (typeof meta === 'string') {
