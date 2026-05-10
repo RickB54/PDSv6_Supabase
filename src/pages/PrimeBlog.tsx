@@ -1505,77 +1505,84 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
 
     return (
         <div className="space-y-6 pt-4 text-left">
-            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                {rootComments.length === 0 ? (
-                    <div className="text-center text-zinc-600 bg-zinc-900/20 p-8 rounded-[28px] border border-dashed border-zinc-800">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                        <p className="text-sm font-medium italic">No comments yet. Share your thoughts!</p>
-                    </div>
-                ) : (
-                    (rootComments || []).map(c => (
-                        <div key={c.id} className="space-y-4">
-                            <div className="flex gap-4 p-4 rounded-[24px] bg-zinc-900/50 border border-zinc-800/50 group hover:border-indigo-500/30 transition-all">
-                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-indigo-500/20 shrink-0">
-                                    {c.author ? c.author.charAt(0).toUpperCase() : 'P'}
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-black text-zinc-200 text-xs uppercase tracking-tighter">{c.author}</span>
-                                            <span className="text-[9px] text-zinc-600 font-bold uppercase">{new Date(c.created_at).toLocaleDateString()}</span>
+            <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">                    {rootComments.length === 0 ? (
+                        <div className="text-center text-zinc-600 bg-zinc-900/20 p-8 rounded-[28px] border border-dashed border-zinc-800">
+                            <MessageSquare className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                            <p className="text-sm font-medium italic">No comments yet. Share your thoughts!</p>
+                        </div>
+                    ) : (
+                        rootComments.map(c => {
+                            const replies = getReplies(c.id) || [];
+                            return (
+                                <div key={c.id} className="space-y-4">
+                                    <div className="flex gap-4 p-4 rounded-[24px] bg-zinc-900/50 border border-zinc-800/50 group hover:border-indigo-500/30 transition-all">
+                                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-indigo-500/20 shrink-0">
+                                            {c.author ? c.author.charAt(0).toUpperCase() : '?'}
                                         </div>
-                                        <div className="flex gap-1">
-                                            {(isAdmin || c.author === currentUser?.email || c.author === currentUser?.name) && (
-                                                <>
-                                                    <Button variant="ghost" size="sm" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Edit comment"><Edit2 className="w-3 h-3" /></Button>
-                                                    <Button variant="ghost" size="sm" onClick={async () => { if (window.confirm('Delete this comment permanently?')) { const success = await deleteComment(c.id); if (success) { setComments(prev => prev.filter(comment => comment.id !== c.id)); toast({ title: "Comment Deleted" }); } else { toast({ title: "Delete Failed", variant: "destructive" }); } } }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Delete comment"><Trash2 className="w-3 h-3" /></Button>
-                                                </>
+                                        <div className="flex-1 space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-zinc-200 text-xs uppercase tracking-tighter">{c.author || 'Anonymous'}</span>
+                                                    <span className="text-[9px] text-zinc-600 font-bold uppercase">{c.created_at ? new Date(c.created_at).toLocaleDateString() : ''}</span>
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    {(isAdmin || c.author === currentUser?.email || c.author === currentUser?.name) && (
+                                                        <>
+                                                            <Button variant="ghost" size="sm" onClick={() => { setEditingCommentId(c.id); setEditingCommentText(c.text); }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Edit comment"><Edit2 className="w-3 h-3" /></Button>
+                                                            <Button variant="ghost" size="sm" onClick={async () => { if (window.confirm('Delete this comment permanently?')) { const success = await deleteComment(c.id); if (success) { setComments(prev => prev.filter(comment => comment.id !== c.id)); toast({ title: "Comment Deleted" }); } else { toast({ title: "Delete Failed", variant: "destructive" }); } } }} className="h-7 px-2 text-[10px] font-black text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Delete comment"><Trash2 className="w-3 h-3" /></Button>
+                                                        </>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setReplyingTo(c);
+                                                            const authorName = c.author ? c.author.split(' ')[0] : 'user';
+                                                            setNewComment(`@${authorName} `);
+                                                        }}
+                                                        className="h-7 px-3 text-[10px] font-black text-indigo-400 hover:bg-indigo-500/10 rounded-xl"
+                                                    >
+                                                        REPLY
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            {editingCommentId === c.id ? (
+                                                <div className="space-y-2 pt-2">
+                                                    <Textarea value={editingCommentText} onChange={e => setEditingCommentText(e.target.value)} className="bg-zinc-900 border-zinc-700 text-sm min-h-[60px]" />
+                                                    <div className="flex gap-2">
+                                                        <Button size="sm" onClick={async () => { const success = await updateComment(c.id, editingCommentText); if (success) { setComments(prev => prev.map(comment => comment.id === c.id ? { ...comment, text: editingCommentText } : comment)); setEditingCommentId(null); toast({ title: "Comment Updated" }); } else { toast({ title: "Update Failed", variant: "destructive" }); } }} className="bg-indigo-600 hover:bg-indigo-500 h-8 text-xs font-bold">Save</Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)} className="h-8 text-xs">Cancel</Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-zinc-400 text-sm leading-relaxed">{c.text}</p>
                                             )}
-                                            <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setReplyingTo(c);
-                                                setNewComment(`@${c.author.split(' ')[0]} `);
-                                            }}
-                                            className="h-7 px-3 text-[10px] font-black text-indigo-400 hover:bg-indigo-500/10 rounded-xl"
-                                        >
-                                            REPLY
-                                        </Button>
                                         </div>
                                     </div>
-                                    {editingCommentId === c.id ? (
-                                        <div className="space-y-2 pt-2">
-                                            <Textarea value={editingCommentText} onChange={e => setEditingCommentText(e.target.value)} className="bg-zinc-900 border-zinc-700 text-sm min-h-[60px]" />
-                                            <div className="flex gap-2">
-                                                <Button size="sm" onClick={async () => { const success = await updateComment(c.id, editingCommentText); if (success) { setComments(prev => prev.map(comment => comment.id === c.id ? { ...comment, text: editingCommentText } : comment)); setEditingCommentId(null); toast({ title: "Comment Updated" }); } else { toast({ title: "Update Failed", variant: "destructive" }); } }} className="bg-indigo-600 hover:bg-indigo-500 h-8 text-xs font-bold">Save</Button>
-                                                <Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)} className="h-8 text-xs">Cancel</Button>
-                                            </div>
+
+                                    {/* Replies Section */}
+                                    {replies.length > 0 && (
+                                        <div className="space-y-3">
+                                            {replies.map(reply => (
+                                                <div key={reply.id} className="ml-12 flex gap-3 p-3 rounded-[20px] bg-indigo-500/5 border border-indigo-500/10">
+                                                    <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center font-black text-zinc-400 text-[10px] shrink-0">
+                                                        {reply.author ? reply.author.charAt(0).toUpperCase() : '?'}
+                                                    </div>
+                                                    <div className="flex-1 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-black text-indigo-300 text-[10px] uppercase">{reply.author || 'Anonymous'}</span>
+                                                            <span className="text-[8px] text-zinc-600 font-bold uppercase">{reply.created_at ? new Date(reply.created_at).toLocaleDateString() : ''}</span>
+                                                        </div>
+                                                        <p className="text-zinc-400 text-xs leading-relaxed">{reply.text}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ) : (
-                                        <p className="text-zinc-400 text-sm leading-relaxed">{c.text}</p>
                                     )}
                                 </div>
-                            </div>
-
-                            {/* Replies */}
-                            {(getReplies(c.id) || []).map(reply => (
-                                <div key={reply.id} className="ml-12 flex gap-3 p-3 rounded-[20px] bg-indigo-500/5 border border-indigo-500/10">
-                                    <div className="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center font-black text-zinc-400 text-[10px] shrink-0">
-                                        {reply.author.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-black text-indigo-300 text-[10px] uppercase">{reply.author}</span>
-                                            <span className="text-[8px] text-zinc-600 font-bold uppercase">{new Date(reply.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                        <p className="text-zinc-400 text-xs leading-relaxed">{reply.text}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ))
-                )}
+                            );
+                        })
+                    )}
             </div>
 
             <div className="space-y-3">
