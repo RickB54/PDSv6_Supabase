@@ -422,34 +422,58 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     const currentPrice = (pkg.pricing as any)[v];
                     const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
                     const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
-                    const evolution = changes.length > 1 
-                        ? changes.map(c => `${c.price} (${c.date})`).join(' → ') 
-                        : "Stable (No changes recorded)";
+                    
+                    let influxList = "";
+                    let timestampList = "";
+                    let newPriceList = "";
 
-                    return [v.toUpperCase(), original, current, evolution];
+                    if (changes.length <= 1) {
+                        influxList = "-";
+                        timestampList = "Stable (No changes)";
+                        newPriceList = "-";
+                    } else {
+                        const instances = [];
+                        for (let i = 1; i < changes.length; i++) {
+                            instances.push({
+                                from: changes[i-1].price,
+                                to: changes[i].price,
+                                when: changes[i].date
+                            });
+                        }
+                        influxList = instances.map(inst => inst.from).join('\n');
+                        timestampList = instances.map(inst => inst.when).join('\n');
+                        newPriceList = instances.map(inst => inst.to).join('\n');
+                    }
+
+                    return [v.toUpperCase(), original, current, influxList, timestampList, newPriceList];
                 });
 
                 autoTable(doc, {
                     startY: currentY,
-                    head: [[pkg.name, 'Initial', 'Current', 'Price Influx / Timeline']],
+                    head: [[pkg.name, 'Initial', 'Current', 'Price Influx', 'Timestamp', 'New Price']],
                     body: body,
-                    headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 9 },
+                    headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 8 },
                     columnStyles: { 
-                        0: { fontStyle: 'bold', cellWidth: 45 },
-                        1: { cellWidth: 20 },
-                        2: { cellWidth: 20, fontStyle: 'bold' },
-                        3: { cellWidth: 'auto' }
+                        0: { fontStyle: 'bold', cellWidth: 35 },
+                        1: { cellWidth: 15 },
+                        2: { cellWidth: 15, fontStyle: 'bold' },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 35 },
+                        5: { cellWidth: 20, fontStyle: 'bold' }
                     },
                     margin: { left: 14, right: 14 },
-                    theme: 'grid', // Grid theme for divider lines
-                    styles: { fontSize: 8, cellPadding: 2 }
+                    theme: 'grid',
+                    styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' }
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             });
         });
 
+        // Always start Add-ons on a new page as requested
+        doc.addPage(); 
+        currentY = 20;
+
         if (allAddons.length > 0) {
-            if (currentY > 260) { doc.addPage(); currentY = 20; }
             doc.setFillColor(245, 158, 11); // Amber
             doc.rect(14, currentY, 182, 8, 'F');
             doc.setFontSize(11);
@@ -473,27 +497,48 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 const currentPrice = a.basePrice || (a.pricing as any).compact;
                 const original = changes.length > 0 ? changes[0].price : `$${currentPrice}`;
                 const current = changes.length > 0 ? changes[changes.length - 1].price : `$${currentPrice}`;
-                const evolution = changes.length > 1 
-                    ? changes.map(c => `${c.price} (${c.date})`).join(' → ') 
-                    : "Stable (No changes recorded)";
+                
+                let influxList = "";
+                let timestampList = "";
+                let newPriceList = "";
 
-                return [a.name, original, current, evolution];
+                if (changes.length <= 1) {
+                    influxList = "-";
+                    timestampList = "Stable (No changes)";
+                    newPriceList = "-";
+                } else {
+                    const instances = [];
+                    for (let i = 1; i < changes.length; i++) {
+                        instances.push({
+                            from: changes[i-1].price,
+                            to: changes[i].price,
+                            when: changes[i].date
+                        });
+                    }
+                    influxList = instances.map(inst => inst.from).join('\n');
+                    timestampList = instances.map(inst => inst.when).join('\n');
+                    newPriceList = instances.map(inst => inst.to).join('\n');
+                }
+
+                return [a.name, original, current, influxList, timestampList, newPriceList];
             });
 
             autoTable(doc, {
                 startY: currentY,
-                head: [['Add-on Item', 'Initial', 'Current', 'Price Influx / Timeline']],
+                head: [['Add-on Item', 'Initial', 'Current', 'Price Influx', 'Timestamp', 'New Price']],
                 body: addonRows,
-                headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 9 },
+                headStyles: { fillColor: [244, 244, 245], textColor: [31, 41, 55], fontStyle: 'bold', fontSize: 8 },
                 columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 45 }, 
-                    1: { cellWidth: 20 }, 
-                    2: { cellWidth: 20, fontStyle: 'bold' }, 
-                    3: { cellWidth: 'auto' } 
+                    0: { fontStyle: 'bold', cellWidth: 35 }, 
+                    1: { cellWidth: 15 }, 
+                    2: { cellWidth: 15, fontStyle: 'bold' }, 
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 35 },
+                    5: { cellWidth: 20, fontStyle: 'bold' }
                 },
                 margin: { left: 14, right: 14 },
                 theme: 'striped',
-                styles: { fontSize: 8 }
+                styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' }
             });
         }
 
