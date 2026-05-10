@@ -147,19 +147,21 @@ const isAppRoute = (path: string) => {
   return true;
 };
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) => {
-  const user = getCurrentUser();
+const ProtectedRoute = ({ children, allowedRoles, user }: { children: React.ReactNode; allowedRoles: string[]; user: any }) => {
   const { isDemoMode } = useDemoMode();
 
-  // Redirect to login if NO user and no simulation
-  if (!user && allowedRoles.length > 0) return <Navigate to="/login" replace />;
+  // If we have no user and it's a restricted route, go to login
+  if (!user && allowedRoles.length > 0) {
+    return <Navigate to="/login" replace />;
+  }
 
-  // Enforce roles strictly
+  // Enforce roles strictly if specified
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
     if (user?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
     if (user?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
     return <Navigate to="/customer-dashboard" replace />;
   }
+
   return <>{children}</>;
 };
 
@@ -253,7 +255,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
         <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
           {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
             <div className="dark-theme">
-              <AppSidebar key={effectiveUser.id} user={effectiveUser} businessStatus={businessStatus} />
+              <AppSidebar key={effectiveUser.id || 'sidebar-anon'} user={effectiveUser} businessStatus={businessStatus} />
             </div>
           )}
           <div className="flex-1 flex flex-col min-w-0">
@@ -318,27 +320,27 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   return (
     <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
-        <AppSidebar key={effectiveUser.id} user={effectiveUser} businessStatus={businessStatus} />
+        <AppSidebar key={effectiveUser?.id || 'sidebar-authenticated'} user={effectiveUser} businessStatus={businessStatus} />
       </div>
       <div className={`flex-1 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
-          <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/demo/dashboard" element={<ProtectedRoute allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/dashboard/employee" element={<ProtectedRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
-          <Route path="/customer-dashboard" element={<ProtectedRoute allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
-          <Route path="/bookings" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
-          <Route path="/demo/bookings" element={<ProtectedRoute allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
-          <Route path="/bookings-analytics" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
-          <Route path="/demo/bookings-analytics" element={<ProtectedRoute allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
-          <Route path="/search-customer" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
-          <Route path="/demo/search-customer" element={<ProtectedRoute allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
-          <Route path="/prospects" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
-          <Route path="/demo/prospects" element={<ProtectedRoute allowedRoles={[]}><Prospects /></ProtectedRoute>} />
-          <Route path="/service-checklist" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
-          <Route path="/tasks" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
-          <Route path="/demo/tasks" element={<ProtectedRoute allowedRoles={[]}><Tasks /></ProtectedRoute>} />
-          <Route path="/team-chat" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
+          <Route path="/dashboard/admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/demo/dashboard" element={<ProtectedRoute user={user} allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/employee" element={<ProtectedRoute user={user} allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
+          <Route path="/customer-dashboard" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
+          <Route path="/bookings" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
+          <Route path="/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/search-customer" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/demo/search-customer" element={<ProtectedRoute user={user} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/prospects" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
+          <Route path="/demo/prospects" element={<ProtectedRoute user={user} allowedRoles={[]}><Prospects /></ProtectedRoute>} />
+          <Route path="/service-checklist" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
+          <Route path="/demo/tasks" element={<ProtectedRoute user={user} allowedRoles={[]}><Tasks /></ProtectedRoute>} />
+          <Route path="/team-chat" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
           <Route path="/jobs-completed" element={<ProtectedRoute allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
           <Route path="/invoicing" element={<ProtectedRoute allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
           <Route path="/demo/invoicing" element={<ProtectedRoute allowedRoles={[]}><Invoicing /></ProtectedRoute>} />

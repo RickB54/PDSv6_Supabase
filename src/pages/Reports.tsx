@@ -1463,9 +1463,35 @@ const Reports = () => {
                           <TableCell className="text-zinc-200 font-bold">${(inv.total || 0).toFixed(2)}</TableCell>
                           <TableCell className="text-emerald-400">${(inv.paidAmount || 0).toFixed(2)}</TableCell>
                           <TableCell>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${inv.isPaid ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
-                              {inv.isPaid ? 'PAID' : 'PENDING'}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${inv.isPaid ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'}`}>
+                                {inv.isPaid ? 'PAID' : 'PENDING'}
+                              </span>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10" 
+                                onClick={() => {
+                                  // Find the generatePDF function from Invoicing or re-implement here
+                                  // For now, let's assume we can trigger it via a custom event or it's globally available
+                                  window.dispatchEvent(new CustomEvent('print-invoice', { detail: inv }));
+                                }} 
+                                title="Preview PDF"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10" 
+                                onClick={() => {
+                                  window.dispatchEvent(new CustomEvent('download-invoice', { detail: inv }));
+                                }} 
+                                title="Download PDF"
+                              >
+                                <Save className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

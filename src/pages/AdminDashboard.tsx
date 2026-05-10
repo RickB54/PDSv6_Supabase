@@ -129,19 +129,41 @@ function MenuVisibilityControls() {
     toast({ title: 'Menu visibility updated', description: `${show ? 'Showing' : 'Hiding'} ${MENU_REGISTRY.find(i => i.key === key)?.label || key}` });
   };
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {MENU_REGISTRY.map((item) => {
-        const shown = !hidden.includes(item.key);
-        return (
-          <div key={item.key} className="flex items-center gap-2 p-2 rounded border border-zinc-800 bg-zinc-900">
-            <Checkbox checked={shown} onCheckedChange={(val) => {
-              if (!ensureNotDemo("menu visibility toggle")) return;
-              toggleKey(item.key, Boolean(val));
-            }} id={`menu_${item.key}`} />
-            <Label htmlFor={`menu_${item.key}`} className="text-sm text-white">{item.label}</Label>
-          </div>
-        );
-      })}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h4 className="text-sm font-semibold text-zinc-400">Configure Dashboard Layout</h4>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="text-[10px] h-7 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 uppercase font-black tracking-widest"
+          onClick={() => {
+            if (!ensureNotDemo("menu reset")) return;
+            setHidden([]);
+            setHiddenMenuItems([]);
+            localStorage.removeItem("demo_mode_active");
+            localStorage.removeItem("admin_demo_preview");
+            window.dispatchEvent(new Event('storage'));
+            window.location.reload(); // Force full refresh to clear any stuck states
+          }}
+        >
+          <RotateCcw className="h-3 w-3 mr-1" />
+          Restore All Menu Items
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {MENU_REGISTRY.map((item) => {
+          const shown = !hidden.includes(item.key);
+          return (
+            <div key={item.key} className="flex items-center gap-2 p-2 rounded border border-zinc-800 bg-zinc-900">
+              <Checkbox checked={shown} onCheckedChange={(val) => {
+                if (!ensureNotDemo("menu visibility toggle")) return;
+                toggleKey(item.key, Boolean(val));
+              }} id={`menu_${item.key}`} />
+              <Label htmlFor={`menu_${item.key}`} className="text-sm text-white">{item.label}</Label>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -516,7 +538,12 @@ export default function AdminDashboard() {
     });
 
     // File Manager new files today
-    const records = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+    let records: any[] = [];
+    try {
+      records = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+      if (!Array.isArray(records)) records = [];
+    } catch { records = []; }
+
     const tStr = new Date().toLocaleDateString().replace(/\//g, '-');
     const countToday = records.filter((r: any) => String(r.date).includes(tStr) && !isViewed("file", String(r.id))).length;
     setNewFilesToday(countToday);
@@ -538,8 +565,18 @@ export default function AdminDashboard() {
           try {
             const employees = (await localforage.getItem<any[]>('company-employees')) || [];
             const hist = (await localforage.getItem<any[]>('payroll-history')) || [];
-            const jobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
-            const adj = JSON.parse(localStorage.getItem('payroll_owed_adjustments') || '{}');
+            
+            let jobs: any[] = [];
+            try {
+              jobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
+              if (!Array.isArray(jobs)) jobs = [];
+            } catch { jobs = []; }
+
+            let adj: any = {};
+            try {
+              adj = JSON.parse(localStorage.getItem('payroll_owed_adjustments') || '{}');
+              if (!adj || typeof adj !== 'object') adj = {};
+            } catch { adj = {}; }
             const now = Date.now();
             const sevenDays = 7 * 24 * 60 * 60 * 1000;
             const dueEmps = employees.filter((emp: any) => {
@@ -602,13 +639,18 @@ export default function AdminDashboard() {
         try { localStorage.setItem('inventory_low_count', String(total)); } catch { }
       });
       // Recompute files today
-      const records = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+      let records: any[] = [];
+      try {
+        records = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
+        if (!Array.isArray(records)) records = [];
+      } catch { records = []; }
+
       const tStr = new Date().toLocaleDateString().replace(/\//g, '-');
       setNewFilesToday(records.filter((r: any) => String(r.date).includes(tStr) && !isViewed("file", String(r.id))).length);
       setUnviewedFilesCount(records.filter((r: any) => !isViewed("file", String(r.id))).length);
       // Admin jobs badge: count Job PDFs linked to checklists with employeeId 'Admin'
       try {
-        const jobPdfs = (records as any[]).filter(r => String(r.recordType) === 'Job');
+        const jobPdfs = (records || []).filter(r => r && String(r.recordType) === 'Job');
         localforage.getItem<any[]>('generic-checklists').then((list) => {
           const checklists = Array.isArray(list) ? list : [];
           const merged = jobPdfs.map(pdf => ({ pdf, cl: checklists.find((c: any) => String(c.id) === String(pdf.recordId)) || null }));

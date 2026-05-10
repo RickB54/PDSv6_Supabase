@@ -327,7 +327,12 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   }, [isDemoMode, tick]);
 
   // Group State Persistence
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('sidebar_groups');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
 
 
   const toggleGroup = (title: string, isOpen: boolean) => {
@@ -409,14 +414,14 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     });
 
     // Determine the badge simply from active bookings
-    let badgeCount = isDemoMode ? 3 : activeBookings.length;
+    let badgeCount = isDemoMode ? 3 : (activeBookings || []).length;
     let badgeColor: 'red' | 'blue' = (isDemoMode) ? 'red' : 'blue';
 
     return getMenuGroups({
-      todoCount,
-      payrollDueCount,
-      inventoryCount,
-      fileCount,
+      todoCount: todoCount || 0,
+      payrollDueCount: payrollDueCount || 0,
+      inventoryCount: inventoryCount || 0,
+      fileCount: fileCount || 0,
       tentativeBookingsCount: badgeCount,
       bookingsBadgeColor: badgeColor
     }).filter(group => {

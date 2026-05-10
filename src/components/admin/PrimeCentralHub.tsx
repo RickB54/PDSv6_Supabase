@@ -200,29 +200,64 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
     const recentActivity = useMemo(() => {
         const activity: any[] = [];
-        (activeBookings || []).slice(0, 5).forEach(b => {
-            activity.push({
-                type: 'Job',
-                name: `${b.customer || 'Lead'}`,
-                detail: `${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.status}`.trim(),
-                timestamp: b.createdAt ? parseISO(b.createdAt) : new Date(b.date || Date.now())
+        try {
+            (activeBookings || []).slice(0, 5).forEach(b => {
+                if (!b) return;
+                let ts: Date;
+                try {
+                    ts = b.createdAt ? parseISO(b.createdAt) : new Date(b.date || Date.now());
+                    if (isNaN(ts.getTime())) ts = new Date();
+                } catch {
+                    ts = new Date();
+                }
+                
+                activity.push({
+                    type: 'Job',
+                    name: `${b.customer || 'Lead'}`,
+                    detail: `${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.status || ''}`.trim(),
+                    timestamp: ts
+                });
             });
-        });
-        (invoices || []).slice(0, 5).forEach(i => {
-            activity.push({
-                type: 'Invoice',
-                name: `INV-${i.id.substring(0, 8)}`,
-                detail: `$${i.total} - ${i.paymentStatus}`,
-                timestamp: i.createdAt ? parseISO(i.createdAt) : new Date()
+
+            (invoices || []).slice(0, 5).forEach(i => {
+                if (!i) return;
+                let ts: Date;
+                try {
+                    ts = i.createdAt ? parseISO(i.createdAt) : new Date();
+                    if (isNaN(ts.getTime())) ts = new Date();
+                } catch {
+                    ts = new Date();
+                }
+
+                activity.push({
+                    type: 'Invoice',
+                    name: i.id ? `INV-${String(i.id).substring(0, 8)}` : 'INV-NEW',
+                    detail: `$${i.total || 0} - ${i.paymentStatus || 'unpaid'}`,
+                    timestamp: ts
+                });
             });
-        });
-        return activity
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-            .slice(0, 5)
-            .map((item: any) => ({
-                ...item,
-                time: formatDistanceToNow(item.timestamp, { addSuffix: true })
-            }));
+
+            return activity
+                .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+                .slice(0, 5)
+                .map((item: any) => {
+                    let timeStr = 'recently';
+                    try {
+                        if (!isNaN(item.timestamp.getTime())) {
+                            timeStr = formatDistanceToNow(item.timestamp, { addSuffix: true });
+                        }
+                    } catch (e) {
+                        console.error("Error formatting distance:", e);
+                    }
+                    return {
+                        ...item,
+                        time: timeStr
+                    };
+                });
+        } catch (e) {
+            console.error("Error computing recent activity:", e);
+            return [];
+        }
     }, [activeBookings, invoices]);
 
     const allShortcuts = useMemo(() => [...AVAILABLE_SHORTCUTS, ...customShortcuts], [customShortcuts]);
@@ -293,8 +328,10 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
         }
 
         return (activeBookings || []).filter(b => {
+            if (!b) return false;
             try {
                 const d = b.date ? parseISO(b.date) : new Date();
+                if (isNaN(d.getTime())) return false;
                 return isWithinInterval(d, { start, end });
             } catch { return false; }
         });
@@ -310,98 +347,126 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     // Action Required Logic
     const actionItems = useMemo(() => {
         const items = [];
+        try {
+            // Overdue invoices
+            const now = new Date();
+            const overdueInvoices = (invoices || []).filter(inv => inv && inv.paymentStatus !== 'paid' && inv.dueDate && new Date(inv.dueDate) < now);
+            if (overdueInvoices.length > 0) {
+                items.push({
+                    id: 'overdue-invoices',
+                    title: `${overdueInvoices.length} Overdue Invoices`,
+                    description: `Total outstanding: $${overdueInvoices.reduce((a, b) => a + (Number(b.total) || 0), 0).toFixed(2)}`,
+                    link: '/accounting',
+                    type: 'critical'
+                });
+            }
 
-        // Overdue invoices
-        const now = new Date();
-        const overdueInvoices = invoices.filter(inv => inv.paymentStatus !== 'paid' && inv.dueDate && new Date(inv.dueDate) < now);
-        if (overdueInvoices.length > 0) {
-            items.push({
-                id: 'overdue-invoices',
-                title: `${overdueInvoices.length} Overdue Invoices`,
-                description: `Total outstanding: $${overdueInvoices.reduce((a, b) => a + (Number(b.total) || 0), 0).toFixed(2)}`,
-                link: '/accounting',
-                type: 'critical'
+            // Unassigned jobs
+            const unassigned = (bookings || []).filter(b => b && !b.assignedEmployee && (b.status === 'pending' || b.status === 'confirmed'));
+            if (unassigned.length > 0) {
+                items.push({
+                    id: 'unassigned-jobs',
+                    title: `${unassigned.length} Unassigned Jobs`,
+                    description: 'Team assignments needed for upcoming bookings',
+                    link: '/bookings',
+                    type: 'critical'
+                });
+            }
+
+            // From Alert System
+            const criticalAlerts = (alerts || []).filter(a => a && !a.read && (a.type === 'low_inventory' || a.type === 'invoice_unpaid' || a.type === 'todo_overdue'));
+            criticalAlerts.forEach(a => {
+                let timeStr = 'recently';
+                try {
+                    const d = new Date(a.timestamp);
+                    if (!isNaN(d.getTime())) {
+                        timeStr = format(d, 'MMM d, p');
+                    }
+                } catch {}
+
+                items.push({
+                    id: a.id,
+                    title: a.message || a.type.replace(/_/g, ' '),
+                    description: timeStr,
+                    link: '/admin-dashboard', // Or more specific based on mapAlert
+                    type: 'critical'
+                });
             });
+        } catch (e) {
+            console.error("Error computing action items:", e);
         }
-
-        // Unassigned jobs
-        const unassigned = (bookings || []).filter(b => !b.assignedEmployee && (b.status === 'pending' || b.status === 'confirmed'));
-        if (unassigned.length > 0) {
-            items.push({
-                id: 'unassigned-jobs',
-                title: `${unassigned.length} Unassigned Jobs`,
-                description: 'Team assignments needed for upcoming bookings',
-                link: '/bookings',
-                type: 'critical'
-            });
-        }
-
-        // From Alert System
-        const criticalAlerts = (alerts || []).filter(a => !a.read && (a.type === 'low_inventory' || a.type === 'invoice_unpaid' || a.type === 'todo_overdue'));
-        criticalAlerts.forEach(a => {
-            items.push({
-                id: a.id,
-                title: a.message || a.type.replace(/_/g, ' '),
-                description: format(new Date(a.timestamp), 'MMM d, p'),
-                link: '/admin-dashboard', // Or more specific based on mapAlert
-                type: 'critical'
-            });
-        });
 
         return items.slice(0, 3);
     }, [invoices, bookings, inventories, alerts]);
 
     // Section 3: Snapshot Metrics
     const summaryMetrics = useMemo(() => {
-        const now = new Date();
-        const start = timeScope === 'today' ? startOfToday() : timeScope === 'week' ? startOfWeek(now) : startOfMonth(now);
-        const end = timeScope === 'today' ? endOfToday() : timeScope === 'week' ? endOfWeek(now) : endOfMonth(now);
+        try {
+            const now = new Date();
+            const start = timeScope === 'today' ? startOfToday() : timeScope === 'week' ? startOfWeek(now) : startOfMonth(now);
+            const end = timeScope === 'today' ? endOfToday() : timeScope === 'week' ? endOfWeek(now) : endOfMonth(now);
 
-        const scopeBookings = (bookings || []).filter(b => {
-            try {
-                const d = b.date ? parseISO(b.date) : null;
-                return d && isWithinInterval(d, { start, end });
-            } catch { return false; }
-        });
+            const scopeBookings = (bookings || []).filter(b => {
+                if (!b) return false;
+                try {
+                    const d = b.date ? parseISO(b.date) : null;
+                    return d && !isNaN(d.getTime()) && isWithinInterval(d, { start, end });
+                } catch { return false; }
+            });
 
-        const upcoming = scopeBookings.filter(b => b.date && new Date(b.date) >= now).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-        const jobsInProgress = scopeBookings.filter(b => b.status === 'in_progress').length;
-        const jobsWaiting = scopeBookings.filter(b => (b.status === 'confirmed' || b.status === 'pending') && b.date && new Date(b.date) >= now).length;
-        const totalEmps = employees.length;
-        const assignedInScope = new Set(scopeBookings.filter(b => b.assignedEmployee).map(b => b.assignedEmployee)).size;
+            const upcoming = scopeBookings.filter(b => {
+                if (!b.date) return false;
+                const d = new Date(b.date);
+                return !isNaN(d.getTime()) && d >= now;
+            }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+            
+            const jobsInProgress = scopeBookings.filter(b => b.status === 'in_progress').length;
+            const jobsWaiting = scopeBookings.filter(b => (b.status === 'confirmed' || b.status === 'pending') && b.date && new Date(b.date) >= now).length;
+            const totalEmps = (employees || []).length;
+            const assignedInScope = new Set(scopeBookings.filter(b => b.assignedEmployee).map(b => b.assignedEmployee)).size;
 
-        const scopeInvoices = invoices.filter(inv => {
-            try {
-                const d = inv.createdAt ? parseISO(inv.createdAt) : null;
-                return d && isWithinInterval(d, { start, end });
-            } catch { return false; }
-        });
+            const scopeInvoices = (invoices || []).filter(inv => {
+                if (!inv) return false;
+                try {
+                    const d = inv.createdAt ? parseISO(inv.createdAt) : null;
+                    return d && !isNaN(d.getTime()) && isWithinInterval(d, { start, end });
+                } catch { return false; }
+            });
 
-        const outstandingBalance = scopeInvoices.filter(i => i.paymentStatus !== 'paid').reduce((a, b) => a + (Number(b.total) || 0), 0);
-        const collected = scopeInvoices.reduce((a, b) => a + (Number(b.paidAmount) || 0), 0);
+            const outstandingBalance = scopeInvoices.filter(i => i.paymentStatus !== 'paid').reduce((a, b) => a + (Number(b.total) || 0), 0);
+            const collected = scopeInvoices.reduce((a, b) => a + (Number(b.paidAmount) || 0), 0);
 
-        return {
-            bookings: {
-                count: scopeBookings.length,
-                next: upcoming,
-                confirmed: scopeBookings.filter(b => b.status === 'confirmed').length
-            },
-            jobs: {
-                inProgress: jobsInProgress,
-                waiting: jobsWaiting,
-                completed: scopeBookings.filter(b => b.status === 'done').length
-            },
-            employees: {
-                scheduled: assignedInScope,
-                available: Math.max(0, totalEmps - assignedInScope),
-                conflicts: 0
-            },
-            finance: {
-                due: scopeInvoices.filter(i => i.paymentStatus !== 'paid').length,
-                balance: outstandingBalance,
-                collected: collected
-            }
-        };
+            return {
+                bookings: {
+                    count: scopeBookings.length,
+                    next: upcoming,
+                    confirmed: scopeBookings.filter(b => b.status === 'confirmed').length
+                },
+                jobs: {
+                    inProgress: jobsInProgress,
+                    waiting: jobsWaiting,
+                    completed: scopeBookings.filter(b => b.status === 'done').length
+                },
+                employees: {
+                    scheduled: assignedInScope,
+                    available: Math.max(0, totalEmps - assignedInScope),
+                    conflicts: 0
+                },
+                finance: {
+                    due: scopeInvoices.filter(i => i.paymentStatus !== 'paid').length,
+                    balance: outstandingBalance,
+                    collected: collected
+                }
+            };
+        } catch (e) {
+            console.error("Error computing summary metrics:", e);
+            return {
+                bookings: { count: 0, next: null, confirmed: 0 },
+                jobs: { inProgress: 0, waiting: 0, completed: 0 },
+                employees: { scheduled: 0, available: 0, conflicts: 0 },
+                finance: { due: 0, balance: 0, collected: 0 }
+            };
+        }
     }, [bookings, invoices, employees, timeScope]);
 
     const weeklyDistribution = useMemo(() => {
@@ -437,13 +502,43 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
     return (
         <div className="flex flex-col gap-8 pb-10 max-w-7xl mx-auto">
+            {/* EMERGENCY RESTORE BANNER */}
+            {(isDemoMode || localStorage.getItem('hiddenMenuItems')) && (
+                <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-red-500/20 p-2 rounded-full">
+                            <AlertTriangle className="text-red-500 h-6 w-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h3 className="text-red-500 font-bold uppercase tracking-tight">Administrative Access Restricted</h3>
+                            <p className="text-zinc-400 text-xs font-medium">Training Mode is active or menu items are hidden. Click to restore all dashboard functionality.</p>
+                        </div>
+                    </div>
+                    <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        className="bg-red-600 hover:bg-red-700 font-black uppercase tracking-widest px-6 shadow-lg shadow-red-900/20"
+                        onClick={() => {
+                            localStorage.removeItem("demo_mode_active");
+                            localStorage.removeItem("admin_demo_preview");
+                            localStorage.removeItem("hiddenMenuItems");
+                            localStorage.removeItem("sidebar_groups"); // Reset groups as well
+                            window.dispatchEvent(new Event('storage'));
+                            window.location.reload();
+                        }}
+                    >
+                        Restore Full Admin Menu
+                    </Button>
+                </div>
+            )}
+
             {/* Section 1: Context Header */}
             <header className="flex flex-col gap-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <h1 className="text-2xl font-bold tracking-tight text-white">{format(new Date(), 'EEEE, MMMM do')}</h1>
                         <p className="text-zinc-400 text-sm">
-                            {stats.scheduled} jobs scheduled · {stats.inProgress} in progress · ${stats.expectedRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} expected
+                            {(stats?.scheduled || 0)} jobs scheduled · {(stats?.inProgress || 0)} in progress · ${(stats?.expectedRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} expected
                         </p>
                     </div>
                     <div className="flex p-1 bg-zinc-900/50 rounded-lg border border-zinc-800">
@@ -526,7 +621,12 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             <div className="text-sm text-zinc-400">
                                 {summaryMetrics.bookings.next ? (
                                     <span className="flex items-center gap-1.5 line-clamp-1">
-                                        <Clock className="w-3.5 h-3.5" /> Next: {format(parseISO(summaryMetrics.bookings.next.date), 'p')}
+                                        <Clock className="w-3.5 h-3.5" /> Next: {(() => {
+                                            try {
+                                                const d = parseISO(summaryMetrics.bookings.next.date);
+                                                return isNaN(d.getTime()) ? 'Invalid date' : format(d, 'p');
+                                            } catch { return 'Invalid date'; }
+                                        })()}
                                     </span>
                                 ) : 'No more upcoming'}
                             </div>
@@ -579,8 +679,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                 <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Scheduled Today</div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${summaryMetrics.employees.available > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                <span className="text-sm text-zinc-400">{summaryMetrics.employees.available} members available</span>
+                                <div className={`w-2 h-2 rounded-full ${(summaryMetrics?.employees?.available || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                <span className="text-sm text-zinc-400">{(summaryMetrics?.employees?.available || 0)} members available</span>
                             </div>
                             <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-purple-500 group-hover:underline font-medium">
                                 Open Employee Scheduler <ArrowRight className="w-3.5 h-3.5" />
@@ -602,7 +702,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                 <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Outstanding Balances</div>
                             </div>
                             <div className="text-sm text-emerald-500/80 font-medium">
-                                {summaryMetrics.finance.due} Invoices Due
+                                {(summaryMetrics?.finance?.due || 0)} Invoices Due
                             </div>
                             <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-emerald-500 group-hover:underline font-medium">
                                 Open Finance / Invoices <ArrowRight className="w-3.5 h-3.5" />
@@ -670,11 +770,17 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                     </div>
                                 </div>
                                 <div className="pl-5 border-l border-zinc-800 space-y-4">
-                                    {(scopedBookings || []).filter(b => b.status !== 'done' && b.status !== 'blocked').slice(0, 3).map((b, i) => (
+                                    {(scopedBookings || []).filter(b => b && b.status !== 'done' && b.status !== 'blocked').slice(0, 3).map((b, i) => (
                                         <div key={i} className="flex items-center gap-3">
-                                            <span className="text-xs font-mono text-zinc-500">{b.date ? format(parseISO(b.date), 'p') : 'N/A'}</span>
+                                            <span className="text-xs font-mono text-zinc-500">{(() => {
+                                                try {
+                                                    if (!b.date) return 'N/A';
+                                                    const d = parseISO(b.date);
+                                                    return isNaN(d.getTime()) ? 'N/A' : format(d, 'p');
+                                                } catch { return 'N/A'; }
+                                            })()}</span>
                                             <div className="h-2 w-2 rounded-full bg-blue-500/50" />
-                                            <span className="text-sm text-zinc-300">{b.customer} — {b.vehicleYear} {b.vehicleMake} {b.vehicleModel}</span>
+                                            <span className="text-sm text-zinc-300">{b.customer || 'Lead'} — {b.vehicleYear || ''} {b.vehicleMake || ''} {b.vehicleModel || ''}</span>
                                         </div>
                                     ))}
                                     {scopedBookings.filter(b => b.status !== 'done' && b.status !== 'blocked').length === 0 && (

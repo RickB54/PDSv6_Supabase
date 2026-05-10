@@ -843,12 +843,17 @@ const Estimates = () => {
                                                 {(est.status || 'open').toUpperCase()}
                                             </div>
                                         </div>
-
-                                        <div className="flex gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)}>
+                                        <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(est.id!)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => generatePDF(est, 'print')} title="Preview PDF">
+                                                <Printer className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(est, 'download')} title="Download PDF">
+                                                <Save className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-500 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(est.id!)} title="Delete Estimate">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
