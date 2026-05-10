@@ -459,7 +459,9 @@ const Reports = () => {
         const empName = job.employeeName || 'Unassigned';
         if (!employeeStats[empName]) employeeStats[empName] = { jobs: 0, revenue: 0 };
         employeeStats[empName].jobs += 1;
-        employeeStats[empName].revenue += Number(job.totalRevenue || job.total || 0);
+        const rev = job.totalRevenue || job.total || 0;
+        const parsedRev = typeof rev === 'number' ? rev : parseFloat(String(rev).replace(/[^0-9.-]+/g, ""));
+        employeeStats[empName].revenue += isNaN(parsedRev) ? 0 : parsedRev;
     });
 
     const empData = Object.entries(employeeStats).map(([name, stats]: any) => [
@@ -990,9 +992,16 @@ const Reports = () => {
         else targetName = 'Admin'; // Absolute fallback
       }
 
+      const parseRevenue = (val: any) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        const parsed = parseFloat(String(val).replace(/[^0-9.-]+/g, ""));
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
       if (!stats[targetName]) stats[targetName] = { jobs: 0, revenue: 0 };
       stats[targetName].jobs += 1;
-      stats[targetName].revenue += Number(job.totalRevenue || job.total || 0);
+      stats[targetName].revenue += parseRevenue(job.totalRevenue || job.total || 0);
     });
 
     return stats;

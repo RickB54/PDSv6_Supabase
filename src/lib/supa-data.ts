@@ -2242,8 +2242,10 @@ export const getSupabaseTaxReports = async (year?: number): Promise<TaxReportArc
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
         return data || [];
-    } catch (err) {
-        console.error('getSupabaseTaxReports error:', err);
+    } catch (err: any) {
+        if (err?.code !== '42P01') {
+            console.error('getSupabaseTaxReports error:', err);
+        }
         return [];
     }
 };
@@ -2254,8 +2256,10 @@ export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) =
         const { data, error } = await supabase.from('tax_reports').insert(report).select().single();
         if (error) throw error;
         return data;
-    } catch (err) {
-        console.error('saveSupabaseTaxReport error:', err);
+    } catch (err: any) {
+        if (err?.code !== '42P01') {
+            console.error('saveSupabaseTaxReport error:', err);
+        }
         throw err;
     }
 };
