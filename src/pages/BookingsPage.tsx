@@ -2857,10 +2857,11 @@ export default function BookingsPage() {
                       uniqueCustomers.map((customer) => (
                       <Collapsible
                         key={customer.name}
+                        id={`history-customer-${customer.name.replace(/\s+/g, '-')}`}
                         open={selectedHistoryCustomer === customer.name}
                         onOpenChange={(open) => handleSelectHistoryCustomer(open ? customer.name : null)}
+                        className="border border-zinc-800 rounded-lg overflow-hidden transition-all"
                       >
-                        <div id={`history-customer-${customer.name.replace(/\s+/g, '-')}`} className="border border-zinc-800 rounded-lg overflow-hidden transition-all">
                           <CollapsibleTrigger className="w-full">
                             <div className="flex items-center justify-between p-2.5 sm:p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
                               <div className="flex items-center gap-4">
@@ -3233,14 +3234,14 @@ export default function BookingsPage() {
                               </div>
                             </div>
                           </CollapsibleContent>
-                        </div>
                       </Collapsible>
                     ))
                   )}
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
+        </Card>
       </div>
       <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
         <AlertDialogContent className="bg-zinc-950 border-zinc-800 max-w-[500px]">
