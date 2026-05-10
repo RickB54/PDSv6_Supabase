@@ -73,7 +73,8 @@ export const PerspectiveBanner = () => {
             <button 
                 onClick={() => {
                     localStorage.removeItem('view_as_mode');
-                    navigate('/dashboard/admin');
+                    window.dispatchEvent(new Event('auth-changed'));
+                    navigate('/dashboard/admin', { replace: true });
                 }}
                 className="flex items-center gap-2 px-3 py-1 bg-white text-zinc-900 hover:bg-zinc-100 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95 group"
             >

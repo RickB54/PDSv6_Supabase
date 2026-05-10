@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw, HelpCircle } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { servicePackages } from '@/lib/services';
 import * as supaPkgs from '@/services/supabase/packages';
 import { getCombinedSelectableProducts } from '@/lib/chemicals';
@@ -458,47 +460,38 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   }, [currentTip.notes, activeTab, selectedPackageId]);
 
 
-  const handleSavePDF = (targetId?: string) => {
-    const element = targetId ? document.getElementById(targetId) : printRef.current;
-    if (!element) return;
-
-    const opt = {
-      margin: 10 as number | [number, number],
-      filename: `RicksChemicalTips_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg' as const, quality: 1 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        backgroundColor: '#0c1220'
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
-    // Create a temporary clone for colorful styling
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.style.background = '#0c1220';
-    clone.style.color = 'white';
-    clone.style.padding = '20px';
+  const handleSavePDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Add the header to the clone
-    const header = document.createElement('div');
-    header.innerHTML = `
-      <div style="border-bottom: 2px solid #2d3748; margin-bottom: 30px; padding-bottom: 20px;">
-        <h1 style="color: #c084fc; font-size: 28px; font-family: sans-serif; font-style: italic; font-weight: 900; margin: 0;">Rick's Command Center</h1>
-        <p style="color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;">Professional Auto Detailing - Generated ${new Date().toLocaleDateString()}</p>
-      </div>
-    `;
-    clone.prepend(header);
-
-    html2pdf().set(opt).from(clone).save()
-      .then(() => {
-        toast.success("PDF Downloaded Successfully");
-      })
-      .catch((err) => {
-        console.error("PDF Error:", err);
-        toast.error("PDF Generation Failed");
-      });
+    // Header
+    doc.setFillColor(15, 22, 41);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.setTextColor(192, 132, 252);
+    doc.text("Rick's Command Center", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(148, 163, 184);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Professional Detailing Advice | Printed: ${new Date().toLocaleDateString()}`, 14, 28);
+    
+    // Content
+    doc.setFontSize(14);
+    doc.setTextColor(192, 132, 252);
+    doc.setFont("helvetica", "bold");
+    doc.text("Strategic Recommendations", 14, 50);
+    doc.setDrawColor(192, 132, 252, 0.3);
+    doc.line(14, 52, 196, 52);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "normal");
+    const splitNotes = doc.splitTextToSize(currentTip.notes || "No custom advice set.", 182);
+    doc.text(splitNotes, 14, 62);
+    
+    doc.save(`Ricks_Advice_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Advice Exported Successfully");
   };
 
   const generateCleanPrintHtml = (title: string, content: string) => {
@@ -533,227 +526,321 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   };
 
   const handlePrint = (type: 'single-package' | 'single-chemical' | 'master-packages' | 'master-chemicals' | 'prep-interior' | 'prep-exterior') => {
-    let title = "Rick's Chemical Report";
-    let contentHtml = '';
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let currentY = 20;
+
+    // --- Helper: Premium Header ---
+    const drawHeader = (title: string, subtitle: string) => {
+      // Background Accent
+      doc.setFillColor(15, 22, 41); // Deep Navy
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      // Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.setTextColor(192, 132, 252); // Purple-400
+      doc.text(title, 14, 20);
+      
+      // Subtitle
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184); // Slate-400
+      doc.setFont("helvetica", "normal");
+      doc.text(`${subtitle} | Printed: ${new Date().toLocaleString()}`, 14, 28);
+      
+      // Logo Placeholder / Graphic element
+      doc.setDrawColor(192, 132, 252);
+      doc.setLineWidth(1);
+      doc.line(14, 32, 60, 32);
+      
+      return 50; // New Y
+    };
+
+    // --- Helper: Section Title ---
+    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [192, 132, 252]) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(text.toUpperCase(), 14, y);
+      doc.setDrawColor(color[0], color[1], color[2], 0.2);
+      doc.setLineWidth(0.5);
+      doc.line(14, y + 2, 196, y + 2);
+      return y + 10;
+    };
 
     if (type === 'single-package') {
-      const pkg = servicePackages.find(p => p.id === selectedPackageId);
+      const pkg = activePackages.find(p => p.id === selectedPackageId);
       const pkgChems = availableChemicals.filter(c => currentTip.chemicalIds.includes(c.id));
-      title = `${pkg?.name || 'Service'} Advice`;
-      contentHtml = `
-        <div class="item-container">
-          <h2>Recommendations</h2>
-          <p>${currentTip.notes || "No custom advice set."}</p>
-          <h2>Chemical Listing</h2>
-          ${pkgChems.map(c => `
-            <div class="data-row">
-              <span><span class="label">Product:</span> ${c.name}</span>
-              <span class="value">${c.brand}</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
+      
+      currentY = drawHeader("Rick's Command Center", `Service Package Advice: ${pkg?.name || 'Service'}`);
+      
+      currentY = drawSectionTitle("Professional Recommendations", currentY);
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont("helvetica", "normal");
+      const splitNotes = doc.splitTextToSize(currentTip.notes || "No custom advice set for this package.", 182);
+      doc.text(splitNotes, 14, currentY);
+      currentY += (splitNotes.length * 6) + 10;
+
+      currentY = drawSectionTitle("Designated Chemical Inventory", currentY, [56, 189, 248]); // Blue-400
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Chemical Name', 'Brand', 'Category', 'Purpose']],
+        body: pkgChems.map(c => [
+          c.name,
+          c.brand || 'N/A',
+          c.category || 'General',
+          descriptions.find(d => d.id === c.id)?.purpose || '—'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [15, 22, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 9, cellPadding: 4 },
+        columnStyles: { 0: { fontStyle: 'bold' } }
+      });
+
     } else if (type === 'single-chemical') {
       const chem = availableChemicals.find(c => c.id === selectedChemicalId);
-      title = `Chemical Reference: ${chem?.name || 'Product'}`;
-      contentHtml = `
-        <div class="item-container">
-          <p><span class="label">Brand:</span> ${chem?.brand}</p>
-          <h2>Purpose</h2>
-          <p>${currentDesc.purpose || "Professional properties."}</p>
-          <h2>Usage Instructions</h2>
-          <p>${currentDesc.instructions || "Standard application."}</p>
-          <h2>Dilution Scenarios</h2>
-          ${(currentDesc.dilutions || DEFAULT_SCENARIOS).map(dil => `
-            <div class="data-row">
-              <span>${dil.scenario}</span>
-              <span class="value">${dil.ratio}</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
+      currentY = drawHeader("Rick's Chemical Reference", `${chem?.name || 'Product'} Specification`);
+      
+      currentY = drawSectionTitle("Product Identity", currentY, [56, 189, 248]);
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Brand: ${chem?.brand || 'N/A'}`, 14, currentY);
+      currentY += 8;
+      doc.text(`Purpose: ${currentDesc.purpose || "Professional properties."}`, 14, currentY);
+      currentY += 12;
+
+      currentY = drawSectionTitle("Usage Instructions", currentY, [16, 185, 129]); // Emerald-500
+      const splitInst = doc.splitTextToSize(currentDesc.instructions || "Standard application procedures.", 182);
+      doc.text(splitInst, 14, currentY);
+      currentY += (splitInst.length * 6) + 10;
+
+      currentY = drawSectionTitle("Professional Dilution Matrix", currentY);
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Cleaning Scenario / Intensity', 'Target Dilution Ratio']],
+        body: (currentDesc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio || 'RTU']),
+        theme: 'striped',
+        headStyles: { fillColor: [192, 132, 252] },
+        styles: { fontSize: 10, cellPadding: 5 }
+      });
+
+    } else if (type === 'prep-interior' || type === 'prep-exterior' || (type as string) === 'full-prep') {
+      const isFull = (type as string) === 'full-prep';
+      const isInterior = type === 'prep-interior' || isFull;
+      const isExterior = type === 'prep-exterior' || isFull;
+      
+      currentY = drawHeader("Rick's Setup Guide", isFull ? "Complete Mobile Unit Stage List" : `${isInterior ? 'Interior' : 'Exterior'} Preparation Checklist`);
+      
+      const filterChems = (zone: 'interior' | 'exterior') => {
+        return availableChemicals
+          .filter(c => prepList.includes(c.id))
+          .filter(c => {
+            const name = c.name.toLowerCase();
+            if (zone === 'interior') {
+              return (c.category?.toLowerCase() === 'interior') || 
+                     ['perfection', 'buster', 'bomber', 'terminator', 'xpress'].some(n => name.includes(n));
+            } else {
+              if (['perfection', 'buster', 'bomber', 'terminator', 'xpress'].some(n => name.includes(n)) && !name.includes('pink perfection')) {
+                 return false;
+              }
+              return (c.category?.toLowerCase() === 'exterior') || 
+                     ['gold class', 'warrior', 'dark fury', 'formula 4', 'spray wax', 'aqua gloss', 'apc', 'pink perfection'].some(n => name.includes(n));
+            }
+          });
+      };
+
+      const zones: ('interior' | 'exterior')[] = isFull ? ['interior', 'exterior'] : [isInterior ? 'interior' : 'exterior'];
+
+      zones.forEach(zone => {
+        const zoneChems = filterChems(zone);
+        if (zoneChems.length === 0) return;
+
+        currentY = drawSectionTitle(`${zone} Setup`, currentY + 5, zone === 'interior' ? [56, 189, 248] : [245, 158, 11]);
+
+        zoneChems.forEach((chem, idx) => {
+          const desc = descriptions.find(d => d.id === chem.id);
+          if (currentY > 240) { doc.addPage(); currentY = 20; }
+          
+          doc.setFontSize(11);
+          doc.setTextColor(30, 41, 59);
+          doc.setFont("helvetica", "bold");
+          doc.text(`${idx + 1}. ${chem.name}`, 14, currentY);
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(` (${chem.brand || 'N/A'})`, 14 + doc.getTextWidth(`${idx + 1}. ${chem.name}`), currentY);
+          currentY += 4;
+
+          autoTable(doc, {
+            startY: currentY,
+            head: [['Scenario', 'Ratio', 'Ready']],
+            body: (desc?.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio || 'RTU', '[ ]']),
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: zone === 'interior' ? [56, 189, 248] : [245, 158, 11] },
+            margin: { left: 20, right: 20 }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 8;
+        });
+        currentY += 10;
+      });
+
     } else if (type === 'master-packages') {
-      title = "Master Package Advice Matrix";
-      contentHtml = servicePackages.map(pkg => {
+      currentY = drawHeader("Rick's Master Matrix", "Global Service Package Advice Catalog");
+      
+      activePackages.forEach(pkg => {
         const tip = tips.find(t => t.packageId === pkg.id);
         const pkgChems = availableChemicals.filter(c => tip?.chemicalIds.includes(c.id));
-        return `
-          <div class="item-container">
-            <h2>${pkg.name} Advice</h2>
-            <p>${tip?.notes || "No custom advice set."}</p>
-            <div style="margin-left: 20px;">
-              ${pkgChems.map(c => `<p>• <strong>${c.name}</strong> (${c.brand})</p>`).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    } else if (type === 'prep-interior' || type === 'prep-exterior') {
-      const isInterior = type === 'prep-interior';
-      title = `${isInterior ? 'Interior' : 'Exterior'} Preparation Guide`;
-      const filtered = availableChemicals
-        .filter(c => prepList.includes(c.id))
-        .filter(c => {
-          const name = c.name.toLowerCase();
-          if (isInterior) {
-            return (c.category?.toLowerCase() === 'interior') || 
-                   ['perfection', 'buster', 'bomber', 'terminator', 'xpress'].some(n => name.includes(n));
-          } else {
-            if (['perfection', 'buster', 'bomber', 'terminator', 'xpress'].some(n => name.includes(n)) && !name.includes('pink perfection')) {
-               return false;
-            }
-            return (c.category?.toLowerCase() === 'exterior') || 
-                   ['gold class', 'warrior', 'dark fury', 'formula 4', 'spray wax', 'aqua gloss', 'apc', 'pink perfection'].some(n => name.includes(n));
-          }
-        });
+        
+        currentY = drawSectionTitle(pkg.name, currentY);
+        
+        const splitNotes = doc.splitTextToSize(tip?.notes || "No advice set.", 182);
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.text(splitNotes, 14, currentY);
+        currentY += (splitNotes.length * 5) + 5;
 
-      contentHtml = filtered.map(chem => {
-        const desc = descriptions.find(d => d.id === chem.id);
-        return `
-          <div class="item-container">
-            <h2>${chem.name}</h2>
-            <div style="margin-bottom: 5px;"><span class="label">Brand:</span> ${chem.brand}</div>
-            ${(desc?.dilutions || DEFAULT_SCENARIOS).map(dil => `
-              <div class="data-row" style="padding: 5px;">
-                <span>${dil.scenario}</span>
-                <span class="value">${dil.ratio || 'N/A'}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }).join('');
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.text(`Primary Chemicals: ${pkgChems.map(c => c.name).join(', ')}`, 14, currentY);
+        currentY += 15;
+      });
+
     } else if (type === 'master-chemicals') {
-      title = "Master Chemical Reference Catalog";
-      contentHtml = availableChemicals.map(chem => {
+      currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
+      
+      availableChemicals.forEach(chem => {
         const desc = descriptions.find(d => d.id === chem.id);
-        if (!desc) return '';
-        return `
-          <div class="item-container">
-            <h2>${chem.name} (${chem.brand})</h2>
-            <p><strong>Purpose:</strong> ${desc.purpose || "Generic properties."}</p>
-            <p><strong>Usage:</strong> ${desc.instructions || "Standard application."}</p>
-            <h4>Dilution Matrix</h4>
-            ${(desc.dilutions || DEFAULT_SCENARIOS).map(dil => `
-              <div class="data-row">
-                <span>${dil.scenario}</span>
-                <span class="value">${dil.ratio}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }).join('');
+        if (!desc) return;
+        
+        if (currentY > 230) { doc.addPage(); currentY = 20; }
+        currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Purpose: ${desc.purpose || "—"}`, 14, currentY);
+        currentY += 10;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Scenario', 'Professional Ratio']],
+          body: (desc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
+          theme: 'striped',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [15, 22, 41] },
+          margin: { left: 30 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+      });
     }
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(generateCleanPrintHtml(title, contentHtml));
-      printWindow.document.close();
-      printWindow.focus();
-      // Small timeout to allow images/styles to load if any added later
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    }
+    window.open(doc.output('bloburl'), '_blank');
+    toast.success("Professional Document Generated");
   };
 
   const saveMasterCatalog = (type: 'packages' | 'chemicals') => {
-    toast.loading(`Generating Master ${type === 'packages' ? 'Package Matrix' : 'Chemical Catalog'}...`);
+    const toastId = toast.loading(`Generating Master ${type === 'packages' ? 'Package Matrix' : 'Chemical Catalog'}...`);
     
-    let contentHtml = '';
-    
-    if (type === 'packages') {
-      contentHtml = servicePackages.map(pkg => {
-        const tip = tips.find(t => t.packageId === pkg.id);
-        const pkgChems = availableChemicals.filter(c => tip?.chemicalIds.includes(c.id));
-        return `
-          <div style="margin-bottom: 50px; break-inside: avoid; border: 1px solid #2d3748; background: #1a2235; padding: 25px; border-radius: 12px;">
-            <h2 style="color: #c084fc; font-style: italic; margin-bottom: 15px; font-size: 24px; text-transform: uppercase;">${pkg.name} Advice</h2>
-            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
-              <p style="color: white; font-size: 14px; white-space: pre-wrap;">${tip?.notes || "No custom advice set for this package."}</p>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-              ${pkgChems.map(c => `
-                <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                  <div style="font-weight: bold; color: white; font-size: 13px;">${c.name}</div>
-                  <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">${c.brand}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    } else {
-      contentHtml = availableChemicals.map(chem => {
-        const desc = descriptions.find(d => d.id === chem.id);
-        if (!desc) return '';
-        return `
-          <div style="margin-bottom: 60px; break-inside: avoid; border: 1px solid #2d3748; background: #1a2235; padding: 30px; border-radius: 16px;">
-            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px;">
-              ${chem.primary_image_url ? `<img src="${chem.primary_image_url}" style="width: 70px; height: 70px; border-radius: 12px; object-fit: cover; border: 2px solid #2d3748;" />` : ''}
-              <div>
-                <h2 style="color: #38bdf8; font-style: italic; font-weight: 900; margin: 0; font-size: 28px; text-transform: uppercase;">${chem.name}</h2>
-                <div style="color: #94a3b8; font-weight: bold; letter-spacing: 1.5px; text-transform: uppercase; font-size: 11px;">${chem.brand} Master Reference</div>
-              </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 25px;">
-              <div>
-                <h4 style="color: #34d399; text-transform: uppercase; font-size: 13px; border-bottom: 1px solid rgba(52,211,153,0.2); padding-bottom: 6px; margin-bottom: 10px;">Purpose & Instructions</h4>
-                <p style="color: white; font-size: 14px; margin-bottom: 15px; opacity: 0.9;"><strong>Purpose:</strong> ${desc.purpose || "Generic properties."}</p>
-                <p style="color: white; font-size: 14px; opacity: 0.9;"><strong>Usage:</strong> ${desc.instructions || "Standard application."}</p>
-              </div>
-              <div>
-                <h4 style="color: #c084fc; text-transform: uppercase; font-size: 13px; border-bottom: 1px solid rgba(192,132,252,0.2); padding-bottom: 6px; margin-bottom: 12px;">Dilution Scenarios</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                  ${(desc.dilutions || DEFAULT_SCENARIOS).map(dil => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                      <span style="font-size: 11px; color: #94a3b8;">${dil.scenario}</span>
-                      <span style="background: rgba(192,132,252,0.2); color: #c084fc; padding: 3px 8px; border-radius: 4px; font-weight: 900; font-size: 11px;">${dil.ratio}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let currentY = 20;
 
-    const wrapper = document.createElement('div');
-    wrapper.style.background = '#0c1220';
-    wrapper.style.color = 'white';
-    wrapper.style.padding = '40px';
-    wrapper.style.fontFamily = 'sans-serif';
-    
-    wrapper.innerHTML = `
-      <div style="border-bottom: 3px solid #2d3748; margin-bottom: 40px; padding-bottom: 25px;">
-        <h1 style="color: #c084fc; font-size: 32px; font-style: italic; font-weight: 900; margin: 0; text-transform: uppercase;">Rick's Master ${type === 'packages' ? 'Matrix' : 'Catalog'}</h1>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-          <p style="color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 2px;">Professional Auto Detailing Reference</p>
-          <p style="color: #94a3b8; font-size: 10px;">Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
-        </div>
-      </div>
-      <div>${contentHtml}</div>
-    `;
-
-    const opt = {
-      margin: 15,
-      filename: `Ricks_${type === 'packages' ? 'Package_Matrix' : 'Chemical_Catalog'}_${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg' as const, quality: 1 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0c1220' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    // --- Helper: Premium Header ---
+    const drawHeader = (title: string, subtitle: string) => {
+      doc.setFillColor(15, 22, 41);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(28);
+      doc.setTextColor(192, 132, 252);
+      doc.text(title, 14, 22);
+      doc.setFontSize(10);
+      doc.setTextColor(148, 163, 184);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${subtitle} | Master Reference File`, 14, 32);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 38);
+      return 55;
     };
 
-    html2pdf().set(opt).from(wrapper).save()
-      .then(() => {
-        toast.dismiss();
-        toast.success("Master Catalog Downloaded Successfully");
-      })
-      .catch((err) => {
-        console.error("PDF Error:", err);
-        toast.dismiss();
-        toast.error("Generation Failed");
+    // --- Helper: Section Title ---
+    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [192, 132, 252]) => {
+      if (y > 260) { doc.addPage(); y = 20; }
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(text.toUpperCase(), 14, y);
+      doc.setDrawColor(color[0], color[1], color[2], 0.3);
+      doc.setLineWidth(0.8);
+      doc.line(14, y + 2, 196, y + 2);
+      return y + 12;
+    };
+
+    if (type === 'packages') {
+      currentY = drawHeader("Rick's Master Matrix", "Global Service Package Advice Catalog");
+      activePackages.forEach(pkg => {
+        const tip = tips.find(t => t.packageId === pkg.id);
+        const pkgChems = availableChemicals.filter(c => tip?.chemicalIds.includes(c.id));
+        
+        currentY = drawSectionTitle(pkg.name, currentY);
+        
+        // Advice Text
+        doc.setFontSize(11);
+        doc.setTextColor(30, 41, 59);
+        doc.setFont("helvetica", "normal");
+        const splitNotes = doc.splitTextToSize(tip?.notes || "No custom advice set for this package.", 182);
+        doc.text(splitNotes, 14, currentY);
+        currentY += (splitNotes.length * 6) + 8;
+
+        // Chemicals Table
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Chemical Product', 'Brand', 'Category']],
+          body: pkgChems.map(c => [c.name, c.brand || 'N/A', c.category || 'General']),
+          theme: 'striped',
+          headStyles: { fillColor: [15, 22, 41] },
+          styles: { fontSize: 9 },
+          margin: { left: 20 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 20;
       });
+    } else {
+      currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
+      availableChemicals.forEach(chem => {
+        const desc = descriptions.find(d => d.id === chem.id);
+        if (!desc) return;
+        
+        currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont("helvetica", "bold");
+        doc.text("PURPOSE:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        doc.text(desc.purpose || "—", 40, currentY);
+        currentY += 8;
+
+        doc.setFont("helvetica", "bold");
+        doc.text("USAGE:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        const splitInst = doc.splitTextToSize(desc.instructions || "Standard application procedures.", 156);
+        doc.text(splitInst, 40, currentY);
+        currentY += (splitInst.length * 5) + 8;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Scenario', 'Professional Ratio']],
+          body: (desc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
+          theme: 'grid',
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [15, 22, 41] },
+          margin: { left: 40 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+      });
+    }
+
+    doc.save(`Ricks_${type === 'packages' ? 'Package_Matrix' : 'Chemical_Catalog'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Master Catalog Saved Successfully", { id: toastId });
   };
 
   const isAllSelected = filteredChemicals.length > 0 && filteredChemicals.every(c => currentTip.chemicalIds.includes(c.id));
@@ -1176,7 +1263,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                        <button onClick={() => handlePrint('master-packages')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="Print FULL Setup Chart">
                           <Printer className="w-4 h-4 text-emerald-400" />
                        </button>
-                       <button onClick={() => handleSavePDF('full-job-prep')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="SAVE FULL PDF File">
+                       <button onClick={() => handlePrint('full-prep' as any)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 group" title="SAVE FULL PDF File">
                           <span className="text-[9px] font-black uppercase text-sky-400 hidden group-hover:inline">Save PDF</span>
                           <FileText className="w-4 h-4 text-sky-400" />
                        </button>
@@ -1203,7 +1290,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   </div>
                 </div>
               </div>
-
+ 
               <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-[#0f1629]/30 custom-scrollbar" id="full-job-prep">
                  <div className="max-w-5xl mx-auto space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
@@ -1218,7 +1305,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                 <button onClick={() => handlePrint('prep-interior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Print Interior Only">
                                    <Printer className="w-4 h-4 text-emerald-400" />
                                 </button>
-                                <button onClick={() => handleSavePDF('print-interior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Save Interior PDF">
+                                <button onClick={() => handlePrint('prep-interior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Save Interior PDF">
                                    <FileText className="w-4 h-4 text-sky-400" />
                                 </button>
                              </div>
@@ -1271,7 +1358,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                })}
                           </div>
                        </div>
-
+ 
                        {/* Exterior Column */}
                        <div className="space-y-4" id="print-exterior">
                           <div className="flex items-center gap-3 border-b border-amber-500/30 pb-3">
@@ -1283,7 +1370,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                 <button onClick={() => handlePrint('prep-exterior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Print Exterior Only">
                                    <Printer className="w-4 h-4 text-emerald-400" />
                                 </button>
-                                <button onClick={() => handleSavePDF('print-exterior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Save Exterior PDF">
+                                <button onClick={() => handlePrint('prep-exterior')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors shadow-inner border border-white/5" title="Save Exterior PDF">
                                    <FileText className="w-4 h-4 text-sky-400" />
                                 </button>
                              </div>

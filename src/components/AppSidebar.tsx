@@ -351,11 +351,9 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     localStorage.setItem('sidebar_groups', JSON.stringify(next));
   };
 
-  // Auto-expand groups based on active route
+  // Auto-expand groups based on active route (Exclusive)
   useEffect(() => {
-    const updatedGroups = { ...openGroups };
-    let changed = false;
-
+    let activeGroupTitle = "";
     MENU_GROUPS.forEach(group => {
       const match = group.items.find(item => {
         const currentFull = location.pathname + location.search;
@@ -363,16 +361,17 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         return targetUrl === currentFull ||
           (!targetUrl.includes('?') && location.pathname === targetUrl);
       });
-
-      if (match && !updatedGroups[group.title]) {
-        updatedGroups[group.title] = true;
-        changed = true;
-      }
+      if (match) activeGroupTitle = group.title;
     });
 
-    if (changed) {
-      setOpenGroups(updatedGroups);
-      localStorage.setItem('sidebar_groups', JSON.stringify(updatedGroups));
+    // If we are on a page that belongs to a group, ensure only that group is open.
+    // If we are on a top-level page (no activeGroupTitle), close all groups to keep it clean.
+    const next: Record<string, boolean> = activeGroupTitle ? { [activeGroupTitle]: true } : {};
+    
+    // Only update if it actually changed to avoid loop
+    if (JSON.stringify(next) !== JSON.stringify(openGroups)) {
+      setOpenGroups(next);
+      localStorage.setItem('sidebar_groups', JSON.stringify(next));
     }
   }, [location.pathname, location.search]);
 
@@ -701,7 +700,9 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                     key={group.title}
                     open={isOpen}
                     onOpenChange={(v) => {
-                      const next = { ...openGroups, [group.title]: v };
+                      // Exclusive toggle: if opening (v=true), close all others.
+                      // If closing (v=false), just close it.
+                      const next = v ? { [group.title]: true } : {};
                       setOpenGroups(next);
                       localStorage.setItem('sidebar_groups', JSON.stringify(next));
                     }}
@@ -716,10 +717,6 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                             "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex items-center w-full",
                             isGroupActive ? "text-[#2563eb] font-black" : "text-zinc-400"
                           )}
-                          onClick={() => {
-                            const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                            navigate(`/section/${sectionId}`);
-                          }}
                         >
                           <group.icon className={cn("h-4 w-4 mr-2", isGroupActive ? "text-[#2563eb]" : (group.iconColor || ""))} />
                           {(open || openMobile) && (
