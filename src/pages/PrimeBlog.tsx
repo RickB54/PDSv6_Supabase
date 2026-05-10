@@ -114,11 +114,11 @@ export default function PrimeBlog() {
             // 2. Customers: See (Verified & Published) OR (Their own posts).
             // 3. Admin/Staff: See everything.
             if (!isAuth) {
-                blogItems = blogItems.filter(item => item.is_verified && item.is_published);
+                blogItems = blogItems.filter(item => item.is_published);
             } else if (!isAdmin && !isEmployee) {
                 // It's a customer
                 blogItems = blogItems.filter(item =>
-                    (item.is_verified && item.is_published) || (item.created_by === user?.email)
+                    item.is_published || (item.created_by === user?.email)
                 );
             }
 
@@ -509,27 +509,6 @@ export default function PrimeBlog() {
             <Navbar />
 
             <main className="flex-1">
-                {/* Admin Needs Review Banner */}
-                {isActualAdmin && items.some(i => !i.is_verified) && (
-                    <div className="bg-red-600/10 border-b border-red-500/20 py-3 animate-in slide-in-from-top duration-500">
-                        <div className="container mx-auto px-4 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <ShieldCheck className="w-5 h-5 text-red-500 animate-pulse" />
-                                <p className="text-xs font-black uppercase tracking-widest text-red-400">
-                                    Attention: {(items || []).filter(i => !i.is_verified).length} blog posts are waiting for your verification.
-                                </p>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setActiveCategory('NEEDS REVIEW')}
-                                className="text-[10px] font-black uppercase tracking-tighter hover:bg-red-500 hover:text-white rounded-xl h-8 px-4"
-                            >
-                                REVIEW NOW
-                            </Button>
-                        </div>
-                    </div>
-                )}
 
                 {/* Glossy Header */}
                 <div className="relative overflow-hidden bg-zinc-950 pt-24 pb-16 border-b border-zinc-800/50">
@@ -611,15 +590,7 @@ export default function PrimeBlog() {
                         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto">
                             <TabsList className="bg-transparent h-14 p-1 gap-1">
                                 <TabsTrigger value="All" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">ALL POSTS</TabsTrigger>
-                                {isActualAdmin && items.some(i => !i.is_verified) && (
-                                    <TabsTrigger value="NEEDS REVIEW" className="rounded-2xl px-6 data-[state=active]:bg-red-600 data-[state=active]:text-white transition-all text-red-400 font-bold flex items-center gap-2">
-                                        <ShieldCheck className="w-4 h-4" />
-                                        NEEDS REVIEW
-                                        <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 h-4 ml-1">
-                                            {items.filter(i => !i.is_verified).length}
-                                        </Badge>
-                                    </TabsTrigger>
-                                )}
+                                {/* NEEDS REVIEW Tab Removed */}
                                 <TabsTrigger value="General" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">UPDATES</TabsTrigger>
                                 {customCategories.map(cat => (
                                     <TabsTrigger key={cat || 'default'} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
@@ -702,7 +673,7 @@ export default function PrimeBlog() {
                                         {/* Verification Badge */}
                                         {isAdmin && (
                                             <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-                                                {!item.is_verified && <Badge className="bg-red-500/20 text-red-500 border-red-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><EyeOff className="w-3 h-3 mr-1" /> UNVERIFIED</Badge>}
+                                                {/* Verification Badges Removed */}
                                                 {!item.is_published && <Badge className="bg-amber-500/20 text-amber-500 border-amber-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><Lock className="w-3 h-3 mr-1" /> DRAFT</Badge>}
                                                 {item.is_pinned && <Badge className="bg-indigo-500/20 text-indigo-400 border-indigo-500/30 backdrop-blur-md uppercase tracking-tighter text-[10px]"><Pin className="w-3 h-3 mr-1 fill-indigo-400" /> PINNED</Badge>}
                                             </div>

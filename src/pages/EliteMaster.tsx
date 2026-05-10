@@ -126,18 +126,30 @@ function SortablePostCard({
                 </div>
 
                 {/* THUMBNAIL (1.5x larger -> 75px) */}
-                <div style={{ width: '75px', height: '75px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#020202', border: '1px solid #111', flexShrink: 0 }}>
+                <div style={{ width: '75px', height: '75px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#020202', border: '1px solid #111', flexShrink: 0, position: 'relative' }}>
                     {(item.thumbnail_url || item.resource_url) ? (
-                        <img 
-                            src={item.thumbnail_url || item.resource_url} 
-                            alt="Post" 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                            onError={(e) => {
-                                // Fallback if image fails to load
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;color:#111"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
-                            }}
-                        />
+                        item.type === 'video' ? (
+                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                <video 
+                                    src={item.resource_url} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                />
+                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                                    <Play size={16} fill="white" color="white" />
+                                </div>
+                            </div>
+                        ) : (
+                            <img 
+                                src={item.thumbnail_url || item.resource_url} 
+                                alt="Post" 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={(e) => {
+                                    // Fallback if image fails to load
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;alignItems:center;justifyContent:center;color:#111"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                                }}
+                            />
+                        )
                     ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#111' }}>
                             <FileText size={24} />
