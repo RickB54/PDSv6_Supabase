@@ -66,7 +66,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     return cached?.meta?.businessStatus || null;
   });
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const isEmployee = user?.role === 'employee';
   const isCustomer = user?.role === 'customer';
 
@@ -735,23 +735,23 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
                                         <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
                                         {item.helpTopicId && (
-                                          <button
-                                            type="button"
+                                          <div
+                                            role="button"
                                             onClick={(e) => {
                                               e.preventDefault();
                                               e.stopPropagation();
                                               window.dispatchEvent(new CustomEvent('open-help', { 
                                                 detail: { 
                                                   topicId: item.helpTopicId,
-                                                  role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                                  role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
                                                 } 
                                               }));
                                             }}
-                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
+                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5 cursor-pointer"
                                             title={`Help for ${item.title}`}
                                           >
                                             <HelpCircle className="w-3 h-3" />
-                                          </button>
+                                          </div>
                                         )}
                                       </div>
                                       {item.badge !== undefined && item.badge > 0 && (
@@ -774,23 +774,23 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
                                         <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
                                         {item.helpTopicId && (
-                                          <button
-                                            type="button"
+                                          <div
+                                            role="button"
                                             onClick={(e) => {
                                               e.preventDefault();
                                               e.stopPropagation();
                                               window.dispatchEvent(new CustomEvent('open-help', { 
                                                 detail: { 
                                                   topicId: item.helpTopicId,
-                                                  role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                                  role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
                                                 } 
                                               }));
                                             }}
-                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5"
+                                            className="ml-auto opacity-0 group-hover:opacity-100 hover:text-emerald-400 transition-all p-0.5 cursor-pointer"
                                             title={`Help for ${item.title}`}
                                           >
                                             <HelpCircle className="w-3 h-3" />
-                                          </button>
+                                          </div>
                                         )}
                                       </div>
                                       {isActive && !item.helpTopicId && <div className="ml-auto w-1 h-1 bg-blue-500 rounded-full shadow-[0_0_8px_#3b82f6]" />}

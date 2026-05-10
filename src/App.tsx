@@ -291,7 +291,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
     );
   }
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const isPerspectiveMode = isAdmin && (
      localStorage.getItem('view_as_mode') === 'customer' ||
      localStorage.getItem('view_as_mode') === 'employee' ||
