@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 export const exportCustomerHistoryPDF = (customer: any, bookings: any[], preview = false) => {
-  const doc = jsPDF();
+  const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
   // Header
@@ -36,7 +36,7 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[], preview
     body: profileData,
     theme: 'plain',
     styles: { cellPadding: 1, fontSize: 10 },
-    columnStyles: { 0: { fontStyle: 'bold', width: 40 } }
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } }
   });
 
   // Admin Directives / Notes
@@ -88,7 +88,7 @@ export const exportCustomerHistoryPDF = (customer: any, bookings: any[], preview
     startY: Math.max(finalY2 + 35, 105),
     head: [['Date/Time', 'Category', 'Action/Item', 'Technical Details', 'Notes']],
     body: tableBody,
-    headStyles: { fillStyle: 'F', fillColor: [59, 130, 246] }, // Blue-500
+    headStyles: { fillColor: [59, 130, 246] }, // Blue-500
     styles: { fontSize: 8, overflow: 'linebreak' },
     columnStyles: {
       0: { cellWidth: 25 },

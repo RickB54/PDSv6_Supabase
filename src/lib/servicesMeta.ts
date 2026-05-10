@@ -96,6 +96,7 @@ export interface CustomServicePackageDef {
 export interface CustomAddOnDef {
   id: string;
   name: string;
+  basePrice?: number;
   pricing: { compact: number; midsize: number; truck: number; luxury: number };
 }
 

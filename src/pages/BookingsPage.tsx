@@ -2890,8 +2890,7 @@ export default function BookingsPage() {
                                       </Badge>
                                     </div>
                                   </div>
-                                  </div>
-                              </div>
+                                </div>
                               <div className="flex items-center gap-2">
                                 <Button 
                                   variant="ghost" 
@@ -3241,8 +3240,7 @@ export default function BookingsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
       </div>
       <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
         <AlertDialogContent className="bg-zinc-950 border-zinc-800 max-w-[500px]">
