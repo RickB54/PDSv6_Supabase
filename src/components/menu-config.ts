@@ -49,6 +49,7 @@ export type MenuItem = {
 export type MenuGroup = {
     title: string;
     icon: any;
+    iconColor?: string;
     items: MenuItem[];
 };
 
