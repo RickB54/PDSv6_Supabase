@@ -95,9 +95,19 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         }
       }
 
+      // CRITICAL: Merge remote items with any local items that haven't synced yet
+      // This prevents "disappearing" bookings during the split-second between a local save and a remote fetch.
+      const localOptimistic = get().items.filter(li => 
+        !remoteItems.some(ri => ri.id === li.id) && 
+        li.createdAt && 
+        (Date.now() - new Date(li.createdAt).getTime() < 10000) // Keep for 10 seconds
+      );
+
+      const mergedItems = [...remoteItems, ...localOptimistic];
+
       set({
-        items: remoteItems,
-        pendingCount: remoteItems.filter((i: Booking) => i.status === "pending").length
+        items: mergedItems,
+        pendingCount: mergedItems.filter((i: Booking) => i.status === "pending").length
       });
     } catch (e) {
       console.error("❌ Booking sync failed", e);

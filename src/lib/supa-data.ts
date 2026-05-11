@@ -2040,7 +2040,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
             vehicle_id: (booking.vehicleId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicleId)) ? booking.vehicleId : (booking.vehicle_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicle_id)) ? booking.vehicle_id : null,
             scheduled_at: booking.date || booking.scheduled_at,
             date: booking.date || booking.scheduled_at,
-            assigned_employee_id: (booking.assignedEmployeeId && booking.assignedEmployeeId !== 'Unassigned') || (booking.assigned_employee_id && booking.assigned_employee_id !== 'Unassigned') || (booking.assignedEmployee && booking.assignedEmployee !== 'Unassigned') || null,
+            customer_name: booking.customer || booking.customer_name,
             service_package: booking.title || booking.service_package,
             status: booking.status || 'confirmed',
             notes: booking.notes,
@@ -2048,7 +2048,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
             add_ons: Array.isArray(booking.addons) ? booking.addons : [],
             booking_vehicle: {
               ...(booking.vehicle_info || booking.booking_vehicle || {}),
-              customer_name: booking.customer || booking.customer_name, // fallback for schema safety
+              customer_name: booking.customer || booking.customer_name,
               make: booking.vehicleMake || booking.make,
               model: booking.vehicleModel || booking.model,
               year: booking.vehicleYear || booking.year,
@@ -2061,6 +2061,15 @@ export const upsertSupabaseBooking = async (booking: any) => {
             source_origin: booking.source || booking.source_origin || 'Manual Entry',
             created_at: booking.createdAt || new Date().toISOString()
         };
+
+        // Handle assigned_employee_id with UUID validation to prevent DB crashes
+        const empId = booking.assignedEmployeeId || booking.assigned_employee_id || booking.assignedEmployee;
+        if (empId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(empId)) {
+            payload.assigned_employee_id = empId;
+        } else if (empId && empId !== 'Unassigned') {
+            // If it's a name instead of an ID, we append it to notes to preserve the data without crashing the UUID column
+            payload.notes = (payload.notes ? payload.notes + "\n" : "") + "Assigned to: " + empId;
+        }
 
         if (booking.id) {
             payload.id = booking.id;

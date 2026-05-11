@@ -1026,9 +1026,13 @@ export default function BookingsPage() {
           await auditEmployeeAction('update', 'Booking', resultingBooking);
         }
       } else {
-        // Create
         const newBooking: Booking = {
-          id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `b-${Date.now()}`,
+          id: (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+              }),
           customer: formData.customer,
           customerId: finalCustomerId,
           title: formData.service,
