@@ -163,8 +163,13 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     if (isSupabaseEnabled()) {
       try {
         await upsertSupabaseBooking(record);
-      } catch (err) {
-        console.error("Supabase persistent sync failed (schema mismatch?), proceeding with local sync:", err);
+      } catch (err: any) {
+        console.error("Supabase persistent save failed:", err);
+        // PERSISTENT ERROR TOAST
+        toast.error(`Database Save Failed: ${err.message || 'Unknown error'}. Booking is only saved locally.`, {
+          duration: 10000,
+          id: `db-error-${record.id}`
+        });
       }
     }
 

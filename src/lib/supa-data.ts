@@ -2040,7 +2040,6 @@ export const upsertSupabaseBooking = async (booking: any) => {
             vehicle_id: (booking.vehicleId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicleId)) ? booking.vehicleId : (booking.vehicle_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.vehicle_id)) ? booking.vehicle_id : null,
             scheduled_at: booking.date || booking.scheduled_at,
             date: booking.date || booking.scheduled_at,
-            customer_name: booking.customer || booking.customer_name,
             service_package: booking.title || booking.service_package,
             status: booking.status || 'confirmed',
             notes: booking.notes,
