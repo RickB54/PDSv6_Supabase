@@ -9,6 +9,49 @@ export type HelpTopic = {
   relatedTopicIds?: string[];
 };
 
+export const operationsFlowTopic: HelpTopic = {
+  id: 'operations-flow',
+  title: 'Master Operations Flow',
+  summary: 'The complete start-to-finish workflow for professional detailing operations and customer lifecycles.',
+  content: [
+    '**The Prime Methodology**: This system is built on a **CRM-First Architecture**. To ensure your shop runs like a professional machine, every action should follow the "Customer Master Record" logic.',
+    '',
+    '🚀 **PHASE 1: LEAD CAPTURE (THE PROSPECT)**',
+    '• **When**: Anytime a potential client inquiries but hasn\'t booked.',
+    '• **Action**: Create a record in the **Prospects** page.',
+    '• **Why**: Keeps your active client list clean and lets you track follow-up conversion rates.',
+    '',
+    '📅 **PHASE 2: THE COMMITMENT (THE BOOKING)**',
+    '• **Order of Operations**: Search CRM → Select/Add Customer → Assign Vehicle from Garage → Select Package.',
+    '• **Automation**: Once saved, the system auto-calculates pricing based on **Vehicle Class + Package**. Never manually guess a price again.',
+    '',
+    '🧰 **PHASE 3: PREPARATION (RIG SETUP)**',
+    '• **When**: Day of service.',
+    '• **Tool**: Open the **Prep Summary** PDF in the checklist. It lists every specific chemical and tool needed for that specific job so you gather everything at once.',
+    '',
+    '⏱️ **PHASE 4: EXECUTION (THE SERVICE)**',
+    '• **Action**: Start the **Job Timer** in the Service Checklist.',
+    '• **Logic**: Every checked step creates a permanent audit trail. Use the **Digital Inspection** tool to document pre-existing damage before touching the car.',
+    '',
+    '💳 **PHASE 5: COMPLETION & BILLING**',
+    '• **Automation**: Clicking "Finish & Complete Job" stops the timer and generates a **Pending Invoice** automatically.',
+    '• **Payment**: Collect payment via the mobile-ready interface. Mark as **Paid** to move the revenue into your Ledger.',
+    '',
+    '🔄 **PHASE 6: THE CYCLE (RETENTION)**',
+    '• **When**: 4-8 weeks later.',
+    '• **Tool**: The **Follow-Up Center** alerts you that the client is "Due for Service" based on their maintenance cycle.',
+    '• **The Goal**: Turn a one-time booking into a lifetime maintenance client.',
+    '',
+    '⚠️ **SYSTEM LOGIC & BEST PRACTICES**',
+    '• **Master Records**: The **Customer** is the owner. **Bookings** are events. NEVER delete a Customer with history; always **Archive** instead.',
+    '• **Duplicates**: Search before you save! Duplicates are the #1 cause of lost service history.',
+    '• **Invoices**: Never delete a financial record. If an error occurs, "Cancel" or "Void" it to maintain a clean tax trail.',
+    '',
+    '💡 **Pro Tip**: The smartest workflow is to ALWAYS start with a search in the **Bookings** or **Customers** page. If they aren\'t found, that is your trigger to create a new profile.',
+  ],
+  section: 'system',
+};
+
 export const demoModeHelpTopic: HelpTopic = {
   id: 'interactive-training-demo',
   title: 'Guided Training & Demo Mode',
@@ -329,6 +372,7 @@ export const prospectVsCustomerTopic: HelpTopic = {
 
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 export const adminMenuTopics: HelpTopic[] = [
+  operationsFlowTopic,
   netProfitExplanationTopic,
   demoModeHelpTopic,
   masterSourceOfTruthItem,
