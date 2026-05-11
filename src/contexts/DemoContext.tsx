@@ -50,7 +50,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     "team-chat", "follow-up-center", "discount-coupons", "blog",
     "blog-reorder", "user-settings", "vehicle-types", "mobile-setup",
     "detailing-vendors", "active-jobs", "job-history", "payments-cart",
-    "my-invoices", "personal-notes", "bookings-analytics", "file-manager"
+        "my-invoices", "personal-notes", "bookings-analytics", "file-manager", "letter-maker"
   ];
 
   const [config, setConfig] = useState<DemoConfig>({

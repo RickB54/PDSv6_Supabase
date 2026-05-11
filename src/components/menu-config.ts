@@ -27,9 +27,10 @@ import {
     Beaker,
     Printer,
     Bell,
-    Tag,
+        Tag,
     FlaskConical,
-    Zap
+    Zap,
+    Mail
 } from "lucide-react";
 
 export type MenuItem = {
