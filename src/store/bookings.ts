@@ -97,11 +97,20 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
 
       // CRITICAL: Merge remote items with any local items that haven't synced yet
       // This prevents "disappearing" bookings during the split-second between a local save and a remote fetch.
-      const localOptimistic = get().items.filter(li => 
-        !remoteItems.some(ri => ri.id === li.id) && 
-        li.createdAt && 
-        (Date.now() - new Date(li.createdAt).getTime() < 10000) // Keep for 10 seconds
-      );
+      const localOptimistic = get().items.filter(li => {
+        const isRemote = remoteItems.some(ri => ri.id === li.id);
+        if (isRemote) return false;
+
+        // Protect local items created in the last 30 seconds from being overwritten by stale DB fetch
+        if (!li.createdAt) return false;
+        const age = Date.now() - new Date(li.createdAt).getTime();
+        const isFresh = age < 30000; // 30 second protection window
+        
+        if (isFresh) {
+          console.log(`[Stability] Preserving optimistic record: ${li.customer} (${Math.round(age/1000)}s old)`);
+        }
+        return isFresh;
+      });
 
       const mergedItems = [...remoteItems, ...localOptimistic];
 
@@ -109,6 +118,7 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
         items: mergedItems,
         pendingCount: mergedItems.filter((i: Booking) => i.status === "pending").length
       });
+      console.log(`[Stability] Sync complete. Remote: ${remoteItems.length}, Preserved Local: ${localOptimistic.length}`);
     } catch (e) {
       console.error("❌ Booking sync failed", e);
       // Ensure we have current local data if cloud fails
@@ -129,9 +139,11 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
           console.log('🔥 Realtime Booking Change:', payload.eventType, payload.new);
 
           const refresh = get().refresh;
-          // For now, simpler to just re-fetch to ensure all joins (customer, vehicle) are correct
-          // But we could also manually patch if we wanted to be even faster.
-          await refresh(true);
+          // Slight delay to allow for DB consistency and replication
+          setTimeout(async () => {
+            console.log('[Stability] Realtime update triggered refresh');
+            await refresh(true);
+          }, 500);
         }
       )
       .subscribe();

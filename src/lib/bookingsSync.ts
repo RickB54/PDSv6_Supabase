@@ -68,13 +68,14 @@ export async function onBookingCreated(booking: Booking) {
     const d = new Date(booking.date);
     const year = d.getFullYear();
     const monthName = d.toLocaleString(undefined, { month: 'long' });
-    await uploadToFileManager(pdf, path, booking, { service: booking.title });
+    const path = `Bookings ${year}/${monthName}/`;
+    await uploadToFileManager(pdf, path, booking, { service: booking.title, silent: true });
     
-    // Push an ESSENTIAL admin alert for the new booking
+    // Push exactly ONE descriptive admin alert for the new booking
     pushAdminAlert(
       'booking_created',
       `NEW BOOKING: ${booking.customer} - ${booking.title}`,
-      'Customer Web',
+      'Staff',
       { id: booking.id, recordId: booking.id, bookingId: booking.id, price: booking.price }
     );
   } catch (e) {

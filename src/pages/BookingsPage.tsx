@@ -26,7 +26,7 @@ import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getS
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
-import { servicePackages, addOns } from "@/lib/services";
+import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
 import { getUnifiedCustomers } from "@/lib/customers";
@@ -56,6 +56,18 @@ const getWeekDays = (date: Date) => {
     d.setDate(d.getDate() + i);
     return d;
   });
+};
+
+const mapToServiceVehicleType = (type: string = ""): VehicleType => {
+  const t = type.toLowerCase();
+  if (t.includes('compact') || t.includes('sedan')) return 'compact';
+  if (t.includes('mid') || t.includes('suv')) {
+    if (t.includes('large') || t.includes('truck') || t.includes('van')) return 'truck';
+    return 'midsize';
+  }
+  if (t.includes('truck') || t.includes('van') || t.includes('large')) return 'truck';
+  if (t.includes('luxury')) return 'luxury';
+  return 'compact'; // default
 };
 
 export default function BookingsPage() {
@@ -318,6 +330,25 @@ export default function BookingsPage() {
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
+
+  const liveTotal = useMemo(() => {
+    let total = 0;
+    const vType = mapToServiceVehicleType(formData.vehicle);
+    const pkg = allServices.find(s => s.name === formData.service);
+    if (pkg) {
+      total = getServicePrice(pkg.id, vType);
+    }
+    
+    if (formData.addons && formData.addons.length > 0) {
+      formData.addons.forEach(addonName => {
+        const addon = allAddons.find(a => a.name === addonName);
+        if (addon) {
+          total += getAddOnPrice(addon.id, vType);
+        }
+      });
+    }
+    return total;
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons]);
 
   const handleArchiveToggle = (booking: Booking) => {
     update(booking.id, { isArchived: !booking.isArchived });
@@ -990,6 +1021,23 @@ export default function BookingsPage() {
       const endDate = new Date(dateBase);
       endDate.setHours(isNaN(endHours) ? 17 : endHours, isNaN(endMinutes) ? 0 : endMinutes, 0, 0);
 
+      // 3. Final Price Verification (ensure latest vehicle type is used)
+      let calculatedPrice = 0;
+      const finalVType = mapToServiceVehicleType(formData.vehicle);
+      const pkg = allServices.find(s => s.name === formData.service);
+      if (pkg) {
+        calculatedPrice = getServicePrice(pkg.id, finalVType);
+      }
+      
+      if (formData.addons && formData.addons.length > 0) {
+        formData.addons.forEach(addonName => {
+          const addon = allAddons.find(a => a.name === addonName);
+          if (addon) {
+            calculatedPrice += getAddOnPrice(addon.id, finalVType);
+          }
+        });
+      }
+
       let resultingBooking: any;
 
       if (selectedBooking) {
@@ -1014,7 +1062,8 @@ export default function BookingsPage() {
           vehicleId: formData.vehicleId,
           customerId: finalCustomerId,
           customerEmail: formData.email,
-          customerPhone: formData.phone
+          customerPhone: formData.phone,
+          price: calculatedPrice
         };
         
         await update(selectedBooking.id, updates);
@@ -1053,6 +1102,7 @@ export default function BookingsPage() {
           vehicleId: formData.vehicleId,
           customerEmail: formData.email,
           customerPhone: formData.phone,
+          price: calculatedPrice,
           createdAt: new Date().toISOString()
         };
         
@@ -1085,12 +1135,15 @@ export default function BookingsPage() {
         }
       }
 
-      // Generate and Save PDF automatically
+      // Generate and Save PDF automatically via the booking store logic (handled by add/update)
+      // Removing explicit call here to prevent duplicate alerts
+      /*
       try {
         handleSavePDF();
       } catch (pdfErr) {
         console.error("PDF generation failed:", pdfErr);
       }
+      */
 
       // Final cleanup and close
       // Final cleanup and close
@@ -1900,10 +1953,13 @@ export default function BookingsPage() {
                       )}
                     </div>
                     <div className="text-right">
-                      <div className="text-emerald-400 font-bold text-lg">
-                        {selectedBooking?.price ? `$${selectedBooking.price.toFixed(2)}` : 'Est.'}
+                      <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
+                        ${liveTotal.toFixed(2)}
                       </div>
-                      <div className="text-zinc-500 text-xs">
+                      <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">
+                        Live Estimate
+                      </div>
+                      <div className="text-zinc-500 text-[10px] mt-1">
                         {selectedDate ? formatETDate(selectedDate) : "No Date"}
                         {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
                       </div>
@@ -2155,7 +2211,11 @@ export default function BookingsPage() {
                                   />
                                   <div className="flex flex-col">
                                     <span className="text-xs font-bold">{addon.name}</span>
-                                    {addon.basePrice && <span className="text-[9px] text-zinc-600 font-black">+${addon.basePrice}</span>}
+                                    {(() => {
+                                      const vType = mapToServiceVehicleType(formData.vehicle);
+                                      const price = getAddOnPrice(addon.id, vType);
+                                      return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price > 0 ? `$${price}` : ''}</span> : null;
+                                    })()}
                                   </div>
                                 </CommandItem>
                               ))}
