@@ -79,7 +79,7 @@ const LetterMaker = () => {
             
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(11);
-            doc.text("Professional Correspondence", 190, 24, { align: "right" });
+            doc.text("Correspondence", 190, 24, { align: "right" });
         } catch (e) {
             console.warn("Header failed", e);
             doc.setFontSize(16);

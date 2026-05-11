@@ -987,7 +987,8 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     }
 
     // 2. Prepare Estimate Payload
-            customer_id: customerId,
+    const payload = {
+        customer_id: customerId,
         vehicle_id: vehicleId,
         services: [
             ...(p.services || []),
