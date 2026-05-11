@@ -44,6 +44,7 @@ import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } fro
 import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
+import VehicleClassificationDialog from "@/components/bookings/VehicleClassificationDialog";
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year" | "analytics";
@@ -79,7 +80,19 @@ export default function BookingsPage() {
   const [analyticsDefaultTab, setAnalyticsDefaultTab] = useState<string | undefined>(undefined);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const hasInitialized = useRef(false);
+  const [showClassificationModal, setShowClassificationModal] = useState(false);
   const lastHandledBookingId = useRef<string | null>(null);
+
+  const handleClassificationSelect = (data: { make: string; model: string; category: string }) => {
+    setFormData(prev => ({
+      ...prev,
+      vehicleMake: data.make,
+      vehicleModel: data.model,
+      vehicle: data.category
+    }));
+    setShowClassificationModal(false);
+    toast.success(`Vehicle set to ${data.category}`);
+  };
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -1152,6 +1165,7 @@ export default function BookingsPage() {
       
       // Refresh in background to ensure everything is in sync
       refresh();
+      fetchCustomers(); // CRITICAL: Ensure new customer profiles are added to the local cache immediately
       loadUnifiedEvents();
       
       // Delay state resets slightly to allow modal animation to complete
@@ -2263,7 +2277,7 @@ export default function BookingsPage() {
                         type="button"
                         variant="outline"
                         className="border-blue-600 text-blue-600 hover:bg-blue-600/10"
-                        onClick={() => navigate('/vehicle-classification', { state: { returnTo: '/bookings' } })}
+                        onClick={() => setShowClassificationModal(true)}
                       >
                         Quick Select
                       </Button>
@@ -3380,6 +3394,18 @@ export default function BookingsPage() {
         onOpenChange={setIsCustomerModalOpen}
         initial={customerToEdit}
         onSave={onSaveCustomer}
+      />
+
+      <VehicleClassificationDialog 
+        open={showClassificationModal}
+        onOpenChange={setShowClassificationModal}
+        onSelect={handleClassificationSelect}
+      />
+
+      <HelpModal 
+        open={isHelpOpen} 
+        onOpenChange={setIsHelpOpen} 
+        role={isAdmin ? 'admin' : 'employee'} 
       />
     </div>
   );
