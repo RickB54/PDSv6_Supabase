@@ -44,8 +44,8 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/inventory-control";
       break;
     case "booking_created":
-      // Route to Bookings page with booking ID to open edit modal
-      href = a.payload?.id ? `/bookings?id=${a.payload.id}` : "/bookings";
+      // Route to File Manager to see the generated PDF in the Bookings category
+      href = "/file-manager?category=" + encodeURIComponent("Bookings");
       break;
     case "customer_added":
       href = "/search-customer";
