@@ -144,7 +144,8 @@ const SearchCustomer = () => {
         learningCenterUrl: data.learningCenterUrl,
         videoNote: data.videoNote,
         howFound: data.howFound,
-        howFoundOther: data.howFoundOther
+        howFoundOther: data.howFoundOther,
+        date_of_contact: data.date_of_contact
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
@@ -751,10 +752,22 @@ const SearchCustomer = () => {
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
                                  <div className="pt-4 border-t border-zinc-800/50">
-                                   <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block mb-2">Status Tracking</span>
-                                   <div className="flex items-center gap-2">
-                                      <Star className={cn("h-4 w-4", customer.has_google_review ? "fill-amber-500 text-amber-500" : "text-zinc-700")} />
-                                      <span className="text-xs font-bold text-zinc-300">{customer.has_google_review ? 'Identity Verified VIP' : 'No review response recorded'}</span>
+                                   <div className="flex items-center justify-between mb-2">
+                                     <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">Relationship Metadata</span>
+                                     <Badge variant="outline" className="h-5 bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-1.5">
+                                       <Star className="h-3 w-3 fill-amber-500" />
+                                       <span className="text-[9px] font-black uppercase tracking-tight">IDENTITY VERIFIED</span>
+                                     </Badge>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Initial Entry:</span>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleString() : '—'}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Last Contact:</span>
+                                        <span className="text-[9px] text-blue-400 font-black uppercase">{customer.date_of_contact ? new Date(customer.date_of_contact).toLocaleDateString() : '—'}</span>
+                                      </div>
                                    </div>
                                  </div>
                               </div>

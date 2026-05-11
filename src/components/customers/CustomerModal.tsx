@@ -76,6 +76,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     videoNote: "",
     has_google_review: false,
     vehicles: [],
+    date_of_contact: new Date().toISOString().split('T')[0],
   });
 
   const isProspect = form.type === 'prospect';
@@ -208,7 +209,8 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           videoNote: "",
           vehicles: [
             { make: "", model: "", year: "", type: "", color: "", vin: "", conditionInside: "", conditionOutside: "", mileage: "" }
-          ]
+          ],
+          date_of_contact: initial?.date_of_contact || new Date().toISOString().split('T')[0]
         });
       }
     };
@@ -686,11 +688,22 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 {form.id ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-zinc-800/50 min-h-[600px]">
                     <div className="p-6 space-y-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
-                          <Plus className="h-4 w-4" />
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                            <Plus className="h-4 w-4" />
+                          </div>
+                          <h3 className="text-xs font-black uppercase tracking-widest text-white">Manual Activity Logger</h3>
                         </div>
-                        <h3 className="text-xs font-black uppercase tracking-widest text-white">Manual Activity Logger</h3>
+                        <div className="flex flex-col items-end gap-1">
+                          <Label className="text-[10px] text-zinc-500 uppercase font-black">Date of Contact</Label>
+                          <Input 
+                            type="date" 
+                            className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white w-40" 
+                            value={form.date_of_contact || ""} 
+                            onChange={(e) => handleChange("date_of_contact", e.target.value)} 
+                          />
+                        </div>
                       </div>
                       <ActivityLog 
                         customer={form} 

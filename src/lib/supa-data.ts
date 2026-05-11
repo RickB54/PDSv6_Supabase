@@ -88,6 +88,7 @@ export interface Customer {
     has_google_review?: boolean;
     engagements?: any[];
     activity_log?: any[];
+    date_of_contact?: string;
 }
 
 // ------------------------------------------------------------------

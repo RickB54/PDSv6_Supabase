@@ -167,7 +167,8 @@ const Prospects = () => {
         learningCenterUrl: data.learningCenterUrl,
         videoNote: data.videoNote,
         howFound: data.howFound,
-        howFoundOther: data.howFoundOther
+        howFoundOther: data.howFoundOther,
+        date_of_contact: data.date_of_contact
       });
       await api('/api/customers', { method: 'POST', body: JSON.stringify(data) }).catch(() => { });
       await refresh();
@@ -695,14 +696,108 @@ const Prospects = () => {
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
                                  <div className="pt-4 border-t border-zinc-800/50">
-                                   <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest block mb-2">Lead Source</span>
-                                   <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 text-[10px]">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || 'Manual Entry'}</Badge>
-                                      <span className="text-[10px] text-zinc-500 uppercase font-black tracking-tighter">Created: {(customer as any).created_at ? new Date((customer as any).created_at).toLocaleDateString() : '—'}</span>
+                                   <div className="flex items-center justify-between mb-2">
+                                     <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest block">Relationship Metadata</span>
+                                     <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 text-[10px]">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || 'Manual Entry'}</Badge>
+                                   </div>
+                                   <div className="space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Initial Entry:</span>
+                                        <span className="text-[9px] text-zinc-400 font-black uppercase">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleString() : '—'}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Last Contact:</span>
+                                        <span className="text-[9px] text-purple-400 font-black uppercase">{customer.date_of_contact ? new Date(customer.date_of_contact).toLocaleDateString() : '—'}</span>
+                                      </div>
                                    </div>
                                  </div>
                               </div>
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
+                           </section>
+                           
+                           {/* NEW: Booking Lifecycle Section */}
+                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                  <Calendar className="h-3 w-3" /> Booking Lifecycle
+                                </h4>
+                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-purple-500/5 text-purple-400 border-purple-500/20 px-2 py-0">
+                                  Lead Intel
+                                </Badge>
+                              </div>
+                              
+                              {(() => {
+                                const customerBookings = allBookings.filter(b => 
+                                  (b.customerId === customer.id) || 
+                                  (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                  (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                );
+                                
+                                const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
+                                const scheduled = customerBookings.filter(b => b.status === 'confirmed' || b.status === 'scheduled');
+                                const tentative = customerBookings.filter(b => b.status === 'tentative' || b.status === 'request');
+                                
+                                // Find next upcoming booking
+                                const upcoming = scheduled
+                                  .filter(b => new Date(b.date).getTime() > Date.now())
+                                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+                                if (customerBookings.length === 0) {
+                                  return (
+                                    <div className="py-4 text-center border border-dashed border-zinc-800 rounded-xl">
+                                      <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">No Booking Data Yet</p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="grid grid-cols-1 gap-3">
+                                    <div className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                        </div>
+                                        <div>
+                                          <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Completed Jobs</div>
+                                          <div className="text-zinc-200 text-lg font-black tracking-tighter">{doneCount}</div>
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tight">Booking Done</div>
+                                    </div>
+
+                                    {upcoming && (
+                                      <div className="flex items-center justify-between bg-purple-500/5 p-3 rounded-xl border border-purple-500/20 animate-pulse-slow">
+                                        <div className="flex items-center gap-3">
+                                          <div className="p-2 bg-purple-500/10 rounded-lg">
+                                            <Clock className="w-4 h-4 text-purple-400" />
+                                          </div>
+                                          <div>
+                                            <div className="text-[10px] text-purple-500 font-black uppercase tracking-widest">Next Scheduled</div>
+                                            <div className="text-zinc-200 text-sm font-bold truncate max-w-[150px]">{upcoming.title}</div>
+                                            <div className="text-[10px] text-zinc-400">{new Date(upcoming.date).toLocaleDateString()}</div>
+                                          </div>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Booking Scheduled</div>
+                                      </div>
+                                    )}
+
+                                    {tentative.length > 0 && (
+                                      <div className="flex items-center justify-between bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+                                        <div className="flex items-center gap-3">
+                                          <div className="p-2 bg-amber-500/10 rounded-lg">
+                                            <AlertCircle className="w-4 h-4 text-amber-500" />
+                                          </div>
+                                          <div>
+                                            <div className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Active Requests</div>
+                                            <div className="text-zinc-200 text-lg font-black tracking-tighter">{tentative.length}</div>
+                                          </div>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Tentatively Booked</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                            </section>
 
                         </div>
