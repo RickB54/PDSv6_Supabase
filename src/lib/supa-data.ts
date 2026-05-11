@@ -677,6 +677,17 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                 finalVehicles.push(savedVeh);
             }
         }
+        // C. Last Resort: Handle direct fields on the customer object
+        else if (customer.make || customer.model || customer.year) {
+            const savedVeh = await upsertSupabaseVehicle({
+                make: customer.make || '',
+                model: customer.model || '',
+                year: customer.year || '',
+                type: customer.vehicleType || customer.type || '',
+                customer_id: finalId
+            });
+            finalVehicles.push(savedVeh);
+        }
     }
 
     return {
@@ -2074,11 +2085,29 @@ export const upsertSupabaseBooking = async (booking: any) => {
             payload.id = booking.id;
         }
 
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('bookings')
             .upsert(payload)
             .select()
             .single();
+
+        // CRITICAL FALLBACK: If employee ID is invalid (FK violation), retry without it to save the booking
+        if (error && error.code === '23503' && error.message.includes('assigned_employee_id')) {
+            console.warn('[upsertSupabaseBooking] FK violation for employee. Retrying without ID...');
+            const retryPayload = { ...payload };
+            delete retryPayload.assigned_employee_id;
+            // Append the invalid ID/Name to notes so we don't lose the user's intent
+            retryPayload.notes = (retryPayload.notes ? retryPayload.notes + "\n" : "") + "Staff Link Failed (Invalid ID): " + payload.assigned_employee_id;
+            
+            const retryResult = await supabase
+                .from('bookings')
+                .upsert(retryPayload)
+                .select()
+                .single();
+            
+            data = retryResult.data;
+            error = retryResult.error;
+        }
 
         if (error) {
             console.error('Upsert booking error:', error);

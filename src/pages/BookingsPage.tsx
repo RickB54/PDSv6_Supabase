@@ -1001,9 +1001,10 @@ export default function BookingsPage() {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        vehicle: formData.vehicleMake,
+        make: formData.vehicleMake,
         model: formData.vehicleModel,
         year: formData.vehicleYear,
+        vehicleType: formData.vehicle,
         type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done') ? 'customer' : 'prospect',
         updatedAt: new Date().toISOString()
       };
