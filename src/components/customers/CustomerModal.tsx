@@ -10,7 +10,7 @@ import {
   Image as ImageIcon, Video, X, Camera, Trash2, 
   FileBarChart, Plus, ChevronDown, ExternalLink, 
   Star, ShieldCheck, Zap, Users, Info, HelpCircle,
-  Sparkles, Loader2, RotateCcw
+  Sparkles, Loader2, RotateCcw, Activity
 } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
