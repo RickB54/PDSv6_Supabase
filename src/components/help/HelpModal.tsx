@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { makeToc, HelpTopic } from './helpData';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Zap } from 'lucide-react';
+import { Search, ChevronRight, Zap, Printer } from 'lucide-react';
+import { exportHelpTopicPDF } from '@/lib/help-pdf';
 
 type HelpModalProps = {
   open: boolean;
@@ -258,6 +259,14 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                          <Zap className="w-3.5 h-3.5 mr-2" /> Launch Tool
                       </Button>
                     )}
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => exportHelpTopicPDF(topic)}
+                      className="h-8 px-4 text-xs font-bold border-slate-700 hover:bg-slate-800 text-slate-300 rounded-full uppercase tracking-wider"
+                    >
+                       <Printer className="w-3.5 h-3.5 mr-2" /> Save as PDF
+                    </Button>
                   </div>
                 </div>
                 
