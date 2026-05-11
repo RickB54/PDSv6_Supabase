@@ -971,6 +971,91 @@ const SearchCustomer = () => {
                                })()}
                              </div>
                            </section>
+                           
+                           {/* NEW: Booking Lifecycle Section */}
+                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                  <Calendar className="h-3 w-3" /> Booking Lifecycle
+                                </h4>
+                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-blue-500/5 text-blue-400 border-blue-500/20 px-2 py-0">
+                                  CRM Intel
+                                </Badge>
+                              </div>
+                              
+                              {(() => {
+                                const customerBookings = allBookings.filter(b => 
+                                  (b.customerId === customer.id) || 
+                                  (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                  (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                );
+                                
+                                const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
+                                const scheduled = customerBookings.filter(b => b.status === 'confirmed' || b.status === 'scheduled');
+                                const tentative = customerBookings.filter(b => b.status === 'tentative' || b.status === 'request');
+                                
+                                // Find next upcoming booking
+                                const upcoming = scheduled
+                                  .filter(b => new Date(b.date).getTime() > Date.now())
+                                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+                                if (customerBookings.length === 0) {
+                                  return (
+                                    <div className="py-4 text-center border border-dashed border-zinc-800 rounded-xl">
+                                      <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">No Booking Data Yet</p>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div className="grid grid-cols-1 gap-3">
+                                    <div className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                        </div>
+                                        <div>
+                                          <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Completed Jobs</div>
+                                          <div className="text-zinc-200 text-lg font-black tracking-tighter">{doneCount}</div>
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tight">Booking Done</div>
+                                    </div>
+
+                                    {upcoming && (
+                                      <div className="flex items-center justify-between bg-blue-500/5 p-3 rounded-xl border border-blue-500/20 animate-pulse-slow">
+                                        <div className="flex items-center gap-3">
+                                          <div className="p-2 bg-blue-500/10 rounded-lg">
+                                            <Clock className="w-4 h-4 text-blue-400" />
+                                          </div>
+                                          <div>
+                                            <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest">Next Scheduled</div>
+                                            <div className="text-zinc-200 text-sm font-bold truncate max-w-[150px]">{upcoming.title}</div>
+                                            <div className="text-[10px] text-zinc-400">{new Date(upcoming.date).toLocaleDateString()}</div>
+                                          </div>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Booking Scheduled</div>
+                                      </div>
+                                    )}
+
+                                    {tentative.length > 0 && (
+                                      <div className="flex items-center justify-between bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+                                        <div className="flex items-center gap-3">
+                                          <div className="p-2 bg-amber-500/10 rounded-lg">
+                                            <AlertCircle className="w-4 h-4 text-amber-500" />
+                                          </div>
+                                          <div>
+                                            <div className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Active Requests</div>
+                                            <div className="text-zinc-200 text-lg font-black tracking-tighter">{tentative.length}</div>
+                                          </div>
+                                        </div>
+                                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Tentatively Booked</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                           </section>
                         </div>
                       </div>
                                             {/* MEDIA GALLERY - dynamic */}
