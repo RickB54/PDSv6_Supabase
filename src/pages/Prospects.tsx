@@ -734,8 +734,8 @@ const Prospects = () => {
                                 );
                                 
                                 const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
-                                const scheduled = customerBookings.filter(b => b.status === 'confirmed' || b.status === 'scheduled');
-                                const tentative = customerBookings.filter(b => b.status === 'tentative' || b.status === 'request');
+                                const scheduled = customerBookings.filter(b => b.status === 'confirmed');
+                                const tentative = customerBookings.filter(b => b.status === 'tentative');
                                 
                                 // Find next upcoming booking
                                 const upcoming = scheduled

@@ -600,8 +600,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,
         video_url: customer.videoUrl,
-        learning_center_url: customer.learningCenterUrl,
-        activity_log: customer.activity_log || (customer as any).activityLog
+        learning_center_url: customer.learningCenterUrl
     };
 
     // ONLY ADD THESE IF THEY WERE PASSED - AND WE'LL CATCH DB ERROR IF MISSING
@@ -679,9 +678,9 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
             }
         }
         // C. Last Resort: Handle direct fields on the customer object
-        else if (customer.make || customer.model || customer.year) {
+        else if (customer.vehicle || customer.model || customer.year) {
             const savedVeh = await upsertSupabaseVehicle({
-                make: customer.make || '',
+                make: customer.vehicle || '',
                 model: customer.model || '',
                 year: customer.year || '',
                 type: customer.vehicleType || customer.type || '',

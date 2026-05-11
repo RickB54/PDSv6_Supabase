@@ -45,9 +45,24 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   }, [customer.id, customer.email]);
 
   const fetchActivities = async () => {
-    // Activities are now passed in the customer object as activity_log
-    const log = (customer as any).activity_log || (customer as any).activityLog || [];
-    setActivities(Array.isArray(log) ? [...log].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : []);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('engagements')
+        .select('*')
+        .or(`customer_email.eq.${customer.email},customer_name.eq.${customer.name}`)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setActivities(data || []);
+    } catch (e) {
+      console.error("Failed to fetch activities", e);
+      // Fallback to local activity_log if provided (demo/legacy)
+      const log = (customer as any).activity_log || (customer as any).activityLog || [];
+      setActivities(Array.isArray(log) ? [...log].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddActivity = async () => {
@@ -58,27 +73,26 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
 
     setIsAdding(true);
     try {
-      const newEntry: ActivityEntry = {
-        id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      const payload = {
+        customer_name: customer.name,
+        customer_email: customer.email,
         note: note.trim(),
         type: type,
         created_at: new Date().toISOString()
       };
 
-      const currentLog = (customer as any).activity_log || (customer as any).activityLog || [];
-      const updatedLog = [newEntry, ...currentLog];
-
-      const { error } = await supabase
-        .from('customers')
-        .update({ activity_log: updatedLog })
-        .eq('id', customer.id);
+      const { data, error } = await supabase
+        .from('engagements')
+        .insert(payload)
+        .select()
+        .single();
 
       if (error) throw error;
 
       toast.success("Activity logged");
       setNote("");
       setIsAdding(false);
-      setActivities(updatedLog);
+      setActivities([data, ...activities]);
       if (onRefresh) onRefresh();
     } catch (e: any) {
       toast.error("Failed to log activity", { description: e.message });
@@ -89,16 +103,13 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   const deleteActivity = async (id: string) => {
     if (!confirm("Remove this log entry?")) return;
     try {
-      const currentLog = (customer as any).activity_log || (customer as any).activityLog || [];
-      const updatedLog = currentLog.filter((a: any) => a.id !== id);
-
       const { error } = await supabase
-        .from('customers')
-        .update({ activity_log: updatedLog })
-        .eq('id', customer.id);
+        .from('engagements')
+        .delete()
+        .eq('id', id);
 
       if (error) throw error;
-      setActivities(updatedLog);
+      setActivities(activities.filter((a: any) => a.id !== id));
       toast.success("Log removed");
       if (onRefresh) onRefresh();
     } catch (e: any) {

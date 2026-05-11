@@ -689,11 +689,29 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                   <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-zinc-800/50 min-h-[600px]">
                     <div className="p-6 space-y-6">
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
-                            <Plus className="h-4 w-4" />
+                            <Activity className="h-4 w-4" />
                           </div>
-                          <h3 className="text-xs font-black uppercase tracking-widest text-white">Manual Activity Logger</h3>
+                          <div>
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-2">
+                              CRM & Lead Intelligence
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-5 w-5 text-zinc-500 hover:text-blue-400 rounded-full"
+                                onClick={() => {
+                                  // This could open the Help Modal or a specific popover
+                                  // For now, let's trigger a toast or just show it's a help point
+                                  toast.info("CRM Hub Guide", { 
+                                    description: "Use the Activity Logger to track manual calls/notes, and the Retention Workflow to send automated maintenance reminders and lead follow-ups."
+                                  });
+                                }}
+                              >
+                                <Info className="h-3 w-3" />
+                              </Button>
+                            </h3>
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <Label className="text-[10px] text-zinc-500 uppercase font-black">Date of Contact</Label>
