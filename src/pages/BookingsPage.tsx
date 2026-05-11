@@ -97,9 +97,10 @@ export default function BookingsPage() {
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
-
-
-  const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success'>('confirmation');
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  
+  // Dialog/Search states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Sync latest data on mount and subscribe to realtime updates
