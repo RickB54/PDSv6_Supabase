@@ -99,6 +99,7 @@ export default function BookingsPage() {
   const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success'>('confirmation');
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
   
   // Dialog/Search states
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -181,7 +182,6 @@ export default function BookingsPage() {
     }
   };
 
-  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success' | 'reminder'>('confirmation');
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
