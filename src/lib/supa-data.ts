@@ -860,6 +860,8 @@ export interface Estimate {
     discount?: number;
     discountType?: "percent" | "amount";
     vehicleType?: string;
+    isSent?: boolean;
+    sentDate?: string;
 }
 
 export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
@@ -901,8 +903,20 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
             customerId: e.customer_id,
             customerName: e.customers?.full_name || 'Unknown',
             vehicle: e.vehicles ? `${e.vehicles.year} ${e.vehicles.make} ${e.vehicles.model}` : 'Unknown',
-            vehicleId: e.vehicle_id,
-            services: e.services || [],
+                        vehicleId: e.vehicle_id,
+            services: (e.services || []).filter((s: any) => {
+                if (s.name?.startsWith("VIRTUAL_SENT:")) {
+                    (e as any).isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
+                    return false;
+                }
+                if (s.name?.startsWith("VIRTUAL_SENT_DATE:")) {
+                    (e as any).sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
+                    return false;
+                }
+                return true;
+            }),
+            isSent: (e as any).isSent ?? false,
+            sentDate: (e as any).sentDate,
             total: e.total,
             date: e.date || e.created_at?.split('T')[0],
             status: e.status,
@@ -973,10 +987,13 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     }
 
     // 2. Prepare Estimate Payload
-    const payload = {
-        customer_id: customerId,
+            customer_id: customerId,
         vehicle_id: vehicleId,
-        services: p.services, 
+        services: [
+            ...(p.services || []),
+            ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
+            ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : [])
+        ], 
         total: p.total,
         date: p.date,
         status: p.status || 'open',

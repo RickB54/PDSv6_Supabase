@@ -5,14 +5,16 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
+import { cn } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import {
     Select,
@@ -58,6 +60,8 @@ interface Estimate {
     discountType?: "percent" | "amount";
     notes?: string;
     created_at?: string;
+    isSent?: boolean;
+    sentDate?: string;
 }
 
 const Estimates = () => {
@@ -81,7 +85,9 @@ const Estimates = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [discount, setDiscount] = useState(0);
-    const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+        const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
+    const [editIsSent, setEditIsSent] = useState(false);
+    const navigate = useNavigate();
     const formatPart = (val: any) => (val && val !== 'null' && val !== 'undefined') ? val : '';
     const formatDisplayDate = (dStr: string) => {
         if (!dStr) return '';
@@ -265,6 +271,8 @@ const Estimates = () => {
                 discount,
                 discountType,
                 notes: notes,
+                isSent: editIsSent,
+                sentDate: editIsSent ? (editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
                 created_at: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
             };
 
@@ -279,7 +287,8 @@ const Estimates = () => {
             setSelectedStatus("open");
             setSelectedVehicleId("");
             setDiscount(0);
-            setNotes("");
+                        setNotes("");
+            setEditIsSent(false);
             setEstimateDate(getLocalDateString());
             loadData();
         } catch (error: any) {
@@ -299,7 +308,8 @@ const Estimates = () => {
         setSelectedVehicleId((est as any).vehicleId || "");
         setDiscount(est.discount || 0);
         setDiscountType(est.discountType || "percent");
-        setNotes(est.notes || "");
+                setNotes(est.notes || "");
+        setEditIsSent(est.isSent || false);
         setEstimateDate(est.estimateDate || getLocalDateString());
         setShowCreateForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -317,7 +327,7 @@ const Estimates = () => {
         if (selectedEstimate?.id === est.id) setSelectedEstimate(updated as any);
     };
 
-    const handleDeleteEstimate = async (id: string) => {
+        const handleDeleteEstimate = async (id: string) => {
         if (isDemoMode) {
             toast({ title: "Simulation Mode", description: "Delete simulated locally." });
             setDeleteId(null);
@@ -327,6 +337,32 @@ const Estimates = () => {
         toast({ title: "Deleted", description: "Estimate removed" });
         setDeleteId(null);
         loadData();
+    };
+
+    const toggleSentStatus = async (e: React.MouseEvent, estimate: Estimate) => {
+        e.stopPropagation();
+        if (isDemoMode) {
+            toast({ title: "Simulation Mode", description: "Sent status updated locally." });
+            return;
+        }
+
+        const newStatus = !estimate.isSent;
+        const updatedEstimate = {
+            ...estimate,
+            isSent: newStatus,
+            sentDate: newStatus ? new Date().toISOString() : undefined
+        };
+
+        try {
+            await upsertSupabaseEstimate(updatedEstimate as any);
+            toast({
+                title: newStatus ? "Marked as Sent" : "Marked as Unsent",
+                description: newStatus ? `Estimate #${estimate.estimateNumber} recorded as sent.` : `Estimate #${estimate.estimateNumber} status cleared.`
+            });
+            loadData();
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+        }
     };
 
     const generatePDF = (estimate: Estimate, action: 'print' | 'download' | 'archive') => {
@@ -845,7 +881,12 @@ const Estimates = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <span className="font-bold text-white text-lg">#{est.estimateNumber}</span>
-                                                <span className="text-zinc-500 text-sm">• {formatDisplayDate(est.estimateDate || est.date)}</span>
+                                                                                                <span className="text-zinc-500 text-sm">• {formatDisplayDate(est.estimateDate || est.date)}</span>
+                                                {est.isSent && (
+                                                    <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[9px] h-4 px-1.5 py-0 uppercase font-black tracking-widest ml-1 rounded flex items-center">
+                                                        SENT
+                                                    </span>
+                                                )}
                                                 {(est as any).created_at && (
                                                     <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-700 font-mono">
                                                         STAMP: {new Date((est as any).created_at).toLocaleString()}
@@ -865,11 +906,28 @@ const Estimates = () => {
 
                                         <div className="text-right min-w-[100px]">
                                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Status</div>
-                                            <div className={`font-medium ${(est.status || 'open') === 'accepted' ? 'text-emerald-400' :
+                                                                                        <div className={`font-medium ${(est.status || 'open') === 'accepted' ? 'text-emerald-400' :
                                                 (est.status || 'open') === 'declined' ? 'text-red-400' : 'text-amber-400'
                                                 }`}>
                                                 {(est.status || 'open').toUpperCase()}
                                             </div>
+                                        </div>
+                                        <div className="flex flex-col items-center gap-1 min-w-[50px]" onClick={e => e.stopPropagation()}>
+                                            <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider mb-0.5">Sent?</div>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className={cn(
+                                                    "h-8 w-8 rounded-full border transition-all",
+                                                    est.isSent
+                                                        ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
+                                                        : "bg-zinc-800 border-zinc-700 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700"
+                                                )}
+                                                onClick={(e) => toggleSentStatus(e, est)}
+                                                title={est.isSent ? `Sent on ${est.sentDate ? new Date(est.sentDate).toLocaleDateString() : 'N/A'}` : "Mark as Sent"}
+                                            >
+                                                <Send className={cn("h-4 w-4", est.isSent && "fill-blue-400/20")} />
+                                            </Button>
                                         </div>
                                         <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
@@ -930,9 +988,46 @@ const Estimates = () => {
                                     <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                                         Estimate #{selectedEstimate.estimateNumber}
                                     </h2>
-                                    <p className="text-zinc-400">Prime Auto Detail</p>
+                                                                        <p className="text-zinc-400">Prime Auto Detail</p>
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedEstimate(null)} className="h-8 w-8 p-0 rounded-full hover:bg-zinc-900">✕</Button>
+                                <div className="flex gap-3 items-center">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20 h-9 font-bold px-4"
+                                        onClick={() => navigate(`/search-customer?customerId=${selectedEstimate.customerId}&search=${encodeURIComponent(selectedEstimate.customerName)}`)}
+                                    >
+                                        <Users className="h-4 w-4 mr-2" /> Customer Profile
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setSelectedEstimate(null)} className="h-9 w-9 p-0 rounded-full hover:bg-zinc-900 text-zinc-500">✕</Button>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mb-6">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => setEditIsSent(!editIsSent)}
+                                    className={cn(
+                                        "gap-2 font-bold text-[11px] uppercase tracking-wider",
+                                        editIsSent 
+                                            ? "text-blue-400 hover:text-blue-300 hover:bg-blue-400/10" 
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "h-4 w-4 rounded border flex items-center justify-center transition-colors",
+                                        editIsSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
+                                    )}>
+                                        {editIsSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
+                                    </div>
+                                    I have sent this estimate to the customer
+                                </Button>
+                                {editIsSent && selectedEstimate.sentDate && (
+                                    <span className="text-[10px] text-zinc-500 italic ml-auto">
+                                        Marked sent on {new Date(selectedEstimate.sentDate).toLocaleDateString()}
+                                    </span>
+                                )}
                             </div>
 
                             {/* Service Details similar to Invoicing but tailored for Estimates */}

@@ -110,6 +110,7 @@ import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
 import StickerMaker from "./pages/StickerMaker";
+import LetterMaker from "./pages/LetterMaker";
 import { PerspectiveBanner } from "./components/PerspectiveBanner";
 
 const queryClient = new QueryClient();
@@ -402,8 +403,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/reports" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/demo/reports" element={<ProtectedRoute user={user} allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/follow-up-center" element={<ProtectedRoute user={user} allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
-          <Route path="/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
+                    <Route path="/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/demo/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/letter-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><LetterMaker /></ProtectedRoute>} />
           <Route path="/elite-master" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<Navigate to="/elite-master" replace />} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
