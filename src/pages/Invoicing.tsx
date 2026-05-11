@@ -533,62 +533,43 @@ const Invoicing = () => {
 
   const generatePDF = (invoice: Invoice, download = false, styleOverride?: 'original' | 'professional') => {
     const doc = new jsPDF();
-    const style = styleOverride || invoiceStyle;
     
-    if (style === 'professional') {
-      // NEW PROFESSIONAL STYLE
-      try {
-        const logoWidth = 28;
-        const logoHeight = 28;
-        doc.addImage(logo, 'PNG', 20, 10, logoWidth, logoHeight);
-        
-        // Contact Info next to logo
-        doc.setFontSize(13);
-        doc.setTextColor(16, 185, 129); // Emerald color
-        doc.setFont("helvetica", "bold");
-        doc.text("Rick Berube", 52, 18);
-        
-        doc.setFontSize(9);
-        doc.setTextColor(80, 80, 80);
-        doc.setFont("helvetica", "normal");
-        doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
-        doc.text("978-566-1008", 52, 29);
-        
-        // Company Name on the Right
-        doc.setFontSize(14);
-        doc.setTextColor(16, 185, 129);
-        doc.setFont("helvetica", "bold");
-        doc.text("Prime Auto Detail", 190, 18, { align: "right" });
-        
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(11);
-        doc.text("INVOICE", 190, 24, { align: "right" });
-        doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 190, 29, { align: "right" });
-      } catch (e) {
-        console.warn("Professional header failed", e);
-      }
-    } else {
-      // ORIGINAL STYLE - Top Center
-      try {
-        const logoWidth = 32;
-        const logoHeight = 32;
-        const xPos = (210 - logoWidth) / 2;
-        doc.addImage(logo, 'PNG', xPos, 5, logoWidth, logoHeight);
-      } catch (e) {
-        console.warn("Logo failed to load for PDF", e);
-      }
-
-      doc.setFontSize(16);
+    // UNIFORM PROFESSIONAL HEADER (Logo on left)
+    try {
+      const logoWidth = 28;
+      const logoHeight = 28;
+      doc.addImage(logo, 'PNG', 20, 10, logoWidth, logoHeight);
+      
+      // Contact Info next to logo
+      doc.setFontSize(13);
       doc.setTextColor(16, 185, 129); // Emerald color
-      doc.text("Prime Auto Detail", 105, 44, { align: "center" });
-
+      doc.setFont("helvetica", "bold");
+      doc.text("Rick Berube", 52, 18);
+      
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont("helvetica", "normal");
+      doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
+      doc.text("Rick.PrimeAutoDetail@gmail.com", 52, 29);
+      doc.text("978-566-1008", 52, 34);
+      
+      // Company Name on the Right
+      doc.setFontSize(14);
+      doc.setTextColor(16, 185, 129);
+      doc.setFont("helvetica", "bold");
+      doc.text("Prime Auto Detail", 190, 18, { align: "right" });
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(11);
-      doc.text("INVOICE", 105, 50, { align: "center" });
-      doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 105, 56, { align: "center" });
+      doc.text("INVOICE", 190, 24, { align: "right" });
+      doc.text(`Invoice #${invoice.invoiceNumber || 'N/A'}`, 190, 29, { align: "right" });
+    } catch (e) {
+      console.warn("Header failed", e);
+      doc.setFontSize(16);
+      doc.text("Prime Auto Detail", 105, 15, { align: "center" });
     }
 
-    const contentStartY = style === 'professional' ? 45 : 68;
+    const contentStartY = 45;
     doc.setFontSize(10);
     doc.text(`Service Date: ${invoice.date}`, 20, contentStartY);
     doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, contentStartY + 6);
@@ -606,7 +587,7 @@ const Invoicing = () => {
 
     doc.setFontSize(10);
     invoice.services.forEach((s) => {
-      const serviceName = s.name || s.title || 'Service';
+            const serviceName = s.name || 'Service';
       const lines = doc.splitTextToSize(serviceName, 140);
       doc.text(lines, 25, y);
       doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });

@@ -35,6 +35,7 @@ import {
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_ESTIMATES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
 import logo from "@/assets/pds-final-logo.png";
+import qrCode from "@/assets/review-qr.png";
 import { getCustomPackages } from "@/lib/servicesMeta";
 import { generateInvoiceNumber } from "@/lib/utils";
 
@@ -106,7 +107,7 @@ const Estimates = () => {
         } else {
             d = new Date(dStr);
         }
-        d.setDate(d.getDate() + 30);
+        d.setMonth(d.getMonth() + 1);
         return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
     };
 
@@ -346,8 +347,9 @@ const Estimates = () => {
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
             doc.setFont("helvetica", "normal");
-            doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
-            doc.text("978-566-1008", 52, 29);
+                        doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
+            doc.text("Rick.PrimeAutoDetail@gmail.com", 52, 29);
+            doc.text("978-566-1008", 52, 34);
             
             // Company Name on the Right
             doc.setFontSize(14);
@@ -373,7 +375,7 @@ const Estimates = () => {
         
         // Move Customer and Vehicle to the right side
         doc.setFont("helvetica", "bold");
-        doc.text(`Prospect: ${estimate.customerName}`, 130, contentStartY);
+                doc.text(`Customer: ${estimate.customerName}`, 130, contentStartY);
         doc.text(`Vehicle: ${(estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}`, 130, contentStartY + 6);
         doc.setFont("helvetica", "normal");
 
@@ -384,7 +386,7 @@ const Estimates = () => {
 
         doc.setFontSize(10);
         estimate.services.forEach((s) => {
-            const serviceName = s.name || s.title || 'Service';
+                        const serviceName = s.name || 'Service';
             const lines = doc.splitTextToSize(serviceName, 140);
             doc.text(lines, 25, y);
             doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
@@ -424,7 +426,7 @@ const Estimates = () => {
         doc.setFont("helvetica", "normal");
         y += 12;
 
-        if (estimate.notes) {
+                if (estimate.notes) {
             if (y > 230) {
                 doc.addPage();
                 y = 20;
@@ -440,11 +442,12 @@ const Estimates = () => {
             y += (splitNotes.length * 5) + 10;
         }
 
-        y += 10;
+                y += 10;
         doc.setTextColor(100);
         doc.setFontSize(10);
         doc.text("This is an estimate for detailing services. Prices may vary based on actual vehicle condition upon arrival.", 105, y, { align: "center" });
-        doc.text("Thank you for considering Prime Auto Detail for your vehicle's protection and care!", 105, y + 6, { align: "center" });
+        doc.text("Thank you for trusting Prime Auto Detail with your vehicle!", 105, y + 6, { align: "center" });
+        doc.text("We truly appreciate your business and look forward to serving you again.", 105, y + 12, { align: "center" });
 
         if (action === 'download') doc.save(`Estimate_${estimate.estimateNumber}.pdf`);
         else if (action === 'print') window.open(doc.output('bloburl'), '_blank');
@@ -805,7 +808,7 @@ const Estimates = () => {
                                         const tempEst: Estimate = {
                                             estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : 9999,
                                             customerId: selectedCustomer,
-                                            customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Prospect",
+                                                                                        customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Customer",
                                             vehicle: "Current Vehicle",
                                             services,
                                             total: calculateTotal(),
