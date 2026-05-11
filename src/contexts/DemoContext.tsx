@@ -159,8 +159,10 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const blacklisted: string[] = [];
     if (blacklisted.includes(key)) return false;
 
-    // Use current config as a primary whitelist if it exists and has and items
+        // Use current config as a primary whitelist if it exists and has and items
     if (config?.visibleSections && config.visibleSections.length > 0) {
+      // Always allow the new Letter Maker even if not in the saved remote config yet
+      if (key === 'letter-maker') return true;
       return config.visibleSections.includes(key);
     }
 
