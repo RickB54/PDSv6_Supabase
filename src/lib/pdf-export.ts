@@ -453,15 +453,24 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   }
 
   // --- FINAL FOOTER ---
-  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  // Ensure footer is on the current page, or a new one if we are at the very bottom
+  if (currentY + 20 > pageHeight) {
+    doc.addPage();
+    currentY = 20;
+  } else {
+    currentY += 15;
+  }
+
   doc.setDrawColor(...colors.primary);
   doc.setLineWidth(0.5);
-  doc.line(14, finalY, pageWidth - 14, finalY);
+  doc.line(14, currentY, pageWidth - 14, currentY);
   
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text('INTERNAL USE ONLY | PRIME AUTO DETAIL CRM INTELLIGENCE ENGINE', 14, finalY + 10);
-  doc.text(`PAGE 1 OF 1`, pageWidth - 14, finalY + 10, { align: 'right' });
+  doc.text('INTERNAL USE ONLY | PRIME AUTO DETAIL CRM INTELLIGENCE ENGINE', 14, currentY + 10);
+  
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  doc.text(`PAGE ${totalPages} OF ${totalPages}`, pageWidth - 14, currentY + 10, { align: 'right' });
 
   // --- Save or Preview ---
   if (preview) {

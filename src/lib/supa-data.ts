@@ -447,6 +447,9 @@ export const getCustomerDetailedHistory = async (customerId: string) => {
         const customer = {
             ...customerData,
             name: customerData.full_name || customerData.name || 'Unknown',
+            generalPhotos: customerData.general_photos || [],
+            beforePhotos: customerData.before_photos || [],
+            afterPhotos: customerData.after_photos || [],
             vehicles: (customerData.vehicles || []).map((v: any) => ({
                 id: v.id,
                 make: v.make,
