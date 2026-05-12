@@ -404,9 +404,18 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                         const seenUrls = new Set<string>();
 
                         // 1. Per vehicle (Process these first as they are more specific)
-                        for (const v of customer.vehicles || []) {
+                        const vehicles = customer.vehicles || [];
+                        for (let i = 0; i < vehicles.length; i++) {
+                            const v = vehicles[i];
                             const vLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
-                            const vItems = allMedia.filter(m => m.vehicleLabel === vLabel);
+                            let vItems = allMedia.filter(m => m.vehicleLabel === vLabel);
+                            
+                            // If this is the only vehicle, also pull in Profile items to unify the gallery
+                            if (vehicles.length === 1) {
+                                const pItems = allMedia.filter(m => m.vehicleLabel === "Profile");
+                                vItems = [...vItems, ...pItems];
+                            }
+
                             const uniqueVItems = vItems.filter(item => {
                                 if (!item.url || seenUrls.has(item.url)) return false;
                                 seenUrls.add(item.url);
@@ -415,7 +424,7 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                             if (uniqueVItems.length > 0) groups.push({ label: vLabel, items: uniqueVItems });
                         }
 
-                        // 2. Profile-level (Show remaining items that weren't in vehicles)
+                        // 2. Profile-level fallback (Show remaining items if not already merged into a single vehicle)
                         const profileItems = allMedia.filter(m => m.vehicleLabel === "Profile");
                         const uniqueProfileItems = profileItems.filter(item => {
                             if (!item.url || seenUrls.has(item.url)) return false;
