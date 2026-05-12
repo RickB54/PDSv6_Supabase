@@ -288,6 +288,11 @@ const ServiceChecklist = () => {
     setItemDurations({});
     setFinishedJobId(null);
     setShowTipScreen(false);
+
+    // Reset Master Timer
+    setMasterStartTime(null);
+    setMasterIsRunning(false);
+    setMasterElapsedTimeMs(0);
   };
 
   // Read employee from URL params (from Staff Schedule "Start Job")
@@ -461,6 +466,11 @@ const ServiceChecklist = () => {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editSectionValue, setEditSectionValue] = useState<string>("");
 
+  // Master Timer (Job Duration) - Top Right
+  const [masterStartTime, setMasterStartTime] = useState<number | null>(null);
+  const [masterIsRunning, setMasterIsRunning] = useState(false);
+  const [masterElapsedTimeMs, setMasterElapsedTimeMs] = useState(0);
+
   const updateElapsedTime = (now: number, startTime: number | null, accumulated: number) => {
     const diff = (now - (startTime || now)) + accumulated;
     const hrs = Math.floor(diff / 3600000);
@@ -485,6 +495,54 @@ const ServiceChecklist = () => {
     return () => clearInterval(interval);
   }, [isTimerRunning, jobStartTime, totalElapsedMs, elapsedTime]);
 
+  // Master Timer Update Loop
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (masterIsRunning) {
+      interval = setInterval(() => {
+        setLiveNow(Date.now());
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [masterIsRunning]);
+
+  // Master Timer Persistence
+  useEffect(() => {
+    if (!checklistId) return;
+    const key = `master_timer_${checklistId}`;
+    if (masterIsRunning) {
+      localStorage.setItem(key, JSON.stringify({ 
+        startTime: masterStartTime, 
+        isRunning: true, 
+        elapsedBase: masterElapsedTimeMs 
+      }));
+    } else {
+      localStorage.setItem(key, JSON.stringify({ 
+        startTime: null, 
+        isRunning: false, 
+        elapsedBase: masterElapsedTimeMs 
+      }));
+    }
+  }, [masterIsRunning, masterStartTime, masterElapsedTimeMs, checklistId]);
+
+  // Initialize Master Timer from storage
+  useEffect(() => {
+    if (!checklistId) return;
+    const saved = localStorage.getItem(`master_timer_${checklistId}`);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.isRunning && data.startTime) {
+          setMasterStartTime(data.startTime);
+          setMasterIsRunning(true);
+          setMasterElapsedTimeMs(data.elapsedBase || 0);
+        } else if (data.elapsedBase) {
+          setMasterElapsedTimeMs(data.elapsedBase);
+        }
+      } catch (e) { console.error("Master timer restore failed", e); }
+    }
+  }, [checklistId]);
+
   const handleStartTimer = () => {
     if (!isTimerRunning) {
       const now = Date.now();
@@ -492,9 +550,14 @@ const ServiceChecklist = () => {
       setIsTimerRunning(true);
       setLastActionTime(now);
       updateElapsedTime(now, now, totalElapsedMs); // Immediate UI update
-      // toast({ title: "Timer Started", description: "Detaling clock is now running." });
 
-      // Auto-scroll to where i left off
+      // Sync Master Timer (Start it if not already running)
+      if (!masterIsRunning) {
+        setMasterStartTime(now);
+        setMasterIsRunning(true);
+      }
+
+      // Find first unchecked to scroll to
       setTimeout(() => {
         const firstUnchecked = checklistSteps.find(s => !s.checked);
         if (firstUnchecked) {
@@ -538,6 +601,14 @@ const ServiceChecklist = () => {
       setTotalElapsedMs(0);
       setElapsedTime("00:00:00");
       setItemDurations({});
+      
+      // Reset Master Timer too
+      setMasterStartTime(null);
+      setMasterIsRunning(false);
+      setMasterElapsedTimeMs(0);
+      if (checklistId) {
+        localStorage.removeItem(`master_timer_${checklistId}`);
+      }
       // toast({ title: "Timer Reset", description: "Clock and task times have been cleared." });
     }
   };
@@ -1522,11 +1593,12 @@ const ServiceChecklist = () => {
       if (employeeAssigned) { doc.text(`Employee: ${employeeAssigned}`, 20, y); y += 8; }
 
       // Timer Info
-      if (finalize && (jobStartTime || totalElapsedMs > 0)) {
-        if (jobStartTime) doc.text(`Started: ${new Date(jobStartTime).toLocaleTimeString()}`, 120, 46);
-        if (jobEndTime) doc.text(`Finished: ${new Date(jobEndTime).toLocaleTimeString()}`, 120, 54);
+      const masterDuration = (masterIsRunning ? (Date.now() - (masterStartTime || Date.now())) : 0) + masterElapsedTimeMs;
+      if (finalize && (masterDuration > 0)) {
+        if (masterStartTime) doc.text(`Started: ${new Date(masterStartTime).toLocaleTimeString()}`, 120, 46);
+        doc.text(`Finished: ${new Date().toLocaleTimeString()}`, 120, 54);
         doc.setFont(undefined, 'bold');
-        doc.text(`Time Taken: ${elapsedTime}`, 120, 62);
+        doc.text(`Master Job Time: ${formatDuration(masterDuration)}`, 120, 62);
         doc.setFont(undefined, 'normal');
       } else if (estimatedTime) {
         doc.text(`Est. Time: ${estimatedTime}`, 120, 38);
@@ -1867,9 +1939,18 @@ const ServiceChecklist = () => {
     }
   };
   const finishJob = async () => {
-    // Stop the timer
+    // Stop the timers
     const end = Date.now();
     setJobEndTime(end);
+    setIsTimerRunning(false);
+    setJobStartTime(null);
+    
+    // Stop Master Timer
+    setMasterIsRunning(false);
+    if (masterStartTime) {
+      setMasterElapsedTimeMs(prev => prev + (end - masterStartTime));
+      setMasterStartTime(null);
+    }
 
     let step = 'start';
     try {
@@ -3925,14 +4006,17 @@ const ServiceChecklist = () => {
         <ArrowUp className="h-5 w-5" />
       </Button>
 
-      {/* Floating Global Job Timer - Always visible in top right corner (except on payment screen) */}
-      {jobStartTime && !showTipScreen && (
+      {/* Floating Global Job Timer - Master Timer (Job Duration) */}
+      {(masterIsRunning || masterElapsedTimeMs > 0) && !showTipScreen && (
         <div className="fixed top-[74px] right-2 md:right-4 z-[200] animate-in slide-in-from-right duration-500">
-          <div className={`flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950/90 border-2 shadow-lg rounded-2xl backdrop-blur-md ${jobEndTime ? 'border-green-500' : 'border-red-600 animate-pulse-subtle'}`}>
-            <Clock className={`h-4 w-4 md:h-5 md:w-5 ${jobEndTime ? 'text-green-600' : 'text-red-600'}`} />
-            <span className={`text-sm md:text-2xl font-mono font-black ${jobEndTime ? 'text-green-600' : 'text-red-600'}`}>
-              {formatDuration((jobEndTime || liveNow) - jobStartTime)}
-            </span>
+          <div className={`flex flex-col items-end gap-1 px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950/90 border-2 shadow-xl rounded-2xl backdrop-blur-md ${jobEndTime ? 'border-green-500' : 'border-blue-600'}`}>
+            <span className="text-[8px] md:text-[10px] text-zinc-500 uppercase font-black tracking-widest">Job Duration</span>
+            <div className="flex items-center gap-2">
+              <Clock className={`h-4 w-4 md:h-5 md:w-5 ${jobEndTime ? 'text-green-500' : 'text-blue-500'}`} />
+              <span className={`text-sm md:text-2xl font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-blue-400'}`}>
+                {formatDuration((masterIsRunning ? (Date.now() - (masterStartTime || Date.now())) : 0) + masterElapsedTimeMs)}
+              </span>
+            </div>
           </div>
         </div>
       )}

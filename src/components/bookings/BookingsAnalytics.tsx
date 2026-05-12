@@ -30,6 +30,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import localforage from "localforage";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { CustomerIntelligence360Modal } from "./CustomerIntelligence360Modal";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -1129,7 +1130,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
                     <p className="text-xs text-zinc-500">Comprehensive overview of operational performance and revenue goals.</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <CustomerIntelligence360Modal customers={customers} />
                     <Button 
                         onClick={generateAnalyticsPDF}
                         className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-6 gap-2 shadow-lg shadow-blue-900/20 w-full sm:w-auto"
