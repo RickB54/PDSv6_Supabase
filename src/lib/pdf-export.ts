@@ -34,7 +34,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   const pageHeight = doc.internal.pageSize.getHeight();
 
   // --- Visual Configuration ---
-  const colors = {
+  const colors: Record<string, [number, number, number]> = {
     primary: [59, 130, 246],    // Blue-500
     success: [16, 185, 129],    // Emerald-500
     warning: [245, 158, 11],    // Amber-500
@@ -94,7 +94,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   // Dashboard Boxes
   const boxW = (pageWidth - 40) / 4;
   const boxH = 25;
-  const drawStat = (x: number, y: number, label: string, val: string, color: number[]) => {
+  const drawStat = (x: number, y: number, label: string, val: string, color: [number, number, number]) => {
     doc.setFillColor(...colors.light);
     doc.setDrawColor(...color);
     doc.setLineWidth(0.5);

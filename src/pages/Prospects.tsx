@@ -65,10 +65,18 @@ const Prospects = () => {
   const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
-  const [photoToDelete, setPhotoToDelete] = useState<{ index: number; customer: Customer } | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
 
   const { isDemoMode } = useDemoMode();
   const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('search');
+    if (q) {
+      setSearchTerm(decodeURIComponent(q));
+    }
+  }, [location.search]);
 
   useEffect(() => {
     // Always load fresh data on mount to ensure we see new prospects
@@ -379,8 +387,8 @@ const Prospects = () => {
 
   const confirmDeletePhoto = async () => {
     if (!photoToDelete) return;
-    const { index, customer } = photoToDelete;
-    const m = galleryMetadata[index];
+    const { index, metadata, customer } = photoToDelete;
+    const m = metadata || (index !== undefined ? galleryMetadata[index] : null);
     if (!m) return;
 
     try {
@@ -411,7 +419,26 @@ const Prospects = () => {
   };
 
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
-  const toggleCustomer = (id: string) => { setExpandedCustomers(prev => (prev.includes(id) ? [] : [id])); setAllExpanded(false); };
+  const toggleCustomer = (id: string) => { 
+    const isExpanding = !expandedCustomers.includes(id);
+    setExpandedCustomers(prev => (prev.includes(id) ? [] : [id])); 
+    setAllExpanded(false); 
+    
+    if (isExpanding) {
+      setTimeout(() => {
+        const el = document.getElementById(`customer-${id}`);
+        if (el) {
+          const offset = 100; // Account for fixed header
+          const elementPosition = el.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          });
+        }
+      }, 150);
+    }
+  };
   const toggleAll = () => {
     if (allExpanded) setExpandedCustomers([]);
     else setExpandedCustomers(filteredCustomers.map(c => c.id!));
@@ -514,7 +541,7 @@ const Prospects = () => {
               if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
-                <div key={customer.id} className="border border-purple-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-purple-500/40">
+                <div key={customer.id} id={`customer-${customer.id}`} className="border border-purple-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-purple-500/40">
                   <div className="p-4 bg-purple-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-purple-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-zinc-600'}`} />
@@ -535,7 +562,7 @@ const Prospects = () => {
                         if (allPhotos.length > 0) {
                           return (
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              {allPhotos.slice(0, 3).map((photo, idx) => (
+                              {allPhotos.slice(0, 1).map((photo, idx) => (
                                 <div
                                   key={`thumb-${idx}`}
                                   className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
@@ -544,6 +571,14 @@ const Prospects = () => {
                                   <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
                                 </div>
                               ))}
+                              {allPhotos.length > 1 && (
+                                <button
+                                  onClick={() => openGallery(customer, 0)}
+                                  className="h-12 w-12 rounded-lg border-2 border-purple-500/50 bg-purple-500/10 flex items-center justify-center text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-all hover:scale-105"
+                                >
+                                  +{allPhotos.length - 1}
+                                </button>
+                              )}
                             </div>
                           );
                         }
@@ -991,25 +1026,25 @@ const Prospects = () => {
 
                       {/* MEDIA GALLERY - dynamic */}
                       {(() => {
-                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
+                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'; metadata: any}[] = [];
                         const seenUrls = new Set<string>();
 
-                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general') => {
+                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general', m: any) => {
                           if (!url || seenUrls.has(url)) return;
                           seenUrls.add(url);
-                          allPhotos.push({ url, label, type });
+                          allPhotos.push({ url, label, type, metadata: m });
                         };
 
-                        customer.generalPhotos?.forEach(url => addPhoto(url, 'General', 'general'));
-                        customer.beforePhotos?.forEach(url => addPhoto(url, 'Before', 'before'));
-                        customer.afterPhotos?.forEach(url => addPhoto(url, 'After', 'after'));
+                        customer.generalPhotos?.forEach((url, idx) => addPhoto(url, 'General', 'general', { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.beforePhotos?.forEach((url, idx) => addPhoto(url, 'Before', 'before', { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.afterPhotos?.forEach((url, idx) => addPhoto(url, 'After', 'after', { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id }));
                         
-                        for (const v of customer.vehicles || []) {
+                        (customer.vehicles || []).forEach((v, vIdx) => {
                           const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-                          v.generalPhotos?.forEach(url => addPhoto(url, vLabel + ' - General', 'general'));
-                          v.beforePhotos?.forEach(url => addPhoto(url, vLabel + ' - Before', 'before'));
-                          v.afterPhotos?.forEach(url => addPhoto(url, vLabel + ' - After', 'after'));
-                        }
+                          v.generalPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - General', 'general', { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.beforePhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - Before', 'before', { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.afterPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - After', 'after', { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                        });
                         if (allPhotos.length === 0) return null;
 
                         const displayPhotos = allPhotos.slice(0, 12);
@@ -1035,7 +1070,7 @@ const Prospects = () => {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-7 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
-                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
+                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}&from=prospects`)}
                                   >
                                     VIEW ALL <ExternalLink className="w-3 h-3 ml-0.5" />
                                   </Button>
@@ -1055,7 +1090,7 @@ const Prospects = () => {
                                   {isAdmin && (
                                     <button 
                                       className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-lg z-10"
-                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ index: i, customer }); }}
+                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ metadata: p.metadata, customer }); }}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -1088,36 +1123,91 @@ const Prospects = () => {
             .map(c => {
               const isExpanded = expandedCustomers.includes(c.id!);
               return (
-                <div key={c.id} className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden transition-all duration-300">
+                <div key={c.id} id={`customer-${c.id}`} className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden transition-all duration-300">
                   {/* Header - Click to toggle */}
                   <div 
                     className={cn(
-                      "p-4 flex justify-between items-center cursor-pointer active:bg-zinc-800 transition-colors",
+                      "p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer active:bg-zinc-800 transition-colors gap-4",
                       isExpanded && "bg-zinc-800/30 border-b border-zinc-800"
                     )}
                     onClick={() => toggleCustomer(c.id!)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
-                        <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-zinc-200 text-base">{c.name}</h3>
-                        <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-black">{c.phone || "No Phone"}</p>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      {(() => {
+                        const allPhotos = Array.from(new Set([
+                          ...(c.generalPhotos || []),
+                          ...(c.beforePhotos || []),
+                          ...(c.afterPhotos || []),
+                          ...((c.vehicles || []).flatMap(v => [
+                            ...(v.generalPhotos || []),
+                            ...(v.beforePhotos || []),
+                            ...(v.afterPhotos || [])
+                          ]))
+                        ])).filter(Boolean);
+
+                        if (allPhotos.length > 0) {
+                          return (
+                            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <div
+                                className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400"
+                                onClick={() => openGallery(c, 0)}
+                              >
+                                <img src={allPhotos[0]} alt={c.name} className="h-full w-full object-cover" />
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
+                            <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
+                          </div>
+                        );
+                      })()}
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-zinc-200 text-base truncate">{c.name}</h3>
+                        <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-black truncate">{c.phone || "No Phone"}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                       {!c.is_archived && (
+                    
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                      <div className="flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                        {!c.is_archived && (
+                          <Button 
+                            asChild 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 px-3 text-[10px] font-black border-purple-500/30 text-purple-400 bg-purple-500/10"
+                          >
+                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                          </Button>
+                        )}
                         <Button 
-                          asChild 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm" 
-                          className="h-7 px-3 text-[10px] font-black border-purple-500/30 text-purple-400 bg-purple-500/10"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={() => handleArchiveId(c)} 
+                          className={cn("h-8 w-8 p-0", c.is_archived ? "text-amber-500" : "text-zinc-400")}
                         >
-                          <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                          {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                         </Button>
-                      )}
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={async () => { 
+                            const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                            const detailedHistory = await getCustomerDetailedHistory(c.id!);
+                            if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
+                          }} 
+                          className="h-8 w-8 p-0 text-purple-400"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400"><Pencil className="h-4 w-4" /></Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                       <ChevronDown className={cn("h-5 w-5 text-zinc-600 transition-transform duration-300", isExpanded && "rotate-180")} />
                     </div>
                   </div>

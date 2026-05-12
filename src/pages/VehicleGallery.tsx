@@ -26,6 +26,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
@@ -307,7 +313,24 @@ function MediaTile({ item, onClick, small = false, onDelete, isAdmin = false }: 
 }
 
 // ─── customer card ────────────────────────────────────────────────────────────
-function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; onOpen: (items: MediaItem[], idx: number) => void; onAddMedia: (customer: Customer) => void }) {
+function CustomerCard({ 
+    customer, 
+    onOpen, 
+    onAddMedia, 
+    isAdmin = false, 
+    onDelete,
+    showBackLink = false,
+    returnTarget = ""
+}: { 
+    customer: Customer; 
+    onOpen: (items: MediaItem[], idx: number) => void; 
+    onAddMedia: (customer: Customer) => void; 
+    isAdmin?: boolean; 
+    onDelete: (item: MediaItem) => void;
+    showBackLink?: boolean;
+    returnTarget?: string;
+}) {
+    const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
     const [videoUrl, setVideoUrl] = useState("");
     const [showVideoInput, setShowVideoInput] = useState(false);
@@ -350,6 +373,28 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                 {/* Line 1: Name & Actions */}
                 <div className="flex items-center justify-between gap-1 overflow-hidden w-full">
                     <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                        {showBackLink && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 shrink-0"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(returnTarget);
+                                            }}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="bg-zinc-900 border-zinc-800 text-[10px] font-black uppercase">
+                                        Back to {returnTarget.includes('prospects') ? 'Prospect' : 'Customer'}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         <div className="h-7 w-7 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
                             <User className="h-3 w-3 text-blue-400" />
                         </div>
@@ -464,7 +509,7 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                                             item={item}
                                             small
                                             isAdmin={isAdmin}
-                                            onDelete={() => setPhotoToDelete({ item })}
+                                            onDelete={() => onDelete(item)}
                                             onClick={() => onOpen(allMedia, allMedia.indexOf(item))}
                                         />
                                     ))}
@@ -627,11 +672,42 @@ export default function VehicleGallery() {
             <main className="container mx-auto px-2 sm:px-4 pt-4 sm:pt-10 pb-16 overflow-x-hidden w-full max-w-[100vw]">
                 {/* Title */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 sm:mb-10">
-                    <div>
-                        <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tighter">
-                            Media <span className="text-blue-500">Library</span>
-                        </h1>
-                        <p className="text-zinc-500 text-[10px] sm:text-sm">Vehicle photos and videos.</p>
+                    <div className="flex items-center gap-4">
+                        {(() => {
+                            const params = new URLSearchParams(location.search);
+                            const from = params.get('from');
+                            const search = params.get('search');
+                            if (from) {
+                                const target = from === 'prospects' ? '/prospects' : '/search-customer';
+                                const returnUrl = `${target}?search=${encodeURIComponent(search || '')}`;
+                                return (
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-10 w-10 p-0 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                                                    onClick={() => navigate(returnUrl)}
+                                                >
+                                                    <ChevronLeft className="h-6 w-6" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="bg-zinc-900 border-zinc-800 text-[10px] font-black uppercase">
+                                                Return to {from === 'prospects' ? 'Prospects' : 'Customers'}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                );
+                            }
+                            return null;
+                        })()}
+                        <div>
+                            <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tighter">
+                                Media <span className="text-blue-500">Library</span>
+                            </h1>
+                            <p className="text-zinc-500 text-[10px] sm:text-sm">Vehicle photos and videos.</p>
+                        </div>
                     </div>
 
                     {/* Search */}
@@ -681,18 +757,30 @@ export default function VehicleGallery() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {customersWithMedia.map(c => (
-                                    <CustomerCard
-                                        key={c.id}
-                                        customer={c}
-                                        onOpen={openLightbox}
-                                        onAddMedia={(customer) => {
-                                          setEditingCustomer(customer);
-                                          setModalTab("media");
-                                          setModalOpen(true);
-                                        }}
-                                    />
-                                ))}
+                                {customersWithMedia.map(c => {
+                                    const params = new URLSearchParams(location.search);
+                                    const from = params.get('from');
+                                    const search = params.get('search');
+                                    const showBack = from && c.name.toLowerCase().includes((search || '').toLowerCase());
+                                    const target = from === 'prospects' ? '/prospects' : '/search-customer';
+
+                                    return (
+                                        <CustomerCard
+                                            key={c.id}
+                                            customer={c}
+                                            onOpen={openLightbox}
+                                            onAddMedia={(customer) => {
+                                              setEditingCustomer(customer);
+                                              setModalTab("media");
+                                              setModalOpen(true);
+                                            }}
+                                            isAdmin={isAdmin}
+                                            onDelete={(item) => setPhotoToDelete({ item })}
+                                            showBackLink={!!showBack}
+                                            returnTarget={showBack ? `${target}?search=${encodeURIComponent(search || '')}` : ""}
+                                        />
+                                    );
+                                })}
                             </div>
                         )}
                     </TabsContent>

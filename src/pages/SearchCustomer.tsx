@@ -348,7 +348,7 @@ const SearchCustomer = () => {
   const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
-  const [photoToDelete, setPhotoToDelete] = useState<{ index: number; customer: Customer } | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
 
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string }[] = [];
@@ -395,8 +395,8 @@ const SearchCustomer = () => {
 
   const confirmDeletePhoto = async () => {
     if (!photoToDelete) return;
-    const { index, customer } = photoToDelete;
-    const m = galleryMetadata[index];
+    const { index, metadata, customer } = photoToDelete;
+    const m = metadata || (index !== undefined ? galleryMetadata[index] : null);
     if (!m) return;
 
     try {
@@ -552,7 +552,7 @@ const SearchCustomer = () => {
                         if (allPhotos.length > 0) {
                           return (
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              {allPhotos.slice(0, 3).map((photo, idx) => (
+                              {allPhotos.slice(0, 1).map((photo, idx) => (
                                 <div
                                   key={`thumb-${idx}`}
                                   className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
@@ -561,12 +561,12 @@ const SearchCustomer = () => {
                                   <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
                                 </div>
                               ))}
-                              {allPhotos.length > 3 && (
+                              {allPhotos.length > 1 && (
                                 <button
                                   onClick={() => openGallery(customer, 0)}
                                   className="h-12 w-12 rounded-lg border-2 border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all hover:scale-105"
                                 >
-                                  +{allPhotos.length - 3}
+                                  +{allPhotos.length - 1}
                                 </button>
                               )}
                             </div>
@@ -602,16 +602,11 @@ const SearchCustomer = () => {
                           <span>{customer.phone || 'No phone'}</span>
                           <span className="hidden sm:inline">•</span>
                           <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
-                          {customer.notes && !isExpanded && (
-                            <span className="hidden lg:inline text-blue-400 italic truncate max-w-[200px]">
-                              • "{customer.notes.substring(0, 40)}{customer.notes.length > 40 ? '...' : ''}"
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                      <div className="flex gap-1 mr-4">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                      <div className="flex flex-wrap gap-1 mr-4">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1103,25 +1098,25 @@ const SearchCustomer = () => {
                       </div>
                                             {/* MEDIA GALLERY - dynamic */}
                       {(() => {
-                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
+                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'; metadata: any}[] = [];
                         const seenUrls = new Set<string>();
 
-                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general') => {
+                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general', m: any) => {
                           if (!url || seenUrls.has(url)) return;
                           seenUrls.add(url);
-                          allPhotos.push({ url, label, type });
+                          allPhotos.push({ url, label, type, metadata: m });
                         };
 
-                        customer.generalPhotos?.forEach(url => addPhoto(url, 'General', 'general'));
-                        customer.beforePhotos?.forEach(url => addPhoto(url, 'Before', 'before'));
-                        customer.afterPhotos?.forEach(url => addPhoto(url, 'After', 'after'));
+                        customer.generalPhotos?.forEach((url, idx) => addPhoto(url, 'General', 'general', { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.beforePhotos?.forEach((url, idx) => addPhoto(url, 'Before', 'before', { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.afterPhotos?.forEach((url, idx) => addPhoto(url, 'After', 'after', { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id }));
                         
-                        for (const v of customer.vehicles || []) {
+                        (customer.vehicles || []).forEach((v, vIdx) => {
                           const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-                          v.generalPhotos?.forEach(url => addPhoto(url, vLabel + ' - General', 'general'));
-                          v.beforePhotos?.forEach(url => addPhoto(url, vLabel + ' - Before', 'before'));
-                          v.afterPhotos?.forEach(url => addPhoto(url, vLabel + ' - After', 'after'));
-                        }
+                          v.generalPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - General', 'general', { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.beforePhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - Before', 'before', { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.afterPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - After', 'after', { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                        });
                         
                         if (allPhotos.length === 0) return null;
 
@@ -1148,7 +1143,7 @@ const SearchCustomer = () => {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-7 text-[10px] font-black border-blue-500/30 text-blue-400 hover:bg-blue-500/10 gap-1.5"
-                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
+                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}&from=customers`)}
                                   >
                                     VIEW ALL <ExternalLink className="w-3 h-3 ml-0.5" />
                                   </Button>
@@ -1169,7 +1164,7 @@ const SearchCustomer = () => {
                                   {isAdmin && (
                                     <button 
                                       className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-lg z-10"
-                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ index: i, customer }); }}
+                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ metadata: p.metadata, customer }); }}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
