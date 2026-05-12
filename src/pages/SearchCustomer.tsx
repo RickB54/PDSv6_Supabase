@@ -353,35 +353,37 @@ const SearchCustomer = () => {
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string }[] = [];
     const meta: any[] = [];
+    const seenUrls = new Set<string>();
+
+    const addPhoto = (url: string, label: string, m: any) => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      photos.push({ url, label });
+      meta.push(m);
+    };
 
     // Customer-level photos
     customer.generalPhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "General" });
-      meta.push({ type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "General", { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id });
     });
     customer.beforePhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "Before" });
-      meta.push({ type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "Before", { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id });
     });
     customer.afterPhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "After" });
-      meta.push({ type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "After", { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
     });
 
     // Per-vehicle photos
     (customer.vehicles || []).forEach((v, vIdx) => {
       const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
       v.generalPhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · General` });
-        meta.push({ type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · General`, { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
       v.beforePhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · Before` });
-        meta.push({ type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · Before`, { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
       v.afterPhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · After` });
-        meta.push({ type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · After`, { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
     });
 
@@ -535,34 +537,50 @@ const SearchCustomer = () => {
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
 
                       {/* Photo Thumbnails - clickable to open gallery */}
-                      {(customer.generalPhotos?.length || customer.beforePhotos?.length || customer.afterPhotos?.length) ? (
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          {customer.generalPhotos?.slice(0, 3).map((photo, idx) => (
-                            <div
-                              key={`thumb-g-${idx}`}
-                              className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
-                              onClick={() => openGallery(customer, idx)}
-                            >
-                              <img src={photo} alt={`${customer.name} - General ${idx + 1}`} className="h-full w-full object-cover" />
+                      {(() => {
+                        const allPhotos = Array.from(new Set([
+                          ...(customer.generalPhotos || []),
+                          ...(customer.beforePhotos || []),
+                          ...(customer.afterPhotos || []),
+                          ...((customer.vehicles || []).flatMap(v => [
+                            ...(v.generalPhotos || []),
+                            ...(v.beforePhotos || []),
+                            ...(v.afterPhotos || [])
+                          ]))
+                        ])).filter(Boolean);
+
+                        if (allPhotos.length > 0) {
+                          return (
+                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                              {allPhotos.slice(0, 3).map((photo, idx) => (
+                                <div
+                                  key={`thumb-${idx}`}
+                                  className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
+                                  onClick={() => openGallery(customer, idx)}
+                                >
+                                  <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
+                                </div>
+                              ))}
+                              {allPhotos.length > 3 && (
+                                <button
+                                  onClick={() => openGallery(customer, 0)}
+                                  className="h-12 w-12 rounded-lg border-2 border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all hover:scale-105"
+                                >
+                                  +{allPhotos.length - 3}
+                                </button>
+                              )}
                             </div>
-                          ))}
-                          {(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) > 3 && (
-                            <button
-                              onClick={() => openGallery(customer, 0)}
-                              className="h-12 w-12 rounded-lg border-2 border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all hover:scale-105"
-                            >
-                              +{(customer.beforePhotos?.length || 0) + (customer.afterPhotos?.length || 0) + (customer.generalPhotos?.length || 0) - 3}
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div
-                          className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
-                          onClick={async (e) => { e.stopPropagation(); openEdit(customer); }}
-                        >
-                          <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
-                        </div>
-                      )}
+                          );
+                        }
+                        return (
+                          <div
+                            className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
+                            onClick={async (e) => { e.stopPropagation(); openEdit(customer); }}
+                          >
+                            <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
+                          </div>
+                        );
+                      })()}
 
                       <div>
                         <div className="flex items-center gap-2">
@@ -661,8 +679,8 @@ const SearchCustomer = () => {
                         <Button asChild variant="outline" size="sm" className="h-9 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
                           <Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link>
                         </Button>
-                        <Button asChild variant="outline" size="sm" className="h-9 border-pink-500/30 text-pink-400 hover:bg-pink-500/10 hover:text-pink-300">
-                          <Link to={`/vehicle-gallery?customerId=${customer.id}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
+                        <Button variant="outline" size="sm" asChild className="h-9 px-4 text-pink-400 hover:text-pink-300 bg-zinc-800/50 border-zinc-800 rounded-lg">
+                          <Link to={`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
                         </Button>
                       </div>
 
@@ -1087,15 +1105,25 @@ const SearchCustomer = () => {
                                             {/* MEDIA GALLERY - dynamic */}
                       {(() => {
                         const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
-                        customer.generalPhotos?.forEach(url => allPhotos.push({url, label: 'General', type: 'general'}));
-                        customer.beforePhotos?.forEach(url => allPhotos.push({url, label: 'Before', type: 'before'}));
-                        customer.afterPhotos?.forEach(url => allPhotos.push({url, label: 'After', type: 'after'}));
+                        const seenUrls = new Set<string>();
+
+                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general') => {
+                          if (!url || seenUrls.has(url)) return;
+                          seenUrls.add(url);
+                          allPhotos.push({ url, label, type });
+                        };
+
+                        customer.generalPhotos?.forEach(url => addPhoto(url, 'General', 'general'));
+                        customer.beforePhotos?.forEach(url => addPhoto(url, 'Before', 'before'));
+                        customer.afterPhotos?.forEach(url => addPhoto(url, 'After', 'after'));
+                        
                         for (const v of customer.vehicles || []) {
                           const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-                          v.generalPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - General', type: 'general'}));
-                          v.beforePhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - Before', type: 'before'}));
-                          v.afterPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - After', type: 'after'}));
+                          v.generalPhotos?.forEach(url => addPhoto(url, vLabel + ' - General', 'general'));
+                          v.beforePhotos?.forEach(url => addPhoto(url, vLabel + ' - Before', 'before'));
+                          v.afterPhotos?.forEach(url => addPhoto(url, vLabel + ' - After', 'after'));
                         }
+                        
                         if (allPhotos.length === 0) return null;
 
                         const displayPhotos = allPhotos.slice(0, 12);
@@ -1121,7 +1149,7 @@ const SearchCustomer = () => {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-7 text-[10px] font-black border-blue-500/30 text-blue-400 hover:bg-blue-500/10 gap-1.5"
-                                    onClick={() => navigate(`/vehicle-gallery?customerId=${customer.id}`)}
+                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
                                   >
                                     VIEW ALL <ExternalLink className="w-3 h-3 ml-0.5" />
                                   </Button>
@@ -1143,7 +1171,7 @@ const SearchCustomer = () => {
                               {hasMore && (
                                 <div 
                                   className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
-                                  onClick={() => navigate(`/vehicle-gallery?customerId=${customer.id}`)}
+                                  onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
                                 >
                                   <span className="text-xl font-black text-blue-500/50 group-hover:text-blue-400">+{allPhotos.length - 6}</span>
                                   <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
@@ -1172,7 +1200,7 @@ const SearchCustomer = () => {
       </main >
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
@@ -1218,7 +1246,7 @@ const SearchCustomer = () => {
       />
 
       <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
             <AlertDialogDescription>

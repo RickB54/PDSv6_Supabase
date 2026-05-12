@@ -402,10 +402,6 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                     {(() => {
                         const groups: { label: string; items: MediaItem[] }[] = [];
 
-                        // Profile-level
-                        const profileItems = allMedia.filter(m => m.vehicleLabel === "Profile");
-                        if (profileItems.length > 0) groups.push({ label: "Profile / General", items: profileItems });
-
                         // Per vehicle
                         for (const v of customer.vehicles || []) {
                             const vLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
@@ -516,6 +512,12 @@ export default function VehicleGallery() {
         setLightboxItems(items);
         setLightboxIdx(idx);
     };
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const q = params.get('search');
+        if (q) setSearchQuery(q);
+    }, [location.search]);
 
     useEffect(() => {
         (async () => {

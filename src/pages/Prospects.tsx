@@ -339,33 +339,35 @@ const Prospects = () => {
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string }[] = [];
     const meta: any[] = [];
+    const seenUrls = new Set<string>();
+
+    const addPhoto = (url: string, label: string, m: any) => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      photos.push({ url, label });
+      meta.push(m);
+    };
     
     customer.generalPhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "General" });
-      meta.push({ type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "General", { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id });
     });
     customer.beforePhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "Before" });
-      meta.push({ type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "Before", { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id });
     });
     customer.afterPhotos?.forEach((url, idx) => {
-      photos.push({ url, label: "After" });
-      meta.push({ type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
+      addPhoto(url, "After", { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
     });
     
     (customer.vehicles || []).forEach((v, vIdx) => {
       const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
       v.generalPhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · General` });
-        meta.push({ type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · General`, { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
       v.beforePhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · Before` });
-        meta.push({ type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · Before`, { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
       v.afterPhotos?.forEach((url, idx) => {
-        photos.push({ url, label: `${vLabel} · After` });
-        meta.push({ type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+        addPhoto(url, `${vLabel} · After`, { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
     });
     
@@ -519,16 +521,16 @@ const Prospects = () => {
 
                       {(() => {
                         // Gather ALL photos from all possible sources for display
-                        const allPhotos: string[] = [
+                        const allPhotos: string[] = Array.from(new Set([
                           ...(customer.generalPhotos || []),
                           ...(customer.beforePhotos || []),
                           ...(customer.afterPhotos || []),
-                          ...(customer.vehicles?.flatMap(v => [
+                          ...((customer.vehicles || []).flatMap(v => [
                             ...(v.generalPhotos || []),
                             ...(v.beforePhotos || []),
                             ...(v.afterPhotos || [])
-                          ]) || [])
-                        ].filter(Boolean);
+                          ]))
+                        ])).filter(Boolean);
 
                         if (allPhotos.length > 0) {
                           return (
@@ -990,14 +992,23 @@ const Prospects = () => {
                       {/* MEDIA GALLERY - dynamic */}
                       {(() => {
                         const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'}[] = [];
-                        customer.generalPhotos?.forEach(url => allPhotos.push({url, label: 'General', type: 'general'}));
-                        customer.beforePhotos?.forEach(url => allPhotos.push({url, label: 'Before', type: 'before'}));
-                        customer.afterPhotos?.forEach(url => allPhotos.push({url, label: 'After', type: 'after'}));
+                        const seenUrls = new Set<string>();
+
+                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general') => {
+                          if (!url || seenUrls.has(url)) return;
+                          seenUrls.add(url);
+                          allPhotos.push({ url, label, type });
+                        };
+
+                        customer.generalPhotos?.forEach(url => addPhoto(url, 'General', 'general'));
+                        customer.beforePhotos?.forEach(url => addPhoto(url, 'Before', 'before'));
+                        customer.afterPhotos?.forEach(url => addPhoto(url, 'After', 'after'));
+                        
                         for (const v of customer.vehicles || []) {
                           const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-                          v.generalPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - General', type: 'general'}));
-                          v.beforePhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - Before', type: 'before'}));
-                          v.afterPhotos?.forEach(url => allPhotos.push({url, label: vLabel + ' - After', type: 'after'}));
+                          v.generalPhotos?.forEach(url => addPhoto(url, vLabel + ' - General', 'general'));
+                          v.beforePhotos?.forEach(url => addPhoto(url, vLabel + ' - Before', 'before'));
+                          v.afterPhotos?.forEach(url => addPhoto(url, vLabel + ' - After', 'after'));
                         }
                         if (allPhotos.length === 0) return null;
 
@@ -1124,6 +1135,15 @@ const Prospects = () => {
                           <Pencil className="h-4 w-4 mr-2" />
                           Edit
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-9 px-4 text-pink-400 hover:text-pink-300 bg-zinc-800/50 rounded-lg"
+                          onClick={(e) => { e.stopPropagation(); navigate(`/vehicle-gallery?search=${encodeURIComponent(c.name)}`); }}
+                        >
+                          <Video className="h-4 w-4 mr-2" />
+                          Gallery
+                        </Button>
                         {isAdmin && (
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(c.id!); }} className="h-9 px-4 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -1140,7 +1160,7 @@ const Prospects = () => {
       </main>
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
@@ -1189,7 +1209,7 @@ const Prospects = () => {
       />
 
       <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
             <AlertDialogDescription>

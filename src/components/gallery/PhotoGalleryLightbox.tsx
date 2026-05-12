@@ -188,7 +188,7 @@ export const PhotoGalleryLightbox = ({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => { if(confirm('Delete this media?')) onDelete?.(currentIndex); }}
+                                    onClick={() => onDelete?.(currentIndex)}
                                     className="text-red-400 hover:bg-red-500/20 bg-red-500/5 backdrop-blur-md rounded-full h-9 w-9 border border-red-500/20"
                                 >
                                     <Trash2 className="h-4 w-4" />
