@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCombinedSelectableProducts, deleteChemical } from "@/lib/chemicals";
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
-import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap } from "lucide-react";
+import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -325,10 +325,18 @@ export default function ChemicalsLibrary() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <Input
                             placeholder="Search chemicals, uses, or brands..."
-                            className="pl-10 bg-zinc-900 border-zinc-800 text-white"
+                            className="pl-10 pr-10 bg-zinc-900 border-zinc-800 text-white"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
+                        {search && (
+                            <button 
+                                onClick={() => setSearch('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                     
                     {/* NEW: Sort Controls (Matches Inventory Style) */}

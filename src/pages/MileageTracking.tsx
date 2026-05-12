@@ -32,7 +32,8 @@ import {
     TrendingUp,
     FileText,
     Search,
-    Filter
+    Filter,
+    X
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -272,10 +273,18 @@ const MileageTracking = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                             <Input
                                 placeholder="Search..."
-                                className="bg-black/40 border-zinc-800 pl-10 h-10 ring-offset-zinc-900 focus-visible:ring-indigo-500 w-full"
+                                className="bg-black/40 border-zinc-800 pl-10 pr-10 h-10 ring-offset-zinc-900 focus-visible:ring-indigo-500 w-full"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
+                            {searchTerm && (
+                                <button 
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
                         <Select value={purposeFilter} onValueChange={setPurposeFilter}>
                             <SelectTrigger className="w-full sm:w-40 bg-black/40 border-zinc-800 h-10">

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, Plus, Search, FileDown, Edit, Trash2, ArrowLeft } from "lucide-react";
+import { Package, Plus, Search, FileDown, Edit, Trash2, ArrowLeft, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getDetailingVendors, upsertDetailingVendor, deleteDetailingVendor } from "@/lib/db";
 import jsPDF from "jspdf";
@@ -210,8 +210,16 @@ export default function DetailingVendors() {
                                     placeholder="Search vendors..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-10 bg-zinc-800 border-zinc-700 text-white h-10"
+                                    className="pl-10 pr-10 bg-zinc-800 border-zinc-700 text-white h-10"
                                 />
+                                {searchQuery && (
+                                    <button 
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
                             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                                 <SelectTrigger className="w-full sm:w-[200px] bg-zinc-800 border-zinc-700 text-white h-10">

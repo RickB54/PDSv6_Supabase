@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, FileDown, ArrowLeft, Star, MapPin, Phone, Mail, Globe } from "lucide-react";
+import { Search, Plus, FileDown, ArrowLeft, Star, MapPin, Phone, Mail, Globe, X } from "lucide-react";
 import { getSubContractors, upsertSubContractor, deleteSubContractor } from "@/lib/db";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
@@ -254,8 +254,16 @@ export default function SubContractorsModal({ open, onOpenChange }: { open: bool
                                         placeholder="Search..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-8 bg-zinc-900 border-zinc-700"
+                                        className="pl-8 pr-10 bg-zinc-900 border-zinc-700"
                                     />
+                                    {searchQuery && (
+                                        <button 
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <Button onClick={() => { setView("search"); setSearchResults([]); }} className="bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700">

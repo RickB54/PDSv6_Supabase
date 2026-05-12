@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet, Clipboard, Copy, Camera, Loader2 } from "lucide-react";
+import { Download, Upload, AlertCircle, Check, ArrowLeft, BookOpen, Plus, Trash2, Save, FileSpreadsheet, Clipboard, Copy, Camera, Loader2, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { saveChemical, saveTool, saveMaterial, getChemicals, getTools, getMaterials, uploadInventoryImage } from "@/lib/inventory-data";
 import { DETAILING_CHEMICALS } from "@/data/detailingChemicals";
@@ -927,8 +927,16 @@ export function InventoryImportModal({ open, onOpenChange, onSaved, defaultTab =
                                                     value={aiQuery}
                                                     onChange={(e) => setAiQuery(e.target.value)}
                                                     placeholder="Search catalog..."
-                                                    className="pl-10 bg-black border-zinc-800 h-12 font-bold"
+                                                    className="pl-10 pr-10 bg-black border-zinc-800 h-12 font-bold"
                                                 />
+                                                {aiQuery && (
+                                                    <button 
+                                                        onClick={() => setAiQuery('')}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                                    >
+                                                        <X className="h-5 h-5" />
+                                                    </button>
+                                                )}
                                             </div>
                                             <Button type="submit" disabled={isAiSearching} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black h-12 uppercase tracking-wide">
                                                 {isAiSearching ? "Thinking..." : "Find suggested items"}

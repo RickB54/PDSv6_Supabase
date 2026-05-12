@@ -969,8 +969,16 @@ Precision. Protection. Perfection.`;
                 placeholder="Search invoices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-zinc-950 border-zinc-800"
+                className="pl-10 pr-10 bg-zinc-950 border-zinc-800"
               />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
             {filterCustomerId ? (
               <Select value={filterVehicle} onValueChange={(val) => {

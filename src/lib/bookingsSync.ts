@@ -35,15 +35,29 @@ export function generateBookingPDF(booking: Booking, details?: {
   doc.text("BOOKING CONFIRMATION", 20, 30);
   doc.text(`Created: ${new Date().toLocaleString()}`, 20, 40);
   doc.text(`Customer: ${booking.customer || 'N/A'}`, 20, 55);
-  doc.text(`Service: ${details?.service || booking.title}`, 20, 65);
-  doc.text(`Scheduled: ${new Date(booking.date).toLocaleString()}`, 20, 75);
-  if (details?.vehicle) doc.text(`Vehicle: ${details.vehicle}`, 20, 85);
-  if (typeof details?.price === 'number') doc.text(`Price: $${details.price.toFixed(2)}`, 20, 95);
-  if (details?.tech) doc.text(`Tech: ${details.tech}`, 20, 105);
+  if (booking.customerEmail) doc.text(`Email: ${booking.customerEmail}`, 20, 62);
+  if (booking.customerPhone) doc.text(`Phone: ${booking.customerPhone}`, 20, 69);
+  if (booking.address) {
+    doc.text("Address:", 20, 76);
+    doc.text(booking.address, 45, 76);
+  }
+  
+  doc.text(`Service: ${details?.service || booking.title}`, 20, 86);
+  doc.text(`Scheduled: ${new Date(booking.date).toLocaleString()}`, 20, 93);
+  
+  const vYear = booking.vehicleYear || '';
+  const vMake = booking.vehicleMake || '';
+  const vModel = booking.vehicleModel || '';
+  const vType = booking.vehicle || '';
+  const vehicleStr = `${vYear} ${vMake} ${vModel} (${vType})`.trim();
+  
+  if (vehicleStr) doc.text(`Vehicle: ${vehicleStr}`, 20, 103);
+  if (typeof details?.price === 'number') doc.text(`Price: $${details.price.toFixed(2)}`, 20, 110);
+  if (details?.tech) doc.text(`Tech: ${details.tech}`, 20, 120);
   if (details?.notes) {
-    doc.text("Notes:", 20, 115);
+    doc.text("Notes:", 20, 130);
     const lines = doc.splitTextToSize(details.notes, 170);
-    doc.text(lines, 20, 125);
+    doc.text(lines, 20, 140);
   }
   return doc.output('dataurlstring');
 }

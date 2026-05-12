@@ -785,7 +785,20 @@ export default function AdminDashboard() {
             {/* Search */}
             <div className="grid grid-cols-1 gap-4">
               <div className="relative">
-                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users by name or email" className="bg-zinc-900 border-zinc-700 text-white" />
+                <Input 
+                  value={search} 
+                  onChange={(e) => setSearch(e.target.value)} 
+                  placeholder="Search users by name or email" 
+                  className="pr-10 bg-zinc-900 border-zinc-700 text-white" 
+                />
+                {search && (
+                  <button 
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
 

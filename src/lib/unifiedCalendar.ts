@@ -16,6 +16,9 @@ export interface CalendarEvent {
     date: string; // ISO string
     endTime?: string; // ISO string
     customer?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    address?: string;
     status?: string;
     source: 'booking' | 'manual' | 'google';
     source_origin?: string; // e.g. 'Hybrid Availability System'
@@ -23,9 +26,18 @@ export interface CalendarEvent {
     color?: string;
     icon?: string;
     assignedEmployee?: string;
+    vehicle?: string;
     vehicleYear?: string;
     vehicleMake?: string;
     vehicleModel?: string;
+    notes?: string;
+    addons?: string[];
+    price?: number;
+    bookedBy?: string;
+    hasReminder?: boolean;
+    reminderFrequency?: number;
+    vehicleId?: string;
+    customerId?: string;
 }
 
 /**
@@ -50,16 +62,26 @@ export async function getUnifiedCalendarEvents(
                 date: booking.date,
                 endTime: booking.endTime,
                 customer: booking.customer,
+                customerEmail: booking.customerEmail,
+                customerPhone: booking.customerPhone,
+                address: booking.address,
                 status: booking.status,
                 source: 'booking',
                 source_origin: booking.source || 'Manual Entry',
                 isDeletable: true,
-                color: undefined,
-                icon: undefined,
                 assignedEmployee: booking.assignedEmployee,
+                vehicle: booking.vehicle,
                 vehicleYear: booking.vehicleYear,
                 vehicleMake: booking.vehicleMake,
                 vehicleModel: booking.vehicleModel,
+                notes: booking.notes,
+                addons: booking.addons,
+                price: booking.price,
+                bookedBy: booking.bookedBy,
+                hasReminder: booking.hasReminder,
+                reminderFrequency: booking.reminderFrequency,
+                vehicleId: booking.vehicleId,
+                customerId: booking.customerId
             });
         }
     });

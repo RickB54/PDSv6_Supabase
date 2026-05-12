@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { FileText, Download, Search, Filter, Trash2, Eye, BellOff, Bell, Printer } from "lucide-react";
+import { FileText, Download, Search, Filter, Trash2, Eye, BellOff, Bell, Printer, X } from "lucide-react";
 import { markViewed, isViewed, unmarkViewed } from "@/lib/viewTracker";
 import {
   AlertDialog,
@@ -157,10 +157,51 @@ const FileManager = () => {
     }
   }, [location.search]);
 
-  const loadRecords = () => {
+  const loadRecords = async () => {
+    // 1. Load from localStorage (legacy/immediate)
     const stored = localStorage.getItem('pdfArchive');
+    let localRecords: PDFRecord[] = [];
     if (stored) {
-      setRecords(JSON.parse(stored));
+      try { localRecords = JSON.parse(stored); } catch { }
+    }
+
+    // 2. Load from Supabase
+    try {
+      const { default: supabase } = await import('@/lib/supabase');
+      const { data, error } = await supabase
+        .from('pdf_records')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error("Failed to load PDF records from Supabase:", error);
+        setRecords(localRecords);
+      } else if (data) {
+        const remoteRecords: PDFRecord[] = data.map((r: any) => ({
+          id: r.id,
+          fileName: r.file_name,
+          recordType: r.record_type,
+          customerName: r.customer_name,
+          date: r.date,
+          timestamp: r.timestamp,
+          recordId: r.record_id,
+          pdfData: r.pdf_data,
+          path: r.path
+        }));
+
+        // Merge and deduplicate by ID
+        const combined = [...remoteRecords];
+        localRecords.forEach(lr => {
+          if (!combined.find(cr => cr.id === lr.id)) {
+            combined.push(lr);
+          }
+        });
+
+        setRecords(combined);
+      }
+    } catch (e) {
+      console.warn("Supabase not available, using local records only");
+      setRecords(localRecords);
     }
   };
 
@@ -247,10 +288,22 @@ const FileManager = () => {
     } catch { }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    // 1. Delete from localStorage
     const updated = records.filter(r => r.id !== id);
     localStorage.setItem('pdfArchive', JSON.stringify(updated));
     setRecords(updated);
+    
+    // 2. Delete from Supabase
+    try {
+      const { default: supabase } = await import('@/lib/supabase');
+      const { error } = await supabase.from('pdf_records').delete().eq('id', id);
+      if (error) console.error("Supabase PDF delete failed:", error);
+      else console.log("✅ PDF deleted from Supabase:", id);
+    } catch (e) {
+      console.warn("Supabase not available for delete sync");
+    }
+
     setDeleteId(null);
     toast({
       title: "Deleted",
@@ -302,8 +355,16 @@ const FileManager = () => {
                   placeholder="Search by file name or customer..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                 />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val); setUserChangedTypeFilter(true); }}>

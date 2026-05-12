@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Trash2, AlertCircle, RefreshCw, Calendar, Search } from "lucide-react";
+import { Trash2, AlertCircle, RefreshCw, Calendar, Search, X } from "lucide-react";
 import { getChemicals, getTools, getMaterials, deleteChemical, deleteTool, deleteMaterial } from "@/lib/inventory-data";
 import { Input } from "@/components/ui/input";
 
@@ -142,10 +142,18 @@ export function InventoryCleanupModal({ open, onOpenChange }: InventoryCleanupMo
                             <Input
                                 type="search"
                                 placeholder="Search items..."
-                                className="pl-8"
+                                className="pl-8 pr-10"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
+                            {searchQuery && (
+                                <button 
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center px-3 border rounded-md bg-muted/50 text-xs font-semibold whitespace-nowrap text-muted-foreground">
                             {items.length} {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileDown, Search } from "lucide-react";
+import { CheckCircle2, AlertCircle, ArrowLeft, Car, Edit, Trash2, History, FileDown, Search, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import vehicleDatabase from "@/data/vehicle_db.json";
@@ -437,15 +437,23 @@ export default function VehicleClassification() {
                         <div className="space-y-6">
                             <div className="relative">
                                 <label className="text-xs text-zinc-300 uppercase font-bold mb-2 block">Search Manufacturer</label>
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
-                                    <Input
-                                        placeholder="Type to search (e.g. Ford, Toyota)..."
-                                        value={makeSearchQuery}
-                                        onChange={(e) => setMakeSearchQuery(e.target.value)}
-                                        className="pl-9 bg-zinc-950 border-zinc-800 text-zinc-200 focus:border-blue-500 focus:ring-blue-500/20 py-6"
-                                    />
-                                </div>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-500" />
+                                        <Input
+                                            placeholder="Type to search (e.g. Ford, Toyota)..."
+                                            value={makeSearchQuery}
+                                            onChange={(e) => setMakeSearchQuery(e.target.value)}
+                                            className="pl-9 pr-10 bg-zinc-950 border-zinc-800 text-zinc-200 focus:border-blue-500 focus:ring-blue-500/20 py-6"
+                                        />
+                                        {makeSearchQuery && (
+                                            <button 
+                                                onClick={() => setMakeSearchQuery('')}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
                             </div>
 
                             {returnTo && (

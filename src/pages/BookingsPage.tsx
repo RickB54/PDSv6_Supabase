@@ -26,7 +26,7 @@ import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getS
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
-import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType } from "@/lib/services";
+import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType, getCanonicalAddonName } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { useLocation } from "react-router-dom";
 import { getUnifiedCustomers } from "@/lib/customers";
@@ -355,7 +355,8 @@ export default function BookingsPage() {
     
     if (formData.addons && formData.addons.length > 0) {
       formData.addons.forEach(addonName => {
-        const addon = allAddons.find(a => a.name === addonName);
+        const canonical = getCanonicalAddonName(addonName);
+        const addon = allAddons.find(a => a.name === canonical);
         if (addon) {
           total += getAddOnPrice(addon.id, vType);
         }
@@ -840,7 +841,7 @@ export default function BookingsPage() {
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || "",
       notes: booking.notes || matchingCust?.notes || "",
-      addons: Array.isArray(booking.addons) ? booking.addons : [],
+      addons: (Array.isArray(booking.addons) ? booking.addons : []).map(a => getCanonicalAddonName(a)),
       hasReminder: booking.hasReminder || false,
       reminderFrequency: booking.reminderFrequency?.toString() || "3",
       status: booking.status || "confirmed",

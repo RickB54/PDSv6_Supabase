@@ -706,8 +706,16 @@ export default function UserManagement() {
                     value={adminSearch}
                     onChange={(e) => setAdminSearch(e.target.value)}
                     placeholder="Search admins..."
-                    className="pl-9 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
+                    className="pl-9 pr-10 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
                   />
+                  {adminSearch && (
+                    <button 
+                      onClick={() => setAdminSearch('')}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -825,9 +833,28 @@ export default function UserManagement() {
         {/* Employee List */}
         <Card id="employees-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emerald-500" />
-              <CardTitle className="text-white text-lg">Active Employees</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-emerald-500" />
+                <CardTitle className="text-white text-lg">Active Employees</CardTitle>
+              </div>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                <Input
+                  value={empSearch}
+                  onChange={(e) => setEmpSearch(e.target.value)}
+                  placeholder="Search employees..."
+                  className="pl-9 pr-10 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
+                />
+                {empSearch && (
+                  <button 
+                    onClick={() => setEmpSearch('')}
+                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardHeader>
 
@@ -1019,8 +1046,16 @@ export default function UserManagement() {
                   value={custSearch}
                   onChange={(e) => setCustSearch(e.target.value)}
                   placeholder="Search customers..."
-                  className="pl-9 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
+                  className="pl-9 pr-10 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
                 />
+                {custSearch && (
+                  <button 
+                    onClick={() => setCustSearch('')}
+                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -1161,8 +1196,16 @@ export default function UserManagement() {
                   value={custSearch}
                   onChange={(e) => setCustSearch(e.target.value)}
                   placeholder="Search prospects..."
-                  className="pl-9 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
+                  className="pl-9 pr-10 bg-zinc-950 border-zinc-700 text-white placeholder:text-zinc-600 h-9"
                 />
+                {custSearch && (
+                  <button 
+                    onClick={() => setCustSearch('')}
+                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           </CardHeader>

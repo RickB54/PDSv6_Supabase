@@ -348,5 +348,39 @@ export function getServiceDuration(id: string = ''): number {
   if (nid.includes('full')) return 2.5;
   if (nid.includes('interior')) return 1.5;
   if (nid.includes('exterior')) return 1.0;
+  if (nid.includes('elite')) return 4.0;
   return 2.0;
+}
+
+/**
+ * Normalizes an add-on identifier (ID or Name) to its canonical Registry Name.
+ * Handles IDs like 'pet-hair' and common variations.
+ */
+export function getCanonicalAddonName(input: string): string {
+  if (!input) return "";
+  const lowerInput = input.toLowerCase().trim();
+  
+  // 1. Try match against built-in registry IDs
+  const byId = addOns.find(a => a.id.toLowerCase() === lowerInput);
+  if (byId) return byId.name;
+  
+  // 2. Try match against built-in registry Names
+  const byName = addOns.find(a => a.name.toLowerCase() === lowerInput);
+  if (byName) return byName.name;
+
+  // 3. Robust mapping for known aliases and common variations
+  if (lowerInput === 'pet hair' || lowerInput.includes('pet hair')) return 'Pet Hair Removal';
+  if (lowerInput === 'clay bar' || lowerInput.includes('clay bar')) return 'Clay Bar & Iron Decontamination';
+  if (lowerInput.includes('wheel clean')) return 'Wheel Cleaning';
+  if (lowerInput.includes('headlight')) return 'Headlight Restoration';
+  if (lowerInput.includes('leather')) return 'Leather Conditioning';
+  if (lowerInput.includes('stain')) return 'Stain Treatment';
+  if (lowerInput.includes('ceramic trim')) return 'Ceramic Trim Coat Restoration';
+  if (lowerInput.includes('engine')) return 'Engine Bay Cleaning';
+  if (lowerInput.includes('odor')) return 'Odor Eliminator';
+  if (lowerInput.includes('ceramic protection')) return '1-Year Ceramic Protection';
+  if (lowerInput.includes('scratch')) return 'Scratch Repair';
+  
+  // Fallback: If we can't find a canonical match, return the input properly capitalized
+  return input.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }

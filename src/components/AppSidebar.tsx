@@ -5,7 +5,7 @@ import {
   TicketPercent, GraduationCap, Shield, CalendarDays, Target as TargetIcon,
   ChevronRight, ChevronsUp, ChevronsDown, UserPlus, Newspaper,
   MessageSquare, Clock, History, ShoppingCart, Video, HelpCircle,
-  FileText, CheckSquare, Sparkles, PanelLeft
+  FileText, CheckSquare, Sparkles, PanelLeft, X
 } from "lucide-react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -601,8 +601,16 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 bg-zinc-900/50 border border-zinc-800 rounded-lg pl-9 pr-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
+                className="w-full h-9 bg-zinc-900/50 border border-zinc-800 rounded-lg pl-9 pr-9 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium"
               />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         )}

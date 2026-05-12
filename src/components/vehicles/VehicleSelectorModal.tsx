@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, AlertCircle, ArrowLeft, Car, Plus, Search, HelpCircle, Save } from "lucide-react";
+import { CheckCircle2, AlertCircle, ArrowLeft, Car, Plus, Search, HelpCircle, Save, X } from "lucide-react";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
@@ -186,8 +186,16 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                                         placeholder="Search makes (e.g. Ford, Toyota)..."
                                         value={makeSearchQuery}
                                         onChange={(e) => setMakeSearchQuery(e.target.value)}
-                                        className="bg-black/50 border-purple-500/20 pl-10 focus:border-purple-500"
+                                        className="bg-black/50 border-purple-500/20 pl-10 pr-10 focus:border-purple-500"
                                     />
+                                    {makeSearchQuery && (
+                                        <button 
+                                            onClick={() => setMakeSearchQuery('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {filteredMakes.map((make) => (

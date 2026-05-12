@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert } from "lucide-react";
+import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -1926,10 +1926,18 @@ const InventoryControl = () => {
                   <Input
                     type="search"
                     placeholder="Search chemicals..."
-                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    className="pl-8 pr-10 h-9 bg-zinc-900 border-zinc-700 text-white"
                     value={chemicalSearch}
                     onChange={(e) => setChemicalSearch(e.target.value)}
                   />
+                  {chemicalSearch && (
+                    <button 
+                      onClick={() => setChemicalSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="space-y-8">
@@ -2074,10 +2082,18 @@ const InventoryControl = () => {
                   <Input
                     type="search"
                     placeholder="Search supplies..."
-                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    className="pl-8 pr-10 h-9 bg-zinc-900 border-zinc-700 text-white"
                     value={supplySearch}
                     onChange={(e) => setSupplySearch(e.target.value)}
                   />
+                  {supplySearch && (
+                    <button 
+                      onClick={() => setSupplySearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">
@@ -2312,10 +2328,18 @@ const InventoryControl = () => {
                   <Input
                     type="search"
                     placeholder="Search equipment..."
-                    className="pl-8 h-9 bg-zinc-900 border-zinc-700 text-white"
+                    className="pl-8 pr-10 h-9 bg-zinc-900 border-zinc-700 text-white"
                     value={equipmentSearch}
                     onChange={(e) => setEquipmentSearch(e.target.value)}
                   />
+                  {equipmentSearch && (
+                    <button 
+                      onClick={() => setEquipmentSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="overflow-x-auto hidden md:block">

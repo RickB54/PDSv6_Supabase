@@ -114,7 +114,7 @@ export function savePDFToArchive(
     path: opts?.path ?? defaultPath
   };
 
-  // Get existing records
+  // 1. Local Storage fallback/immediate sync
   let existing: PDFRecord[] = [];
   try {
     existing = JSON.parse(localStorage.getItem('pdfArchive') || '[]');
@@ -122,12 +122,30 @@ export function savePDFToArchive(
   } catch {
     existing = [];
   }
-
-  // Add new record
   existing.push(record);
-
-  // Save back to localStorage
   localStorage.setItem('pdfArchive', JSON.stringify(existing));
+
+  // 2. Supabase Persistence
+  const syncWithSupabase = async () => {
+    try {
+      const { default: supabase } = await import('@/lib/supabase');
+      const { error } = await supabase.from('pdf_records').upsert({
+        id: record.id,
+        file_name: record.fileName,
+        record_type: record.recordType,
+        customer_name: record.customerName,
+        date: record.date,
+        record_id: record.recordId,
+        pdf_data: record.pdfData,
+        path: record.path
+      });
+      if (error) console.warn("Supabase PDF sync failed:", error);
+      else console.log("✅ PDF archived to Supabase:", record.id);
+    } catch (e) {
+      console.warn("Supabase not available for PDF sync");
+    }
+  };
+  syncWithSupabase();
 
   // Proactively notify current tab so sidebar badges refresh immediately
   try {

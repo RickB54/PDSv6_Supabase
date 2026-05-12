@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2 } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -436,15 +436,16 @@ const SearchCustomer = () => {
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
-          const offset = 100; // Account for fixed header
-          const elementPosition = el.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          const rect = el.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const targetY = rect.top + scrollTop - 120; // 120px offset for header
+          
           window.scrollTo({
-            top: offsetPosition,
+            top: targetY,
             behavior: "smooth"
           });
         }
-      }, 150);
+      }, 200);
     }
   };
   const toggleAll = () => {
@@ -495,7 +496,23 @@ const SearchCustomer = () => {
         </Card>
 
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-2 sm:p-4 rounded-xl border border-zinc-800">
-          <div className="relative w-full md:w-96"><Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" /><Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" /></div>
+          <div className="relative w-full md:w-96">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              placeholder="Search customers..." 
+              className="pl-10 pr-10 bg-zinc-950 border-zinc-800" 
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
             <Button variant="ghost" onClick={refresh} className="text-zinc-400 hover:text-white" disabled={isRefreshing}>
               <RotateCcw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} /> Refresh
@@ -653,7 +670,7 @@ const SearchCustomer = () => {
 
                   {isExpanded && (
                     <div className="p-3 sm:p-6 border-t border-blue-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
-                      <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
+                      <div className="flex flex-wrap justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
                         {!customer.is_archived && (
                           <>
                             <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
@@ -675,7 +692,7 @@ const SearchCustomer = () => {
                           <Link to={`/service-checklist?customerId=${customer.id}`}><FileBarChart className="h-4 w-4 mr-2" /> Start Service</Link>
                         </Button>
                         <Button variant="outline" size="sm" asChild className="h-9 px-4 text-pink-400 hover:text-pink-300 bg-zinc-800/50 border-zinc-800 rounded-lg">
-                          <Link to={`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
+                          <Link to={`/vehicle-gallery?search=${encodeURIComponent(customer.name)}&from=customers&customerId=${customer.id}`}><Video className="h-4 w-4 mr-2" /> Gallery</Link>
                         </Button>
                       </div>
 
@@ -798,12 +815,12 @@ const SearchCustomer = () => {
 
                         {/* RIGHT COLUMN: TIMELINE */}
                         <div className="space-y-6">
-                           {customer.notes && (
-                             <section className="bg-blue-900/10 border border-blue-500/20 p-5 rounded-2xl shadow-lg animate-in fade-in slide-in-from-right-4 duration-500">
-                               <div className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
-                               <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight font-medium">"{customer.notes}"</div>
-                             </section>
-                           )}
+                           <section className="bg-zinc-900/50 border border-zinc-800/50 p-5 rounded-2xl shadow-xl">
+                             <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                               <Zap className="w-3 h-3 text-amber-500" /> Retention & Engagement Hub
+                             </div>
+                             <RetentionHub customer={customer} />
+                           </section>
 
                            <section>
                              <div className="flex items-center justify-between mb-4">

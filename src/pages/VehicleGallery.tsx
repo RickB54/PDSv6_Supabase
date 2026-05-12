@@ -678,8 +678,9 @@ export default function VehicleGallery() {
                             const from = params.get('from');
                             const search = params.get('search');
                             if (from) {
+                                const customerId = params.get('customerId');
                                 const target = from === 'prospects' ? '/prospects' : '/search-customer';
-                                const returnUrl = `${target}?search=${encodeURIComponent(search || '')}`;
+                                const returnUrl = `${target}?search=${encodeURIComponent(search || '')}${customerId ? `&customerId=${customerId}` : ''}`;
                                 return (
                                     <TooltipProvider>
                                         <Tooltip>
@@ -715,10 +716,18 @@ export default function VehicleGallery() {
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                         <Input
                             placeholder="Search by customer or vehicle..."
-                            className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                            className="pl-10 pr-10 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                         />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
 

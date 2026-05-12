@@ -939,10 +939,18 @@ export function MixedLabelMaker({ open, onOpenChange }: MixedLabelMakerProps) {
                                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-purple-400 transition-colors" />
                                                 <Input 
                                                     placeholder="Search brand, name, or type..."
-                                                    className="pl-10 bg-zinc-900 border-zinc-800 h-10 text-xs font-bold focus:ring-purple-500/20"
+                                                    className="pl-10 pr-10 bg-zinc-900 border-zinc-800 h-10 text-xs font-bold focus:ring-purple-500/20"
                                                     value={searchQuery}
                                                     onChange={(e) => setSearchQuery(e.target.value)}
                                                 />
+                                                {searchQuery && (
+                                                    <button 
+                                                        onClick={() => setSearchQuery('')}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                             
                                             <div className="bg-zinc-900/50 rounded-xl border border-zinc-900 overflow-hidden">

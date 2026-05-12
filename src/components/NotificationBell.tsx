@@ -28,6 +28,16 @@ export default function NotificationBell() {
   const location = useLocation();
   const isFileManagerView = location.pathname.startsWith('/file-manager');
 
+  const sendDesktopNotification = (title: string, body: string) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        silent: true
+      });
+    }
+  };
+
   useEffect(() => {
     const count = isEmployee ? empUnreadCount : unreadCount;
     if (isFileManagerView) {
@@ -37,24 +47,32 @@ export default function NotificationBell() {
     }
     if (count > prevUnreadRef.current) {
       setRing(true);
-      // LOUD notification beep for new bookings
+      
+      // 1. Audio Notification
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         const o = ctx.createOscillator();
         const g = ctx.createGain();
-        o.type = "square"; // More attention-grabbing
-        o.frequency.value = 1200; // Higher pitch
-        g.gain.setValueAtTime(0.3, ctx.currentTime); // LOUD volume (was 0.02)
+        o.type = "square";
+        o.frequency.value = 1200;
+        g.gain.setValueAtTime(0.3, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
         o.connect(g); g.connect(ctx.destination);
         o.start();
         o.stop(ctx.currentTime + 0.3);
         setTimeout(() => ctx.close(), 400);
       } catch { }
+
+      // 2. Desktop Notification
+      const latestAlert = alerts?.[0];
+      if (latestAlert && !latestAlert.read) {
+        sendDesktopNotification("New Admin Alert", latestAlert.message);
+      }
+
       setTimeout(() => setRing(false), 600);
     }
     prevUnreadRef.current = count;
-  }, [unreadCount, empUnreadCount, isFileManagerView, isEmployee]);
+  }, [unreadCount, empUnreadCount, isFileManagerView, isEmployee, alerts]);
 
   // Keep dropdown in sync when alerts/employee notifications change
   useEffect(() => {

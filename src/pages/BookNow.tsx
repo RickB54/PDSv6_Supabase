@@ -16,7 +16,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
-import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
+import { servicePackages as builtInPackages, addOns as builtInAddOns, getCanonicalAddonName, getAddOnPrice, getServicePrice } from "@/lib/services";
 import { getCustomServices, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { generateBookingPDF, uploadToFileManager } from "@/lib/bookingsSync";
 import { useCouponsStore } from "@/store/coupons";
@@ -625,7 +625,7 @@ const BookNow = () => {
             make: formData.make,
             model: formData.model,
             package: bookingPayload.service || formData.package,
-            add_ons: addOns,
+            add_ons: addOns.map(id => getCanonicalAddonName(id)),
             date: dateIso,
             end_time: endTimeIso,
             notes: finalNotes,
@@ -659,6 +659,9 @@ const BookNow = () => {
         id: finalId,
         title: bookingPayload.service || "Booking",
         customer: formData.name,
+        customerEmail: formData.email,
+        customerPhone: formData.phone,
+        address: formData.address,
         date: dateIso,
         endTime: endTimeIso,
         status: "tentative" as const,
@@ -711,11 +714,22 @@ const BookNow = () => {
             subject: `🔔 NEW REQUEST: ${formData.name} - ${bookingPayload.service}`,
             customerName: formData.name,
             customerEmail: formData.email,
+            phone: formData.phone,
+            address: formData.address,
             service: bookingPayload.service,
             date: formattedDate,
             time: formattedTime,
             price: discountedTotal.toFixed(2),
-            status: 'TENTATIVE'
+            status: 'TENTATIVE',
+            vehicleYear: formData.year,
+            vehicleMake: formData.make,
+            vehicleModel: formData.model,
+            vehicleType: vehicleType,
+            notes: finalNotes,
+            addons: addOns.map(id => getCanonicalAddonName(id)).join(', ') || 'None',
+            conditionInside: formData.conditionInside || 'Not specified',
+            conditionOutside: formData.conditionOutside || 'Not specified',
+            couponCode: couponCode.toUpperCase() || 'None'
           }
         });
 
@@ -726,11 +740,22 @@ const BookNow = () => {
             subject: `🚗 Request Received: ${bookingPayload.service}`,
             customerName: formData.name,
             customerEmail: formData.email,
+            phone: formData.phone,
+            address: formData.address,
             service: bookingPayload.service,
             date: formattedDate,
             time: formattedTime,
             price: discountedTotal.toFixed(2),
-            status: 'TENTATIVE'
+            status: 'TENTATIVE',
+            vehicleYear: formData.year,
+            vehicleMake: formData.make,
+            vehicleModel: formData.model,
+            vehicleType: vehicleType,
+            notes: finalNotes,
+            addons: addOns.map(id => getCanonicalAddonName(id)).join(', ') || 'None',
+            conditionInside: formData.conditionInside || 'Not specified',
+            conditionOutside: formData.conditionOutside || 'Not specified',
+            couponCode: couponCode.toUpperCase() || 'None'
           }
         }) : Promise.resolve({ error: null });
 

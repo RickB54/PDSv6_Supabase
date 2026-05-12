@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { makeToc, HelpTopic } from './helpData';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Zap, Printer } from 'lucide-react';
+import { Search, ChevronRight, Zap, Printer, X } from 'lucide-react';
 import { exportHelpTopicPDF } from '@/lib/help-pdf';
 
 type HelpModalProps = {
@@ -175,9 +175,9 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                     // Set to first topic when clearing search
                     if (toc.length > 0) setCurrentTopicId(toc[0].id);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-[10px] font-bold"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
                  >
-                   Clear
+                   <X className="h-4 w-4" />
                  </button>
                )}
             </div>

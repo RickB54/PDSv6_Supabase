@@ -48,7 +48,8 @@ import {
     ChevronLeft,
     ChevronRight,
     CheckCircle2,
-    XCircle
+    XCircle,
+    X
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -539,10 +540,18 @@ const Taxes = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                         <Input
                             placeholder="Filter by vendor, note..."
-                            className="bg-black/40 border-zinc-800 pl-10"
+                            className="bg-black/40 border-zinc-800 pl-10 pr-10"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
+                        {searchTerm && (
+                            <button 
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-3">

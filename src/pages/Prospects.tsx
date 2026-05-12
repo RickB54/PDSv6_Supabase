@@ -26,7 +26,7 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X
 } from "lucide-react";
 import {
   AlertDialog,
@@ -428,15 +428,16 @@ const Prospects = () => {
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
-          const offset = 100; // Account for fixed header
-          const elementPosition = el.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - offset;
+          const rect = el.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const targetY = rect.top + scrollTop - 120; // 120px offset for header
+          
           window.scrollTo({
-            top: offsetPosition,
+            top: targetY,
             behavior: "smooth"
           });
         }
-      }, 150);
+      }, 200);
     }
   };
   const toggleAll = () => {
@@ -495,7 +496,20 @@ const Prospects = () => {
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="pl-10 bg-zinc-950 border-zinc-800" />
+            <Input 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              placeholder="Search prospects..." 
+              className="pl-10 pr-10 bg-zinc-950 border-zinc-800" 
+            />
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
             <Button
@@ -1100,7 +1114,7 @@ const Prospects = () => {
                               {hasMore && (
                                 <div 
                                   className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
-                                  onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
+                                  onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}&from=prospects&customerId=${customer.id}`)}
                                 >
                                   <span className="text-xl font-black text-purple-500/50 group-hover:text-purple-400">+{allPhotos.length - 6}</span>
                                   <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
@@ -1215,17 +1229,13 @@ const Prospects = () => {
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                      {c.notes && (
-                        <div className="text-sm text-zinc-400 italic bg-black/20 p-3 rounded-lg border-l-2 border-purple-500/50">
-                          {c.notes}
-                        </div>
-                      )}
+
                       
                       <div className="pt-2">
                          <RetentionHub customer={c} />
                       </div>
 
-                      <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                      <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-zinc-800">
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">
                           {c.is_archived ? <RotateCcw className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
                           {c.is_archived ? "Restore" : "Archive"}
@@ -1238,7 +1248,7 @@ const Prospects = () => {
                           variant="ghost" 
                           size="sm" 
                           className="h-9 px-4 text-pink-400 hover:text-pink-300 bg-zinc-800/50 rounded-lg"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/vehicle-gallery?search=${encodeURIComponent(c.name)}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/vehicle-gallery?search=${encodeURIComponent(c.name)}&from=prospects&customerId=${c.id}`); }}
                         >
                           <Video className="h-4 w-4 mr-2" />
                           Gallery

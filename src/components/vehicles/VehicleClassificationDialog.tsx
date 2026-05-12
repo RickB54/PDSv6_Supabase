@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Car, Search, ArrowLeft, CheckCircle2, AlertCircle, HelpCircle } from "lucide-react";
+import { Car, Search, ArrowLeft, CheckCircle2, AlertCircle, HelpCircle, X } from "lucide-react";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { useToast } from "@/hooks/use-toast";
@@ -153,9 +153,17 @@ export function VehicleClassificationDialog({ open, onOpenChange, onSelect }: Ve
                                         placeholder="e.g. Ford, Toyota, Honda..."
                                         value={makeSearchQuery}
                                         onChange={(e) => setMakeSearchQuery(e.target.value)}
-                                        className="pl-9 bg-zinc-900 border-zinc-800 py-6"
+                                        className="pl-9 pr-10 bg-zinc-900 border-zinc-800 py-6"
                                         autoFocus
                                     />
+                                    {makeSearchQuery && (
+                                        <button 
+                                            onClick={() => setMakeSearchQuery('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

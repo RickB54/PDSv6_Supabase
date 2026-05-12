@@ -635,14 +635,14 @@ export default function PrimeBlog() {
                                     placeholder="Search stories..."
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
-                                    className="bg-zinc-950/50 border-zinc-800 pl-10 rounded-2xl h-11 focus:border-indigo-500/50 transition-all text-xs font-medium"
+                                    className="bg-zinc-950/50 border-zinc-800 pl-10 pr-10 rounded-2xl h-11 focus:border-indigo-500/50 transition-all text-xs font-medium"
                                 />
                                 {searchTerm && (
                                     <button
                                         onClick={() => setSearchTerm("")}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
                                     >
-                                        <X className="w-3 h-3" />
+                                        <X className="w-4 h-4" />
                                     </button>
                                 )}
                             </div>

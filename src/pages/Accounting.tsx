@@ -809,10 +809,18 @@ const Accounting = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
                           placeholder="Search transactions..." 
-                          className="pl-9"
+                          className="pl-9 pr-10"
                           value={ledgerSearch}
                           onChange={(e) => setLedgerSearch(e.target.value)}
                         />
+                        {ledgerSearch && (
+                          <button 
+                            onClick={() => setLedgerSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                       <div className="flex gap-2 items-center">
                         <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>

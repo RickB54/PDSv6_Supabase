@@ -388,10 +388,18 @@ export default function PersonalNotes() {
                                         <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
                                         <Input
                                             placeholder="Search notes..."
-                                            className="pl-10 bg-zinc-900/50 border-zinc-800 h-10 rounded-xl"
+                                            className="pl-10 pr-10 bg-zinc-900/50 border-zinc-800 h-10 rounded-xl"
                                             value={store.searchQuery}
                                             onChange={(e) => store.setSearch(e.target.value)}
                                         />
+                                        {store.searchQuery && (
+                                            <button 
+                                                onClick={() => store.setSearch('')}
+                                                className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 <ScrollArea className="flex-1">
@@ -684,10 +692,18 @@ export default function PersonalNotes() {
                                     <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-zinc-600 group-focus-within:text-blue-500 transition-colors" />
                                     <Input
                                         placeholder="Fast search..."
-                                        className="pl-9 h-9 bg-zinc-900 border-zinc-800 rounded-xl text-xs placeholder:text-zinc-700"
+                                        className="pl-9 pr-10 h-9 bg-zinc-900 border-zinc-800 rounded-xl text-xs placeholder:text-zinc-700"
                                         value={store.searchQuery}
                                         onChange={(e) => store.setSearch(e.target.value)}
                                     />
+                                    {store.searchQuery && (
+                                        <button 
+                                            onClick={() => store.setSearch('')}
+                                            className="absolute right-3 top-2.5 text-zinc-600 hover:text-white transition-colors"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <ScrollArea className="flex-1">

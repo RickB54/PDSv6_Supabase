@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Search, Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music, Newspaper, GripVertical, Edit2, History as HistoryIcon, Zap, ExternalLink } from "lucide-react";
+import { Search, Printer, FileText, ChevronRight, BookOpen, Sparkles, Info, Rocket, Facebook, Instagram, Music, Newspaper, GripVertical, Edit2, History as HistoryIcon, Zap, ExternalLink, X } from "lucide-react";
 import { 
     adminMenuTopics, 
     employeeMenuTopics, 
@@ -472,8 +472,16 @@ export default function AppManual() {
                                     placeholder="Search 50+ technical topics..." 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-zinc-900 border-zinc-700 pl-10 focus:ring-sky-500/50"
+                                    className="bg-zinc-900 border-zinc-700 pl-10 pr-10 focus:ring-sky-500/50"
                                 />
+                                {searchQuery && (
+                                    <button 
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                         

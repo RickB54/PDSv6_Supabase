@@ -566,7 +566,7 @@ export default function EliteMaster() {
                                 width: '100%', 
                                 backgroundColor: '#0a0a0a', 
                                 border: '1px solid #151515', 
-                                padding: '12px 15px 12px 45px', 
+                                padding: '12px 45px 12px 45px', 
                                 borderRadius: '15px',
                                 color: 'white',
                                 fontSize: '12px',
@@ -575,6 +575,23 @@ export default function EliteMaster() {
                                 letterSpacing: '1px'
                             }}
                         />
+                        {searchQuery && (
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                style={{ 
+                                    position: 'absolute', 
+                                    right: '15px', 
+                                    top: '50%', 
+                                    transform: 'translateY(-50%)', 
+                                    color: '#333',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px' }}>

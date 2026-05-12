@@ -1040,7 +1040,7 @@ const api = async (endpoint, options = {}) => {
       const payload = JSON.parse(options.body || '{}');
       const list = (await localforage.getItem('customers')) || [];
       const now = new Date().toISOString();
-      let saved = null;
+      let isNew = !payload.id;
       if (payload.id) {
         const idx = list.findIndex((c) => c.id === payload.id);
         if (idx >= 0) {
@@ -1058,8 +1058,10 @@ const api = async (endpoint, options = {}) => {
       }
       await localforage.setItem('customers', list);
       try {
-        const { pushAdminAlert } = await import('@/lib/adminAlerts');
-        pushAdminAlert('customer_added', `New customer added: ${String((saved || {}).name || '').trim()}`, 'system', { id: saved.id, recordType: 'Customer' });
+        if (isNew) {
+          const { pushAdminAlert } = await import('@/lib/adminAlerts');
+          pushAdminAlert('customer_added', `New customer added: ${String((saved || {}).name || '').trim()}`, 'system', { id: saved.id, recordType: 'Customer' });
+        }
       } catch { }
       return saved;
     } catch (e) {

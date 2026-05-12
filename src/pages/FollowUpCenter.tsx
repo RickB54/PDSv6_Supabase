@@ -33,7 +33,8 @@ import {
   RotateCcw,
   HelpCircle,
   ExternalLink,
-  Eye
+  Eye,
+  X
 } from "lucide-react";
 import { format, addMonths, isBefore, differenceInDays } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -372,8 +373,16 @@ export default function FollowUpCenter() {
             placeholder="SEARCH: EMAILS, NAMES, VEHICLES..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-12 sm:pl-16 bg-zinc-900/80 border-zinc-800/50 h-14 sm:h-20 rounded-2xl sm:rounded-[2.5rem] text-sm sm:text-xl font-black placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900 focus:border-blue-500/40 transition-all border-2 relative z-10"
+            className="pl-12 sm:pl-16 pr-12 sm:pr-16 bg-zinc-900/80 border-zinc-800/50 h-14 sm:h-20 rounded-2xl sm:rounded-[2.5rem] text-sm sm:text-xl font-black placeholder:text-zinc-700 placeholder:uppercase focus:ring-blue-500/20 focus:bg-zinc-900 focus:border-blue-500/40 transition-all border-2 relative z-10"
           />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors z-20"
+            >
+              <X className="h-6 w-6 sm:h-8 sm:w-8" />
+            </button>
+          )}
         </div>
 
         <TabsContent value="opportunities" className="mt-0 outline-none">
