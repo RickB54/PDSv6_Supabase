@@ -425,6 +425,93 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
 }
 
 /**
+ * Aggregates all data related to a single customer for reporting.
+ * Applies standard mappers to ensure data consistency with the rest of the app.
+ */
+export const getCustomerDetailedHistory = async (customerId: string) => {
+    try {
+        // Fetch all in parallel
+        const [customerRes, bookingsRes, invoicesRes, estimatesRes, engagementsRes] = await Promise.all([
+            supabase.from('customers').select('*, vehicles(*)').eq('id', customerId).maybeSingle(),
+            supabase.from('bookings').select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type)').eq('customer_id', customerId),
+            supabase.from('invoices').select('*, customers(full_name), vehicles(make, model, year)').eq('customer_id', customerId),
+            supabase.from('estimates').select('*, customers(full_name), vehicles(make, model, year)').eq('customer_id', customerId),
+            supabase.from('engagements').select('*').eq('customer_id', customerId).order('created_at', { ascending: false })
+        ]);
+
+        if (customerRes.error) throw customerRes.error;
+        const customerData = customerRes.data;
+        if (!customerData) return null;
+
+        // 1. Map Customer & Vehicles
+        const customer = {
+            ...customerData,
+            name: customerData.full_name || customerData.name || 'Unknown',
+            vehicles: (customerData.vehicles || []).map((v: any) => ({
+                id: v.id,
+                make: v.make,
+                model: v.model,
+                year: v.year,
+                type: v.type,
+                color: v.color,
+                vin: v.vin,
+                generalPhotos: v.general_photos || [],
+                beforePhotos: v.before_photos || [],
+                afterPhotos: v.after_photos || [],
+                videoUrls: v.video_urls || []
+            }))
+        };
+
+        // 2. Map Bookings (Standardize fields for PDF)
+        const bookings = (bookingsRes.data || []).map((b: any) => {
+            const meta = b.booking_vehicle || {};
+            return {
+                ...b,
+                service: b.service_package || b.title || meta.title || b.service || 'N/A',
+                price: b.service_price || b.price || meta.price || 0,
+                vehicleYear: b.vehicles?.year || b.year || meta.year || '',
+                vehicleMake: b.vehicles?.make || b.make || meta.make || '',
+                vehicleModel: b.vehicles?.model || b.model || meta.model || '',
+                date: b.date || b.scheduled_at || meta.date || b.created_at
+            };
+        });
+
+        // 3. Map Invoices
+        const invoices = (invoicesRes.data || []).map((i: any) => {
+            let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "Unknown");
+            // Basic virtual field unpacking if needed
+            return {
+                ...i,
+                invoiceNumber: i.invoice_number,
+                total: i.total || 0,
+                paidAmount: i.paid_amount || 0,
+                date: i.date || i.created_at?.split('T')[0],
+                vehicle
+            };
+        });
+
+        // 4. Map Estimates
+        const estimates = (estimatesRes.data || []).map((e: any) => ({
+            ...e,
+            estimateNumber: e.estimate_number,
+            total: e.total || 0,
+            date: e.date || e.created_at?.split('T')[0]
+        }));
+
+        return {
+            customer,
+            bookings,
+            invoices,
+            estimates,
+            engagements: engagementsRes.data || []
+        };
+    } catch (err) {
+        console.error('getCustomerDetailedHistory error:', err);
+        return null;
+    }
+};
+
+/**
  * Fetch ALL vehicles directly from Supabase (for the gallery)
  */
 export const getSupabaseAllVehicles = async (): Promise<Vehicle[]> => {

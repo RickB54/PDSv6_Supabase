@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import browserImageCompression from "browser-image-compression";
 import { useBookingsStore } from "@/store/bookings";
@@ -76,7 +77,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     videoNote: "",
     has_google_review: false,
     vehicles: [],
-    date_of_contact: new Date().toISOString().split('T')[0],
+    date_of_contact: new Date().toLocaleString('sv-SE').replace(' ', 'T').slice(0, 16),
+    howFound: "",
+    howFoundOther: "",
   });
 
   const isProspect = form.type === 'prospect';
@@ -210,7 +213,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           vehicles: [
             { make: "", model: "", year: "", type: "", color: "", vin: "", conditionInside: "", conditionOutside: "", mileage: "" }
           ],
-          date_of_contact: initial?.date_of_contact || new Date().toISOString().split('T')[0]
+          date_of_contact: new Date().toLocaleString('sv-SE').replace(' ', 'T').slice(0, 16),
+          howFound: "",
+          howFoundOther: "",
         });
       }
     };
@@ -544,6 +549,48 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       value={form.notes}
                       onChange={(e) => handleChange("notes", e.target.value)}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-zinc-500 uppercase font-black">Date of Contact / Lead Entry</Label>
+                      <Input
+                        type="datetime-local"
+                        className="bg-zinc-900 border-zinc-800 text-white h-10"
+                        value={form.date_of_contact ? (form.date_of_contact.includes('T') ? form.date_of_contact.slice(0, 16) : `${form.date_of_contact}T12:00`) : ""}
+                        onChange={(e) => handleChange("date_of_contact", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] text-zinc-500 uppercase font-black">How Did They Find Us?</Label>
+                      <Select
+                        value={form.howFound || ""}
+                        onValueChange={(val) => {
+                          setForm(f => ({ ...f, howFound: val }));
+                        }}
+                      >
+                        <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-300 h-10">
+                          <SelectValue placeholder="Select Source" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-950 border-zinc-800">
+                          <SelectItem value="google">Google Search</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                          <SelectItem value="instagram">Instagram</SelectItem>
+                          <SelectItem value="referral">Referral / Word of Mouth</SelectItem>
+                          <SelectItem value="drive_by">Drive-by / Signage</SelectItem>
+                          <SelectItem value="returning">Returning Customer</SelectItem>
+                          <SelectItem value="other">Other Source</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.howFound === 'other' && (
+                        <Input
+                          placeholder="Please specify source..."
+                          className="mt-2 bg-zinc-900 border-zinc-800 text-white h-8 text-xs"
+                          value={form.howFoundOther || ""}
+                          onChange={(e) => setForm(f => ({ ...f, howFoundOther: e.target.value }))}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

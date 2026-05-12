@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2 } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -597,14 +597,21 @@ const SearchCustomer = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => { 
+                          onClick={async (e) => { 
                             e.stopPropagation(); 
-                            const relatedBookings = allBookings.filter(b => 
-                              (b.customerId === customer.id) || 
-                              (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                              (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                            );
-                            exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                            const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                            toast({ title: "Processing", description: "Aggregating customer intelligence..." });
+                            try {
+                              const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                              if (!detailedHistory) {
+                                toast({ title: "Error", description: "Failed to load customer history", variant: "destructive" });
+                                return;
+                              }
+                              toast({ title: "Success", description: "Intelligence report ready" });
+                              exportCustomerHistoryPDF(detailedHistory, true); 
+                            } catch (err) {
+                              toast({ title: "Error", description: "Error generating report", variant: "destructive" });
+                            }
                           }}
                           className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
                           title="Preview Activity Report"

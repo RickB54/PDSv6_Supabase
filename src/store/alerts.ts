@@ -44,8 +44,10 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/inventory-control";
       break;
     case "booking_created":
-      // Route to File Manager to see the generated PDF in the Bookings category
-      href = "/file-manager?category=" + encodeURIComponent("Bookings");
+    case "job_progress":
+    case "job_completed":
+      // Route to File Manager for bookings/progress, Payroll for completions
+      href = a.type === "job_completed" ? "/payroll" : "/file-manager?category=" + encodeURIComponent("Bookings");
       break;
     case "customer_added":
       href = "/search-customer";
@@ -68,12 +70,6 @@ export function mapAlert(a: AdminAlert): UIAlert {
     case "todo_comment":
     case "todo_updated":
       href = "/tasks";
-      break;
-    case "job_progress":
-      href = "/checklist";
-      break;
-    case "job_completed":
-      href = "/payroll";
       break;
     case "admin_email_sent":
       href = "/file-manager?category=" + encodeURIComponent("Email Logs");

@@ -508,7 +508,16 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
             <header className="flex flex-col gap-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight text-white">{format(new Date(), 'EEEE, MMMM do')}</h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-bold tracking-tight text-white">{format(new Date(), 'EEEE, MMMM do')}</h1>
+                            <button 
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prime-central-hub' } }))}
+                                className="p-1 text-zinc-500 hover:text-blue-400 transition-colors"
+                                title="Help & Documentation"
+                            >
+                                <HelpCircle className="h-5 w-5" />
+                            </button>
+                        </div>
                         <p className="text-zinc-400 text-sm">
                             {(stats?.scheduled || 0)} jobs scheduled · {(stats?.inProgress || 0)} in progress · ${(stats?.expectedRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} expected
                         </p>
