@@ -558,7 +558,7 @@ const SearchCustomer = () => {
                       ) : (
                         <div
                           className="h-12 w-12 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 cursor-pointer hover:border-blue-400 flex items-center justify-center text-zinc-400 font-bold"
-                          onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                          onClick={async (e) => { e.stopPropagation(); openEdit(customer); }}
                         >
                           <span>{(customer.name || 'U').charAt(0).toUpperCase()}</span>
                         </div>
@@ -621,15 +621,15 @@ const SearchCustomer = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => { e.stopPropagation(); handleArchiveId(customer); }}
+                          onClick={async (e) => { e.stopPropagation(); handleArchiveId(customer); }}
                           className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_archived ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-400 hover:text-amber-400")}
                           title={customer.is_archived ? "Restore" : "Archive"}
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
-                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
+                         <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                          {isAdmin && (
-                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
+                           <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
                              <Trash2 className="h-4 w-4" />
                            </Button>
                          )}
@@ -676,7 +676,7 @@ const SearchCustomer = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
-                                onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                                onClick={async (e) => { e.stopPropagation(); openEdit(customer); }}
                               >
                                 <Plus className="w-2.5 h-2.5" /> ADD VEHICLE
                               </Button>
@@ -757,7 +757,7 @@ const SearchCustomer = () => {
                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">Communication Overview</h4>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
-                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
+                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={async (e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
                                  <div className="pt-4 border-t border-zinc-800/50">
                                    <div className="flex items-center justify-between mb-2">
                                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">Relationship Metadata</span>
@@ -802,14 +802,14 @@ const SearchCustomer = () => {
                                    variant="outline"
                                    size="sm"
                                    className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
-                                   onClick={(e) => { 
+                                   onClick={async (e) => { 
                                      e.stopPropagation(); 
                                      const relatedBookings = allBookings.filter(b => 
                                        (b.customerId === customer.id) || 
                                        (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
                                        (b.customer?.toLowerCase() === customer.name?.toLowerCase())
                                      );
-                                     exportCustomerHistoryPDF(customer, relatedBookings); 
+                                     const { getCustomerDetailedHistory } = await import("@/lib/supa-data"); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory);
                                    }}
                                  >
                                    <FileDown className="w-3 h-3" /> EXPORT REPORT
@@ -818,7 +818,7 @@ const SearchCustomer = () => {
                                    variant="ghost"
                                    size="sm"
                                    className="h-8 text-[10px] font-black text-blue-400 hover:text-white bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500 px-4 rounded-lg transition-all gap-1.5"
-                                   onClick={(e) => { e.stopPropagation(); openEdit(customer, "crm"); }}
+                                   onClick={async (e) => { e.stopPropagation(); openEdit(customer, "crm"); }}
                                  >
                                    <Plus className="w-3 h-3" /> LOG ACTIVITY
                                  </Button>
@@ -928,9 +928,15 @@ const SearchCustomer = () => {
                                                   variant="ghost" 
                                                   size="sm" 
                                                   className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 p-0 gap-1.5"
-                                                  onClick={(e) => { 
+                                                  onClick={async (e) => { 
                                                     e.stopPropagation(); 
-                                                    exportCustomerHistoryPDF(customer, [booking], true); 
+                                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                                                    toast({ title: "Processing", description: "Aggregating history..." });
+                                                    try {
+                                                      const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                                                      if (!detailedHistory) return;
+                                                      exportCustomerHistoryPDF(detailedHistory, true); 
+                                                    } catch (err) {}
                                                   }}
                                                  >
                                                    <Eye className="h-3 w-3" /> Preview
@@ -939,7 +945,7 @@ const SearchCustomer = () => {
                                                   variant="ghost" 
                                                   size="sm" 
                                                   className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
-                                                  onClick={(e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
+                                                  onClick={async (e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
                                                  >
                                                    Inspect <ExternalLink className="h-2.5 w-2.5" />
                                                  </Button>

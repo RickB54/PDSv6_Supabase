@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import 'jspdf-autotable';
 import { format } from 'date-fns';
 
 export interface DetailedHistoryData {
@@ -11,8 +11,9 @@ export interface DetailedHistoryData {
 }
 
 export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = false) => {
-  const { customer, bookings, invoices, estimates, engagements } = data;
-  const doc = new jsPDF();
+  try {
+    const { customer, bookings, invoices, estimates, engagements } = data;
+    const doc = new jsPDF() as any; // Cast for autotable
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -231,17 +232,21 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
   doc.setTextColor(...colors.dark);
   doc.text('Operational Activity Ledger', 14, currentY);
 
-  autoTable(doc, {
+  doc.autoTable({
     startY: currentY + 5,
     head: [['Date/Time', 'Source', 'Activity', 'Technical Details', 'Amount', 'Notes / Summary']],
-    body: ledger.map(l => [
-      l.date ? format(new Date(l.date), 'MMM dd, yyyy\np') : 'N/A',
-      l.src,
-      l.act,
-      l.tech,
-      l.val,
-      l.note
-    ]),
+    body: ledger.map(l => {
+      let dStr = 'N/A';
+      try { dStr = l.date ? format(new Date(l.date), 'MMM dd, yyyy\np') : 'N/A'; } catch(e) {}
+      return [
+        dStr,
+        l.src,
+        l.act,
+        l.tech,
+        l.val,
+        l.note
+      ];
+    }),
     theme: 'striped',
     headStyles: { fillColor: colors.primary, fontSize: 8, fontStyle: 'bold' },
     styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
@@ -263,7 +268,7 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
   doc.setFont('helvetica', 'bold');
   doc.text('Customer Garage Archive', 14, currentY);
 
-  autoTable(doc, {
+  doc.autoTable({
     startY: currentY + 5,
     head: [['Vehicle Spec', 'Type', 'Color', 'VIN', 'Media Metadata']],
     body: (customer.vehicles || []).map((v: any) => [
@@ -295,5 +300,9 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
   } else {
     const filename = `${(customer.name || 'Customer').replace(/\s+/g, '_')}_360_Report_${format(new Date(), 'yyyyMMdd')}.pdf`;
     doc.save(filename);
+  }
+  } catch (err) {
+    console.error('PDF Generation Error:', err);
+    throw err; // Re-throw to be caught by UI
   }
 };

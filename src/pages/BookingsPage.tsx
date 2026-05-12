@@ -1698,8 +1698,8 @@ export default function BookingsPage() {
                           <div className="flex gap-1">
                             {booking.type === 'booking' && (
                               <>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleStartJob(); }}><Wrench className="h-4 w-4" /></Button>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleDuplicate(booking as Booking); }}><Copy className="h-4 w-4" /></Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={async (e) => { e.stopPropagation(); handleStartJob(); }}><Wrench className="h-4 w-4" /></Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={async (e) => { e.stopPropagation(); handleDuplicate(booking as Booking); }}><Copy className="h-4 w-4" /></Button>
                               </>
                             )}
                             {(booking.type === 'manual-block' || booking.type === 'booking') && (
@@ -2490,7 +2490,7 @@ export default function BookingsPage() {
                 <Button 
                   variant="secondary" 
                   size="sm" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
+                  onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
                   className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
                 >
                   <Save className="mr-1.5 h-4 w-4" /> Save Booking
@@ -2977,14 +2977,14 @@ export default function BookingsPage() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="h-8 w-8 p-0 text-primary hover:text-primary/80"
-                                  onClick={(e) => { 
+                                  onClick={async (e) => { 
                                     e.stopPropagation(); 
                                     const relatedBookings = items.filter(b => 
                                       (b.customerId === customer.id) || 
                                       (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
                                       (b.customer?.toLowerCase() === customer.name?.toLowerCase())
                                     );
-                                    exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
                                   }}
                                   title="Preview History Report"
                                 >
@@ -3143,7 +3143,7 @@ export default function BookingsPage() {
                                           "p-2 rounded border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer",
                                           event.type === 'booking' && items.find(i => i.id === event.id)?.isArchived && "bg-green-900/40 border-green-700 hover:bg-green-900/50"
                                         )}
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.stopPropagation();
                                           if (event.type === 'booking') {
                                             const original = items.find(i => i.id === event.id);
@@ -3214,7 +3214,7 @@ export default function BookingsPage() {
                                                 size="sm"
                                                 variant="secondary"
                                                 className="h-6 text-[10px] gap-1"
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                   e.stopPropagation();
                                                   // Fall back to the event object if the booking isn't in the local store
                                                   const booking = items.find(i => i.id === event.id) || event as any;
@@ -3241,7 +3241,7 @@ export default function BookingsPage() {
                                                 size="sm"
                                                 variant="ghost"
                                                 className={cn("h-6 text-[10px] gap-1 ml-1", items.find(i => i.id === event.id)?.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                   e.stopPropagation();
                                                   const booking = items.find(i => i.id === event.id);
                                                   if (booking) handleArchiveToggle(booking);
@@ -3253,7 +3253,7 @@ export default function BookingsPage() {
                                                 size="sm"
                                                 variant="ghost"
                                                 className="h-6 text-[10px] gap-1 ml-1 text-zinc-500 hover:text-zinc-300"
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                   e.stopPropagation();
                                                   const booking = items.find(i => i.id === event.id);
                                                   if (booking) handleDuplicate(booking);
@@ -3265,9 +3265,9 @@ export default function BookingsPage() {
                                                   size="sm"
                                                   variant="ghost"
                                                   className="h-6 text-[10px] gap-1 ml-1 text-blue-400 hover:text-blue-300"
-                                                  onClick={(e) => { 
+                                                  onClick={async (e) => { 
                                                     e.stopPropagation(); 
-                                                    exportCustomerHistoryPDF(customer, [event], true); 
+                                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(event.customerId!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
                                                   }}
                                                 >
                                                   <Eye className="h-2.5 w-2.5" /> Preview

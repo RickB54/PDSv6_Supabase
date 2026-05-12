@@ -593,14 +593,22 @@ const Prospects = () => {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={(e) => { 
+                          onClick={async (e) => { 
                             e.stopPropagation(); 
-                            const relatedBookings = allBookings.filter(b => 
-                              (b.customerId === customer.id) || 
-                              (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                              (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                            );
-                            exportCustomerHistoryPDF(customer, relatedBookings, true); 
+                            const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                            const { toast } = await import('sonner');
+                            const toastId = toast.loading("Aggregating prospect intelligence...");
+                            try {
+                              const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                              if (!detailedHistory) {
+                                toast.error("Failed to load history", { id: toastId });
+                                return;
+                              }
+                              toast.success("Report ready", { id: toastId });
+                              exportCustomerHistoryPDF(detailedHistory, true); 
+                            } catch (err) {
+                              toast.error("Error generating report", { id: toastId });
+                            }
                           }} 
                           className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300"
                           title="Preview Prospect Report"
@@ -821,14 +829,13 @@ const Prospects = () => {
                                    variant="outline"
                                    size="sm"
                                    className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
-                                   onClick={(e) => { 
+                                   onClick={async (e) => { 
                                      e.stopPropagation(); 
-                                     const relatedBookings = allBookings.filter(b => 
-                                       (b.customerId === customer.id) || 
-                                       (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                       (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                     );
-                                     exportCustomerHistoryPDF(customer, relatedBookings); 
+                                     const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                                     try {
+                                       const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                                       if (detailedHistory) exportCustomerHistoryPDF(detailedHistory); 
+                                     } catch (err) {}
                                    }}
                                  >
                                    <FileDown className="w-3 h-3" /> EXPORT REPORT
@@ -890,9 +897,13 @@ const Prospects = () => {
                                                    variant="ghost" 
                                                    size="sm" 
                                                    className="h-6 w-6 p-0 text-purple-400 hover:text-purple-300 ml-2"
-                                                   onClick={(e) => { 
+                                                   onClick={async (e) => { 
                                                       e.stopPropagation(); 
-                                                      exportCustomerHistoryPDF(customer, [booking], true); 
+                                                      const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                                                      try {
+                                                        const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                                                        if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
+                                                      } catch (err) {}
                                                    }}
                                                  >
                                                    <Eye className="h-3 w-3" />
