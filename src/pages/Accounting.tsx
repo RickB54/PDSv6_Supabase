@@ -144,7 +144,13 @@ const Accounting = () => {
 
       let daily = 0, weekly = 0, monthly = 0, totalRev = 0;
 
-      const paidInvoices = invoices.filter(inv => inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0);
+      const paidInvoices = invoices.filter(inv => {
+        const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
+        if (!isPaid) return false;
+        // Exclude Generic Customer test data
+        if ((inv as any).customerName === 'Generic Customer' || (inv as any).customer_name === 'Generic Customer') return false;
+        return true;
+      });
       
       paidInvoices.forEach(inv => {
         const amt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
@@ -157,6 +163,9 @@ const Accounting = () => {
 
       incomes.forEach(inc => {
         const amt = inc.amount || 0;
+        // Exclude Generic Customer test data
+        if (inc.customerName === 'Generic Customer') return;
+        
         const d = new Date(inc.date || inc.createdAt);
         if (d.toDateString() === today) daily += amt;
         if (d >= weekAgo) weekly += amt;
