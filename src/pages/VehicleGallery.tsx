@@ -243,7 +243,13 @@ function Lightbox({
 }
 
 // ─── media tile ───────────────────────────────────────────────────────────────
-function MediaTile({ item, onClick, small = false }: { item: MediaItem; onClick: () => void; small?: boolean }) {
+function MediaTile({ item, onClick, small = false, onDelete, isAdmin = false }: { 
+    item: MediaItem; 
+    onClick: () => void; 
+    small?: boolean; 
+    onDelete?: (e: React.MouseEvent) => void;
+    isAdmin?: boolean;
+}) {
     return (
         <div
             onClick={onClick}
@@ -269,8 +275,20 @@ function MediaTile({ item, onClick, small = false }: { item: MediaItem; onClick:
             )}
 
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
-                <p className="text-[8px] font-black uppercase text-white truncate">{item.vehicleLabel}</p>
+            <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1.5">
+                <p className="text-[8px] font-black uppercase text-white truncate text-center px-1">{item.vehicleLabel}</p>
+                
+                {isAdmin && onDelete && (
+                    <button 
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white hover:bg-red-500 shadow-lg z-10 transition-colors"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(e);
+                        }}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                )}
             </div>
 
             {/* Category badge */}
@@ -445,6 +463,8 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                                             key={i}
                                             item={item}
                                             small
+                                            isAdmin={isAdmin}
+                                            onDelete={() => setPhotoToDelete({ item })}
                                             onClick={() => onOpen(allMedia, allMedia.indexOf(item))}
                                         />
                                     ))}
@@ -706,7 +726,12 @@ export default function VehicleGallery() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                                     {allMedia.map((item, i) => (
                                         <div key={i} className="space-y-1">
-                                            <MediaTile item={item} onClick={() => openLightbox(allMedia, i)} />
+                                            <MediaTile 
+                                                item={item} 
+                                                onClick={() => openLightbox(allMedia, i)} 
+                                                isAdmin={isAdmin}
+                                                onDelete={() => setPhotoToDelete({ item })}
+                                            />
                                             <p className="text-[9px] text-zinc-600 truncate pl-1">{item.customerName}</p>
                                         </div>
                                     ))}
@@ -732,7 +757,7 @@ export default function VehicleGallery() {
             )}
 
             <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
-                <AlertDialogContent>
+                <AlertDialogContent className="z-[200]">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
                         <AlertDialogDescription>

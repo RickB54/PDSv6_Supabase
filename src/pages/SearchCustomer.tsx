@@ -1158,7 +1158,7 @@ const SearchCustomer = () => {
                             </div>
                             <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                               {displayPhotos.map((p, i) => (
-                                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
+                                <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
                                   <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
                                   <div className={cn(
                                     "absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase",
@@ -1166,6 +1166,15 @@ const SearchCustomer = () => {
                                     p.type === 'after' ? 'bg-emerald-600/80' : 
                                     'bg-blue-600/60'
                                   )}>{p.type}</div>
+                                  
+                                  {isAdmin && (
+                                    <button 
+                                      className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-lg z-10"
+                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ index: i, customer }); }}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                               ))}
                               {hasMore && (
@@ -1246,7 +1255,7 @@ const SearchCustomer = () => {
       />
 
       <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
-        <AlertDialogContent className="z-[100]">
+        <AlertDialogContent className="z-[200]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
             <AlertDialogDescription>

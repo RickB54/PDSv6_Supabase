@@ -1035,7 +1035,7 @@ const Prospects = () => {
                                     variant="outline" 
                                     size="sm" 
                                     className="h-7 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
-                                    onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                    onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
                                   >
                                     VIEW ALL <ExternalLink className="w-3 h-3 ml-0.5" />
                                   </Button>
@@ -1044,19 +1044,28 @@ const Prospects = () => {
                             </div>
                             <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                               {displayPhotos.map((p, i) => (
-                                <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
+                                <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-purple-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
                                   <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
                                   <div className={`absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase ${
                                     p.type === 'before' ? 'bg-orange-600/80' : 
                                     p.type === 'after' ? 'bg-emerald-600/80' : 
                                     'bg-blue-600/60'
                                   }`}>{p.type}</div>
+                                  
+                                  {isAdmin && (
+                                    <button 
+                                      className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-lg z-10"
+                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ index: i, customer }); }}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
                                 </div>
                               ))}
                               {hasMore && (
                                 <div 
                                   className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
-                                  onClick={() => window.location.href = `/vehicle-gallery?customerId=${customer.id}`}
+                                  onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
                                 >
                                   <span className="text-xl font-black text-purple-500/50 group-hover:text-purple-400">+{allPhotos.length - 6}</span>
                                   <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
@@ -1209,7 +1218,7 @@ const Prospects = () => {
       />
 
       <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800 z-[100]">
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 z-[200]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
             <AlertDialogDescription>
