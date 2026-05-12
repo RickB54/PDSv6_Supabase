@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 export interface DetailedHistoryData {
@@ -13,7 +13,7 @@ export interface DetailedHistoryData {
 export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = false) => {
   try {
     const { customer, bookings, invoices, estimates, engagements } = data;
-    const doc = new jsPDF() as any; // Cast for autotable
+    const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -123,9 +123,7 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
     const y = currentY + 10 + (chartH - h);
     
     doc.setFillColor(...s.color);
-    doc.setAlpha(0.8);
     doc.rect(x, y, barW, h, 'F');
-    doc.setAlpha(1.0);
     
     doc.setFontSize(8);
     doc.setTextColor(50);
@@ -232,12 +230,20 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
   doc.setTextColor(...colors.dark);
   doc.text('Operational Activity Ledger', 14, currentY);
 
-  doc.autoTable({
+  // Manual registration check for autoTable plugin
+  const callTable = (doc as any).autoTable || autoTable;
+  
+  callTable(doc, {
     startY: currentY + 5,
     head: [['Date/Time', 'Source', 'Activity', 'Technical Details', 'Amount', 'Notes / Summary']],
     body: ledger.map(l => {
       let dStr = 'N/A';
-      try { dStr = l.date ? format(new Date(l.date), 'MMM dd, yyyy\np') : 'N/A'; } catch(e) {}
+      try { 
+        if (l.date) {
+          const d = new Date(l.date);
+          dStr = isNaN(d.getTime()) ? 'N/A' : format(d, 'MMM dd, yyyy\np');
+        }
+      } catch(e) {}
       return [
         dStr,
         l.src,
@@ -268,7 +274,7 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
   doc.setFont('helvetica', 'bold');
   doc.text('Customer Garage Archive', 14, currentY);
 
-  doc.autoTable({
+  callTable(doc, {
     startY: currentY + 5,
     head: [['Vehicle Spec', 'Type', 'Color', 'VIN', 'Media Metadata']],
     body: (customer.vehicles || []).map((v: any) => [
