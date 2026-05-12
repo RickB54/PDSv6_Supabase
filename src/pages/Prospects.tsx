@@ -607,7 +607,7 @@ const Prospects = () => {
                                 return;
                               }
                               toast.success("Report ready", { id: toastId });
-                              exportCustomerHistoryPDF(detailedHistory, true); 
+                              await exportCustomerHistoryPDF(detailedHistory, true); 
                             } catch (err) {
                               toast.error("Error generating report", { id: toastId });
                             }
@@ -836,7 +836,7 @@ const Prospects = () => {
                                      const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
                                      try {
                                        const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                       if (detailedHistory) exportCustomerHistoryPDF(detailedHistory); 
+                                       if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory); 
                                      } catch (err) {}
                                    }}
                                  >
@@ -904,7 +904,7 @@ const Prospects = () => {
                                                       const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
                                                       try {
                                                         const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                                        if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
+                                                        if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
                                                       } catch (err) {}
                                                    }}
                                                  >

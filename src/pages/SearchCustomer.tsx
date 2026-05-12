@@ -626,7 +626,7 @@ const SearchCustomer = () => {
                                 return;
                               }
                               toast({ title: "Success", description: "Intelligence report ready" });
-                              exportCustomerHistoryPDF(detailedHistory, true); 
+                              await exportCustomerHistoryPDF(detailedHistory, true); 
                             } catch (err) {
                               toast({ title: "Error", description: "Error generating report", variant: "destructive" });
                             }
@@ -827,7 +827,7 @@ const SearchCustomer = () => {
                                        (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
                                        (b.customer?.toLowerCase() === customer.name?.toLowerCase())
                                      );
-                                     const { getCustomerDetailedHistory } = await import("@/lib/supa-data"); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory);
+                                     const { getCustomerDetailedHistory } = await import("@/lib/supa-data"); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory);
                                    }}
                                  >
                                    <FileDown className="w-3 h-3" /> EXPORT REPORT
@@ -952,8 +952,7 @@ const SearchCustomer = () => {
                                                     toast({ title: "Processing", description: "Aggregating history..." });
                                                     try {
                                                       const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                                      if (!detailedHistory) return;
-                                                      exportCustomerHistoryPDF(detailedHistory, true); 
+                                                      if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
                                                     } catch (err) {}
                                                   }}
                                                  >

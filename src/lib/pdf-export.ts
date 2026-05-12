@@ -2,15 +2,31 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+const getBase64ImageFromUrl = async (url: string): Promise<string | null> => {
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
 export interface DetailedHistoryData {
   customer: any;
   bookings: any[];
   invoices: any[];
   estimates: any[];
   engagements: any[];
+  media?: any[]; // For future use if needed, but we mostly use customer.vehicles
 }
 
-export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = false) => {
+export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, preview = false) => {
   try {
     const { customer, bookings, invoices, estimates, engagements } = data;
     const doc = new jsPDF();
@@ -288,6 +304,153 @@ export const exportCustomerHistoryPDF = (data: DetailedHistoryData, preview = fa
     headStyles: { fillColor: [80, 80, 80] },
     styles: { fontSize: 8 }
   });
+
+  // --- 6. ASSET VISUAL INVENTORY ---
+  currentY = (doc as any).lastAutoTable.finalY + 15;
+  
+  // Aggregate all possible photo sources
+  const photoGroups: { label: string; vehicles: any[] }[] = [];
+  
+  // A. Vehicle-specific photos
+  const vehiclesWithPhotos = (customer.vehicles || []).filter((v: any) => 
+    (v.generalPhotos?.length || 0) > 0 || 
+    (v.beforePhotos?.length || 0) > 0 || 
+    (v.afterPhotos?.length || 0) > 0
+  );
+
+  // B. Customer-level global photos (fallback)
+  const hasGlobalPhotos = (customer.generalPhotos?.length || 0) > 0 || 
+                         (customer.beforePhotos?.length || 0) > 0 || 
+                         (customer.afterPhotos?.length || 0) > 0;
+
+  if (vehiclesWithPhotos.length > 0 || hasGlobalPhotos) {
+    if (currentY + 40 > pageHeight) { doc.addPage(); currentY = 20; }
+    
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.dark);
+    doc.text('Asset Visual Inventory', 14, currentY);
+    currentY += 12;
+
+    // First, render vehicle-specific photos
+    for (const v of vehiclesWithPhotos) {
+      if (currentY + 30 > pageHeight) { doc.addPage(); currentY = 20; }
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...colors.primary);
+      doc.text(`${v.year || ''} ${v.make || ''} ${v.model || ''}`.toUpperCase(), 14, currentY);
+      currentY += 6;
+
+      const categories = [
+        { label: 'Before Photos', photos: v.beforePhotos || [], color: colors.warning },
+        { label: 'After Photos', photos: v.afterPhotos || [], color: colors.success },
+        { label: 'General / Technical', photos: v.generalPhotos || [], color: colors.primary }
+      ];
+
+      for (const cat of categories) {
+        if (cat.photos.length === 0) continue;
+        
+        if (currentY + 20 > pageHeight) { doc.addPage(); currentY = 20; }
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...cat.color);
+        doc.text(cat.label.toUpperCase(), 14, currentY);
+        currentY += 5;
+
+        const imgSize = 40;
+        const gap = 4;
+        let x = 14;
+        
+        for (const photoUrl of cat.photos) {
+          if (x + imgSize > pageWidth - 14) {
+            x = 14;
+            currentY += imgSize + gap;
+          }
+          if (currentY + imgSize > pageHeight - 15) {
+            doc.addPage();
+            currentY = 20;
+            x = 14;
+          }
+          
+          try {
+            const base64 = await getBase64ImageFromUrl(photoUrl);
+            if (base64) {
+               doc.addImage(base64, 'JPEG', x, currentY, imgSize, imgSize, undefined, 'FAST');
+            } else {
+               throw new Error('Load fail');
+            }
+          } catch (e) {
+            doc.setDrawColor(230);
+            doc.rect(x, currentY, imgSize, imgSize);
+            doc.setFontSize(6);
+            doc.setTextColor(150);
+            doc.text('IMAGE LOAD FAIL', x + imgSize/2, currentY + imgSize/2, { align: 'center' });
+          }
+          x += imgSize + gap;
+        }
+        currentY += imgSize + 12;
+      }
+    }
+
+    // Then, render global photos if any (those not assigned to a vehicle)
+    if (hasGlobalPhotos) {
+      if (currentY + 30 > pageHeight) { doc.addPage(); currentY = 20; }
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...colors.dark);
+      doc.text('MISCELLANEOUS / PROFILE ASSETS', 14, currentY);
+      currentY += 6;
+
+      const globalCats = [
+        { label: 'General Assets', photos: customer.generalPhotos || [], color: colors.primary },
+        { label: 'Before Condition (Global)', photos: customer.beforePhotos || [], color: colors.warning },
+        { label: 'After Condition (Global)', photos: customer.afterPhotos || [], color: colors.success }
+      ];
+
+      for (const cat of globalCats) {
+        if (cat.photos.length === 0) continue;
+        if (currentY + 20 > pageHeight) { doc.addPage(); currentY = 20; }
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...cat.color);
+        doc.text(cat.label.toUpperCase(), 14, currentY);
+        currentY += 5;
+
+        const imgSize = 40;
+        const gap = 4;
+        let x = 14;
+        
+        for (const photoUrl of cat.photos) {
+          if (x + imgSize > pageWidth - 14) {
+            x = 14;
+            currentY += imgSize + gap;
+          }
+          if (currentY + imgSize > pageHeight - 15) {
+            doc.addPage();
+            currentY = 20;
+            x = 14;
+          }
+          
+          try {
+            const base64 = await getBase64ImageFromUrl(photoUrl);
+            if (base64) {
+               doc.addImage(base64, 'JPEG', x, currentY, imgSize, imgSize, undefined, 'FAST');
+            }
+          } catch (e) {
+            doc.setDrawColor(230);
+            doc.rect(x, currentY, imgSize, imgSize);
+            doc.text('N/A', x + imgSize/2, currentY + imgSize/2, { align: 'center' });
+          }
+          x += imgSize + gap;
+        }
+        currentY += imgSize + 12;
+      }
+    }
+  }
 
   // --- FINAL FOOTER ---
   const finalY = (doc as any).lastAutoTable.finalY + 15;

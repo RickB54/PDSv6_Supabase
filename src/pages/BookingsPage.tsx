@@ -2984,7 +2984,7 @@ export default function BookingsPage() {
                                       (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
                                       (b.customer?.toLowerCase() === customer.name?.toLowerCase())
                                     );
-                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
+                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
                                   }}
                                   title="Preview History Report"
                                 >
@@ -3267,7 +3267,7 @@ export default function BookingsPage() {
                                                   className="h-6 text-[10px] gap-1 ml-1 text-blue-400 hover:text-blue-300"
                                                   onClick={async (e) => { 
                                                     e.stopPropagation(); 
-                                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(event.customerId!); if (detailedHistory) exportCustomerHistoryPDF(detailedHistory, true); 
+                                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(event.customerId!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
                                                   }}
                                                 >
                                                   <Eye className="h-2.5 w-2.5" /> Preview

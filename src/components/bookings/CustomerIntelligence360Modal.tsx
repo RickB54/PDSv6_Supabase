@@ -105,10 +105,10 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!historyData) return;
     try {
-      exportCustomerHistoryPDF(historyData);
+      await exportCustomerHistoryPDF(historyData);
       toast.success("Intelligence report exported successfully.");
     } catch (error) {
       toast.error("Failed to generate PDF report.");
