@@ -401,13 +401,28 @@ function CustomerCard({ customer, onOpen, onAddMedia }: { customer: Customer; on
                     {/* Group by vehicle */}
                     {(() => {
                         const groups: { label: string; items: MediaItem[] }[] = [];
+                        const seenUrls = new Set<string>();
 
-                        // Per vehicle
+                        // 1. Per vehicle (Process these first as they are more specific)
                         for (const v of customer.vehicles || []) {
                             const vLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
                             const vItems = allMedia.filter(m => m.vehicleLabel === vLabel);
-                            if (vItems.length > 0) groups.push({ label: vLabel, items: vItems });
+                            const uniqueVItems = vItems.filter(item => {
+                                if (!item.url || seenUrls.has(item.url)) return false;
+                                seenUrls.add(item.url);
+                                return true;
+                            });
+                            if (uniqueVItems.length > 0) groups.push({ label: vLabel, items: uniqueVItems });
                         }
+
+                        // 2. Profile-level (Show remaining items that weren't in vehicles)
+                        const profileItems = allMedia.filter(m => m.vehicleLabel === "Profile");
+                        const uniqueProfileItems = profileItems.filter(item => {
+                            if (!item.url || seenUrls.has(item.url)) return false;
+                            seenUrls.add(item.url);
+                            return true;
+                        });
+                        if (uniqueProfileItems.length > 0) groups.push({ label: "Profile / Misc", items: uniqueProfileItems });
 
                         return groups.map((group, gi) => (
                             <div key={gi} className="space-y-2">
