@@ -90,10 +90,25 @@ const Prospects = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get('search');
+    const pid = params.get('id');
+
     if (q) {
       setSearchTerm(decodeURIComponent(q));
     }
-  }, [location.search]);
+
+    if (pid && customers.length > 0) {
+      setTimeout(() => {
+        setExpandedCustomers([pid]);
+        const el = document.getElementById(`customer-${pid}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const targetY = rect.top + scrollTop - 100;
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+        }
+      }, 500);
+    }
+  }, [location.search, customers]);
 
   const refresh = async () => {
     setIsRefreshing(true);
@@ -418,6 +433,8 @@ const Prospects = () => {
     }
   };
 
+
+
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
   const toggleCustomer = (id: string) => { 
     const isExpanding = !expandedCustomers.includes(id);
@@ -425,19 +442,26 @@ const Prospects = () => {
     setAllExpanded(false); 
     
     if (isExpanding) {
+      // Use a more aggressive multi-step scroll for mobile reliability
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          const targetY = rect.top + scrollTop - 120; // 120px offset for header
+          // 1. Initial scroll using scrollIntoView for base positioning
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           
-          window.scrollTo({
-            top: targetY,
-            behavior: "smooth"
-          });
+          // 2. Secondary refinement for the header offset
+          setTimeout(() => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < 80 || rect.top > 130) {
+              const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+              window.scrollTo({
+                top: rect.top + scrollTop - 120,
+                behavior: "smooth"
+              });
+            }
+          }, 400);
         }
-      }, 400);
+      }, 300);
     }
   };
   const toggleAll = () => {

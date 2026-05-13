@@ -90,7 +90,13 @@ export async function onBookingCreated(booking: Booking) {
       'booking_created',
       `NEW BOOKING: ${booking.customer} - ${booking.title}`,
       'Staff',
-      { id: booking.id, recordId: booking.id, bookingId: booking.id, price: booking.price }
+      { 
+        id: booking.id, 
+        recordId: booking.id, 
+        bookingId: booking.id, 
+        customerId: (booking as any).customerId || (booking as any).customer_id,
+        price: booking.price 
+      }
     );
   } catch (e) {
     console.error('Failed to generate/upload booking PDF', e);

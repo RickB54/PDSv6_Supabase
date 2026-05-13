@@ -211,7 +211,7 @@ export default function NotificationBell() {
         // 2. Sync 'tentative' bookings and deduplicate via DB flag
         const { data } = await supabase
           .from('bookings')
-          .select('id, scheduled_at, service_package, booking_vehicle, customer_name')
+          .select('id, customer_id, scheduled_at, service_package, booking_vehicle, customer_name')
           .eq('status', 'tentative')
           .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
           .limit(10);
@@ -242,7 +242,7 @@ export default function NotificationBell() {
                 'booking_created',
                 `NEW ONLINE REQUEST: ${custName} - ${b.service_package}`,
                 'Customer Web',
-                { id: syncId, recordId: b.id, bookingId: b.id }
+                { id: syncId, recordId: b.id, bookingId: b.id, customerId: b.customer_id }
               );
               
               // MARK AS NOTIFIED IN DB (Syncs to all devices)

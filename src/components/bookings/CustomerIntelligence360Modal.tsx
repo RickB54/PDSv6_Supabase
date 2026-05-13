@@ -200,9 +200,9 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 p-0 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-emerald-500 to-pink-500 z-50" />
         
-        <DialogClose className="absolute right-4 top-4 z-[100] rounded-full p-2 bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white transition-all shadow-xl backdrop-blur-md">
-          <X className="w-5 h-5" />
-          <span className="sr-only">Close</span>
+        <DialogClose className="absolute right-2 top-2 z-[150] rounded-full p-3 bg-red-600 text-white hover:bg-red-700 transition-all shadow-2xl scale-110 md:scale-100">
+          <X className="w-6 h-6" />
+          <span className="sr-only">Close Modal</span>
         </DialogClose>
 
         <DialogHeader className="p-6 pb-2">
@@ -483,15 +483,17 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
           )}
         </div>
 
-        <div className="p-6 border-t border-zinc-900 bg-zinc-950 flex justify-between items-center">
+        <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4 text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500" /> Bookings</div>
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Invoices</div>
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pink-500" /> Notes</div>
           </div>
-          <Button variant="ghost" onClick={() => setIsOpen(false)} className="text-zinc-500 hover:text-white uppercase font-black text-xs tracking-widest">
-            Close 360
-          </Button>
+          <DialogClose asChild>
+            <Button variant="default" className="w-full sm:w-auto bg-zinc-100 text-zinc-900 hover:bg-white uppercase font-black text-xs tracking-widest px-10 h-12">
+              Close Report
+            </Button>
+          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>

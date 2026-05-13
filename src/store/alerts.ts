@@ -44,9 +44,16 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/inventory-control";
       break;
     case "booking_created":
+      // Online bookings should lead to the Prospects page for immediate review
+      if (a.payload?.customerId) {
+        href = `/prospects?id=${a.payload.customerId}`;
+      } else {
+        href = "/file-manager?category=" + encodeURIComponent("Bookings");
+      }
+      break;
     case "job_progress":
     case "job_completed":
-      // Route to File Manager for bookings/progress, Payroll for completions
+      // Route to Payroll for completions
       href = a.type === "job_completed" ? "/payroll" : "/file-manager?category=" + encodeURIComponent("Bookings");
       break;
     case "customer_added":
