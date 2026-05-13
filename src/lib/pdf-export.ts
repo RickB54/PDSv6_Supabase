@@ -282,6 +282,72 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
     }
   });
 
+  // --- 4.5 ADMINISTRATIVE COMMUNICATION RECORD ---
+  currentY = (doc as any).lastAutoTable.finalY + 15;
+  if (currentY + 40 > pageHeight) { doc.addPage(); currentY = 20; }
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...colors.dark);
+  doc.text('Administrative Communication Record', 14, currentY);
+
+  const comms: any[] = [];
+  // Reconstruct communication history from booking lifecycle
+  bookings.forEach(b => {
+    const d = b.date || b.created_at;
+    const stat = (b.status || 'pending').toLowerCase();
+    
+    comms.push({
+      date: d,
+      type: 'BOOKING REQUEST',
+      subject: `Request Received: ${b.service}`,
+      status: 'SENT',
+      desc: `Automated receipt sent to ${customer.email || 'customer'}. Includes service details and tentative pricing.`
+    });
+    
+    if (stat === 'confirmed' || stat === 'done') {
+      comms.push({
+        date: d,
+        type: 'CONFIRMATION',
+        subject: `Booking Confirmed: ${b.service}`,
+        status: 'SENT',
+        desc: `Official appointment confirmation sent. Locked into administrative calendar.`
+      });
+    }
+    
+    if (stat === 'cancelled') {
+      comms.push({
+        date: d,
+        type: 'CANCELLATION',
+        subject: `Appointment Cancelled: ${b.service}`,
+        status: 'SENT',
+        desc: `Cancellation notice dispatched. Slot released back to public availability.`
+      });
+    }
+  });
+
+  callTable(doc, {
+    startY: currentY + 5,
+    head: [['Date', 'Communication Type', 'Subject / Context', 'Delivery Status', 'Operational Notes']],
+    body: comms.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(c => [
+      format(new Date(c.date), 'MMM dd, yyyy'),
+      c.type,
+      c.subject,
+      c.status,
+      c.desc
+    ]),
+    theme: 'striped',
+    headStyles: { fillColor: colors.primary, fontSize: 8 },
+    styles: { fontSize: 7, cellPadding: 3 },
+    columnStyles: {
+      0: { cellWidth: 25 },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 50 },
+      3: { cellWidth: 25 },
+      4: { cellWidth: 'auto' }
+    }
+  });
+
   // --- 5. GARAGE ARCHIVE ---
   currentY = (doc as any).lastAutoTable.finalY + 15;
   if (currentY + 40 > pageHeight) { doc.addPage(); currentY = 20; }

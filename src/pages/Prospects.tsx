@@ -26,8 +26,11 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench
 } from "lucide-react";
+import PDFViewer from "@/components/FileManager/PDFViewer";
+import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
+import { parseISO } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +69,13 @@ const Prospects = () => {
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
   const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
+  
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success'>('confirmation');
+  const [emailFormData, setEmailFormData] = useState<any>(null);
+
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
 
   const { isDemoMode } = useDemoMode();
   const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
@@ -101,14 +111,102 @@ const Prospects = () => {
         setExpandedCustomers([pid]);
         const el = document.getElementById(`customer-${pid}`);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          const targetY = rect.top + scrollTop - 100;
-          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          // Robust multi-step scroll for mobile
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(() => {
+            const rect = el.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            window.scrollTo({ top: rect.top + scrollTop - 100, behavior: 'smooth' });
+          }, 300);
         }
-      }, 500);
+      }, 600);
     }
   }, [location.search, customers]);
+
+  const handlePreviewEmailForBooking = (booking: any) => {
+    if (!booking) return;
+    setEmailFormData({
+      customer: booking.customer || '',
+      email: booking.customerEmail || booking.email || '',
+      phone: booking.customerPhone || booking.phone || '',
+      address: booking.address || '',
+      service: booking.service || booking.title || '',
+      vehicle: booking.vehicle || '',
+      vehicleYear: booking.vehicleYear || '',
+      vehicleMake: booking.vehicleMake || '',
+      vehicleModel: booking.vehicleModel || '',
+      notes: booking.notes || '',
+      addons: Array.isArray(booking.addons) ? booking.addons : 
+              (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
+      time: booking.date ? format(parseISO(booking.date), 'HH:mm') : '09:00',
+      status: (booking.status || 'pending').toLowerCase() as any
+    });
+    
+    const stat = (booking.status || 'pending').toLowerCase();
+    let type: any = 'request';
+    if (stat === 'confirmed') type = 'confirmation';
+    else if (stat === 'cancelled') type = 'cancelled';
+    else if (stat === 'done') type = 'payment-success';
+    
+    setEmailPreviewType(type);
+    setShowEmailPreview(true);
+  };
+
+  const handlePreviewPdf = async (customerId: string) => {
+    toast({ title: "Generating Report", description: "Preparing 360 Intelligence Report..." });
+    try {
+      const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+      const detailedHistory = await getCustomerDetailedHistory(customerId);
+      if (detailedHistory) {
+        const { exportCustomerHistoryPDF } = await import('@/lib/pdf-export');
+        // We pass 'true' for preview and 'true' for returnDoc
+        const doc = await exportCustomerHistoryPDF(detailedHistory, true, true);
+        if (doc) {
+          const url = (doc as any).output('bloburl');
+          setPdfUrl(url);
+          setShowPdfViewer(true);
+          toast({ title: "Report Ready", description: "Inspection mode active." });
+        }
+      }
+    } catch (err) {
+      toast({ title: "Report Failed", description: "Generation encountered an error.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteVehicle = async (customerId: string, vehicleIndex: number) => {
+    if (isDemoMode) {
+      toast({ title: "Demo Mode", description: "Vehicle deletion is simulated in demo mode." });
+      return;
+    }
+    
+    try {
+      const customer = customers.find(c => c.id === customerId);
+      if (!customer || !customer.vehicles) return;
+
+      const vehicleToDelete = customer.vehicles[vehicleIndex];
+      
+      // 1. If it has a DB ID, delete from Supabase
+      if (vehicleToDelete.id) {
+        await deleteSupabaseVehicle(vehicleToDelete.id);
+      }
+
+      // 2. Update local state
+      const updatedVehicles = [...customer.vehicles];
+      updatedVehicles.splice(vehicleIndex, 1);
+      
+      const updatedCustomer = { ...customer, vehicles: updatedVehicles };
+      await upsertSupabaseCustomer(updatedCustomer);
+      
+      toast({ title: "Vehicle Removed", description: "The garage has been updated." });
+      refresh();
+    } catch (err: any) {
+      toast({ 
+        title: "Deletion Failed", 
+        description: err.message || "Could not remove vehicle. It may be linked to active bookings.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const refresh = async () => {
     setIsRefreshing(true);
@@ -132,10 +230,20 @@ const Prospects = () => {
         return customerType === 'prospect';
       });
 
-      console.log('🔍 Filtered prospects:', prospects);
-      console.log('🔍 Prospects count:', prospects.length);
-      console.log('🔍 Prospect names:', prospects.map(p => p.name));
+      // CHECK FOR REDIRECT: If we have an ID param but it's not in the prospects list,
+      // it might be a full customer now. Check the full list.
+      const params = new URLSearchParams(location.search);
+      const pid = params.get('id');
+      if (pid && !prospects.find(p => p.id === pid)) {
+        const fullCust = list.find(c => c.id === pid);
+        if (fullCust && fullCust.type !== 'prospect') {
+          console.log(`[Prospects] ID ${pid} is a ${fullCust.type}, redirecting to SearchCustomer...`);
+          navigate(`/search-customer?customerId=${pid}`);
+          return;
+        }
+      }
 
+      console.log('🔍 Filtered prospects:', prospects);
       setCustomers(prospects);
     } catch (err: any) {
       console.error('Refresh prospects failed:', err);
@@ -452,16 +560,14 @@ const Prospects = () => {
           // 2. Secondary refinement for the header offset
           setTimeout(() => {
             const rect = el.getBoundingClientRect();
-            if (rect.top < 80 || rect.top > 130) {
-              const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-              window.scrollTo({
-                top: rect.top + scrollTop - 120,
-                behavior: "smooth"
-              });
-            }
-          }, 400);
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            window.scrollTo({
+              top: rect.top + scrollTop - 120,
+              behavior: "smooth"
+            });
+          }, 450);
         }
-      }, 300);
+      }, 350);
     }
   };
   const toggleAll = () => {
@@ -724,7 +830,16 @@ const Prospects = () => {
                         <div className="space-y-6">
                            <section>
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Garage ({customer.vehicles?.length || 0})</h4>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Garage ({customer.vehicles?.length || 0})</h4>
+                                <button 
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'vehicle-management' } }))}
+                                  className="text-zinc-600 hover:text-blue-400 transition-colors"
+                                  title="Vehicle Help"
+                                >
+                                  <HelpCircle className="h-3 w-3" />
+                                </button>
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -763,8 +878,45 @@ const Prospects = () => {
                                         <div>
                                           <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">{vIdx === 0 ? 'Primary Vehicle' : `Vehicle #${vIdx+1}`}</div>
                                           <div className="text-zinc-200 text-sm font-black tracking-tight">{vy ? `${vy} ` : ''}{v.make} {v.model}</div>
-                                          <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'No Type Set'} {v.color ? `• ${v.color}` : ''}</div>
+                                          <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'No Type Set'} {v.color ? ` • ${v.color}` : ''}</div>
                                         </div>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="sm" 
+                                          className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            openEdit(customer, "profile");
+                                          }}
+                                          title="Edit Vehicle"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        {isAdmin && v.id && (
+                                          <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              if (confirm(`Delete ${vy} ${v.make || ''} ${v.model || ''}?`)) {
+                                                const { deleteSupabaseVehicle } = await import('@/lib/supa-data');
+                                                try {
+                                                  await deleteSupabaseVehicle(v.id);
+                                                  toast({ title: "Vehicle Deleted" });
+                                                  refresh();
+                                                } catch (err: any) {
+                                                  toast({ title: "Error", description: err.message, variant: "destructive" });
+                                                }
+                                              }
+                                            }}
+                                            title="Delete Vehicle"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -772,9 +924,21 @@ const Prospects = () => {
                               })()}
                             </div>
                           </section>
-                          
+                        </div>
+
+                        {/* RIGHT COLUMN: ADMIN DIRECTIVES & CONTACT */}
+                        <div className="space-y-6">
                            <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
-                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">Communication Overview</h4>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Communication Overview</h4>
+                                <button 
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-flow' } }))}
+                                  className="text-zinc-600 hover:text-purple-400 transition-colors"
+                                  title="Communication Help"
+                                >
+                                  <HelpCircle className="h-3 w-3" />
+                                </button>
+                              </div>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
@@ -797,120 +961,58 @@ const Prospects = () => {
                               </div>
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                            </section>
-                           
-                           {/* NEW: Booking Lifecycle Section */}
+
                            <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                  <Calendar className="h-3 w-3" /> Booking Lifecycle
+                                  <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
                                 </h4>
-                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-purple-500/5 text-purple-400 border-purple-500/20 px-2 py-0">
-                                  Lead Intel
-                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-[9px] font-black text-purple-400 hover:text-purple-300 gap-1"
+                                  onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                                >
+                                  <Plus className="w-2.5 h-2.5" /> ADD NOTE
+                                </Button>
                               </div>
                               
-                              {(() => {
-                                const customerBookings = allBookings.filter(b => 
-                                  (b.customerId === customer.id) || 
-                                  (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                  (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                );
-                                
-                                const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
-                                const scheduled = customerBookings.filter(b => b.status === 'confirmed');
-                                const tentative = customerBookings.filter(b => b.status === 'tentative');
-                                
-                                // Find next upcoming booking
-                                const upcoming = scheduled
-                                  .filter(b => new Date(b.date).getTime() > Date.now())
-                                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-
-                                if (customerBookings.length === 0) {
-                                  return (
-                                    <div className="py-4 text-center border border-dashed border-zinc-800 rounded-xl">
-                                      <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">No Booking Data Yet</p>
-                                    </div>
-                                  );
-                                }
-
-                                return (
-                                  <div className="grid grid-cols-1 gap-3">
-                                    <div className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
-                                      <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-emerald-500/10 rounded-lg">
-                                          <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                        </div>
-                                        <div>
-                                          <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Completed Jobs</div>
-                                          <div className="text-zinc-200 text-lg font-black tracking-tighter">{doneCount}</div>
-                                        </div>
-                                      </div>
-                                      <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tight">Booking Done</div>
-                                    </div>
-
-                                    {upcoming && (
-                                      <div className="flex items-center justify-between bg-purple-500/5 p-3 rounded-xl border border-purple-500/20 animate-pulse-slow">
-                                        <div className="flex items-center gap-3">
-                                          <div className="p-2 bg-purple-500/10 rounded-lg">
-                                            <Clock className="w-4 h-4 text-purple-400" />
-                                          </div>
-                                          <div>
-                                            <div className="text-[10px] text-purple-500 font-black uppercase tracking-widest">Next Scheduled</div>
-                                            <div className="text-zinc-200 text-sm font-bold truncate max-w-[150px]">{upcoming.title}</div>
-                                            <div className="text-[10px] text-zinc-400">{new Date(upcoming.date).toLocaleDateString()}</div>
-                                          </div>
-                                        </div>
-                                        <div className="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Booking Scheduled</div>
-                                      </div>
-                                    )}
-
-                                    {tentative.length > 0 && (
-                                      <div className="flex items-center justify-between bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
-                                        <div className="flex items-center gap-3">
-                                          <div className="p-2 bg-amber-500/10 rounded-lg">
-                                            <AlertCircle className="w-4 h-4 text-amber-500" />
-                                          </div>
-                                          <div>
-                                            <div className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Active Requests</div>
-                                            <div className="text-zinc-200 text-lg font-black tracking-tighter">{tentative.length}</div>
-                                          </div>
-                                        </div>
-                                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Tentatively Booked</div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
+                              {customer.notes ? (
+                                <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+                                  "{customer.notes}"
+                                </div>
+                              ) : (
+                                <div className="py-8 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
+                                  <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
+                                </div>
+                              )}
                            </section>
+                      </div>
+                      </div>
 
-                        </div>
-
-                        {/* RIGHT COLUMN: TIMELINE */}
-                        <div className="space-y-6">
-                           {customer.notes && (
-                             <section className="bg-purple-900/10 border border-purple-500/20 p-5 rounded-2xl shadow-lg animate-in fade-in slide-in-from-right-4 duration-500">
-                               <div className="text-purple-500 text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2"><ShieldCheck className="w-3 h-3" /> Admin Directive</div>
-                               <div className="text-zinc-300 text-sm italic leading-relaxed tracking-tight font-medium">"{customer.notes}"</div>
-                             </section>
-                           )}
-
-                           <section>
-                             <div className="flex items-center justify-between mb-4">
-                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                      {/* FULL WIDTH ROW: COMBINED TIMELINE & HISTORY */}
+                      <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                           {/* RENAMED: Booking Lifecycle Section */}
+                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                                  <History className="h-3.5 w-3.5" /> Combined Session & Interaction Timeline
+                                 <button 
+                                   onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-flow' } }))}
+                                   className="text-zinc-600 hover:text-purple-400 transition-colors"
+                                   title="Booking Help"
+                                 >
+                                   <HelpCircle className="h-3 w-3" />
+                                 </button>
                                </h4>
                                <div className="flex items-center gap-2">
-                                 <Button
+                                    <Button
                                    variant="outline"
                                    size="sm"
                                    className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
                                    onClick={async (e) => { 
                                      e.stopPropagation(); 
-                                     const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
-                                     try {
-                                       const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                       if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory); 
-                                     } catch (err) {}
+                                     handlePreviewPdf(customer.id!);
                                    }}
                                  >
                                    <FileDown className="w-3 h-3" /> EXPORT REPORT
@@ -967,22 +1069,31 @@ const Prospects = () => {
                                                  <Calendar className="h-4 w-4 text-purple-500" />
                                                  <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
                                                  <span className="text-zinc-600 text-xs">•</span>
-                                                 <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                                  <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                                  <Button
+                                                   variant="ghost" 
+                                                   size="sm" 
+                                                   className="h-6 w-6 p-0 text-zinc-500 hover:text-blue-400 ml-1"
+                                                   onClick={async (e) => { 
+                                                      e.stopPropagation(); 
+                                                      handlePreviewEmailForBooking(booking);
+                                                   }}
+                                                   title="Preview Email Sent"
+                                                 >
+                                                   <Mail className="h-3 w-3" />
+                                                 </Button>
                                                  <Button 
                                                    variant="ghost" 
                                                    size="sm" 
-                                                   className="h-6 w-6 p-0 text-purple-400 hover:text-purple-300 ml-2"
+                                                   className="h-6 w-6 p-0 text-purple-400 hover:text-purple-300 ml-1"
                                                    onClick={async (e) => { 
                                                       e.stopPropagation(); 
-                                                      const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
-                                                      try {
-                                                        const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                                        if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
-                                                      } catch (err) {}
+                                                      handlePreviewPdf(customer.id!);
                                                    }}
+                                                   title="Preview PDF Report"
                                                  >
                                                    <Eye className="h-3 w-3" />
-                                                 </Button>
+                                                  </Button>
                                                </div>
                                                <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-purple-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
                                                <div className="grid grid-cols-2 gap-2">
@@ -1060,7 +1171,6 @@ const Prospects = () => {
                              </div>
                            </section>
                         </div>
-                      </div>
 
                       {/* MEDIA GALLERY - dynamic */}
                       {(() => {

@@ -701,7 +701,16 @@ const SearchCustomer = () => {
                         <div className="space-y-6">
                           <section>
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Garage ({customer.vehicles?.length || 0})</h4>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Garage ({customer.vehicles?.length || 0})</h4>
+                                <button 
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'vehicle-management' } }))}
+                                  className="text-zinc-600 hover:text-blue-400 transition-colors"
+                                  title="Vehicle Help"
+                                >
+                                  <HelpCircle className="h-3 w-3" />
+                                </button>
+                              </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -744,12 +753,23 @@ const SearchCustomer = () => {
                                           <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'No Type Set'} {v.color ? `• ${v.color}` : ''}</div>
                                         </div>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        {vIdx === 0 && <Badge variant="outline" className="text-[8px] border-blue-500/30 text-blue-400 bg-blue-500/5">DEFAULT</Badge>}
+                                      <div className="flex items-center gap-1">
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="h-7 w-7 p-0 text-zinc-600 hover:text-red-500 transition-colors"
+                                          className="h-7 w-7 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            openEdit(customer, "profile");
+                                          }}
+                                          title="Edit Vehicle"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (confirm(`Remove this ${v.make} ${v.model} from garage?`)) {
@@ -783,8 +803,21 @@ const SearchCustomer = () => {
                             </div>
                           </section>
 
+                        </div>
+
+                        {/* RIGHT COLUMN: ENGAGEMENT & ADMIN */}
+                        <div className="space-y-6">
                            <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
-                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">Communication Overview</h4>
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Communication Overview</h4>
+                                <button 
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-flow' } }))}
+                                  className="text-zinc-600 hover:text-blue-400 transition-colors"
+                                  title="Communication Help"
+                                >
+                                  <HelpCircle className="h-3 w-3" />
+                                </button>
+                              </div>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={async (e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
@@ -811,307 +844,315 @@ const SearchCustomer = () => {
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                            </section>
 
-                        </div>
-
-                        {/* RIGHT COLUMN: TIMELINE */}
-                        <div className="space-y-6">
-                           <section className="bg-zinc-900/50 border border-zinc-800/50 p-5 rounded-2xl shadow-xl">
-                             <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                               <Zap className="w-3 h-3 text-amber-500" /> Retention & Engagement Hub
-                             </div>
-                             <RetentionHub customer={customer} />
-                           </section>
-
-                           <section>
-                             <div className="flex items-center justify-between mb-4">
-                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                 <History className="h-3.5 w-3.5" /> Combined Session & Interaction Timeline
-                               </h4>
-                               <div className="flex items-center gap-2">
-                                 <Button
-                                   variant="outline"
-                                   size="sm"
-                                   className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
-                                   onClick={async (e) => { 
-                                     e.stopPropagation(); 
-                                     const relatedBookings = allBookings.filter(b => 
-                                       (b.customerId === customer.id) || 
-                                       (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                       (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                     );
-                                     const { getCustomerDetailedHistory } = await import("@/lib/supa-data"); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory);
-                                   }}
-                                 >
-                                   <FileDown className="w-3 h-3" /> EXPORT REPORT
-                                 </Button>
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   className="h-8 text-[10px] font-black text-blue-400 hover:text-white bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500 px-4 rounded-lg transition-all gap-1.5"
-                                   onClick={async (e) => { e.stopPropagation(); openEdit(customer, "crm"); }}
-                                 >
-                                   <Plus className="w-3 h-3" /> LOG ACTIVITY
-                                 </Button>
+                           {!customer.is_archived && (
+                             <section className="bg-zinc-900/50 border border-zinc-800/50 p-5 rounded-2xl shadow-xl">
+                               <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                 <Zap className="w-3 h-3 text-amber-500" /> Retention & Engagement Hub
                                </div>
-                             </div>
-
-                             <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar pr-2">
-                               {(() => {
-                                 // Combine bookings and activity logs
-                                 const items: any[] = [];
-                                 
-                                 // 1. Add Bookings
-                                 allBookings
-                                   .filter(b => 
-                                     (b.customerId === customer.id) || 
-                                     (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                     (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                   )
-                                   .forEach(b => items.push({ ...b, timelineType: 'booking' }));
-
-                                 // 2. Add Activity Logs
-                                 const activityLog = (customer as any).activity_log || [];
-                                 activityLog.forEach((a: any) => items.push({ ...a, timelineType: 'activity' }));
-
-                                 // Sort by date recent first
-                                 items.sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime());
-
-                                 if (items.length === 0) {
-                                   return (
-                                     <div className="text-center py-12 text-zinc-700 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-3xl">
-                                       <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                                       <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior history found.</div>
-                                     </div>
-                                   );
-                                 }
-
-                                 return items.map((item, idx) => {
-                                   if (item.timelineType === 'booking') {
-                                     const booking = item;
-                                     const bookingDate = new Date(booking.date);
-                                     const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                     const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-                                     return (
-                                       <div key={`booking-${booking.id}-${idx}`} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-blue-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
-                                          <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-blue-500")} />
-
-                                           <div className="flex items-start justify-between mb-4 relative z-10">
-                                             <div className="flex-1">
-                                               <div className="flex items-center gap-2 mb-2">
-                                                 <Calendar className="h-4 w-4 text-blue-500" />
-                                                 <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
-                                                 <span className="text-zinc-600 text-xs">•</span>
-                                                 <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
-                                               </div>
-                                               <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-3">{booking.title || 'Premium Service'}</div>
-                                               
-                                               {(() => {
-                                                 const rawAddons = booking.addons || booking.add_ons || [];
-                                                 const addonsArray = Array.isArray(rawAddons) ? rawAddons : 
-                                                                    (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : []);
-                                                 
-                                                 if (addonsArray.length === 0) return null;
-
-                                                 return (
-                                                   <div className="flex flex-wrap gap-1.5 mb-4">
-                                                     {addonsArray.map((a: string, i: number) => (
-                                                       <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
-                                                         {a}
-                                                       </Badge>
-                                                     ))}
-                                                   </div>
-                                                 );
-                                               })()}
-                                               
-                                               <div className="grid grid-cols-2 gap-2">
-                                                 <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                                   <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
-                                                   <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
-                                                 </div>
-                                                 <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
-                                                   <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
-                                                   <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
-                                                 </div>
-                                               </div>
-                                             </div>
-                                             <Badge className={cn(
-                                               "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
-                                               booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                               booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                               "bg-zinc-800 text-zinc-500 border-zinc-700"
-                                             )}>
-                                               {booking.status}
-                                             </Badge>
-                                           </div>
-
-                                           {booking.notes && (
-                                             <div className="mt-2 p-3 bg-blue-900/10 rounded-xl border border-blue-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
-                                               "{booking.notes}"
-                                             </div>
-                                           )}
-                                           
-                                           <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
-                                              <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
-                                               <div className="flex items-center gap-2">
-                                                 <Button 
-                                                  variant="ghost" 
-                                                  size="sm" 
-                                                  className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 p-0 gap-1.5"
-                                                  onClick={async (e) => { 
-                                                    e.stopPropagation(); 
-                                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
-                                                    toast({ title: "Processing", description: "Aggregating history..." });
-                                                    try {
-                                                      const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                                                      if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
-                                                    } catch (err) {}
-                                                  }}
-                                                 >
-                                                   <Eye className="h-3 w-3" /> Preview
-                                                 </Button>
-                                                 <Button 
-                                                  variant="ghost" 
-                                                  size="sm" 
-                                                  className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
-                                                  onClick={async (e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
-                                                 >
-                                                   Inspect <ExternalLink className="h-2.5 w-2.5" />
-                                                 </Button>
-                                               </div>
-                                           </div>
-                                       </div>
-                                     );
-                                   } else {
-                                     // Activity Log entry
-                                     const act = item;
-                                     const getActivityIcon = (type: string) => {
-                                       switch (type) {
-                                         case 'call_in': return <PhoneIncoming className="h-4 w-4 text-emerald-400" />;
-                                         case 'call_out': return <PhoneOutgoing className="h-4 w-4 text-blue-400" />;
-                                         case 'text': return <MessageSquare className="h-4 w-4 text-amber-400" />;
-                                         case 'email': return <Mail className="h-4 w-4 text-indigo-400" />;
-                                         case 'attempt': return <AlertCircle className="h-4 w-4 text-red-400" />;
-                                         default: return <StickyNote className="h-4 w-4 text-zinc-400" />;
-                                       }
-                                     };
-
-                                     const getActivityLabel = (type: string) => {
-                                       switch (type) {
-                                         case 'call_in': return 'Incoming Call';
-                                         case 'call_out': return 'Outgoing Call';
-                                         case 'text': return 'Text Message';
-                                         case 'email': return 'Email Sent';
-                                         case 'attempt': return 'Contact Attempt';
-                                         default: return 'General Note';
-                                       }
-                                     };
-
-                                     return (
-                                       <div key={`act-${act.id || idx}`} className="p-5 bg-zinc-900/30 rounded-2xl border border-zinc-800/50 hover:border-zinc-700 transition-all shadow-lg flex gap-4">
-                                          <div className="h-10 w-10 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-center shrink-0">
-                                            {getActivityIcon(act.type)}
-                                          </div>
-                                          <div className="flex-1">
-                                            <div className="flex items-center justify-between mb-1">
-                                              <div className="text-zinc-200 font-black uppercase tracking-tight text-sm">{getActivityLabel(act.type)}</div>
-                                              <div className="text-[10px] text-zinc-500 font-bold uppercase">{format(new Date(act.created_at), 'MMMM dd, yyyy · p')}</div>
-                                            </div>
-                                            <p className="text-xs text-zinc-300 italic leading-relaxed font-medium">"{act.note}"</p>
-                                          </div>
-                                       </div>
-                                     );
-                                   }
-                                 });
-                               })()}
-                             </div>
-                           </section>
+                               <RetentionHub customer={customer} />
+                             </section>
+                           )}
                            
-                           {/* NEW: Booking Lifecycle Section */}
-                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                  <Calendar className="h-3 w-3" /> Booking Lifecycle
-                                </h4>
-                                <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-blue-500/5 text-blue-400 border-blue-500/20 px-2 py-0">
-                                  CRM Intel
-                                </Badge>
-                              </div>
-                              
-                              {(() => {
-                                const customerBookings = allBookings.filter(b => 
-                                  (b.customerId === customer.id) || 
-                                  (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                  (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                );
-                                
-                                const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
-                                const scheduled = customerBookings.filter(b => b.status === 'confirmed');
-                                const tentative = customerBookings.filter(b => b.status === 'tentative');
-                                
-                                // Find next upcoming booking
-                                const upcoming = scheduled
-                                  .filter(b => new Date(b.date).getTime() > Date.now())
-                                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-
-                                if (customerBookings.length === 0) {
-                                  return (
-                                    <div className="py-4 text-center border border-dashed border-zinc-800 rounded-xl">
-                                      <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">No Booking Data Yet</p>
-                                    </div>
-                                  );
-                                }
-
-                                return (
-                                  <div className="grid grid-cols-1 gap-3">
-                                    <div className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
-                                      <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-emerald-500/10 rounded-lg">
-                                          <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                                        </div>
-                                        <div>
-                                          <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Completed Jobs</div>
-                                          <div className="text-zinc-200 text-lg font-black tracking-tighter">{doneCount}</div>
-                                        </div>
-                                      </div>
-                                      <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tight">Booking Done</div>
-                                    </div>
-
-                                    {upcoming && (
-                                      <div className="flex items-center justify-between bg-blue-500/5 p-3 rounded-xl border border-blue-500/20 animate-pulse-slow">
-                                        <div className="flex items-center gap-3">
-                                          <div className="p-2 bg-blue-500/10 rounded-lg">
-                                            <Clock className="w-4 h-4 text-blue-400" />
-                                          </div>
-                                          <div>
-                                            <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest">Next Scheduled</div>
-                                            <div className="text-zinc-200 text-sm font-bold truncate max-w-[150px]">{upcoming.title}</div>
-                                            <div className="text-[10px] text-zinc-400">{new Date(upcoming.date).toLocaleDateString()}</div>
-                                          </div>
-                                        </div>
-                                        <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Booking Scheduled</div>
-                                      </div>
-                                    )}
-
-                                    {tentative.length > 0 && (
-                                      <div className="flex items-center justify-between bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
-                                        <div className="flex items-center gap-3">
-                                          <div className="p-2 bg-amber-500/10 rounded-lg">
-                                            <AlertCircle className="w-4 h-4 text-amber-500" />
-                                          </div>
-                                          <div>
-                                            <div className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Active Requests</div>
-                                            <div className="text-zinc-200 text-lg font-black tracking-tighter">{tentative.length}</div>
-                                          </div>
-                                        </div>
-                                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Tentatively Booked</div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                           </section>
+                           {/* Relationship Metadata relocated here for better balance if not archived */}
+                           {customer.is_archived && (
+                             <div className="p-12 text-center border border-dashed border-zinc-800 rounded-3xl opacity-50">
+                               <Archive className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
+                               <p className="text-xs font-black uppercase tracking-widest text-zinc-600">This profile is archived.</p>
+                             </div>
+                           )}
                         </div>
+                      </div>
+
+                      {/* FULL WIDTH ROW: COMBINED TIMELINE & LIFECYCLE */}
+                      <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2">
+                               <section>
+                                 <div className="flex items-center justify-between mb-4">
+                                   <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                     <History className="h-3.5 w-3.5" /> Combined Session & Interaction Timeline
+                                   </h4>
+                                   <div className="flex items-center gap-2">
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       className="h-8 text-[10px] font-black text-emerald-400 hover:text-white border-emerald-500/20 hover:bg-emerald-500 px-4 rounded-lg transition-all gap-1.5"
+                                       onClick={async (e) => { 
+                                         e.stopPropagation(); 
+                                         const relatedBookings = allBookings.filter(b => 
+                                           (b.customerId === customer.id) || 
+                                           (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                           (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                         );
+                                         const { getCustomerDetailedHistory } = await import("@/lib/supa-data"); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory);
+                                       }}
+                                     >
+                                       <FileDown className="w-3 h-3" /> EXPORT REPORT
+                                     </Button>
+                                     <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       className="h-8 text-[10px] font-black text-blue-400 hover:text-white bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500 px-4 rounded-lg transition-all gap-1.5"
+                                       onClick={async (e) => { e.stopPropagation(); openEdit(customer, "crm"); }}
+                                     >
+                                       <Plus className="w-3 h-3" /> LOG ACTIVITY
+                                     </Button>
+                                   </div>
+                                 </div>
+
+                                 <div className="space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar pr-2">
+                                   {(() => {
+                                     const items: any[] = [];
+                                     allBookings
+                                       .filter(b => 
+                                         (b.customerId === customer.id) || 
+                                         (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                         (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                       )
+                                       .forEach(b => items.push({ ...b, timelineType: 'booking' }));
+
+                                     const activityLog = (customer as any).activity_log || [];
+                                     activityLog.forEach((a: any) => items.push({ ...a, timelineType: 'activity' }));
+
+                                     items.sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime());
+
+                                     if (items.length === 0) {
+                                       return (
+                                         <div className="text-center py-12 text-zinc-700 bg-zinc-950/20 border border-dashed border-zinc-800 rounded-3xl">
+                                           <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                           <div className="text-xs font-black uppercase tracking-widest opacity-40">Zero prior history found.</div>
+                                         </div>
+                                       );
+                                     }
+
+                                     return items.map((item, idx) => {
+                                       if (item.timelineType === 'booking') {
+                                         const booking = item;
+                                         const bookingDate = new Date(booking.date);
+                                         const dateStr = bookingDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                         const timeStr = bookingDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                                         return (
+                                           <div key={`booking-${booking.id}-${idx}`} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-blue-500/40 transition-all group/booking shadow-xl relative overflow-hidden">
+                                              <div className={cn("absolute inset-0 opacity-[0.03]", booking.status === 'done' ? "bg-emerald-500" : "bg-blue-500")} />
+
+                                               <div className="flex items-start justify-between mb-4 relative z-10">
+                                                 <div className="flex-1">
+                                                   <div className="flex items-center gap-2 mb-2">
+                                                     <Calendar className="h-4 w-4 text-blue-500" />
+                                                     <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
+                                                     <span className="text-zinc-600 text-xs">•</span>
+                                                     <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
+                                                   </div>
+                                                   <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-blue-400 transition-colors leading-none mb-3">{booking.title || 'Premium Service'}</div>
+                                                   
+                                                   {(() => {
+                                                     const rawAddons = booking.addons || booking.add_ons || [];
+                                                     const addonsArray = Array.isArray(rawAddons) ? rawAddons : 
+                                                                        (typeof rawAddons === 'string' ? JSON.parse(rawAddons) : []);
+                                                     
+                                                     if (addonsArray.length === 0) return null;
+
+                                                     return (
+                                                       <div className="flex flex-wrap gap-1.5 mb-4">
+                                                         {addonsArray.map((a: string, i: number) => (
+                                                           <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                             {a}
+                                                           </Badge>
+                                                         ))}
+                                                       </div>
+                                                     );
+                                                   })()}
+                                                   
+                                                   <div className="grid grid-cols-2 gap-2">
+                                                     <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                       <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
+                                                       <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
+                                                     </div>
+                                                     <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
+                                                       <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
+                                                       <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
+                                                     </div>
+                                                   </div>
+                                                 </div>
+                                                 <Badge className={cn(
+                                                   "text-[10px] font-black uppercase px-3 py-1 rounded-full border shadow-2xl transition-all",
+                                                   booking.status === 'done' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                   booking.status === 'confirmed' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                   "bg-zinc-800 text-zinc-500 border-zinc-700"
+                                                 )}>
+                                                   {booking.status}
+                                                 </Badge>
+                                               </div>
+
+                                               {booking.notes && (
+                                                 <div className="mt-2 p-3 bg-blue-900/10 rounded-xl border border-blue-500/10 text-[11px] text-zinc-400 italic leading-relaxed">
+                                                   "{booking.notes}"
+                                                 </div>
+                                               )}
+                                               
+                                               <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
+                                                  <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
+                                                   <div className="flex items-center gap-2">
+                                                     <Button 
+                                                      variant="ghost" 
+                                                      size="sm" 
+                                                      className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 p-0 gap-1.5"
+                                                      onClick={async (e) => { 
+                                                        e.stopPropagation(); 
+                                                        const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
+                                                        toast({ title: "Processing", description: "Aggregating history..." });
+                                                        try {
+                                                          const detailedHistory = await getCustomerDetailedHistory(customer.id!);
+                                                          if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
+                                                        } catch (err) {}
+                                                      }}
+                                                     >
+                                                       <Eye className="h-3 w-3" /> Preview
+                                                     </Button>
+                                                     <Button 
+                                                      variant="ghost" 
+                                                      size="sm" 
+                                                      className="h-6 text-[9px] font-black text-zinc-500 hover:text-white p-0 gap-1.5"
+                                                      onClick={async (e) => { e.stopPropagation(); navigate('/bookings?id=' + booking.id); }}
+                                                     >
+                                                       Inspect <ExternalLink className="h-2.5 w-2.5" />
+                                                     </Button>
+                                                   </div>
+                                               </div>
+                                           </div>
+                                         );
+                                       } else {
+                                         const act = item;
+                                         const getActivityIcon = (type: string) => {
+                                           switch (type) {
+                                             case 'call_in': return <PhoneIncoming className="h-4 w-4 text-emerald-400" />;
+                                             case 'call_out': return <PhoneOutgoing className="h-4 w-4 text-blue-400" />;
+                                             case 'text': return <MessageSquare className="h-4 w-4 text-amber-400" />;
+                                             case 'email': return <Mail className="h-4 w-4 text-indigo-400" />;
+                                             case 'attempt': return <AlertCircle className="h-4 w-4 text-red-400" />;
+                                             default: return <StickyNote className="h-4 w-4 text-zinc-400" />;
+                                           }
+                                         };
+
+                                         const getActivityLabel = (type: string) => {
+                                           switch (type) {
+                                             case 'call_in': return 'Incoming Call';
+                                             case 'call_out': return 'Outgoing Call';
+                                             case 'text': return 'Text Message';
+                                             case 'email': return 'Email Sent';
+                                             case 'attempt': return 'Contact Attempt';
+                                             default: return 'General Note';
+                                           }
+                                         };
+
+                                         return (
+                                           <div key={`act-${act.id || idx}`} className="p-5 bg-zinc-900/30 rounded-2xl border border-zinc-800/50 hover:border-zinc-700 transition-all shadow-lg flex gap-4">
+                                              <div className="h-10 w-10 bg-zinc-950 rounded-xl border border-zinc-800 flex items-center justify-center shrink-0">
+                                                {getActivityIcon(act.type)}
+                                              </div>
+                                              <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <div className="text-zinc-200 font-black uppercase tracking-tight text-sm">{getActivityLabel(act.type)}</div>
+                                                  <div className="text-[10px] text-zinc-500 font-bold uppercase">{format(new Date(act.created_at), 'MMMM dd, yyyy · p')}</div>
+                                                </div>
+                                                <p className="text-xs text-zinc-300 italic leading-relaxed font-medium">"{act.note}"</p>
+                                              </div>
+                                           </div>
+                                         );
+                                       }
+                                     });
+                                   })()}
+                                 </div>
+                               </section>
+                            </div>
+
+                            <div className="space-y-6">
+                               {/* Booking Lifecycle Section relocated to side of timeline for wider utility */}
+                               <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4 h-fit">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                      <Calendar className="h-3 w-3" /> Booking Lifecycle
+                                    </h4>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-blue-500/5 text-blue-400 border-blue-500/20 px-2 py-0">
+                                      CRM Intel
+                                    </Badge>
+                                  </div>
+                                  
+                                  {(() => {
+                                    const customerBookings = allBookings.filter(b => 
+                                      (b.customerId === customer.id) || 
+                                      (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+                                      (b.customer?.toLowerCase() === customer.name?.toLowerCase())
+                                    );
+                                    
+                                    const doneCount = customerBookings.filter(b => b.status === 'done' || b.status === 'completed').length;
+                                    const scheduled = customerBookings.filter(b => b.status === 'confirmed');
+                                    const tentative = customerBookings.filter(b => b.status === 'tentative');
+                                    
+                                    const upcoming = scheduled
+                                      .filter(b => new Date(b.date).getTime() > Date.now())
+                                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+                                    if (customerBookings.length === 0) {
+                                      return (
+                                        <div className="py-4 text-center border border-dashed border-zinc-800 rounded-xl">
+                                          <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest">No Booking Data Yet</p>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div className="grid grid-cols-1 gap-3">
+                                        <div className="flex items-center justify-between bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/50">
+                                          <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                                            </div>
+                                            <div>
+                                              <div className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Completed Jobs</div>
+                                              <div className="text-zinc-200 text-lg font-black tracking-tighter">{doneCount}</div>
+                                            </div>
+                                          </div>
+                                          <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-tight">Booking Done</div>
+                                        </div>
+
+                                        {upcoming && (
+                                          <div className="flex items-center justify-between bg-blue-500/5 p-3 rounded-xl border border-blue-500/20 animate-pulse-slow">
+                                            <div className="flex items-center gap-3">
+                                              <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                <Clock className="w-4 h-4 text-blue-400" />
+                                              </div>
+                                              <div>
+                                                <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest">Next Scheduled</div>
+                                                <div className="text-zinc-200 text-sm font-bold truncate max-w-[150px]">{upcoming.title}</div>
+                                                <div className="text-[10px] text-zinc-400">{new Date(upcoming.date).toLocaleDateString()}</div>
+                                              </div>
+                                            </div>
+                                            <div className="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Booking Scheduled</div>
+                                          </div>
+                                        )}
+
+                                        {tentative.length > 0 && (
+                                          <div className="flex items-center justify-between bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+                                            <div className="flex items-center gap-3">
+                                              <div className="p-2 bg-amber-500/10 rounded-lg">
+                                                <AlertCircle className="w-4 h-4 text-amber-500" />
+                                              </div>
+                                              <div>
+                                                <div className="text-[10px] text-amber-500 font-black uppercase tracking-widest">Active Requests</div>
+                                                <div className="text-zinc-200 text-lg font-black tracking-tighter">{tentative.length}</div>
+                                              </div>
+                                            </div>
+                                            <div className="text-[10px] font-bold text-amber-500 uppercase tracking-tight">Tentatively Booked</div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                               </section>
+                            </div>
+                         </div>
                       </div>
                                             {/* MEDIA GALLERY - dynamic */}
                       {(() => {

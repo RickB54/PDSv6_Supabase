@@ -742,7 +742,16 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     if (finalId) {
         // A. Handle 'vehicles' array (preferred)
         if (customer.vehicles && Array.isArray(customer.vehicles)) {
-            for (const v of customer.vehicles) {
+            // Deduplicate incoming array to prevent processing identical vehicles multiple times
+            const seen = new Set();
+            const uniqueIncoming = customer.vehicles.filter(v => {
+                const key = `${v.make || ''}|${v.model || ''}|${v.year || ''}`.toLowerCase().replace(/\s+/g, '');
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+
+            for (const v of uniqueIncoming) {
                 if (v.make || v.model || v.year) {
                     const savedVeh = await upsertSupabaseVehicle({
                         ...v,

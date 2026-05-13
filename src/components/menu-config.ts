@@ -98,6 +98,7 @@ export const getMenuGroups = (counts: {
                 { title: "Tasks", url: "/tasks", key: "tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare, helpTopicId: 'tasks' },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users, helpTopicId: 'search-customer' },
                 { title: "Prospects", url: "/prospects", key: "prospects", icon: Users, helpTopicId: 'prospects' },
+                { title: "File Manager", url: "/file-manager", role: "admin", key: "file-manager", badge: counts.fileCount > 0 ? counts.fileCount : undefined, icon: FileText, helpTopicId: 'file-manager' },
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users, helpTopicId: 'user-mgmt' }
             ]
         },

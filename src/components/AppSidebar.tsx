@@ -391,7 +391,6 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics', iconColor: 'text-amber-500', helpTopicId: 'bookings-analytics' },
     { title: 'Business Goals', url: '/goals', icon: TargetIcon, key: 'goals', iconColor: 'text-emerald-400', helpTopicId: 'business-goals' },
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery', iconColor: 'text-purple-500', helpTopicId: 'media-library' },
-    { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined, iconColor: 'text-emerald-500', helpTopicId: 'file-manager' }
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
     
@@ -651,7 +650,14 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
-                              <span className="truncate">{item.title}</span>
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="truncate">{item.title}</span>
+                                {item.badge !== undefined && item.badge > 0 && (
+                                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white animate-in zoom-in duration-300">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
                               {item.helpTopicId && (
                                 <div 
                                   onClick={(e) => {
@@ -678,7 +684,14 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
-                              <span className="truncate">{item.title}</span>
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="truncate">{item.title}</span>
+                                {item.badge !== undefined && item.badge > 0 && (
+                                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white animate-in zoom-in duration-300">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </div>
                               {item.helpTopicId && (
                                 <div 
                                   onClick={(e) => {

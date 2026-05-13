@@ -22,7 +22,7 @@ import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, getSupabaseCustomers, Customer, deleteSupabaseVehicle } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, upsertSupabaseVehicle, getSupabaseCustomers, Customer, deleteSupabaseVehicle } from "@/lib/supa-data";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
 import { auditEmployeeAction } from "@/lib/audit";
@@ -1425,6 +1425,93 @@ export default function BookingsPage() {
 
     doc.save(`Prime_Auto_Detail_Schedule_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     toast.success("Schedule report generated!");
+  };
+
+
+  const handleConvertToProspect = async (booking: any) => {
+    if (!booking) return;
+    
+    const confirmMsg = `Carry over all info for "${booking.customer || 'this customer'}" and create a new Prospect record?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    const convertToast = toast.loading("Converting booking to prospect...");
+    try {
+      // 1. Create the Prospect record
+      const customerPayload = {
+        name: booking.customer,
+        email: booking.customerEmail || booking.email || "",
+        phone: booking.customerPhone || booking.phone || "",
+        address: booking.address || "",
+        type: 'prospect',
+        notes: booking.notes || '',
+        howFound: booking.source || 'Public Website'
+      };
+
+      const newCustomer = await upsertSupabaseCustomer(customerPayload);
+      
+      if (!newCustomer?.id) throw new Error("Failed to create customer record");
+
+      // 2. Create the Vehicle record for this prospect
+      if (booking.vehicleMake || booking.vehicleModel) {
+        await upsertSupabaseVehicle({
+          customer_id: newCustomer.id,
+          make: booking.vehicleMake || '',
+          model: booking.vehicleModel || '',
+          year: booking.vehicleYear || '',
+          type: booking.vehicle || '',
+        });
+      }
+
+      // 3. Update the booking to link it to the new prospect
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update({ customer_id: newCustomer.id })
+        .eq('id', booking.id);
+
+      if (updateError) console.error("Link failed:", updateError);
+
+      toast.success(`Success! "${booking.customer}" is now a Prospect.`, { id: convertToast });
+      
+      // 4. Refresh local lists
+      await fetchCustomers();
+      await refresh();
+      
+    } catch (err: any) {
+      console.error("Conversion failed:", err);
+      toast.error(err.message || "Conversion failed", { id: convertToast });
+    }
+  };
+
+  const handlePreviewEmailForBooking = (booking: any) => {
+    if (!booking) return;
+    // Set form data to match the booking so the preview works
+    setFormData({
+      ...formData,
+      customer: booking.customer || '',
+      email: booking.customerEmail || booking.email || '',
+      phone: booking.customerPhone || booking.phone || '',
+      address: booking.address || '',
+      service: booking.service || booking.title || '',
+      vehicle: booking.vehicle || '',
+      vehicleYear: booking.vehicleYear || '',
+      vehicleMake: booking.vehicleMake || '',
+      vehicleModel: booking.vehicleModel || '',
+      notes: booking.notes || '',
+      addons: Array.isArray(booking.addons) ? booking.addons : 
+              (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
+      time: booking.date ? format(parseISO(booking.date), 'HH:mm') : '09:00',
+      status: (booking.status || 'pending').toLowerCase() as any
+    });
+    
+    // Determine preview type based on status
+    const stat = (booking.status || 'pending').toLowerCase();
+    let type: any = 'request';
+    if (stat === 'confirmed') type = 'confirmation';
+    else if (stat === 'cancelled') type = 'cancelled';
+    else if (stat === 'done') type = 'payment-success';
+    
+    setEmailPreviewType(type);
+    setShowEmailPreview(true);
   };
 
 
@@ -3201,11 +3288,27 @@ export default function BookingsPage() {
                                           </div>
                                         </div>
                                         
-                                        <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex items-center gap-3 mt-1">
                                             <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                                                 Source: <span className="text-purple-300 font-medium">{('source_origin' in event ? (event as any).source_origin : (event.source || 'Manual Entry'))}</span>
                                             </div>
+                                            
+                                            {/* ADD TO PROSPECTS BUTTON - Only show if not already linked to a customer/prospect */}
+                                            {event.type === 'booking' && !customer.id && (
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-5 px-2 text-[9px] font-black uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 rounded-md gap-1"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const original = items.find(i => i.id === event.id);
+                                                  if (original) handleConvertToProspect(original);
+                                                }}
+                                              >
+                                                <Plus className="w-2.5 h-2.5" /> Add to Prospects
+                                              </Button>
+                                            )}
                                         </div>
 
                                         <div className="flex justify-end mt-2">
@@ -3263,6 +3366,19 @@ export default function BookingsPage() {
                                                 <Copy className="h-2.5 w-2.5" /> Duplicate
                                               </Button>
                                               <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  className="h-6 text-[10px] gap-1 ml-1 text-zinc-500 hover:text-zinc-300"
+                                                  onClick={async (e) => { 
+                                                    e.stopPropagation(); 
+                                                    const original = items.find(i => i.id === event.id);
+                                                    if (original) handlePreviewEmailForBooking(original);
+                                                  }}
+                                                  title="Preview Email Sent"
+                                                >
+                                                  <Mail className="h-2.5 w-2.5 text-blue-400" /> Email
+                                                </Button>
+                                                <Button
                                                   size="sm"
                                                   variant="ghost"
                                                   className="h-6 text-[10px] gap-1 ml-1 text-blue-400 hover:text-blue-300"
