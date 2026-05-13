@@ -70,6 +70,22 @@ export function VideoEmbed({ url, title, className = "" }: VideoEmbedProps) {
             }
         }
 
+        // Vimeo
+        if (url.includes('vimeo.com/')) {
+            const videoId = url.split('vimeo.com/')[1].split('?')[0];
+            return { src: `https://player.vimeo.com/video/${videoId}`, type: 'vimeo' };
+        }
+
+        // Mobile YouTube
+        if (url.includes('m.youtube.com/watch')) {
+            try {
+                const videoId = new URL(url).searchParams.get('v');
+                return { src: `https://www.youtube.com/embed/${videoId}`, type: 'youtube' };
+            } catch (e) {
+                return { src: url, type: 'other' };
+            }
+        }
+
         // Direct Video Files
         if (url.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i)) {
             return { src: url, type: 'direct' };
