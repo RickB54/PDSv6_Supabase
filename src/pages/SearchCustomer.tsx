@@ -938,7 +938,7 @@ const SearchCustomer = () => {
                                     </div>
                                    <div className="space-y-1.5">
                                       <div className="flex items-center justify-between">
-                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Initial Entry:</span>
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Profile Created:</span>
                                         <span className="text-[9px] text-zinc-400 font-black uppercase">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleString() : '—'}</span>
                                       </div>
                                       <div className="flex items-center justify-between">
