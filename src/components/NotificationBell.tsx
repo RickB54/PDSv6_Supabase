@@ -212,9 +212,8 @@ export default function NotificationBell() {
         const { data } = await supabase
           .from('bookings')
           .select('id, customer_id, scheduled_at, service_package, booking_vehicle, customer_name')
-          .eq('status', 'tentative')
-          .gt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .limit(10);
+          .ilike('status', 'tentative')
+          .limit(20);
 
           let addedAny = false;
 
@@ -237,19 +236,32 @@ export default function NotificationBell() {
               // we create one now from the Admin's authenticated session.
               if (!activeCustomerId) {
                 try {
-                  const { data: newCust, error: cErr } = await supabase.from('customers').insert({
-                    full_name: custName,
-                    email: meta.email || null,
-                    phone: meta.phone || null,
-                    type: 'prospect',
-                    notes: `Auto-created from Online Booking #${b.id}`
-                  }).select('id').single();
+                  const email = meta.email || null;
+                  let existingId = null;
+                  
+                  if (email) {
+                    const { data: existing } = await supabase.from('customers').select('id').eq('email', email).maybeSingle();
+                    if (existing) existingId = existing.id;
+                  }
 
-                  if (!cErr && newCust) {
-                    activeCustomerId = newCust.id;
-                    // Link the booking to the new customer
+                  if (existingId) {
+                    activeCustomerId = existingId;
                     await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
-                    console.log(`[AlertSync] Auto-created prospect ${activeCustomerId} for booking ${b.id}`);
+                    console.log(`[AlertSync] Linked existing customer ${activeCustomerId} to booking ${b.id}`);
+                  } else {
+                    const { data: newCust, error: cErr } = await supabase.from('customers').insert({
+                      full_name: custName,
+                      email: email,
+                      phone: meta.phone || null,
+                      type: 'prospect',
+                      notes: `Auto-created from Online Booking #${b.id}`
+                    }).select('id').single();
+
+                    if (!cErr && newCust) {
+                      activeCustomerId = newCust.id;
+                      await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
+                      console.log(`[AlertSync] Auto-created prospect ${activeCustomerId} for booking ${b.id}`);
+                    }
                   }
                 } catch (e) {
                   console.warn("[AlertSync] Auto-prospect creation failed:", e);
@@ -285,7 +297,7 @@ export default function NotificationBell() {
       }
     };
 
-    const interval = setInterval(syncBookings, 30000); // Check every 30s
+    const interval = setInterval(syncBookings, 5000); // Check every 5s for snappy alerts
     syncBookings(); // Initial check
     return () => clearInterval(interval);
   }, [isEmployee, isFileManagerView, refresh]);
