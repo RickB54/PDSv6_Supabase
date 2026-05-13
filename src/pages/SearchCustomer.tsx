@@ -620,35 +620,46 @@ const SearchCustomer = () => {
 
                       {/* Photo Thumbnails - clickable to open gallery */}
                       {(() => {
-                        const allPhotos = Array.from(new Set([
+                        const allMedia = Array.from(new Set([
                           ...(customer.generalPhotos || []),
                           ...(customer.beforePhotos || []),
                           ...(customer.afterPhotos || []),
+                          ...(customer.videoUrl ? [customer.videoUrl] : []),
                           ...((customer.vehicles || []).flatMap(v => [
                             ...(v.generalPhotos || []),
                             ...(v.beforePhotos || []),
-                            ...(v.afterPhotos || [])
+                            ...(v.afterPhotos || []),
+                            ...(v.videoUrls || [])
                           ]))
                         ])).filter(Boolean);
 
-                        if (allPhotos.length > 0) {
+                        if (allMedia.length > 0) {
                           return (
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              {allPhotos.slice(0, 1).map((photo, idx) => (
-                                <div
-                                  key={`thumb-${idx}`}
-                                  className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105"
-                                  onClick={() => openGallery(customer, idx)}
-                                >
-                                  <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
-                                </div>
-                              ))}
-                              {allPhotos.length > 1 && (
+                              {allMedia.slice(0, 1).map((item, idx) => {
+                                const ytThumb = getYouTubeThumbnail(item);
+                                return (
+                                  <div
+                                    key={`thumb-${idx}`}
+                                    className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-blue-400 transition-all hover:scale-105 relative bg-zinc-950 flex items-center justify-center"
+                                    onClick={() => openGallery(customer, idx)}
+                                  >
+                                    {ytThumb ? (
+                                      <img src={ytThumb} className="h-full w-full object-cover" />
+                                    ) : item.includes(':::') || item.includes('youtube.com') || item.includes('youtu.be') ? (
+                                      <Video className="w-6 h-6 text-zinc-500" />
+                                    ) : (
+                                      <img src={item} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {allMedia.length > 1 && (
                                 <button
                                   onClick={() => openGallery(customer, 0)}
                                   className="h-12 w-12 rounded-lg border-2 border-blue-500/50 bg-blue-500/10 flex items-center justify-center text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-all hover:scale-105"
                                 >
-                                  +{allPhotos.length - 1}
+                                  +{allMedia.length - 1}
                                 </button>
                               )}
                             </div>
@@ -1322,7 +1333,7 @@ const SearchCustomer = () => {
                                 >
                                   <Plus className="w-3 h-3" /> ADD MEDIA
                                 </Button>
-                                {allPhotos.length > 0 && (
+                                {allMedia.length > 0 && (
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
@@ -1374,13 +1385,14 @@ const SearchCustomer = () => {
                                     </button>
                                   )}
                                 </div>
-                              ))}
-                              {hasMore && (
+                              );
+                            })}
+                              {allMedia.length > 12 && (
                                 <div 
                                   className="relative aspect-square rounded-2xl overflow-hidden border border-dashed border-zinc-700 bg-zinc-950/40 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900 transition-all group"
                                   onClick={() => navigate(`/vehicle-gallery?search=${encodeURIComponent(customer.name)}`)}
                                 >
-                                  <span className="text-xl font-black text-blue-500/50 group-hover:text-blue-400">+{allPhotos.length - 6}</span>
+                                  <span className="text-xl font-black text-blue-500/50 group-hover:text-blue-400">+{allMedia.length - 12}</span>
                                   <span className="text-[8px] font-black text-zinc-600 uppercase tracking-tighter">More Assets</span>
                                 </div>
                               )}
