@@ -271,16 +271,16 @@ export function RetentionHub({ customer, onRefresh }: Props) {
 
       <div className="h-px bg-zinc-800/50 mx-2" />
 
-      {/* STEP 2: COMPOSITION */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-           <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">2</span>
-           Composition: Design the offer
-        </div>
+      {/* STEP 2 & 3: COMPOSITION & HISTORY */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+             <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">2</span>
+             Composition: Design the offer
+          </div>
 
-        <div className="flex flex-col xl:flex-row gap-6 items-start">
-           <div className="w-full xl:w-2/3 space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5">
-              <div className="space-y-1.5">
+          <div className="space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5 h-full flex flex-col">
+              <div className="space-y-1.5 flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Personal Message</label>
                     <Button 
@@ -302,7 +302,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                   />
               </div>
               
-              <div className="flex items-center justify-between px-1 bg-zinc-950/40 p-2 rounded-xl border border-zinc-800/50">
+              <div className="flex items-center justify-between px-1 bg-zinc-950/40 p-2 rounded-xl border border-zinc-800/50 mt-4">
                  <div className="flex items-center gap-2">
                     <TicketPercent className="h-3 w-3 text-emerald-400" />
                     <span className="text-[10px] font-black uppercase text-zinc-300 tracking-widest">Include Incentive?</span>
@@ -315,7 +315,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
               </div>
 
               {includeDiscount && (
-                <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300 mt-2">
                   <Select 
                     value={outreachCouponId}
                     onValueChange={setOutreachCouponId}
@@ -338,7 +338,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 px-1">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 px-1 mt-6">
                  <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">3</span>
                  Dispatch: Final Review & Send
               </div>
@@ -352,51 +352,51 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                >
                  <Eye className="h-4 w-4 mr-2" /> Review Outreach Email
                </Button>
-           </div>
+          </div>
+        </section>
 
-           {/* Engagement History Inline */}
-           <div className="space-y-4">
-              <div className="flex items-center gap-1.5 px-1 opacity-50">
-                 <History className="h-3 w-3 text-zinc-500" />
-                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Communication Audit Trail</span>
-              </div>
-              <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
-                 {loadingEngs && <div className="text-[10px] text-zinc-700 italic px-4 py-8 border border-dashed border-zinc-800 rounded-2xl text-center flex items-center justify-center gap-2 animate-pulse"><Clock className="h-3 w-3" /> Syncing communication history...</div>}
-                 {!loadingEngs && engagements.length === 0 && (
-                   <div className="text-[10px] text-zinc-500 italic px-4 py-12 border border-dashed border-zinc-800/80 rounded-2xl text-center flex flex-col items-center gap-3">
-                      <div className="h-10 w-10 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><MessageSquare className="h-5 w-5" /></div>
-                      No prior outreach recorded for this profile.
-                   </div>
-                 )}
-                 {engagements.map((eng, idx) => (
-                   <div key={idx} className="flex flex-col gap-2 p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] group/item hover:border-blue-500/20 transition-all shadow-sm">
-                      <div className="flex items-center justify-between">
-                         <div className="flex items-center gap-2">
-                           <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 h-4 bg-zinc-900 border-zinc-800 text-blue-400">
-                             {eng.type === 'initial' ? 'Intro' : 'Retention'}
-                           </Badge>
-                           <span className="text-zinc-500 font-bold tracking-tight">{format(new Date(eng.created_at), 'MMMM dd, yyyy · p')}</span>
-                         </div>
-                         {eng.coupon_code && <span className="text-emerald-500 font-black tracking-tighter text-[9px] bg-emerald-500/10 px-2 h-4 flex items-center rounded-full border border-emerald-500/20">{eng.coupon_code}</span>}
-                      </div>
-                      <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1">
-                         "{eng.note}"
-                      </div>
-                      {eng.addons && Array.isArray(eng.addons) && eng.addons.length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1 pl-3">
-                          {eng.addons.map((a: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-[7px] font-black uppercase px-1 py-0 h-3 bg-zinc-900 border-zinc-800 text-zinc-500">
-                              {a}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                   </div>
-                 ))}
-              </div>
-           </div>
-        </div>
-      </section>
+        {/* Engagement History Column */}
+        <section className="space-y-4 flex flex-col">
+          <div className="flex items-center gap-1.5 px-1 opacity-50">
+             <History className="h-3 w-3 text-zinc-500" />
+             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Communication Audit Trail</span>
+          </div>
+          <div className="space-y-3 flex-1 max-h-[600px] overflow-y-auto custom-scrollbar pr-2 bg-zinc-900/20 p-4 rounded-2xl border border-white/5">
+             {loadingEngs && <div className="text-[10px] text-zinc-700 italic px-4 py-8 border border-dashed border-zinc-800 rounded-2xl text-center flex items-center justify-center gap-2 animate-pulse"><Clock className="h-3 w-3" /> Syncing communication history...</div>}
+             {!loadingEngs && engagements.length === 0 && (
+               <div className="text-[10px] text-zinc-500 italic px-4 py-12 border border-dashed border-zinc-800/80 rounded-2xl text-center flex flex-col items-center gap-3 h-full justify-center">
+                  <div className="h-10 w-10 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><MessageSquare className="h-5 w-5" /></div>
+                  No prior outreach recorded for this profile.
+               </div>
+             )}
+             {engagements.map((eng, idx) => (
+               <div key={idx} className="flex flex-col gap-2 p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] group/item hover:border-blue-500/20 transition-all shadow-sm">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                       <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 h-4 bg-zinc-900 border-zinc-800 text-blue-400">
+                         {eng.type === 'initial' ? 'Intro' : 'Retention'}
+                       </Badge>
+                       <span className="text-zinc-500 font-bold tracking-tight">{format(new Date(eng.created_at), 'MMMM dd, yyyy · p')}</span>
+                     </div>
+                     {eng.coupon_code && <span className="text-emerald-500 font-black tracking-tighter text-[9px] bg-emerald-500/10 px-2 h-4 flex items-center rounded-full border-emerald-500/20">{eng.coupon_code}</span>}
+                  </div>
+                  <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1">
+                     "{eng.note}"
+                  </div>
+                  {eng.addons && Array.isArray(eng.addons) && eng.addons.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1 pl-3">
+                      {eng.addons.map((a: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-[7px] font-black uppercase px-1 py-0 h-3 bg-zinc-900 border-zinc-800 text-zinc-500">
+                          {a}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+               </div>
+             ))}
+          </div>
+        </section>
+      </div>
 
       {!customer.email && (
         <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-bottom-2">

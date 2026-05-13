@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { Badge } from "@/components/ui/badge";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
-import { getSupabaseCustomers, upsertSupabaseCustomer, Customer } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, Customer, supabase } from "@/lib/supa-data";
 import { format } from "date-fns";
-import { RetentionHub } from "@/components/customers/RetentionHub";
+
 import { ActivityLog } from "@/components/customers/ActivityLog";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
@@ -26,7 +26,8 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench,
+  Zap, Check, Bell, Package
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
@@ -41,6 +42,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
@@ -123,7 +132,7 @@ const Prospects = () => {
     }
   }, [location.search, customers]);
 
-  const handlePreviewEmailForBooking = (booking: any) => {
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success') => {
     if (!booking) return;
     setEmailFormData({
       customer: booking.customer || '',
@@ -142,11 +151,14 @@ const Prospects = () => {
       status: (booking.status || 'pending').toLowerCase() as any
     });
     
-    const stat = (booking.status || 'pending').toLowerCase();
-    let type: any = 'request';
-    if (stat === 'confirmed') type = 'confirmation';
-    else if (stat === 'cancelled') type = 'cancelled';
-    else if (stat === 'done') type = 'payment-success';
+    let type: any = forcedType;
+    if (!type) {
+      const stat = (booking.status || 'pending').toLowerCase();
+      if (stat === 'confirmed') type = 'confirmation';
+      else if (stat === 'cancelled') type = 'cancelled';
+      else if (stat === 'done') type = 'payment-success';
+      else type = 'request';
+    }
     
     setEmailPreviewType(type);
     setShowEmailPreview(true);
@@ -932,13 +944,21 @@ const Prospects = () => {
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Communication Overview</h4>
                                 <button 
-                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-flow' } }))}
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))}
                                   className="text-zinc-600 hover:text-purple-400 transition-colors"
-                                  title="Communication Help"
+                                  title="Engagement Hub Help"
                                 >
                                   <HelpCircle className="h-3 w-3" />
                                 </button>
                               </div>
+                              <Button 
+                                variant="outline" 
+                                className="w-full bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group"
+                                onClick={() => navigate(`/follow-up-center?search=${encodeURIComponent(customer.name)}`)}
+                              >
+                                <Zap className="w-4 h-4 text-amber-500 group-hover:animate-pulse" />
+                                Launch Engagement Hub
+                              </Button>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
@@ -1070,18 +1090,37 @@ const Prospects = () => {
                                                  <span className="text-zinc-200 text-sm font-black uppercase tracking-tight">{dateStr}</span>
                                                  <span className="text-zinc-600 text-xs">•</span>
                                                   <span className="text-zinc-400 text-xs font-bold">{timeStr}</span>
-                                                  <Button
-                                                   variant="ghost" 
-                                                   size="sm" 
-                                                   className="h-6 w-6 p-0 text-zinc-500 hover:text-blue-400 ml-1"
-                                                   onClick={async (e) => { 
-                                                      e.stopPropagation(); 
-                                                      handlePreviewEmailForBooking(booking);
-                                                   }}
-                                                   title="Preview Email Sent"
-                                                 >
-                                                   <Mail className="h-3 w-3" />
-                                                 </Button>
+                                                  <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                      <Button
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-6 w-6 p-0 text-zinc-500 hover:text-blue-400 ml-1"
+                                                        title="Preview Emails"
+                                                      >
+                                                        <Mail className="h-3 w-3" />
+                                                      </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56">
+                                                      <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Preview Sent Emails</DropdownMenuLabel>
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'confirmation'); }}>
+                                                        <Check className="mr-2 h-4 w-4 text-emerald-500" /> Booking Approved
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'request'); }}>
+                                                        <Clock className="mr-2 h-4 w-4 text-amber-500" /> Request Received
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'cancelled'); }}>
+                                                        <X className="mr-2 h-4 w-4 text-red-500" /> Job Cancelled
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'reminder'); }}>
+                                                        <Bell className="mr-2 h-4 w-4 text-blue-500" /> 6-Month Reminder
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator className="bg-zinc-800" />
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'payment-success'); }}>
+                                                        <Package className="mr-2 h-4 w-4 text-green-500" /> Payment Success
+                                                      </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                  </DropdownMenu>
                                                  <Button 
                                                    variant="ghost" 
                                                    size="sm" 
@@ -1363,11 +1402,6 @@ const Prospects = () => {
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-
-                      
-                      <div className="pt-2">
-                         <RetentionHub customer={c} />
-                      </div>
 
                       <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-zinc-800">
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">

@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -28,8 +28,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { auditEmployeeAction } from "@/lib/audit";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { RetentionHub } from "@/components/customers/RetentionHub";
+
 import { ActivityLog } from "@/components/customers/ActivityLog";
+import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
@@ -61,6 +70,43 @@ const SearchCustomer = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [activeModalTab, setActiveModalTab] = useState("profile");
+  
+  
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success'>('confirmation');
+  const [emailFormData, setEmailFormData] = useState<any>(null);
+
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success') => {
+    if (!booking) return;
+    setEmailFormData({
+      customer: booking.customer || '',
+      email: booking.customerEmail || booking.email || '',
+      phone: booking.customerPhone || booking.phone || '',
+      address: booking.address || '',
+      service: booking.service || booking.title || '',
+      vehicle: booking.vehicle || '',
+      vehicleYear: booking.vehicleYear || '',
+      vehicleMake: booking.vehicleMake || '',
+      vehicleModel: booking.vehicleModel || '',
+      notes: booking.notes || '',
+      addons: Array.isArray(booking.addons) ? booking.addons : 
+              (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
+      time: booking.date ? format(new Date(booking.date), 'HH:mm') : '09:00',
+      status: (booking.status || 'pending').toLowerCase() as any
+    });
+    
+    let type: any = forcedType;
+    if (!type) {
+      const stat = (booking.status || 'pending').toLowerCase();
+      if (stat === 'confirmed') type = 'confirmation';
+      else if (stat === 'cancelled') type = 'cancelled';
+      else if (stat === 'done') type = 'payment-success';
+      else type = 'request';
+    }
+    
+    setEmailPreviewType(type);
+    setShowEmailPreview(true);
+  };
 
   const { isDemoMode } = useDemoMode();
   const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
@@ -811,13 +857,21 @@ const SearchCustomer = () => {
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">Communication Overview</h4>
                                 <button 
-                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'booking-flow' } }))}
+                                  onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))}
                                   className="text-zinc-600 hover:text-blue-400 transition-colors"
-                                  title="Communication Help"
+                                  title="Engagement Hub Help"
                                 >
                                   <HelpCircle className="h-3 w-3" />
                                 </button>
                               </div>
+                              <Button 
+                                variant="outline" 
+                                className="w-full bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group"
+                                onClick={() => navigate(`/follow-up-center?search=${encodeURIComponent(customer.name)}`)}
+                              >
+                                <Zap className="w-4 h-4 text-amber-500 group-hover:animate-pulse" />
+                                Launch Engagement Hub
+                              </Button>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={async (e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
@@ -844,16 +898,33 @@ const SearchCustomer = () => {
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                            </section>
 
-                           {!customer.is_archived && (
-                             <section className="bg-zinc-900/50 border border-zinc-800/50 p-5 rounded-2xl shadow-xl">
-                               <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                 <Zap className="w-3 h-3 text-amber-500" /> Retention & Engagement Hub
-                               </div>
-                               <RetentionHub customer={customer} />
-                             </section>
-                           )}
-                           
-                           {/* Relationship Metadata relocated here for better balance if not archived */}
+
+                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                  <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
+                                </h4>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
+                                  onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                                >
+                                  <Plus className="w-2.5 h-2.5" /> ADD NOTE
+                                </Button>
+                              </div>
+                              
+                              {customer.notes ? (
+                                <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+                                  "{customer.notes}"
+                                </div>
+                              ) : (
+                                <div className="py-8 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
+                                  <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
+                                </div>
+                              )}
+                           </section>
+
                            {customer.is_archived && (
                              <div className="p-12 text-center border border-dashed border-zinc-800 rounded-3xl opacity-50">
                                <Archive className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
@@ -994,6 +1065,38 @@ const SearchCustomer = () => {
                                                <div className="mt-4 pt-4 border-t border-zinc-800/40 flex items-center justify-between">
                                                   <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Session #{booking.id.slice(-6).toUpperCase()}</div>
                                                    <div className="flex items-center gap-2">
+                                                     <DropdownMenu>
+                                                       <DropdownMenuTrigger asChild>
+                                                         <Button
+                                                           variant="ghost" 
+                                                           size="sm" 
+                                                           className="h-6 w-6 p-0 text-zinc-500 hover:text-blue-400"
+                                                           title="Preview Emails"
+                                                         >
+                                                           <Mail className="h-3 w-3" />
+                                                         </Button>
+                                                       </DropdownMenuTrigger>
+                                                       <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56">
+                                                         <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Preview Sent Emails</DropdownMenuLabel>
+                                                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'confirmation'); }}>
+                                                           <Check className="mr-2 h-4 w-4 text-emerald-500" /> Booking Approved
+                                                         </DropdownMenuItem>
+                                                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'request'); }}>
+                                                           <Clock className="mr-2 h-4 w-4 text-amber-500" /> Request Received
+                                                         </DropdownMenuItem>
+                                                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'cancelled'); }}>
+                                                           <X className="mr-2 h-4 w-4 text-red-500" /> Job Cancelled
+                                                         </DropdownMenuItem>
+                                                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'reminder'); }}>
+                                                           <Bell className="mr-2 h-4 w-4 text-blue-500" /> 6-Month Reminder
+                                                         </DropdownMenuItem>
+                                                         <DropdownMenuSeparator className="bg-zinc-800" />
+                                                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'payment-success'); }}>
+                                                           <Package className="mr-2 h-4 w-4 text-green-500" /> Payment Success
+                                                         </DropdownMenuItem>
+                                                       </DropdownMenuContent>
+                                                     </DropdownMenu>
+
                                                      <Button 
                                                       variant="ghost" 
                                                       size="sm" 

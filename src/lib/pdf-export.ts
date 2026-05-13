@@ -26,7 +26,7 @@ export interface DetailedHistoryData {
   media?: any[]; // For future use if needed, but we mostly use customer.vehicles
 }
 
-export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, preview = false) => {
+export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, preview = false, returnDoc = false) => {
   try {
     const { customer, bookings, invoices, estimates, engagements } = data;
     const doc = new jsPDF();
@@ -539,6 +539,10 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   doc.text(`PAGE ${totalPages} OF ${totalPages}`, pageWidth - 14, currentY + 10, { align: 'right' });
 
   // --- Save or Preview ---
+  if (returnDoc) {
+    return doc;
+  }
+
   if (preview) {
     window.open(doc.output('bloburl'), '_blank');
   } else {

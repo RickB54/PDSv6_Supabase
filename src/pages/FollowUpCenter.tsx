@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { useBookingsStore, Booking } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
@@ -69,7 +70,8 @@ export default function FollowUpCenter() {
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
   const { logs, addLog, clearHistory } = useFollowUpStore();
   
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [prospects, setProspects] = useState<Customer[]>([]);
   const [loadingProspects, setLoadingProspects] = useState(false);
 
