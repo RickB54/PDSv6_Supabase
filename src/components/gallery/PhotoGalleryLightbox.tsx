@@ -14,12 +14,13 @@ import {
     Minimize,
     Play
 } from "lucide-react";
+import { VideoEmbed } from "@/components/video/VideoEmbed";
 
 interface PhotoGalleryProps {
-    photos: {
         url: string;
         label?: string;
         type?: "image" | "video";
+        description?: string;
     }[];
     initialIndex?: number;
     open: boolean;
@@ -233,19 +234,35 @@ export const PhotoGalleryLightbox = ({
                                 className="max-w-full max-h-full transition-transform duration-300 ease-out"
                                 style={{ transform: `scale(${zoom})` }}
                             >
-                                {photos[currentIndex]?.type === "video" || photos[currentIndex]?.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                                    <video
-                                        src={photos[currentIndex].url}
-                                        controls
-                                        autoPlay
-                                        className="max-w-full max-h-full rounded-xl shadow-2xl border border-white/5"
-                                    />
+                                {photos[currentIndex]?.type === "video" || photos[currentIndex]?.url.match(/\.(mp4|webm|ogg|mov)$/i) || photos[currentIndex]?.url.includes('youtube.com') || photos[currentIndex]?.url.includes('youtu.be') || photos[currentIndex]?.url.includes('drive.google.com') ? (
+                                    <div className="w-full max-w-4xl flex flex-col items-center">
+                                        <VideoEmbed 
+                                            url={photos[currentIndex].url} 
+                                            title={photos[currentIndex].label || "Video"} 
+                                        />
+                                        {photos[currentIndex].description && (
+                                            <div className="mt-4 p-4 bg-zinc-900/80 border border-zinc-800 rounded-xl w-full">
+                                                <p className="text-zinc-300 text-sm italic leading-relaxed text-center">
+                                                    "{photos[currentIndex].description}"
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : (
-                                    <img
-                                        src={photos[currentIndex].url}
-                                        alt={photos[currentIndex].label || "Gallery Image"}
-                                        className="max-w-full max-h-full object-contain rounded-xl shadow-2xl pointer-events-none"
-                                    />
+                                    <div className="relative group">
+                                        <img
+                                            src={photos[currentIndex].url}
+                                            alt={photos[currentIndex].label || "Gallery Image"}
+                                            className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl pointer-events-none"
+                                        />
+                                        {photos[currentIndex].description && (
+                                            <div className="mt-4 p-4 bg-zinc-900/80 border border-zinc-800 rounded-xl w-full">
+                                                <p className="text-zinc-300 text-sm italic leading-relaxed text-center">
+                                                    "{photos[currentIndex].description}"
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -274,10 +291,10 @@ export const PhotoGalleryLightbox = ({
                                             : "border-white/5 opacity-40 hover:opacity-100 scale-95"
                                         }`}
                                 >
-                                    {photo.type === "video" || photo.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
-                                        <div className="w-full h-full relative">
-                                            <video src={photo.url} className="w-full h-full object-cover" muted />
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20"><Play className="h-3 w-3 text-white fill-white" /></div>
+                                    {photo.type === "video" || photo.url.match(/\.(mp4|webm|ogg|mov)$/i) || photo.url.includes('youtube.com') || photo.url.includes('youtu.be') || photo.url.includes('drive.google.com') ? (
+                                        <div className="w-full h-full relative bg-zinc-900 flex items-center justify-center">
+                                            <Play className="h-4 w-4 text-white fill-white opacity-60" />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20"></div>
                                         </div>
                                     ) : (
                                         <img src={photo.url} className="w-full h-full object-cover" />

@@ -487,7 +487,23 @@ const Prospects = () => {
     const addPhoto = (url: string, label: string, m: any) => {
       if (!url || seenUrls.has(url)) return;
       seenUrls.add(url);
-      photos.push({ url, label });
+
+      let finalUrl = url;
+      let description = undefined;
+      const isVideo = m.field === 'videoUrls' || m.field === 'videoUrl';
+
+      if (isVideo) {
+        const parts = url.split(':::');
+        finalUrl = parts[0];
+        description = parts[1];
+      }
+
+      photos.push({ 
+        url: finalUrl, 
+        label, 
+        type: isVideo ? 'video' : 'image',
+        description 
+      });
       meta.push(m);
     };
     
@@ -500,6 +516,9 @@ const Prospects = () => {
     customer.afterPhotos?.forEach((url, idx) => {
       addPhoto(url, "After", { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id });
     });
+    if (customer.videoUrl) {
+      addPhoto(customer.videoUrl, "Customer Video", { type: 'customer', field: 'videoUrl', arrayIndex: 0, customerId: customer.id });
+    }
     
     (customer.vehicles || []).forEach((v, vIdx) => {
       const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
@@ -511,6 +530,9 @@ const Prospects = () => {
       });
       v.afterPhotos?.forEach((url, idx) => {
         addPhoto(url, `${vLabel} · After`, { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
+      });
+      v.videoUrls?.forEach((url, idx) => {
+        addPhoto(url, `${vLabel} · Video`, { type: 'vehicle', field: 'videoUrls', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id });
       });
     });
     

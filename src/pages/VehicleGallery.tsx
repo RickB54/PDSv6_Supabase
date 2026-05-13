@@ -51,6 +51,7 @@ interface MediaItem {
         vehicleIndex?: number;
         arrayIndex: number;
     };
+    description?: string;
 }
 
 function buildMediaForCustomer(customer: Customer): MediaItem[] {
@@ -69,7 +70,15 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
         items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'afterPhotos', arrayIndex: idx } })
     );
     if ((customer as any).videoUrl) {
-        items.push({ url: (customer as any).videoUrl, type: "video", category: "video", customerName, vehicleLabel: "Profile", customerId });
+        items.push({ 
+            url: (customer as any).videoUrl, 
+            type: "video", 
+            category: "video", 
+            customerName, 
+            vehicleLabel: "Profile", 
+            customerId,
+            description: (customer as any).videoNote
+        });
     }
 
     // Per-vehicle photos
@@ -84,9 +93,18 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
         (v.afterPhotos || []).forEach((url, idx) =>
             items.push({ url, type: "image", category: "after", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
-        (v.videoUrls || []).forEach(url =>
-            items.push({ url, type: "video", category: "video", customerName, vehicleLabel, customerId })
-        );
+        (v.videoUrls || []).forEach(url => {
+            const parts = url.split(':::');
+            items.push({ 
+                url: parts[0], 
+                type: "video", 
+                category: "video", 
+                customerName, 
+                vehicleLabel, 
+                customerId,
+                description: parts[1]
+            });
+        });
     });
 
     return items;
@@ -192,8 +210,15 @@ function Lightbox({
                         {current.type === "image" ? (
                             <img src={current.url} alt={current.vehicleLabel} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
                         ) : (
-                            <div className="w-full max-w-3xl">
+                            <div className="w-full max-w-3xl flex flex-col items-center">
                                 <VideoEmbed url={current.url} title={current.vehicleLabel} />
+                                {current.description && (
+                                    <div className="mt-4 p-4 bg-zinc-900/80 border border-zinc-800 rounded-xl w-full">
+                                        <p className="text-zinc-300 text-sm italic leading-relaxed text-center">
+                                            "{current.description}"
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -333,6 +358,7 @@ function CustomerCard({
     const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
     const [videoUrl, setVideoUrl] = useState("");
+    const [videoDescription, setVideoDescription] = useState("");
     const [showVideoInput, setShowVideoInput] = useState(false);
     const { toast } = useToast();
 
@@ -347,18 +373,22 @@ function CustomerCard({
         if (!videoUrl) return;
         try {
             const updated = { ...customer };
+            const finalVideoString = videoDescription ? `${videoUrl}:::${videoDescription}` : videoUrl;
+            
             if (!updated.vehicles || updated.vehicles.length === 0) {
                 // Add to customer level if no vehicles
                 (updated as any).videoUrl = videoUrl;
+                (updated as any).videoNote = videoDescription;
             } else {
                 // Add to first vehicle as default
                 const v = { ...updated.vehicles[0] };
-                v.videoUrls = [...(v.videoUrls || []), videoUrl];
+                v.videoUrls = [...(v.videoUrls || []), finalVideoString];
                 updated.vehicles = [v, ...updated.vehicles.slice(1)];
             }
             await upsertSupabaseCustomer(updated);
             toast({ title: "Video Added", description: "The video link has been saved to the gallery." });
             setVideoUrl("");
+            setVideoDescription("");
             setShowVideoInput(false);
             window.location.reload(); // Refresh to show new media
         } catch (err) {
@@ -441,20 +471,28 @@ function CustomerCard({
 
             {/* Video Link Input (Collapseable) */}
             {showVideoInput && (
-                <div className="px-4 pb-4 pl-11 flex gap-2 animate-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
+                <div className="px-4 pb-4 pl-11 flex flex-col gap-2 animate-in slide-in-from-top-2" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-2">
+                        <Input 
+                            placeholder="Paste Video URL (YouTube, Drive, or direct .mp4)"
+                            className="h-9 bg-zinc-950 border-zinc-800 text-xs flex-1"
+                            value={videoUrl}
+                            onChange={e => setVideoUrl(e.target.value)}
+                        />
+                        <Button 
+                            size="sm" 
+                            className="h-9 bg-pink-600 hover:bg-pink-500 text-white text-[10px] font-bold px-4"
+                            onClick={handleAddVideo}
+                        >
+                            SAVE
+                        </Button>
+                    </div>
                     <Input 
-                        placeholder="Paste Video URL"
-                        className="h-9 bg-zinc-950 border-zinc-800 text-xs"
-                        value={videoUrl}
-                        onChange={e => setVideoUrl(e.target.value)}
+                        placeholder="Video Description (Optional)"
+                        className="h-8 bg-zinc-950/50 border-zinc-800 text-[10px]"
+                        value={videoDescription}
+                        onChange={e => setVideoDescription(e.target.value)}
                     />
-                    <Button 
-                        size="sm" 
-                        className="h-9 bg-pink-600 hover:bg-pink-500 text-white text-[10px] font-bold"
-                        onClick={handleAddVideo}
-                    >
-                        SAVE
-                    </Button>
                 </div>
             )}
 
