@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -1278,36 +1278,40 @@ const SearchCustomer = () => {
                       </div>
                                             {/* MEDIA GALLERY - dynamic */}
                       {(() => {
-                        const allPhotos: {url: string; label: string; type: 'before'|'after'|'general'; metadata: any}[] = [];
+                        const allMedia: {url: string; label: string; type: 'before'|'after'|'general'|'video'; metadata: any; isVideo?: boolean}[] = [];
                         const seenUrls = new Set<string>();
 
-                        const addPhoto = (url: string, label: string, type: 'before'|'after'|'general', m: any) => {
+                        const addMedia = (url: string, label: string, type: 'before'|'after'|'general'|'video', m: any, isVideo = false) => {
                           if (!url || seenUrls.has(url)) return;
                           seenUrls.add(url);
-                          allPhotos.push({ url, label, type, metadata: m });
+                          allMedia.push({ url, label, type, metadata: m, isVideo });
                         };
 
-                        customer.generalPhotos?.forEach((url, idx) => addPhoto(url, 'General', 'general', { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id }));
-                        customer.beforePhotos?.forEach((url, idx) => addPhoto(url, 'Before', 'before', { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id }));
-                        customer.afterPhotos?.forEach((url, idx) => addPhoto(url, 'After', 'after', { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.generalPhotos?.forEach((url, idx) => addMedia(url, 'General', 'general', { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.beforePhotos?.forEach((url, idx) => addMedia(url, 'Before', 'before', { type: 'customer', field: 'beforePhotos', arrayIndex: idx, customerId: customer.id }));
+                        customer.afterPhotos?.forEach((url, idx) => addMedia(url, 'After', 'after', { type: 'customer', field: 'afterPhotos', arrayIndex: idx, customerId: customer.id }));
                         
+                        if (customer.videoUrl) {
+                          addMedia(customer.videoUrl, 'Video', 'video', { type: 'customer', field: 'videoUrl', arrayIndex: 0, customerId: customer.id }, true);
+                        }
+
                         (customer.vehicles || []).forEach((v, vIdx) => {
                           const vLabel = [v.year, v.make, v.model].filter(Boolean).join(' ') || 'Vehicle';
-                          v.generalPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - General', 'general', { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
-                          v.beforePhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - Before', 'before', { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
-                          v.afterPhotos?.forEach((url, idx) => addPhoto(url, vLabel + ' - After', 'after', { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.generalPhotos?.forEach((url, idx) => addMedia(url, vLabel + ' - General', 'general', { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.beforePhotos?.forEach((url, idx) => addMedia(url, vLabel + ' - Before', 'before', { type: 'vehicle', field: 'beforePhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.afterPhotos?.forEach((url, idx) => addMedia(url, vLabel + ' - After', 'after', { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }));
+                          v.videoUrls?.forEach((url, idx) => addMedia(url, vLabel + ' - Video', 'video', { type: 'vehicle', field: 'videoUrls', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }, true));
                         });
                         
-                        if (allPhotos.length === 0) return null;
+                        if (allMedia.length === 0) return null;
 
-                        const displayPhotos = allPhotos.slice(0, 12);
-                        const hasMore = allPhotos.length > 12;
+                        const displayMedia = allMedia.slice(0, 12);
 
                         return (
                           <div className="mt-12 pt-8 border-t border-zinc-800/50">
                             <div className="flex items-center justify-between mb-6">
                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                <ImageIcon className="h-3 w-3" /> Media Archive ({allPhotos.length} items)
+                                <ImageIcon className="h-3 w-3" /> Media Archive ({allMedia.length} items)
                               </h4>
                                <div className="flex items-center gap-2">
                                 <Button 
@@ -1331,20 +1335,40 @@ const SearchCustomer = () => {
                               </div>
                             </div>
                             <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                              {displayPhotos.map((p, i) => (
-                                <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
-                                  <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
-                                  <div className={cn(
-                                    "absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase",
-                                    p.type === 'before' ? 'bg-orange-600/80' : 
-                                    p.type === 'after' ? 'bg-emerald-600/80' : 
-                                    'bg-blue-600/60'
-                                  )}>{p.type}</div>
+                              {displayMedia.map((m, i) => {
+                                const ytThumb = m.isVideo ? getYouTubeThumbnail(m.url) : null;
+                                return (
+                                  <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 cursor-pointer hover:border-blue-400 transition-all hover:scale-[1.03] shadow-xl" onClick={() => openGallery(customer, i)}>
+                                    {m.isVideo ? (
+                                      <div className="w-full h-full relative">
+                                        {ytThumb ? (
+                                          <img src={ytThumb} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                                            <Video className="w-8 h-8 text-zinc-700" />
+                                          </div>
+                                        )}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                                          <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                                            <Play className="w-4 h-4 text-white fill-white" />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <img src={m.url} alt={m.label} className="w-full h-full object-cover" />
+                                    )}
+                                    <div className={cn(
+                                      "absolute top-2 left-2 text-[9px] px-1.5 py-0.5 rounded text-white font-black uppercase",
+                                      m.type === 'before' ? 'bg-orange-600/80' : 
+                                      m.type === 'after' ? 'bg-emerald-600/80' : 
+                                      m.type === 'video' ? 'bg-pink-600/80' :
+                                      'bg-zinc-600/80'
+                                    )}>{m.type}</div>
                                   
                                   {isAdmin && (
                                     <button 
                                       className="absolute top-2 right-2 p-1.5 rounded-full bg-red-600/80 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-lg z-10"
-                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ metadata: p.metadata, customer }); }}
+                                      onClick={(e) => { e.stopPropagation(); setPhotoToDelete({ metadata: m.metadata, customer }); }}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
