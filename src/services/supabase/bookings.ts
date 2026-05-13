@@ -27,41 +27,72 @@ export interface BookingInput {
 export async function create(input: BookingInput) {
   if (isDemoActive()) return { ...input, id: `demo_book_${Date.now()}` };
   try {
-    // 1. Upsert Customer (Match on Email)
-    // 1. Upsert Customer (Match on Email if exists, otherwise create new)
+    // 1. Find or create Customer
+    // Priority: email match → name match → phone match → create new prospect
     let customerId: string | null = null;
+
+    // Step 1a: Try to find existing customer by email
     if (input.email) {
-      const { data: existing } = await supabase.from('customers').select('id').eq('email', input.email).maybeSingle();
-      if (existing) {
-        customerId = existing.id;
-      } else {
-        // Create new customer - Don't use .single() as it requires SELECT permissions which anon might not have
-        const { data: newCust, error: cErr } = await supabase.from('customers').insert({
-          full_name: input.customer_name,
-          email: input.email,
-          phone: input.phone,
-          type: 'prospect',
-          notes: 'Created via Book Now'
-        }).select('id');
-        
-        if (cErr) {
-          console.warn("Customer creation warning (likely RLS or duplicate):", cErr);
-          // If we can't create/select the customer, we'll try to proceed with a name-only booking
-          // or a late-binding approach.
-        }
-        customerId = newCust && newCust[0] ? newCust[0].id : null;
+      const { data: byEmail } = await supabase
+        .from('customers')
+        .select('id, type')
+        .eq('email', input.email)
+        .maybeSingle();
+      if (byEmail) {
+        customerId = byEmail.id;
+        console.log('[bookings.ts] Matched existing customer by email:', customerId);
       }
-    } else {
-      // No email provided - Create name-only customer
-      const { data: newCust, error: cErr } = await supabase.from('customers').insert({
+    }
+
+    // Step 1b: If no email match, try by full name
+    if (!customerId && input.customer_name) {
+      const { data: byName } = await supabase
+        .from('customers')
+        .select('id, type')
+        .ilike('full_name', input.customer_name.trim())
+        .maybeSingle();
+      if (byName) {
+        customerId = byName.id;
+        console.log('[bookings.ts] Matched existing customer by name:', customerId);
+      }
+    }
+
+    // Step 1c: If still no match, try by phone
+    if (!customerId && input.phone) {
+      const normalizedPhone = input.phone.replace(/\D/g, '');
+      if (normalizedPhone.length >= 7) {
+        const { data: byPhone } = await supabase
+          .from('customers')
+          .select('id, type')
+          .ilike('phone', `%${normalizedPhone}%`)
+          .maybeSingle();
+        if (byPhone) {
+          customerId = byPhone.id;
+          console.log('[bookings.ts] Matched existing customer by phone:', customerId);
+        }
+      }
+    }
+
+    // Step 1d: No match at all — create a new prospect record
+    if (!customerId) {
+      const insertPayload: any = {
         full_name: input.customer_name,
         phone: input.phone || null,
         type: 'prospect',
-        notes: 'Created via Book Now (Staff Entry)'
-      }).select('id').single();
-      if (!cErr && newCust) {
-        customerId = newCust.id;
+        notes: input.email ? 'Created via Book Now' : 'Created via Book Now (Staff Entry)'
+      };
+      if (input.email) insertPayload.email = input.email;
+
+      const { data: newCust, error: cErr } = await supabase
+        .from('customers')
+        .insert(insertPayload)
+        .select('id');
+
+      if (cErr) {
+        console.warn("Customer creation warning (likely RLS or duplicate):", cErr);
       }
+      customerId = newCust && newCust[0] ? newCust[0].id : null;
+      console.log('[bookings.ts] Created new prospect:', customerId);
     }
 
     // 2. Upsert Vehicle (if we have customer)

@@ -2556,7 +2556,7 @@ export default function BookingsPage() {
                   </Button>
                 )}
 
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -2566,7 +2566,7 @@ export default function BookingsPage() {
                       <Mail className="mr-1.5 h-4 w-4" /> Previews <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56">
+                  <DropdownMenuContent side="top" align="start" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56 z-[9999]">
                     <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Customer Communication</DropdownMenuLabel>
                     <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('confirmation'); setShowEmailPreview(true); }}>
                       <Check className="mr-2 h-4 w-4 text-emerald-500" /> Booking Approved
