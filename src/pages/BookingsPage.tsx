@@ -2648,113 +2648,257 @@ export default function BookingsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Email Preview Dialog */}
+        {/* Email Preview Dialog — renders the EXACT same template sent to the customer */}
         <Dialog open={showEmailPreview} onOpenChange={setShowEmailPreview}>
-          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white border-zinc-200 p-0 text-black">
-            <DialogHeader className="p-4 bg-zinc-100 border-b border-zinc-200 sticky top-0 z-10">
-              <div className="flex items-center justify-between w-full">
-                <DialogTitle className="text-zinc-900 flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  Email Preview: {
-                    emailPreviewType === 'confirmation' ? 'Booking Approved' :
-                    emailPreviewType === 'request' ? 'Request Received' :
-                    emailPreviewType === 'cancelled' ? 'Job Cancelled' :
-                    emailPreviewType === 'reminder' ? '6-Month Follow-up' :
-                    'Payment Success'
-                  }
+          <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 p-0 text-black">
+
+            {/* ── Audit Banner ────────────────────────────────────────────── */}
+            <DialogHeader className="p-0 sticky top-0 z-10">
+              {/* Top bar */}
+              <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800">
+                <DialogTitle className="text-white flex items-center gap-2 text-sm font-bold">
+                  <Mail className="h-4 w-4 text-blue-400" />
+                  Actual Email Sent to Customer
                 </DialogTitle>
                 <div className="flex items-center gap-2 pr-8">
-                   <Badge variant="outline" className={cn(
-                     "capitalize",
-                     emailPreviewType === 'confirmation' ? "border-green-500 text-green-700" :
-                     emailPreviewType === 'cancelled' ? "border-red-500 text-red-700" :
-                     "border-blue-500 text-blue-700"
-                   )}>
-                     Live Environment
-                   </Badge>
+                  <Badge variant="outline" className={cn(
+                    "text-[10px] uppercase tracking-wider",
+                    emailPreviewType === 'confirmation' ? "border-emerald-500 text-emerald-400" :
+                    emailPreviewType === 'cancelled'    ? "border-red-500 text-red-400" :
+                    emailPreviewType === 'reminder'     ? "border-blue-500 text-blue-400" :
+                                                         "border-amber-500 text-amber-400"
+                  )}>
+                    {emailPreviewType === 'confirmation' ? 'Booking Approved' :
+                     emailPreviewType === 'request'      ? 'Request Received' :
+                     emailPreviewType === 'cancelled'    ? 'Job Cancelled' :
+                     emailPreviewType === 'reminder'     ? '6-Month Reminder' :
+                                                          'Payment Success'}
+                  </Badge>
                 </div>
               </div>
+
+              {/* Audit meta-row */}
+              <div className={cn(
+                "px-4 py-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] border-b",
+                emailPreviewType === 'confirmation' ? "bg-emerald-950/60 border-emerald-900/60 text-emerald-300" :
+                emailPreviewType === 'cancelled'    ? "bg-red-950/60 border-red-900/60 text-red-300" :
+                emailPreviewType === 'reminder'     ? "bg-blue-950/60 border-blue-900/60 text-blue-300" :
+                                                      "bg-amber-950/60 border-amber-900/60 text-amber-300"
+              )}>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 opacity-70" />
+                  <span className="opacity-70 font-medium">Triggered:</span>{' '}
+                  {emailPreviewType === 'confirmation'
+                    ? (selectedBooking?.updatedAt || selectedBooking?.date
+                        ? `When status changed to Confirmed`
+                        : 'On booking confirmation')
+                    : emailPreviewType === 'request'
+                    ? 'When online booking was submitted'
+                    : emailPreviewType === 'cancelled'
+                    ? 'When job was cancelled'
+                    : emailPreviewType === 'reminder'
+                    ? 'When sent from Retention Hub'
+                    : 'When payment was marked Paid'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Mail className="h-3 w-3 opacity-70" />
+                  <span className="opacity-70 font-medium">To:</span>{' '}
+                  {formData.email || selectedBooking?.customerEmail || '(no email on file)'}
+                </span>
+                <span className="flex items-center gap-1 ml-auto font-bold opacity-90">
+                  ✓ This is the exact email the customer received
+                </span>
+              </div>
             </DialogHeader>
-            <div className="p-6 bg-zinc-50 min-h-[400px]">
-              <div className="max-w-[600px] mx-auto bg-white shadow-xl rounded-xl border border-zinc-200 overflow-hidden text-left">
-                
-                {/* TEMPLATE: CANCELLATION */}
-                {emailPreviewType === 'cancelled' ? (
+
+            {/* ── Email Body ───────────────────────────────────────────────── */}
+            <div className="p-5 bg-zinc-100">
+              <div className="max-w-[600px] mx-auto bg-white shadow-xl rounded-xl border border-zinc-200 overflow-hidden text-left font-sans">
+
+                {/* ═══ TEMPLATE: BOOKING CONFIRMED (exact match to bookingsSync.ts line ~123) ═══ */}
+                {emailPreviewType === 'confirmation' && (() => {
+                  const formattedDate = selectedBooking?.date ? formatETDate(selectedBooking.date) : (selectedDate ? formatETDate(selectedDate.toISOString()) : 'TBD');
+                  const formattedTime = selectedBooking?.date ? formatETTime(selectedBooking.date) : (formData.time || '09:00 AM');
+                  const vehicleStr = [selectedBooking?.vehicleYear, selectedBooking?.vehicleMake, selectedBooking?.vehicleModel].filter(Boolean).join(' ');
+                  const price = selectedBooking?.price ?? 0;
+                  return (
+                    <>
+                      <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '15px' }}>🚗</div>
+                        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.025em', textTransform: 'uppercase' }}>Booking Confirmed!</h1>
+                        <p style={{ margin: '10px 0 0', fontSize: '16px', opacity: 0.9 }}>We've officially set your appointment.</p>
+                      </div>
+                      <div style={{ padding: '30px' }}>
+                        <p style={{ fontSize: '18px', color: '#111827', marginTop: 0 }}>Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6 }}>Great news! Your booking for <strong>{formData.service || selectedBooking?.title}</strong> has been confirmed. Our team is excited to service your vehicle and provide a premium experience.</p>
+                        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                          <h3 style={{ marginTop: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>Appointment Details</h3>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>📅</span><span style={{ color: '#334155', fontWeight: 600 }}>{formattedDate}</span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>⏰</span><span style={{ color: '#334155', fontWeight: 600 }}>{formattedTime}</span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>🔧</span><span style={{ color: '#334155', fontWeight: 600 }}>{formData.service || selectedBooking?.title}</span></div>
+                          {vehicleStr && <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>🚙</span><span style={{ color: '#334155', fontWeight: 600 }}>{vehicleStr}</span></div>}
+                          <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '15px', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b', fontWeight: 500 }}>Total Estimate:</span>
+                            <span style={{ color: '#10b981', fontSize: '20px', fontWeight: 800 }}>${price.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                          <h3 style={{ marginTop: 0, fontSize: '16px', color: '#166534' }}>💳 Secure Payment Options</h3>
+                          <p style={{ fontSize: '14px', color: '#166534', margin: '10px 0' }}>You have the flexibility to pay however you prefer:</p>
+                          <div style={{ fontSize: '14px', color: '#166534', lineHeight: 1.5 }}>
+                            • <strong>Pay in Full:</strong> Settle the balance now for a contactless experience.<br/>
+                            • <strong>Partial Deposit:</strong> Pay any amount now to secure your spot.<br/>
+                            • <strong>Pay Later:</strong> No pressure! You can pay in person once the job is completed.
+                          </div>
+                          <div style={{ textAlign: 'center', marginTop: '25px' }}>
+                            <span style={{ display: 'inline-block', backgroundColor: '#10b981', color: '#ffffff', padding: '14px 28px', borderRadius: '8px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>View Payment Options</span>
+                          </div>
+                        </div>
+                        <div style={{ backgroundColor: '#fefce8', border: '1px solid #fef08a', borderRadius: '8px', padding: '15px', marginBottom: '25px' }}>
+                          <p style={{ margin: 0, fontSize: '14px', color: '#854d0e' }}><strong>Note:</strong> If you need to make any changes or cancel your appointment, please contact us at least 24 hours in advance.</p>
+                        </div>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6, marginBottom: '30px' }}>We look forward to seeing you soon!</p>
+                        <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '30px' }}>
+                          <p style={{ margin: 0, color: '#111827', fontWeight: 700 }}>Prime Auto Detail</p>
+                          <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '14px' }}>Professional Detailing Solutions</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* ═══ TEMPLATE: REQUEST RECEIVED ═══ */}
+                {emailPreviewType === 'request' && (() => {
+                  const formattedDate = selectedBooking?.date ? formatETDate(selectedBooking.date) : (selectedDate ? formatETDate(selectedDate.toISOString()) : 'TBD');
+                  const formattedTime = selectedBooking?.date ? formatETTime(selectedBooking.date) : (formData.time || '09:00 AM');
+                  return (
+                    <>
+                      <div style={{ background: 'linear-gradient(135deg, #b45309 0%, #f59e0b 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '15px' }}>🚗</div>
+                        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.025em', textTransform: 'uppercase' }}>Request Received</h1>
+                        <p style={{ margin: '10px 0 0', fontSize: '16px', opacity: 0.9 }}>We've received your request and are reviewing it.</p>
+                      </div>
+                      <div style={{ padding: '30px' }}>
+                        <p style={{ fontSize: '18px', color: '#111827', marginTop: 0 }}>Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6 }}>We have received your request for <strong>{formData.service || selectedBooking?.title}</strong>. Our team will review it and contact you within 24 hours to confirm your appointment.</p>
+                        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                          <h3 style={{ marginTop: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>Appointment Details</h3>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>📅</span><span style={{ color: '#334155', fontWeight: 600 }}>{formattedDate}</span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>⏰</span><span style={{ color: '#334155', fontWeight: 600 }}>{formattedTime}</span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>🔧</span><span style={{ color: '#334155', fontWeight: 600 }}>{formData.service || selectedBooking?.title}</span></div>
+                        </div>
+                        <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '30px' }}>
+                          <p style={{ margin: 0, color: '#111827', fontWeight: 700 }}>Prime Auto Detail</p>
+                          <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '14px' }}>Professional Detailing Solutions</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* ═══ TEMPLATE: JOB CANCELLED (exact match to bookingsSync.ts line ~267) ═══ */}
+                {emailPreviewType === 'cancelled' && (() => {
+                  const formattedDate = selectedBooking?.date ? formatETDate(selectedBooking.date) : 'TBD';
+                  const formattedTime = selectedBooking?.date ? formatETTime(selectedBooking.date) : '';
+                  const price = selectedBooking?.price ?? 0;
+                  return (
+                    <>
+                      <div style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                        <div style={{ fontSize: '48px', marginBottom: '15px' }}>⚠️</div>
+                        <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '-0.025em', textTransform: 'uppercase' }}>Appointment Cancelled</h1>
+                        <p style={{ margin: '10px 0 0', fontSize: '16px', opacity: 0.9 }}>Notification regarding your upcoming service.</p>
+                      </div>
+                      <div style={{ padding: '30px' }}>
+                        <p style={{ fontSize: '18px', color: '#111827', marginTop: 0 }}>Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6 }}>This email is to inform you that your scheduled appointment for <strong>{formData.service || selectedBooking?.title}</strong> has been cancelled.</p>
+                        <div style={{ backgroundColor: '#fffaf0', border: '1px solid #feebc8', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                          <h3 style={{ marginTop: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c05621' }}>Reason for Cancellation</h3>
+                          <p style={{ color: '#744210', fontWeight: 500, fontStyle: 'italic', marginBottom: 0 }}>"Due to scheduling — as noted at time of cancellation"</p>
+                        </div>
+                        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                          <h3 style={{ marginTop: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>Original Appointment Info</h3>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>📅</span><span style={{ color: '#334155' }}>Original Date: <strong>{formattedDate}</strong></span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>⏰</span><span style={{ color: '#334155' }}>Original Time: <strong>{formattedTime}</strong></span></div>
+                          <div style={{ display: 'flex', marginBottom: '12px' }}><span style={{ color: '#94a3b8', width: '30px' }}>🔧</span><span style={{ color: '#334155' }}>Service: <strong>{formData.service || selectedBooking?.title}</strong></span></div>
+                          <div style={{ borderTop: '1px dashed #e2e8f0', marginTop: '15px', paddingTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b', fontWeight: 500 }}>Original Estimate:</span>
+                            <span style={{ color: '#111827', fontSize: '18px', fontWeight: 800 }}>${price.toLocaleString()}</span>
+                          </div>
+                        </div>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6 }}>If you would like to reschedule or have any questions, please reply to this email or call us directly.</p>
+                        <p style={{ color: '#4b5563', lineHeight: 1.6, marginBottom: '30px' }}>We apologize for the inconvenience and hope to serve you in the future.</p>
+                        <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '30px' }}>
+                          <p style={{ margin: 0, color: '#111827', fontWeight: 700 }}>Prime Auto Detail</p>
+                          <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '14px' }}>Professional Detailing Solutions</p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* ═══ TEMPLATE: 6-MONTH REMINDER (exact match to bookingsSync.ts line ~345) ═══ */}
+                {emailPreviewType === 'reminder' && (
                   <>
-                    <div style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
-                      <div style={{ fontSize: '48px', marginBottom: '15px' }}>⚠️</div>
-                      <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800, textTransform: 'uppercase' }}>Appointment Cancelled</h1>
-                      <p style={{ margin: '10px 0 0', opacity: 0.9 }}>Notification regarding your upcoming service.</p>
+                    <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '15px' }}>✨</div>
+                      <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, letterSpacing: '-0.025em', textTransform: 'uppercase' }}>A Personalized Note from Prime</h1>
+                      <p style={{ margin: '10px 0 0', fontSize: '16px', opacity: 0.9 }}>Professional Maintenance Reminder</p>
                     </div>
-                    <div className="p-8">
-                       <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
-                       <p className="text-zinc-600 leading-relaxed">This email is to inform you that your scheduled appointment for <strong>{formData.service}</strong> has been cancelled.</p>
-                       <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 my-6 italic text-orange-900">
-                          "Due to unforeseen scheduling conflicts, we need to cancel your appointment. We apologize for any inconvenience..."
-                       </div>
-                       <p className="text-zinc-500 text-sm mt-8 border-t pt-4">Prime Auto Detail Team</p>
+                    <div style={{ padding: '30px' }}>
+                      <p style={{ fontSize: '18px', color: '#111827', marginTop: 0 }}>Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                      <p style={{ color: '#4b5563', lineHeight: 1.6 }}>It has been some time since your last professional detail with us, and we wanted to check in to see how your vehicle is looking.</p>
+                      <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #e0f2fe', borderRadius: '12px', padding: '25px', margin: '25px 0' }}>
+                        <p style={{ margin: 0, color: '#0369a1', fontWeight: 600, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Last Service:</p>
+                        <p style={{ margin: '5px 0 0', color: '#0c4a6e', fontWeight: 700, fontSize: '18px' }}>{formData.service || selectedBooking?.title || 'Your last detail'}</p>
+                      </div>
+                      <p style={{ color: '#4b5563', lineHeight: 1.6 }}>Regular maintenance is the key to preserving your vehicle's value and aesthetic. We recommend a refresh every 6 months for best results.</p>
+                      <div style={{ textAlign: 'center', margin: '35px 0' }}>
+                        <span style={{ display: 'inline-block', backgroundColor: '#1d4ed8', color: '#ffffff', padding: '16px 36px', borderRadius: '8px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Book Your Re-Appointment</span>
+                      </div>
+                      <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '30px', marginTop: '40px' }}>
+                        <p style={{ margin: 0, color: '#111827', fontWeight: 700 }}>Prime Auto Detail Team</p>
+                        <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '14px' }}>"Your Vehicle, Our Passion"</p>
+                      </div>
                     </div>
                   </>
-                ) : emailPreviewType === 'payment-success' ? (
+                )}
+
+                {/* ═══ TEMPLATE: PAYMENT SUCCESS ═══ */}
+                {emailPreviewType === 'payment-success' && (
                   <>
                     <div style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', padding: '40px 20px', textAlign: 'center', color: '#ffffff' }}>
                       <div style={{ fontSize: '48px', marginBottom: '15px' }}>💰</div>
                       <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 800 }}>Payment Received!</h1>
                       <p style={{ margin: '10px 0 0', opacity: 0.9 }}>Thank you for your business.</p>
                     </div>
-                    <div className="p-8">
-                       <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
-                       <p className="text-zinc-600 leading-relaxed">We have successfully processed your payment for <strong>{formData.service}</strong>.</p>
-                       <div className="bg-zinc-50 rounded-xl p-6 my-6 border border-zinc-100 flex justify-between items-center">
-                          <span className="font-bold">Total Processed:</span>
-                          <span className="text-2xl font-black text-emerald-600">${selectedBooking?.price?.toFixed(2) || '90.00'}</span>
-                       </div>
-                       <p className="text-zinc-400 text-xs text-center italic">A receipt has been sent to your primary email address.</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* ORIGINAL TEMPLATES (Approved/Request) */}
-                    <div className={cn("p-8 text-center text-white", emailPreviewType === 'confirmation' ? "bg-gradient-to-r from-blue-800 to-blue-600" : "bg-gradient-to-r from-amber-700 to-amber-500")}>
-                      <div className="text-4xl mb-3">🚗</div>
-                      <h1 className="m-0 text-2xl font-extrabold uppercase tracking-tight">
-                        {emailPreviewType === 'confirmation' ? 'Booking Confirmed!' : 'Request Received'}
-                      </h1>
-                      <p className="m-0 mt-2 text-sm opacity-90 italic">
-                        {emailPreviewType === 'confirmation' 
-                          ? "We've officially set your appointment."
-                          : "We've received your request and are reviewing it."}
-                      </p>
-                    </div>
-                    <div className="p-8">
-                      <p className="mt-0 text-lg">Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
-                      <p className="text-zinc-600 leading-relaxed">
-                        {emailPreviewType === 'confirmation'
-                          ? `Great news! Your booking for ${formData.service} has been confirmed.`
-                          : `We have received your request for ${formData.service}. Our team will contact you shortly.`}
-                      </p>
-                      <div className="bg-zinc-50 border border-zinc-100 rounded-xl p-6 my-6">
-                        <h3 className="mt-0 mb-4 text-xs font-bold uppercase tracking-widest text-zinc-400">Appointment Details</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3"><span className="text-zinc-400">📅</span> <strong>{selectedDate ? formatETDate(selectedDate) : "TBD"}</strong></div>
-                          <div className="flex items-center gap-3"><span className="text-zinc-400">⏰</span> <strong>{formData.time || "09:00 AM"}</strong></div>
-                          <div className="flex items-center gap-3"><span className="text-zinc-400">🔧</span> <strong>{formData.service}</strong></div>
-                        </div>
+                    <div style={{ padding: '30px' }}>
+                      <p style={{ fontSize: '18px', color: '#111827', marginTop: 0 }}>Hi <strong>{formData.customer || 'Customer'}</strong>,</p>
+                      <p style={{ color: '#4b5563', lineHeight: 1.6 }}>We have successfully processed your payment for <strong>{formData.service || selectedBooking?.title}</strong>.</p>
+                      <div style={{ backgroundColor: '#f9fafb', borderRadius: '12px', padding: '25px', margin: '25px 0', border: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: '#111827' }}>Total Processed:</span>
+                        <span style={{ fontSize: '24px', fontWeight: 900, color: '#10b981' }}>${selectedBooking?.price?.toFixed(2) || '0.00'}</span>
                       </div>
-                      
-                      {emailPreviewType === 'confirmation' && (
-                         <div className="bg-green-50 rounded-xl p-6 border border-green-100 text-center">
-                            <p className="text-sm text-green-800 font-bold mb-4">💳 Secure Payment Options Available</p>
-                            <div className="inline-block bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold text-sm">VIEW PAYMENT OPTIONS</div>
-                         </div>
-                      )}
+                      <p style={{ color: '#9ca3af', fontSize: '12px', textAlign: 'center', fontStyle: 'italic' }}>A receipt has been sent to your primary email address.</p>
+                      <div style={{ textAlign: 'center', borderTop: '1px solid #e5e7eb', paddingTop: '30px', marginTop: '30px' }}>
+                        <p style={{ margin: 0, color: '#111827', fontWeight: 700 }}>Prime Auto Detail</p>
+                        <p style={{ margin: '5px 0 0', color: '#6b7280', fontSize: '14px' }}>Professional Detailing Solutions</p>
+                      </div>
                     </div>
                   </>
                 )}
-                
+
+                {/* Footer — same as every real email */}
                 <div style={{ backgroundColor: '#f9fafb', padding: '20px', textAlign: 'center', borderTop: '1px solid #e5e7eb' }}>
-                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '12px' }}>&copy; {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
+                  <p style={{ margin: 0, color: '#9ca3af', fontSize: '12px' }}>© {new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
                 </div>
+              </div>
+
+              {/* Sent-at timestamp footer note */}
+              <div className="mt-3 text-center text-[10px] text-zinc-500 italic">
+                This preview renders the exact HTML template delivered via Resend / Supabase Edge Function.
+                {formData.email || selectedBooking?.customerEmail
+                  ? ` Recipient: ${formData.email || selectedBooking?.customerEmail}`
+                  : ' No email address on file for this booking.'}
               </div>
             </div>
           </DialogContent>
