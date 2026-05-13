@@ -470,19 +470,21 @@ export default function LearningLibrary() {
                     <p className="text-zinc-400">Educational resources and reference materials</p>
                 </div>
                 {/* Help / Info Section */}
-                <div className="flex items-start gap-4 p-4 bg-blue-900/20 border border-blue-900/50 rounded-lg mb-8">
-                    <HelpCircle className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                        <h3 className="font-bold text-blue-400 mb-1">About the Learning Library</h3>
-                        <p className="text-blue-200 text-sm">
-                            The Learning Library is a standalone resource center for continuous education.
-                            <strong> It is NOT related to the Employee Certification program.</strong>
-                            Certification videos and exams are located in the "Employee Certification" section.
-                            Use this library for optional learning, reference materials, and advanced tips.
-                        </p>
+                <div className="flex flex-col md:flex-row items-start gap-4 p-5 bg-blue-900/20 border border-blue-900/50 rounded-xl mb-8">
+                    <div className="flex items-start gap-4 flex-1 w-full">
+                        <HelpCircle className="w-6 h-6 text-blue-400 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <h3 className="font-bold text-blue-400 mb-1">About the Learning Library</h3>
+                            <p className="text-blue-200 text-sm leading-relaxed">
+                                The Learning Library is a standalone resource center for continuous education.
+                                <strong> It is NOT related to the Employee Certification program.</strong>
+                                Certification videos and exams are located in the "Employee Certification" section.
+                                Use this library for optional learning, reference materials, and advanced tips.
+                            </p>
+                        </div>
                     </div>
                     {isAdmin && (
-                        <Button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700 shrink-0">
+                        <Button onClick={handleAddNew} className="bg-blue-600 hover:bg-blue-700 shrink-0 w-full md:w-auto mt-2 md:mt-0 shadow-lg shadow-blue-600/20">
                             <Plus className="w-4 h-4 mr-2" /> Add New Resource
                         </Button>
                     )}

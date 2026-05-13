@@ -437,7 +437,7 @@ const Prospects = () => {
             behavior: "smooth"
           });
         }
-      }, 200);
+      }, 400);
     }
   };
   const toggleAll = () => {

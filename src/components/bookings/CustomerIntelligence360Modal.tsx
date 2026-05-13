@@ -5,7 +5,8 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogDescription,
-  DialogTrigger
+  DialogTrigger,
+  DialogClose
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
@@ -59,7 +60,8 @@ import {
   Filter,
   UserCheck,
   Building,
-  Target
+  Target,
+  X
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getCustomerDetailedHistory } from "@/lib/supa-data";
@@ -196,10 +198,15 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
         )}
       </DialogTrigger>
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 p-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-emerald-500 to-pink-500" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-emerald-500 to-pink-500 z-50" />
         
+        <DialogClose className="absolute right-4 top-4 z-[100] rounded-full p-2 bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white transition-all shadow-xl backdrop-blur-md">
+          <X className="w-5 h-5" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
+
         <DialogHeader className="p-6 pb-2">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pr-10 md:pr-0">
             <div>
               <DialogTitle className="text-2xl font-black tracking-tighter text-zinc-100 flex items-center gap-2">
                 <TrendingUp className="w-6 h-6 text-blue-500" />
@@ -209,9 +216,9 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                 Deep-dive operational analytics & customer relationship audit
               </DialogDescription>
             </div>
-            
+
             <div className="flex items-center gap-3">
-              <div className="w-64">
+              <div className="w-64 hidden md:block">
                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                   <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-blue-500">
                     <SelectValue placeholder="Select Customer/Prospect..." />
@@ -235,13 +242,40 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                   size="sm" 
                   variant="outline" 
                   onClick={handleExportPDF}
-                  className="bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20"
+                  className="bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20 h-9"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Export 360
+                  <span className="hidden sm:inline">Export 360</span>
+                  <span className="sm:hidden">Export</span>
                 </Button>
               )}
+              
+              <DialogClose asChild>
+                <Button variant="ghost" className="hidden md:flex text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white">
+                  Close Profile
+                </Button>
+              </DialogClose>
             </div>
+          </div>
+          
+          {/* Mobile Search Selector (below title on mobile) */}
+          <div className="mt-4 md:hidden">
+            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-blue-500 w-full">
+                <SelectValue placeholder="Select Customer/Prospect..." />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 max-h-80">
+                {sortedCustomers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <div className="flex items-center gap-2">
+                      {c.type === 'prospect' ? <Target className="w-3 h-3 text-pink-400" /> : <UserCheck className="w-3 h-3 text-emerald-400" />}
+                      <span>{c.name}</span>
+                      <span className="text-[10px] text-zinc-500 opacity-50 ml-auto">{c.type?.toUpperCase()}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </DialogHeader>
 
