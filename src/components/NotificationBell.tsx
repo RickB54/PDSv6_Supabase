@@ -231,6 +231,30 @@ export default function NotificationBell() {
             if (!isAlreadyNotifiedGlobally) {
               const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
               const syncId = `sync_book_${b.id}`;
+              let activeCustomerId = b.customer_id;
+
+              // AUTO-PROMOTION: If the booking doesn't have a linked customer record,
+              // we create one now from the Admin's authenticated session.
+              if (!activeCustomerId) {
+                try {
+                  const { data: newCust, error: cErr } = await supabase.from('customers').insert({
+                    full_name: custName,
+                    email: meta.email || null,
+                    phone: meta.phone || null,
+                    type: 'prospect',
+                    notes: `Auto-created from Online Booking #${b.id}`
+                  }).select('id').single();
+
+                  if (!cErr && newCust) {
+                    activeCustomerId = newCust.id;
+                    // Link the booking to the new customer
+                    await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
+                    console.log(`[AlertSync] Auto-created prospect ${activeCustomerId} for booking ${b.id}`);
+                  }
+                } catch (e) {
+                  console.warn("[AlertSync] Auto-prospect creation failed:", e);
+                }
+              }
 
               toast({
                 title: "New Online Booking!",
@@ -242,7 +266,7 @@ export default function NotificationBell() {
                 'booking_created',
                 `NEW ONLINE REQUEST: ${custName} - ${b.service_package}`,
                 'Customer Web',
-                { id: syncId, recordId: b.id, bookingId: b.id, customerId: b.customer_id }
+                { id: syncId, recordId: b.id, bookingId: b.id, customerId: activeCustomerId }
               );
               
               // MARK AS NOTIFIED IN DB (Syncs to all devices)
@@ -253,11 +277,10 @@ export default function NotificationBell() {
               addedAny = true;
             }
           }
-          
           if (addedAny) {
             refresh();
           }
-      } catch (err) {
+        } catch (err) {
         console.warn("[AlertSync] Failed to poll bookings:", err);
       }
     };

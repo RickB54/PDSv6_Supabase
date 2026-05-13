@@ -672,7 +672,8 @@ const BookNow = () => {
         vehicleModel: formData.model,
         price: discountedTotal,
         notes: finalNotes,
-        source: 'Public Website'
+        source: 'Public Website',
+        customerId: createdBooking?.customer_id
       };
 
       // Generate and save PDF to File Manager (this creates ONE alert)
