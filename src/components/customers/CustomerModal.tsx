@@ -364,6 +364,38 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     });
   };
 
+  const handleAddVideo = (url: string, description: string, vehicleIndex?: number) => {
+    if (!url) return;
+    const finalString = description ? `${url}:::${description}` : url;
+    setForm(prev => {
+      if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const v = { ...updatedVehicles[vehicleIndex] };
+        v.videoUrls = [...(v.videoUrls || []), finalString];
+        updatedVehicles[vehicleIndex] = v;
+        return { ...prev, vehicles: updatedVehicles };
+      } else {
+        return { ...prev, videoUrl: url, videoNote: description };
+      }
+    });
+    toast.success("Video link added");
+  };
+
+  const handleRemoveVideo = (index: number, vehicleIndex?: number) => {
+    setForm(prev => {
+      if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const v = { ...updatedVehicles[vehicleIndex] };
+        v.videoUrls = (v.videoUrls || []).filter((_, i) => i !== index);
+        updatedVehicles[vehicleIndex] = v;
+        return { ...prev, vehicles: updatedVehicles };
+      } else {
+        return { ...prev, videoUrl: "", videoNote: "" };
+      }
+    });
+    toast.info("Video removed");
+  };
+
   const handleBook = () => {
     const v = ((form.vehicles || [])[0] || {}) as import('@/lib/supa-data').Vehicle;
     const params = new URLSearchParams();
@@ -711,6 +743,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                             <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
                             <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
                           </div>
+                          <div className="pt-4 border-t border-zinc-800/50">
+                            <VideoLinkField 
+                              videos={vehicle.videoUrls || []} 
+                              onAdd={(url, desc) => handleAddVideo(url, desc, vIdx)} 
+                              onRemove={(idx) => handleRemoveVideo(idx, vIdx)} 
+                            />
+                          </div>
                         </div>
                       );
                     })
@@ -725,6 +764,13 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
                         <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
                         <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
+                      </div>
+                      <div className="pt-4 border-t border-zinc-800/50">
+                        <VideoLinkField 
+                          videos={form.videoUrl ? [form.videoNote ? `${form.videoUrl}:::${form.videoNote}` : form.videoUrl] : []} 
+                          onAdd={(url, desc) => handleAddVideo(url, desc, -1)} 
+                          onRemove={() => handleRemoveVideo(0, -1)} 
+                        />
                       </div>
                     </div>
                   )}
@@ -908,6 +954,76 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function VideoLinkField({ videos, onAdd, onRemove }: { videos: string[], onAdd: (url: string, desc: string) => void, onRemove: (idx: number) => void }) {
+  const [url, setUrl] = useState("");
+  const [desc, setDesc] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] text-zinc-500 uppercase font-black flex items-center gap-2">
+          <Video className="w-3 h-3 text-pink-500" /> Embedded Videos ({videos.length})
+        </Label>
+        <Button variant="ghost" size="sm" className="h-6 text-[9px] text-blue-400 font-bold" onClick={() => setIsAdding(!isAdding)}>
+          {isAdding ? "CANCEL" : "ADD VIDEO LINK"}
+        </Button>
+      </div>
+
+      {isAdding && (
+        <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg space-y-2 animate-in slide-in-from-top-2">
+          <Input 
+            placeholder="Video URL (YouTube, Drive, etc.)" 
+            className="h-8 text-xs bg-zinc-900 border-zinc-800" 
+            value={url} 
+            onChange={e => setUrl(e.target.value)} 
+          />
+          <Input 
+            placeholder="Description / Note (Optional)" 
+            className="h-8 text-xs bg-zinc-900 border-zinc-800" 
+            value={desc} 
+            onChange={e => setDesc(e.target.value)} 
+          />
+          <Button 
+            className="w-full h-8 bg-blue-600 hover:bg-blue-500 text-xs font-bold"
+            onClick={() => {
+              if (url) {
+                onAdd(url, desc);
+                setUrl("");
+                setDesc("");
+                setIsAdding(false);
+              }
+            }}
+          >
+            SAVE VIDEO
+          </Button>
+        </div>
+      )}
+
+      {videos.length > 0 && (
+        <div className="grid gap-2">
+          {videos.map((v, i) => {
+            const parts = v.split(':::');
+            const vUrl = parts[0];
+            const vDesc = parts[1];
+            return (
+              <div key={i} className="flex items-center justify-between p-2 bg-zinc-950/50 border border-zinc-800 rounded-lg group">
+                <div className="flex-1 min-w-0 pr-4">
+                  <p className="text-[10px] text-zinc-300 font-bold truncate">{vUrl}</p>
+                  {vDesc && <p className="text-[9px] text-zinc-500 italic truncate mt-0.5">"{vDesc}"</p>}
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-red-500" onClick={() => onRemove(i)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
