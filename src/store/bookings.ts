@@ -39,6 +39,7 @@ export interface Booking {
   isArchived?: boolean;
   vehicleId?: string;
   source?: string;
+  last_email_sent_at?: string;
 }
 
 const STORAGE_KEY = "bookings";

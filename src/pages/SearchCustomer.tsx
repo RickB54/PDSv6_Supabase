@@ -942,6 +942,10 @@ const SearchCustomer = () => {
                                         <span className="text-[9px] text-zinc-400 font-black uppercase">{(customer as any).created_at ? new Date((customer as any).created_at).toLocaleString() : '—'}</span>
                                       </div>
                                       <div className="flex items-center justify-between">
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Last Email Sent:</span>
+                                        <span className="text-[9px] text-zinc-500 font-black uppercase">{(customer as any).last_email_sent_at ? new Date((customer as any).last_email_sent_at).toLocaleString() : 'NONE SENT'}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
                                         <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Last Contact:</span>
                                         <span className="text-[9px] text-blue-400 font-black uppercase">{customer.date_of_contact ? new Date(customer.date_of_contact).toLocaleDateString() : '—'}</span>
                                       </div>

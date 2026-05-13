@@ -89,6 +89,7 @@ export interface Customer {
     engagements?: any[];
     activity_log?: any[];
     date_of_contact?: string;
+    last_email_sent_at?: string;
 }
 
 // ------------------------------------------------------------------

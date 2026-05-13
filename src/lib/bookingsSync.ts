@@ -217,6 +217,12 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
         });
 
         if (!error) {
+          // success! Update database with sent timestamp
+          await supabase.from('bookings').update({ last_email_sent_at: new Date().toISOString() }).eq('id', booking.id);
+          if ((booking as any).customerId) {
+            await supabase.from('customers').update({ last_email_sent_at: new Date().toISOString() }).eq('id', (booking as any).customerId);
+          }
+
           // success! Push alert & confirmation PDF
           pushAdminAlert(
             'admin_email_sent',
@@ -684,6 +690,11 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         }
       });
       
+      if (!error) {
+        // Update prospect/customer record with sent timestamp
+        await supabase.from('customers').update({ last_email_sent_at: new Date().toISOString() }).eq('id', prospect.id);
+      }
+ 
       if (error) throw error;
       return data;
       
