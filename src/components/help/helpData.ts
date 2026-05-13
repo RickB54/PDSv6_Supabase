@@ -414,7 +414,7 @@ export const deletingRecordsTopic: HelpTopic = {
     '👻 **VIRTUAL CUSTOMERS (No Profile — Booking Only)**',
     'If a name appears in Booking History but NOT in the Customer Database, they are a "Virtual Customer." They exist because of an online booking where their profile creation failed or was skipped.',
     '• **To remove them**: Delete the booking from the Booking History page (Deletion Point 3). Once their last booking is gone, they automatically disappear from the list.',
-    '• **To promote them**: Use the **"Add to Prospects"** button on their Booking History card to formally create a Prospect profile for them.'
+    '• **To promote them**: Use the **"Add to Prospects"** button on their Booking History card to formally create a Prospect profile for them.',
     '',
     '⚠️ **ADMIN-ONLY ACTION**',
     'All three deletion types require Admin privileges. If you attempt to delete as a non-admin user, the system will display an "Access Denied" message and block the action.',

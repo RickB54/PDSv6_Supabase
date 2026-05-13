@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
+import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
 import {
   AlertDialog,
@@ -80,7 +81,7 @@ const Prospects = () => {
   const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
   
   const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'payment-success'>('confirmation');
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect'>('confirmation');
   const [emailFormData, setEmailFormData] = useState<any>(null);
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -132,7 +133,7 @@ const Prospects = () => {
     }
   }, [location.search, customers]);
 
-  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success') => {
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect') => {
     if (!booking) return;
     setEmailFormData({
       customer: booking.customer || '',
@@ -997,6 +998,29 @@ const Prospects = () => {
                                      <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest block">Relationship Metadata</span>
                                      <Badge variant="outline" className="bg-zinc-800 border-zinc-700 text-zinc-300 text-[10px]">{customer.howFound === 'other' ? customer.howFoundOther : customer.howFound || 'Manual Entry'}</Badge>
                                    </div>
+                                   <div className="pt-2 pb-4">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full h-9 bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 gap-2"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handlePreviewEmailForBooking({
+                                            customer: customer.name,
+                                            customerEmail: customer.email,
+                                            customerPhone: customer.phone,
+                                            address: customer.address,
+                                            vehicle: customer.vehicle,
+                                            vehicleYear: customer.year,
+                                            vehicleMake: customer.vehicle,
+                                            vehicleModel: customer.model,
+                                            service: 'Premium Detailing Service'
+                                          }, 'prospect');
+                                        }}
+                                      >
+                                        <Mail className="h-3.5 w-3.5" /> Preview Welcome Email
+                                      </Button>
+                                    </div>
                                    <div className="space-y-1.5">
                                       <div className="flex items-center justify-between">
                                         <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Initial Entry:</span>
@@ -1148,6 +1172,10 @@ const Prospects = () => {
                                                       <DropdownMenuSeparator className="bg-zinc-800" />
                                                       <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'payment-success'); }}>
                                                         <Package className="mr-2 h-4 w-4 text-green-500" /> Payment Success
+                                                      </DropdownMenuItem>
+                                                      <DropdownMenuSeparator className="bg-zinc-800" />
+                                                      <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); handlePreviewEmailForBooking(booking, 'prospect'); }}>
+                                                        <Mail className="mr-2 h-4 w-4 text-purple-400" /> Prospect Welcome
                                                       </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                   </DropdownMenu>
@@ -1556,6 +1584,13 @@ const Prospects = () => {
         initialTab={activeModalTab}
         defaultType="prospect"
         onSave={onSaveModal} 
+      />
+
+      <EmailPreviewModal 
+        open={showEmailPreview} 
+        onOpenChange={setShowEmailPreview}
+        type={emailPreviewType}
+        data={emailFormData}
       />
     </div>
   );
