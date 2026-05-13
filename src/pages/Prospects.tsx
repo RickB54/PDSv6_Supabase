@@ -391,9 +391,17 @@ const Prospects = () => {
 
   const handleDelete = async () => {
     if (!deleteCustomerId) return;
-    await removeCustomer(deleteCustomerId);
-    await refresh();
-    toast({ title: "Deleted", description: "Prospect permanently removed." });
+    try {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(deleteCustomerId)) {
+        await deleteSupabaseCustomer(deleteCustomerId);
+      }
+      await removeCustomer(deleteCustomerId).catch(() => { });
+      await refresh();
+      toast({ title: "Deleted", description: "Prospect permanently removed." });
+    } catch (error: any) {
+      toast({ title: "Delete Failed", description: error?.message || "Could not delete prospect.", variant: "destructive" });
+    }
     setDeleteCustomerId(null);
   };
 
@@ -1476,7 +1484,7 @@ const Prospects = () => {
       </main>
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
-        <AlertDialogContent className="z-[100]">
+        <AlertDialogContent className="z-[250]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
@@ -1497,7 +1505,7 @@ const Prospects = () => {
                 }
                 await handleDelete();
               }}
-              className="bg-destructive"
+              className="bg-red-600 hover:bg-red-700 text-white border-0"
             >
               Delete
             </AlertDialogAction>

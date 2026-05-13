@@ -226,6 +226,9 @@ export const useBookingsStore = create<BookingsState>((set, get) => ({
     set({ items, pendingCount: items.filter(i => i.status === "pending").length });
     try {
       await deleteSupabaseBooking(id);
-    } catch (err) { console.error("Delete failed", err); }
+    } catch (err) { 
+      console.error("Delete failed", err);
+      throw err;
+    }
   }
 }));

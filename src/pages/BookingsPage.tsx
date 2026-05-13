@@ -3430,8 +3430,13 @@ export default function BookingsPage() {
                                                   onClick={async (e) => {
                                                     e.stopPropagation();
                                                     if (window.confirm(`⚠️ Delete this history record for "${customer.name}"?\n\nThis action cannot be undone.`)) {
-                                                      await remove(event.id);
-                                                      toast.success("History record deleted");
+                                                      try {
+                                                        await remove(event.id);
+                                                        toast.success("History record deleted");
+                                                      } catch (err: any) {
+                                                        toast.error(err.message || "Failed to delete record");
+                                                        refresh(); // Rollback local state
+                                                      }
                                                     }
                                                   }}
                                                 >
@@ -3525,11 +3530,17 @@ export default function BookingsPage() {
                     return;
                   }
                   
-                  remove(selectedBooking.id);
-                  toast.success("Booking deleted");
-                  setIsAddModalOpen(false);
-                  setSelectedBooking(null);
-                  setSelectedCustomer(null);
+                  try {
+                    await remove(selectedBooking.id);
+                    toast.success("Booking deleted");
+                    setIsAddModalOpen(false);
+                    setSelectedBooking(null);
+                    setSelectedCustomer(null);
+                    // Refresh unified events to ensure history updates
+                    await loadUnifiedEvents();
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to delete booking");
+                  }
                 }
                 setIsDeleteDialogOpen(false);
               }}

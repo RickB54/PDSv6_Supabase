@@ -1419,7 +1419,7 @@ const SearchCustomer = () => {
       </main >
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>
-        <AlertDialogContent className="z-[100]">
+        <AlertDialogContent className="z-[250]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
@@ -1440,7 +1440,7 @@ const SearchCustomer = () => {
                 }
                 await handleDelete();
               }} 
-              className="bg-destructive"
+              className="bg-red-600 hover:bg-red-700 text-white border-0"
             >
               Delete
             </AlertDialogAction>
