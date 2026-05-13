@@ -233,7 +233,10 @@ export default function BookingsPage() {
     ).filter(name => name && (name !== 'INTERNAL: System Blocks' || sourceFilter === 'HYBRID AVAILABILITY SYSTEM')).map(customerName => {
       if (!customerName) return null;
       
-      const customerData = customers.find(c => c.name?.trim().toLowerCase() === customerName.trim().toLowerCase());
+      const customerData = customers.find(c => {
+        const normalizedName = (c.full_name || c.name || '').trim().toLowerCase();
+        return normalizedName === customerName.trim().toLowerCase();
+      });
       
       // We'll filter events individually below, so we don't need to return null here
       // based on the customer profile's archive status. This ensures customers with 
@@ -1472,9 +1475,19 @@ export default function BookingsPage() {
 
       toast.success(`Success! "${booking.customer}" is now a Prospect.`, { id: convertToast });
       
-      // 4. Refresh local lists
-      await fetchCustomers();
-      await refresh();
+      // 4. Update local state immediately for better UX
+      setItems(prev => prev.map(item => {
+        if (item.id === booking.id) {
+          return { ...item, customer_id: newCustomer.id };
+        }
+        return item;
+      }));
+
+      // 5. Refresh everything to be sure
+      await Promise.all([
+        fetchCustomers(),
+        refresh()
+      ]);
       
     } catch (err: any) {
       console.error("Conversion failed:", err);
@@ -3100,9 +3113,18 @@ export default function BookingsPage() {
                                         size="sm"
                                         className="h-8 text-[11px] font-black border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
                                         onClick={() => {
+                                          if (!customer.id) {
+                                            toast.error("This customer is not yet in the database. Add them as a prospect first.");
+                                            return;
+                                          }
                                           const targetPath = customer.type === 'prospect' ? '/prospects' : '/search-customer';
                                           navigate(`${targetPath}?search=${encodeURIComponent(customer.name)}`);
                                         }}
+                                        disabled={!customer.id}
+                                        className={cn(
+                                          "h-8 text-[11px] font-black border-zinc-800",
+                                          customer.id ? "text-zinc-400 hover:bg-zinc-800 hover:text-white" : "text-zinc-600 opacity-50 cursor-not-allowed"
+                                        )}
                                       >
                                         <User className="w-3.5 h-3.5 mr-2" />
                                         View in Database
@@ -3135,10 +3157,21 @@ export default function BookingsPage() {
                                           size="sm"
                                           className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
                                           onClick={() => {
-                                            const cData = customers.find(c => c.id === customer.id || c.name === customer.name);
+                                            const cData = customers.find(c => c.id === customer.id || (c.name && c.name.trim().toLowerCase() === customer.name.trim().toLowerCase()));
                                             if (cData) {
                                               setCustomerToEdit(cData);
                                               setIsCustomerModalOpen(true);
+                                            } else {
+                                              // If not found, it's likely a virtual customer from a booking.
+                                              // Suggest adding as prospect first
+                                              const firstBooking = customer.events?.find((e: any) => e.type === 'booking');
+                                              const original = firstBooking ? items.find(i => i.id === firstBooking.id) : null;
+                                              
+                                              if (original && confirm(`"${customer.name}" does not have a profile yet. Would you like to create a Prospect profile to manage vehicles?`)) {
+                                                handleConvertToProspect(original);
+                                              } else {
+                                                toast.error("Please add this customer to Prospects or Search first to manage their vehicles.");
+                                              }
                                             }
                                           }}
                                         >
