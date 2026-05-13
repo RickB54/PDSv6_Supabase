@@ -379,6 +379,43 @@ export const prospectVsCustomerTopic: HelpTopic = {
   section: 'system',
 };
 
+export const deletingRecordsTopic: HelpTopic = {
+  id: 'deleting-records',
+  title: 'Deleting Records & Test Data Cleanup',
+  summary: 'The 3 ways to permanently remove customers, prospects, or individual booking records from the system.',
+  content: [
+    '**When to Delete**: Only delete records that are genuine test entries or mistakes. For real customers who are simply inactive, use **Archive** instead — it hides them from your active lists while keeping their history intact.',
+    '',
+    '🗑️ **THE 3 DELETION POINTS**',
+    '',
+    '1️⃣ **Delete a Customer Profile (Total Wipeout)**',
+    '• **Where**: Customer Database page → find the person → click the Trash icon on their card.',
+    '• **What it removes**: The profile, all their vehicles, and all their booking history in one action.',
+    '• **Use this when**: The person is a test account you never want to see again.',
+    '',
+    '2️⃣ **Delete a Prospect Profile (Total Wipeout)**',
+    '• **Where**: Prospects page → find the person → click the Trash icon on their card.',
+    '• **What it removes**: The prospect profile, their garage/vehicles, and any associated data.',
+    '• **Use this when**: A test lead was created that should not exist.',
+    '',
+    '3️⃣ **Delete a Single Booking/Job Entry (Surgical)**',
+    '• **Where**: Booking History page → find the customer card → look at the Activity Logs on the right → click the red Delete button on that specific log entry.',
+    '• **What it removes**: Only that one appointment record — the customer profile and vehicles remain untouched.',
+    '• **Use this when**: A real customer has a specific test booking on their history that is skewing your reports.',
+    '',
+    '👻 **VIRTUAL CUSTOMERS (No Profile — Booking Only)**',
+    'If a name appears in Booking History but NOT in the Customer Database, they are a "Virtual Customer." They only exist because of an online booking — no permanent profile was ever created.',
+    '• **To remove them**: Delete the booking from the Booking History page (Deletion Point 3). Once their last booking is gone, they automatically disappear from the list.',
+    '',
+    '⚠️ **ADMIN-ONLY ACTION**',
+    'All three deletion types require Admin privileges. If you attempt to delete as a non-admin user, the system will display an "Access Denied" message and block the action.',
+    '',
+    '💡 **Pro Tip — Archive vs. Delete**: If you are unsure, choose **Archive** first. Archived records are hidden from normal views but can be restored at any time. A deletion is permanent and cannot be undone.',
+  ],
+  section: 'system',
+  relatedTopicIds: ['prospect-vs-customer', 'operations-flow'],
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 
 export const vehicleManagementTopic: HelpTopic = {
@@ -462,6 +499,7 @@ export const adminMenuTopics: HelpTopic[] = [
   inventoryChemicalsTopic,
   multiVehicleBookingHelpTopic,
   prospectVsCustomerTopic,
+  deletingRecordsTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
