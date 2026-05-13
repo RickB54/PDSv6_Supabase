@@ -477,7 +477,7 @@ function CustomerCard({
                     <div className="flex gap-2">
                         <Input 
                             placeholder="Paste Video URL (YouTube, Drive, or direct .mp4)"
-                            className="h-9 bg-zinc-950 border-zinc-800 text-xs flex-1"
+                            className="h-9 bg-zinc-950 border-zinc-800 text-white placeholder:text-zinc-400 text-xs flex-1"
                             value={videoUrl}
                             onChange={e => setVideoUrl(e.target.value)}
                         />
@@ -491,7 +491,7 @@ function CustomerCard({
                     </div>
                     <Input 
                         placeholder="Video Description (Optional)"
-                        className="h-8 bg-zinc-950/50 border-zinc-800 text-[10px]"
+                        className="h-8 bg-zinc-950/50 border-zinc-800 text-white placeholder:text-zinc-400 text-[10px]"
                         value={videoDescription}
                         onChange={e => setVideoDescription(e.target.value)}
                     />
@@ -775,7 +775,7 @@ export default function VehicleGallery() {
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                         <Input
                             placeholder="Search by customer or vehicle..."
-                            className="pl-10 pr-10 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-500"
+                            className="pl-10 pr-10 bg-zinc-900 border-zinc-800 text-zinc-100 placeholder:text-zinc-400"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                         />

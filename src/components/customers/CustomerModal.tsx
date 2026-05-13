@@ -978,13 +978,13 @@ function VideoLinkField({ videos, onAdd, onRemove }: { videos: string[], onAdd: 
         <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg space-y-2 animate-in slide-in-from-top-2">
           <Input 
             placeholder="Video URL (YouTube, Drive, etc.)" 
-            className="h-8 text-xs bg-zinc-900 border-zinc-800" 
+            className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400" 
             value={url} 
             onChange={e => setUrl(e.target.value)} 
           />
           <Input 
             placeholder="Description / Note (Optional)" 
-            className="h-8 text-xs bg-zinc-900 border-zinc-800" 
+            className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-400" 
             value={desc} 
             onChange={e => setDesc(e.target.value)} 
           />
