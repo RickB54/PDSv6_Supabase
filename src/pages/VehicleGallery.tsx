@@ -77,7 +77,8 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
             customerName, 
             vehicleLabel: "Profile", 
             customerId,
-            description: (customer as any).videoNote
+            description: (customer as any).videoNote,
+            source: { type: 'customer', field: 'videoUrl', arrayIndex: 0 }
         });
     }
 
@@ -93,7 +94,7 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
         (v.afterPhotos || []).forEach((url, idx) =>
             items.push({ url, type: "image", category: "after", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'afterPhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
-        (v.videoUrls || []).forEach(url => {
+        (v.videoUrls || []).forEach((url, idx) => {
             const parts = url.split(':::');
             items.push({ 
                 url: parts[0], 
@@ -102,7 +103,8 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
                 customerName, 
                 vehicleLabel, 
                 customerId,
-                description: parts[1]
+                description: parts[1],
+                source: { type: 'vehicle', field: 'videoUrls', vehicleIndex: vIdx, arrayIndex: idx }
             });
         });
     });
@@ -611,17 +613,36 @@ export default function VehicleGallery() {
             const m = item.source;
 
             if (m.type === 'customer') {
-                const arr = [...(updatedCustomer[m.field as keyof Customer] as string[])];
-                arr.splice(m.arrayIndex, 1);
-                (updatedCustomer as any)[m.field] = arr;
+                const field = updatedCustomer[m.field as keyof Customer];
+                if (Array.isArray(field)) {
+                    const arr = [...field];
+                    arr.splice(m.arrayIndex, 1);
+                    (updatedCustomer as any)[m.field] = arr;
+                } else {
+                    // Singular field (like videoUrl)
+                    (updatedCustomer as any)[m.field] = null;
+                    if (m.field === 'videoUrl') {
+                        (updatedCustomer as any).videoNote = null;
+                    }
+                }
             } else if (m.type === 'vehicle') {
                 const vehicles = [...(updatedCustomer.vehicles || [])];
-                const v = { ...vehicles[m.vehicleIndex!] };
-                const arr = [...(v[m.field as keyof typeof v] as string[])];
-                arr.splice(m.arrayIndex, 1);
-                (v as any)[m.field] = arr;
-                vehicles[m.vehicleIndex!] = v;
-                updatedCustomer.vehicles = vehicles;
+                const vIdx = m.vehicleIndex!;
+                const v = { ...vehicles[vIdx] };
+                const field = v[m.field as keyof typeof v];
+                
+                if (Array.isArray(field)) {
+                    const arr = [...field];
+                    arr.splice(m.arrayIndex, 1);
+                    (v as any)[m.field] = arr;
+                    vehicles[vIdx] = v;
+                    updatedCustomer.vehicles = vehicles;
+                } else {
+                    // Singular vehicle field (if any added in future)
+                    (v as any)[m.field] = null;
+                    vehicles[vIdx] = v;
+                    updatedCustomer.vehicles = vehicles;
+                }
             }
 
             await upsertSupabaseCustomer(updatedCustomer);

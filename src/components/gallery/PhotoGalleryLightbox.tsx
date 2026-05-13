@@ -17,6 +17,7 @@ import {
 import { VideoEmbed } from "@/components/video/VideoEmbed";
 
 interface PhotoGalleryProps {
+    photos: {
         url: string;
         label?: string;
         type?: "image" | "video";

@@ -14,7 +14,15 @@ export function VideoEmbed({ url, title, className = "" }: VideoEmbedProps) {
 
         // YouTube
         if (url.includes('youtube.com/watch')) {
-            const videoId = new URL(url).searchParams.get('v');
+            try {
+                const videoId = new URL(url).searchParams.get('v');
+                return { src: `https://www.youtube.com/embed/${videoId}`, type: 'youtube' };
+            } catch (e) {
+                return { src: url, type: 'other' };
+            }
+        }
+        if (url.includes('youtube.com/shorts/')) {
+            const videoId = url.split('shorts/')[1].split('?')[0];
             return { src: `https://www.youtube.com/embed/${videoId}`, type: 'youtube' };
         }
         if (url.includes('youtu.be/')) {

@@ -74,7 +74,7 @@ const Prospects = () => {
   const [allExpanded, setAllExpanded] = useState(false);
   const [openMaps, setOpenMaps] = useState<string[]>([]);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string }[]>([]);
+  const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string; type?: "image" | "video"; description?: string; }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
   const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
@@ -480,7 +480,7 @@ const Prospects = () => {
   };
 
   const openGallery = (customer: Customer, startIndex = 0) => {
-    const photos: { url: string; label?: string }[] = [];
+    const photos: { url: string; label?: string; type?: "image" | "video"; description?: string; }[] = [];
     const meta: any[] = [];
     const seenUrls = new Set<string>();
 
