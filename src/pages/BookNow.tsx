@@ -766,6 +766,18 @@ const BookNow = () => {
         if (customerRes.error) console.error('❌ Customer Email Error:', customerRes.error);
 
         console.log('✅ Notification emails dispatched');
+
+        // Log engagement for transparency
+        if (!customerRes.error) {
+          await supabase.from('engagements').insert({
+            customer_name: formData.name,
+            customer_email: formData.email,
+            customer_id: createdBooking?.customer_id,
+            booking_id: createdBooking?.id,
+            type: 'email',
+            note: `Online booking request received for ${bookingPayload.service}`
+          });
+        }
       } catch (emailError) {
         console.error("❌ Email sending FAILED:", emailError);
       }

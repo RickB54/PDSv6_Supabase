@@ -219,9 +219,20 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
         if (!error) {
           // success! Update database with sent timestamp
           await supabase.from('bookings').update({ last_email_sent_at: new Date().toISOString() }).eq('id', booking.id);
-          if ((booking as any).customerId) {
-            await supabase.from('customers').update({ last_email_sent_at: new Date().toISOString() }).eq('id', (booking as any).customerId);
+          const customerId = (booking as any).customerId || (booking as any).customer_id;
+          if (customerId) {
+            await supabase.from('customers').update({ last_email_sent_at: new Date().toISOString() }).eq('id', customerId);
           }
+
+          // Log engagement for transparency
+          await supabase.from('engagements').insert({
+            customer_name: booking.customer,
+            customer_email: booking.customerEmail,
+            customer_id: customerId,
+            booking_id: booking.id,
+            type: 'email',
+            note: `Confirmation email sent for ${booking.title}`
+          });
 
           // success! Push alert & confirmation PDF
           pushAdminAlert(
@@ -245,7 +256,16 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
 
           const logDataUrl = logDoc.output('dataurlstring');
           const logFileName = `EMAIL_CONFIRMATION_${booking.customer.replace(/\s/g, '_')}_${Date.now()}.pdf`;
-          uploadToFileManager(logDataUrl, `Email Logs/${year}/${monthName}/`, booking, { service: "Email Confirmation Log", silent: true });
+          
+          const now = new Date();
+          const year = now.getFullYear();
+          const monthName = now.toLocaleString('default', { month: 'long' });
+          
+          savePDFToArchive("Admin Updates", booking.customer, `email-conf-${Date.now()}`, logDataUrl, { 
+            fileName: logFileName, 
+            path: `Email Logs/${year}/${monthName}/`,
+            silent: true 
+          });
 
           toast({
             title: "Confirmation Sent",
@@ -332,6 +352,16 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
           subject: `⚠️ Cancellation: Your Booking with Prime Auto Detail`,
           html: cancellationHtml
         }
+      });
+      
+      // Log engagement
+      await supabase.from('engagements').insert({
+        customer_name: booking.customer,
+        customer_email: booking.customerEmail,
+        customer_id: (booking as any).customerId || (booking as any).customer_id,
+        booking_id: booking.id,
+        type: 'email',
+        note: `Cancellation email sent: ${reason}`
       });
       
       console.log(`✅ Cancellation email sent to ${booking.customerEmail}`);
@@ -499,6 +529,8 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
         await supabase.from('engagements').insert({
           customer_name: booking.customer,
           customer_email: booking.customerEmail,
+          customer_id: (booking as any).customerId || (booking as any).customer_id,
+          booking_id: booking.id,
           type: 'retention',
           note: options?.customNote || `${booking.title} maintenance follow-up`,
           coupon_code: options?.couponCode
@@ -671,6 +703,7 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         await supabase.from('engagements').insert({
           customer_name: prospect.name,
           customer_email: prospect.email,
+          customer_id: prospect.id,
           type: 'initial',
           note: `Welcome outreach sent to ${prospect.name}`
         });

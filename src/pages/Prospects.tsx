@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,13 +55,38 @@ import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-const Prospects = () => {
+
+export default function Prospects() {
   const navigate = useNavigate();
   const { items: allBookings } = useBookingsStore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [engagements, setEngagements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEngagements = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
+      if (!error && data) setEngagements(data);
+    } catch (e) {
+      console.error("Failed to fetch engagements", e);
+    }
+  }, []);
+
+  const fetchCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      fetchEngagements(); // Refresh engagements
+      const data = await getSupabaseCustomers();
+      setCustomers(data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchEngagements]);
+
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -133,23 +158,25 @@ const Prospects = () => {
     }
   }, [location.search, customers]);
 
-  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect') => {
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: any, engagement?: any) => {
     if (!booking) return;
     setEmailFormData({
-      customer: booking.customer || '',
-      email: booking.customerEmail || booking.email || '',
+      customer: booking.customer || booking.customer_name || '',
+      email: booking.customerEmail || booking.email || booking.customer_email || '',
       phone: booking.customerPhone || booking.phone || '',
       address: booking.address || '',
-      service: booking.service || booking.title || '',
-      vehicle: booking.vehicle || '',
-      vehicleYear: booking.vehicleYear || '',
-      vehicleMake: booking.vehicleMake || '',
-      vehicleModel: booking.vehicleModel || '',
+      service: booking.service || booking.title || booking.note || '',
+      vehicle: booking.vehicle || booking.vehicle_type || '',
+      vehicleYear: booking.vehicleYear || booking.year || '',
+      vehicleMake: booking.vehicleMake || booking.make || '',
+      vehicleModel: booking.vehicleModel || booking.model || '',
       notes: booking.notes || '',
       addons: Array.isArray(booking.addons) ? booking.addons : 
               (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
       time: booking.date ? format(parseISO(booking.date), 'HH:mm') : '09:00',
-      status: (booking.status || 'pending').toLowerCase() as any
+      status: (booking.status || 'pending').toLowerCase() as any,
+      sent_at: engagement?.created_at || booking.last_email_sent_at,
+      last_email_sent_at: engagement?.created_at || booking.last_email_sent_at
     });
     
     let type: any = forcedType;
@@ -158,6 +185,8 @@ const Prospects = () => {
       if (stat === 'confirmed') type = 'confirmation';
       else if (stat === 'cancelled') type = 'cancelled';
       else if (stat === 'done') type = 'payment-success';
+      else if (engagement?.type === 'retention') type = 'reminder';
+      else if (engagement?.type === 'initial') type = 'prospect';
       else type = 'request';
     }
     
@@ -234,8 +263,6 @@ const Prospects = () => {
       // This ensures Jen and all other prospects are always visible
       const list = await getSupabaseCustomers();
       console.log('🔍 All Supabase customers:', list);
-      console.log('🔍 Total count:', list.length);
-      console.log('🔍 Each customer:', list.map(c => ({ name: c.name, type: c.type })));
 
       // Filter for prospects only (same logic as Users & Roles)
       const prospects = list.filter(c => {
@@ -256,7 +283,6 @@ const Prospects = () => {
         }
       }
 
-      console.log('🔍 Filtered prospects:', prospects);
       setCustomers(prospects);
     } catch (err: any) {
       console.error('Refresh prospects failed:', err);
@@ -326,7 +352,6 @@ const Prospects = () => {
       }
     } catch (err: any) {
       console.error('❌ Supabase upsertSupabaseCustomer failed:', err);
-      console.error('Error details:', { message: err?.message, code: err?.code, details: err?.details, hint: err?.hint });
       const saved = await upsertCustomer(data as any);
       await refresh();
       setModalOpen(false);
@@ -584,8 +609,6 @@ const Prospects = () => {
     }
   };
 
-
-
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
   const toggleCustomer = (id: string) => { 
     const isExpanding = !expandedCustomers.includes(id);
@@ -597,10 +620,7 @@ const Prospects = () => {
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
-          // 1. Initial scroll using scrollIntoView for base positioning
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          
-          // 2. Secondary refinement for the header offset
           setTimeout(() => {
             const rect = el.getBoundingClientRect();
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -724,7 +744,6 @@ const Prospects = () => {
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
-              // If we are selectively expanding (not allExpanded), we only show the expanded one
               if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
@@ -734,7 +753,6 @@ const Prospects = () => {
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-zinc-600'}`} />
 
                       {(() => {
-                        // Gather ALL photos from all possible sources for display
                         const allPhotos: string[] = Array.from(new Set([
                           ...(customer.generalPhotos || []),
                           ...(customer.beforePhotos || []),
@@ -749,15 +767,12 @@ const Prospects = () => {
                         if (allPhotos.length > 0) {
                           return (
                             <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              {allPhotos.slice(0, 1).map((photo, idx) => (
-                                <div
-                                  key={`thumb-${idx}`}
-                                  className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
-                                  onClick={() => openGallery(customer, idx)}
-                                >
-                                  <img src={photo} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
-                                </div>
-                              ))}
+                              <div
+                                className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
+                                onClick={() => openGallery(customer, 0)}
+                              >
+                                <img src={allPhotos[0]} alt={customer.name} className="h-full w-full object-cover" />
+                              </div>
                               {allPhotos.length > 1 && (
                                 <button
                                   onClick={() => openGallery(customer, 0)}
@@ -819,20 +834,7 @@ const Prospects = () => {
                           size="sm" 
                           onClick={async (e) => { 
                             e.stopPropagation(); 
-                            const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
-                            const { toast } = await import('sonner');
-                            const toastId = toast.loading("Aggregating prospect intelligence...");
-                            try {
-                              const detailedHistory = await getCustomerDetailedHistory(customer.id!);
-                              if (!detailedHistory) {
-                                toast.error("Failed to load history", { id: toastId });
-                                return;
-                              }
-                              toast.success("Report ready", { id: toastId });
-                              await exportCustomerHistoryPDF(detailedHistory, true); 
-                            } catch (err) {
-                              toast.error("Error generating report", { id: toastId });
-                            }
+                            handlePreviewPdf(customer.id!);
                           }} 
                           className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300"
                           title="Preview Prospect Report"
@@ -856,7 +858,7 @@ const Prospects = () => {
                         {!customer.is_archived && (
                           <>
                             <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
-                              <Link to={`/estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name || '')}${(customer.name || '').toLowerCase().includes('forrest') ? '&discount=10' : ''}`}>
+                              <Link to={`/estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name || '')}`}>
                                 <FileBarChart className="h-4 w-4 mr-2" /> Estimates
                               </Link>
                             </Button>
@@ -869,7 +871,7 @@ const Prospects = () => {
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* LEFT COLUMN: IDENTIFICATION & MARKETING */}
+                        {/* LEFT COLUMN: IDENTIFICATION & GARAGE */}
                         <div className="space-y-6">
                            <section>
                             <div className="flex items-center justify-between mb-3">
@@ -945,7 +947,6 @@ const Prospects = () => {
                                             onClick={async (e) => {
                                               e.stopPropagation();
                                               if (confirm(`Delete ${vy} ${v.make || ''} ${v.model || ''}?`)) {
-                                                const { deleteSupabaseVehicle } = await import('@/lib/supa-data');
                                                 try {
                                                   await deleteSupabaseVehicle(v.id);
                                                   toast({ title: "Vehicle Deleted" });
@@ -969,7 +970,7 @@ const Prospects = () => {
                           </section>
                         </div>
 
-                        {/* RIGHT COLUMN: ADMIN DIRECTIVES & CONTACT */}
+                        {/* RIGHT COLUMN: CONTACT & NOTES */}
                         <div className="space-y-6">
                            <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
                               <div className="flex items-center justify-between mb-2">
@@ -1037,9 +1038,8 @@ const Prospects = () => {
                                    </div>
                                  </div>
                               </div>
-                              {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                            </section>
-
+                           
                            <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
@@ -1065,7 +1065,8 @@ const Prospects = () => {
                                 </div>
                               )}
                            </section>
-                      </div>
+                           {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
+                        </div>
                       </div>
 
                       {/* FULL WIDTH ROW: COMBINED TIMELINE & HISTORY */}
@@ -1120,6 +1121,13 @@ const Prospects = () => {
                                  const activityLog = (customer as any).activity_log || [];
                                  activityLog.forEach((a: any) => items.push({ ...a, timelineType: 'activity' }));
 
+                                 // Include Engagements
+                                 engagements.filter(eng => {
+                                   const isNameMatch = eng.customer_name?.trim().toLowerCase() === customer.name.trim().toLowerCase();
+                                   const isEmailMatch = eng.customer_email && customer.email && eng.customer_email.trim().toLowerCase() === customer.email.trim().toLowerCase();
+                                   return isNameMatch || isEmailMatch;
+                                 }).forEach(eng => items.push({ ...eng, timelineType: 'engagement' }));
+
                                  items.sort((a, b) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime());
 
                                  if (items.length === 0) {
@@ -1132,6 +1140,35 @@ const Prospects = () => {
                                  }
 
                                  return items.map((item, idx) => {
+                                   if (item.timelineType === 'engagement') {
+                                     const eng = item;
+                                     const date = new Date(eng.created_at);
+                                     return (
+                                       <div key={`eng-${eng.id}-${idx}`} className="p-4 bg-zinc-950/60 rounded-2xl border border-zinc-800/50 hover:border-purple-500/30 transition-all group shadow-sm">
+                                         <div className="flex items-center justify-between mb-2">
+                                           <div className="flex items-center gap-2">
+                                             <div className="p-1.5 bg-purple-500/10 rounded-lg">
+                                               <Mail className="h-3.5 w-3.5 text-purple-400" />
+                                             </div>
+                                             <div>
+                                               <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">System Engagement</div>
+                                               <div className="text-xs text-zinc-300 font-bold">{format(date, 'MMM d, yyyy • h:mm a')}</div>
+                                             </div>
+                                           </div>
+                                           <Button 
+                                             variant="ghost" 
+                                             size="sm" 
+                                             className="h-7 text-[10px] text-purple-400 hover:text-purple-300"
+                                             onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
+                                           >
+                                             Preview Email
+                                           </Button>
+                                         </div>
+                                         <div className="text-sm text-zinc-400 italic">"{eng.note}"</div>
+                                       </div>
+                                     );
+                                   }
+
                                    if (item.timelineType === 'booking') {
                                      const booking = item;
                                      const bookingDate = new Date(booking.date);
@@ -1195,6 +1232,21 @@ const Prospects = () => {
                                                  >
                                                    <Eye className="h-3 w-3" />
                                                   </Button>
+                                                  {/* NEW: Convert to Customer Button inside history card */}
+                                                  {!customer.is_archived && (
+                                                    <Button
+                                                      variant="outline"
+                                                      size="sm"
+                                                      className="h-6 text-[9px] font-black text-emerald-400 hover:text-white border-emerald-500/30 hover:bg-emerald-500 px-2 rounded-lg ml-1"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}`);
+                                                      }}
+                                                      title="Convert to Full Customer"
+                                                    >
+                                                      <Plus className="h-2.5 w-2.5 mr-1" /> MANUAL ADD
+                                                    </Button>
+                                                  )}
                                                </div>
                                                <div className="text-lg text-white font-black uppercase tracking-tighter group-hover/booking:text-purple-400 transition-colors leading-none mb-4">{booking.title || 'Premium Service'}</div>
                                                <div className="grid grid-cols-2 gap-2">
@@ -1459,9 +1511,7 @@ const Prospects = () => {
                           variant="ghost" 
                           size="sm" 
                           onClick={async () => { 
-                            const { getCustomerDetailedHistory } = await import('@/lib/supa-data');
-                            const detailedHistory = await getCustomerDetailedHistory(c.id!);
-                            if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
+                            handlePreviewPdf(c.id!);
                           }} 
                           className="h-8 w-8 p-0 text-purple-400"
                         >
@@ -1552,9 +1602,6 @@ const Prospects = () => {
         onOpenChange={setGalleryOpen}
         isAdmin={isAdmin}
         onDelete={(idx) => {
-          // Find which customer this gallery belongs to
-          // In Prospects, the gallery is opened for a specific customer
-          // We can find the customer from the metadata of the first photo
           const m = galleryMetadata[idx];
           if (!m) return;
           const customer = customers.find(c => c.id === m.customerId);
@@ -1598,6 +1645,4 @@ const Prospects = () => {
       />
     </div>
   );
-};
-
-export default Prospects;
+}

@@ -98,7 +98,8 @@ export default function BookingsPage() {
   const [vehicleClassModalOpen, setVehicleClassModalOpen] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
-  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success'>('confirmation');
+  const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect'>('confirmation');
+  const [emailFormData, setEmailFormData] = useState<any>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
   
@@ -188,6 +189,7 @@ export default function BookingsPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [engagements, setEngagements] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
   
@@ -212,6 +214,15 @@ export default function BookingsPage() {
       }, 100);
     }
   };
+
+  const fetchEngagements = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
+      if (!error && data) setEngagements(data);
+    } catch (e) {
+      console.error("Failed to fetch engagements", e);
+    }
+  }, []);
 
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
@@ -272,7 +283,18 @@ export default function BookingsPage() {
           const isBlockedVisible = (sourceFilter === 'Hybrid Availability System' || sourceFilter === 'INTERNAL: System Blocks') ? true : !isBlocked;
             
           return isCustMatch && isArchiveVisible && e.type !== 'booking' && isBlockedVisible;
-        })
+        }),
+        ...engagements.filter(eng => {
+          const isNameMatch = eng.customer_name?.trim().toLowerCase() === customerName.trim().toLowerCase();
+          const isEmailMatch = eng.customer_email && customerData?.email && eng.customer_email.trim().toLowerCase() === customerData.email.trim().toLowerCase();
+          return isNameMatch || isEmailMatch;
+        }).map(eng => ({
+          ...eng,
+          id: eng.id,
+          date: eng.created_at, // Map to common date field
+          type: 'activity' as const,
+          source: 'System Outreach'
+        }))
       ];
 
       // Filters
@@ -466,6 +488,7 @@ export default function BookingsPage() {
   const fetchCustomers = useCallback(async () => {
     setLoadingCustomers(true);
     try {
+      fetchEngagements(); // Refresh engagements in parallel
       const custs = await getUnifiedCustomers();
       if (custs.length > 0) {
         setCustomers(custs);
@@ -1516,33 +1539,45 @@ export default function BookingsPage() {
     }
   };
 
-  const handlePreviewEmailForBooking = (booking: any) => {
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: any, engagement?: any) => {
     if (!booking) return;
+    
     // Set form data to match the booking so the preview works
-    setFormData({
+    const previewData = {
       ...formData,
-      customer: booking.customer || '',
-      email: booking.customerEmail || booking.email || '',
+      customer: booking.customer || booking.customer_name || '',
+      email: booking.customerEmail || booking.email || booking.customer_email || '',
       phone: booking.customerPhone || booking.phone || '',
       address: booking.address || '',
-      service: booking.service || booking.title || '',
-      vehicle: booking.vehicle || '',
-      vehicleYear: booking.vehicleYear || '',
-      vehicleMake: booking.vehicleMake || '',
-      vehicleModel: booking.vehicleModel || '',
+      service: booking.service || booking.title || booking.note || '',
       notes: booking.notes || '',
+      date: booking.date || booking.created_at || new Date().toISOString(),
+      price: booking.price || booking.price_total || 0,
+      vehicleYear: booking.vehicleYear || booking.year || '',
+      vehicleMake: booking.vehicleMake || booking.make || '',
+      vehicleModel: booking.vehicleModel || booking.model || '',
+      vehicle: booking.vehicle || booking.vehicle_type || '',
       addons: Array.isArray(booking.addons) ? booking.addons : 
               (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
-      time: booking.date ? format(parseISO(booking.date), 'HH:mm') : '09:00',
-      status: (booking.status || 'pending').toLowerCase() as any
-    });
+      // If we have engagement metadata, pass it through
+      sent_at: engagement?.created_at || booking.last_email_sent_at,
+      last_email_sent_at: engagement?.created_at || booking.last_email_sent_at
+    };
     
-    // Determine preview type based on status
-    const stat = (booking.status || 'pending').toLowerCase();
-    let type: any = 'request';
-    if (stat === 'confirmed') type = 'confirmation';
-    else if (stat === 'cancelled') type = 'cancelled';
-    else if (stat === 'done') type = 'payment-success';
+    setEmailFormData(previewData);
+    
+    // Determine preview type based on status or forcedType
+    let type: any = forcedType || 'request';
+    if (!forcedType) {
+      const stat = (booking.status || 'pending').toLowerCase();
+      if (stat === 'confirmed') type = 'confirmation';
+      else if (stat === 'cancelled') type = 'cancelled';
+      else if (stat === 'done') type = 'payment-success';
+    } else if (engagement?.type === 'retention') {
+      type = 'reminder';
+    } else if (engagement?.type === 'initial') {
+      type = 'prospect';
+    }
     
     setEmailPreviewType(type);
     setShowEmailPreview(true);
@@ -3393,19 +3428,62 @@ export default function BookingsPage() {
                                               >
                                                 <Copy className="h-2.5 w-2.5" /> Duplicate
                                               </Button>
-                                              <Button
-                                                  size="sm"
-                                                  variant="ghost"
-                                                  className="h-6 text-[10px] gap-1 ml-1 text-zinc-500 hover:text-zinc-300"
-                                                  onClick={async (e) => { 
-                                                    e.stopPropagation(); 
-                                                    const original = items.find(i => i.id === event.id);
-                                                    if (original) handlePreviewEmailForBooking(original);
-                                                  }}
-                                                  title="Preview Email Sent"
-                                                >
-                                                  <Mail className="h-2.5 w-2.5 text-blue-400" /> Email
-                                                </Button>
+                                              <DropdownMenu>
+                                                 <DropdownMenuTrigger asChild>
+                                                   <Button
+                                                     size="sm"
+                                                     variant="ghost"
+                                                     className="h-6 text-[10px] gap-1 ml-1 text-zinc-500 hover:text-zinc-300"
+                                                   >
+                                                     <Mail className="h-2.5 w-2.5 text-blue-400" /> Email
+                                                   </Button>
+                                                 </DropdownMenuTrigger>
+                                                 <DropdownMenuContent className="bg-zinc-950 border-zinc-800 w-56">
+                                                   <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-2 py-1.5">Actual Emails Sent</DropdownMenuLabel>
+                                                   {(() => {
+                                                     const relevantEngagements = engagements.filter(eng => {
+                                                       const isBookingMatch = eng.booking_id === event.id;
+                                                       const isNameMatch = eng.customer_name?.toLowerCase() === customer.name.toLowerCase();
+                                                       const isEmailMatch = eng.customer_email && customerData?.email && eng.customer_email.toLowerCase() === customerData.email.toLowerCase();
+                                                       return (isBookingMatch || (isNameMatch || isEmailMatch)) && (eng.type === 'email' || eng.type === 'retention' || eng.type === 'initial');
+                                                     }).slice(0, 5);
+
+                                                     if (relevantEngagements.length === 0) {
+                                                       return <div className="text-[10px] text-zinc-600 italic px-2 py-2">No historical records found.</div>;
+                                                     }
+
+                                                     return relevantEngagements.map((eng, eIdx) => (
+                                                       <DropdownMenuItem 
+                                                         key={eng.id || eIdx}
+                                                         className="text-[10px] text-zinc-300 focus:bg-blue-600 focus:text-white cursor-pointer"
+                                                         onClick={(e) => {
+                                                           e.stopPropagation();
+                                                           const original = items.find(i => i.id === event.id);
+                                                           handlePreviewEmailForBooking(original || eng, undefined, eng);
+                                                         }}
+                                                       >
+                                                         <div className="flex flex-col">
+                                                           <span className="font-bold">{format(new Date(eng.created_at), 'MMM d, h:mm a')}</span>
+                                                           <span className="text-[9px] opacity-70 truncate max-w-[180px]">{eng.note}</span>
+                                                         </div>
+                                                       </DropdownMenuItem>
+                                                     ));
+                                                   })()}
+                                                   
+                                                   <DropdownMenuSeparator className="bg-zinc-800" />
+                                                   <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-2 py-1.5">Production Templates</DropdownMenuLabel>
+                                                   <DropdownMenuItem 
+                                                     className="text-[10px] text-zinc-300 focus:bg-blue-600 focus:text-white cursor-pointer"
+                                                     onClick={(e) => {
+                                                       e.stopPropagation();
+                                                       const original = items.find(i => i.id === event.id);
+                                                       if (original) handlePreviewEmailForBooking(original);
+                                                     }}
+                                                   >
+                                                     <Mail className="h-3 w-3 mr-2" /> Preview Production Template
+                                                   </DropdownMenuItem>
+                                                 </DropdownMenuContent>
+                                               </DropdownMenu>
                                                 <Button
                                                   size="sm"
                                                   variant="ghost"
@@ -3564,6 +3642,13 @@ export default function BookingsPage() {
         open={isHelpOpen} 
         onOpenChange={setIsHelpOpen} 
         role={isAdmin ? 'admin' : 'employee'} 
+      />
+
+      <EmailPreviewModal 
+        open={showEmailPreview} 
+        onOpenChange={setShowEmailPreview}
+        type={emailPreviewType}
+        data={emailFormData}
       />
     </div>
   );
