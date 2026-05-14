@@ -184,38 +184,6 @@ export default function BookingsPage() {
   };
 
 
-  const handleConvertToProspect = async (booking: Booking, type: 'prospect' | 'customer' = 'prospect') => {
-    if (!booking) return;
-    const loadToast = toast.loading(`Creating ${type} profile for ${booking.customer}...`);
-    try {
-      const payload = {
-        name: booking.customer,
-        email: booking.customerEmail,
-        phone: booking.customerPhone,
-        address: booking.address,
-        type: type,
-        notes: `Created manually from booking history. Original Booking: ${booking.title} (${booking.date})`,
-        vehicles: [{
-          make: booking.vehicleMake || '',
-          model: booking.vehicleModel || '',
-          year: booking.vehicleYear || '',
-          type: booking.vehicle || ''
-        }]
-      };
-
-      const result = await upsertSupabaseCustomer(payload as any);
-      if (result && result.id) {
-        // Link the booking to the new customer
-        await update(booking.id, { customerId: result.id });
-        toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} profile created and linked!`, { id: loadToast });
-        fetchCustomers();
-        refresh();
-      }
-    } catch (err) {
-      console.error("Conversion failed:", err);
-      toast.error(`Failed to create ${type} profile.`, { id: loadToast });
-    }
-  };
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -1504,61 +1472,47 @@ export default function BookingsPage() {
   };
 
 
-  const handleConvertToProspect = async (booking: any) => {
+  const handleConvertToProspect = async (booking: any, type: 'prospect' | 'customer' = 'prospect') => {
     if (!booking) return;
     
-    const confirmMsg = `Carry over all info for "${booking.customer || 'this customer'}" and create a new Prospect record?`;
+    const confirmMsg = `Carry over all info for "${booking.customer || 'this customer'}" and create a new ${type} record?`;
     if (!window.confirm(confirmMsg)) return;
 
-    const convertToast = toast.loading("Converting booking to prospect...");
+    const convertToast = toast.loading(`Converting booking to ${type}...`);
     try {
-      // 1. Create the Prospect record
-      const customerPayload = {
+      // 1. Create the Profile record
+      const payload = {
         name: booking.customer,
         email: booking.customerEmail || booking.email || "",
         phone: booking.customerPhone || booking.phone || "",
         address: booking.address || "",
-        type: 'prospect',
-        notes: booking.notes || '',
-        howFound: booking.source || 'Public Website'
-      };
-
-      const newCustomer = await upsertSupabaseCustomer(customerPayload);
-      
-      if (!newCustomer?.id) throw new Error("Failed to create customer record");
-
-      // 2. Create the Vehicle record for this prospect
-      if (booking.vehicleMake || booking.vehicleModel) {
-        await upsertSupabaseVehicle({
-          customer_id: newCustomer.id,
+        type: type,
+        notes: `Created manually from booking history. Original Booking: ${booking.title} (${booking.date})`,
+        vehicles: [{
           make: booking.vehicleMake || '',
           model: booking.vehicleModel || '',
           year: booking.vehicleYear || '',
-          type: booking.vehicle || '',
-        });
+          type: booking.vehicle || ''
+        }]
+      };
+
+      const result = await upsertSupabaseCustomer(payload as any);
+      
+      if (result && result.id) {
+        // 2. Link the booking to this new customer ID
+        await update(booking.id, { customerId: result.id });
+        
+        toast.success(`Successfully created ${type} for ${booking.customer}`, { id: convertToast });
+        
+        // Refresh state
+        fetchCustomers();
+        refresh();
+      } else {
+        throw new Error("No ID returned from profile creation");
       }
-
-      // 3. Update the booking to link it to the new prospect
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update({ customer_id: newCustomer.id })
-        .eq('id', booking.id);
-
-      if (updateError) console.error("Link failed:", updateError);
-
-      toast.success(`Success! "${booking.customer}" is now a Prospect.`, { id: convertToast });
-      
-      // 4. Local state update handled by store refresh below
-
-      // 5. Refresh everything to be sure
-      await Promise.all([
-        fetchCustomers(),
-        refresh()
-      ]);
-      
     } catch (err: any) {
       console.error("Conversion failed:", err);
-      toast.error(err.message || "Conversion failed", { id: convertToast });
+      toast.error(err.message || `Failed to create ${type} profile`, { id: convertToast });
     }
   };
 
