@@ -68,343 +68,386 @@ interface ProcedurePage {
 
 const procedures: ProcedurePage[] = [
   {
-    id: "introduction",
-    title: "The Prime Directive",
-    icon: Star,
-    color: "from-amber-400 to-orange-600",
-    summary: "The foundational philosophy and operating standards of Prime Auto Detail. This chapter outlines the 'Why' behind our 'How'.",
+    id: "admin-core",
+    title: "01: The Administrative Core",
+    icon: LayoutDashboard,
+    color: "from-blue-600 to-indigo-700",
+    summary: "Managing the nerve center of Prime Auto Detail. From the Central Hub to Website Administration and global settings.",
     sections: [
       {
-        title: "Mission & Brand Philosophy",
-        content: "Prime Auto Detail isn't just a cleaning service; it's a precision engineering firm for vehicle preservation. Our methodology is built on three pillars: Absolute Transparency, Chemical Accuracy, and Digital Verification. We believe that every job is an audit of our skills, and the app is the medium through which we prove our excellence to the client."
-      },
-      {
-        title: "Standard of Excellence",
-        content: "Every vehicle must pass the 'Prime Inspection' before it leaves the shop. This means no loose change left in cup holders, no streaks on the glass, and a tire dressing that is dry to the touch. We use the Digital Inspection tool in the checklist to prove this to our clients with high-resolution evidence.",
+        title: "Prime Central Hub & Alerts",
+        content: "The Central Hub is the first screen every administrator should review upon start-of-day. It aggregates real-time metrics from active jobs, pending bookings, and financial performance. Administrators use this view to monitor the 'Shop Pulse' and respond to system-wide alerts. Every morning should begin here to assess resource allocation and identify urgent follow-ups.",
         subsections: [
           {
-            title: "The 100% Rule",
-            content: "If a step is in the checklist, it must be performed or explicitly marked as 'Skipped' with a reasoning note. There are no shortcuts at Prime.",
-            icon: CheckCircle2
-          },
+            title: "Real-time Sync",
+            content: "The Hub utilizes a bidirectional bridge to ensure that a checkmark on a mobile technician's phone reflects instantly on the Admin's desktop.",
+            icon: Zap
+          }
+        ]
+      },
+      {
+        title: "Website Administration",
+        content: "This portal manages the 'Public Face' of your business. It allows you to toggle service availability, update pricing packages, and manage your 'Elite Transformations' gallery. Ensuring your Website Admin settings match your shop's actual capacity is critical to prevent over-booking and maintaining customer trust.",
+        subsections: [
           {
-            title: "Client First Communication",
-            content: "We never surprise a client with a higher price. We use the Estimate system to lock in costs and the Email Preview modal to ensure they see exactly what we're sending.",
-            icon: Mail
+            title: "Live Booking Control",
+            content: "Enable or disable specific slots and set SUV/Truck premiums that apply instantly to the online booking portal.",
+            icon: Settings
+          }
+        ]
+      },
+      {
+        title: "Personal Notes & System Settings",
+        content: "Operational efficiency relies on tracking the small details. Personal Notes are tied to your admin profile and persist across devices—perfect for internal 'To-Dos'. System Settings control your shop identity: tax rates, labor costs, and currency. Accuracy here ensures every invoice and report is legally compliant.",
+        subsections: [
+          {
+            title: "Internal Audits",
+            content: "Use the 'Private' toggle on notes to document employee performance or strategy ideas.",
+            icon: Clock
           }
         ]
       }
     ],
     proTips: [
-      "Always start your day by checking the 'Real-time Alerts' on the dashboard.",
-      "The 'Golden Rule': If it's not in the app, it didn't happen."
+      "Check the 'Alerts' panel in the Hub every 2 hours to stay ahead of new lead inquiries.",
+      "Use 'Website Admin' to push seasonal specials (e.g. 'Winter Salt Neutralizer') to the front page."
     ],
     warnings: [
-      "Never delete a customer record unless it is a confirmed duplicate.",
-      "Unauthorized discounts are a violation of shop protocol."
+      "Public-facing website changes take effect immediately; always verify in a 'Customer View' tab.",
+      "Incorrect Tax rates in Settings can lead to significant accounting errors; verify these with your CPA."
     ]
   },
   {
-    id: "lifecycle",
-    title: "The 6-Phase Lifecycle",
-    icon: Workflow,
-    color: "from-blue-400 to-indigo-600",
-    summary: "A comprehensive walkthrough of the standard operating procedure for every job, from the first lead to the final retention outreach.",
+    id: "financial-intelligence",
+    title: "02: Financial Intelligence",
+    icon: BarChart3,
+    color: "from-indigo-600 to-violet-800",
+    summary: "Transforming revenue into strategy. Mastering Finance, Sales Reports, and Business Goals.",
     sections: [
       {
-        title: "Phase 1: Lead Capture (The Prospect)",
-        content: "All potential work begins as a **Lead**. When an inquiry comes in via the website, a phone call, or a walk-in, it MUST be recorded in the **Prospects** page. This allows us to track conversion rates and ensure no client is left behind.",
+        title: "Finance & Sales Ledger",
+        content: "Professionalism is measured in numbers. The Finance module provides a complete ledger of Income vs. Expenses. We use a 'Net Valuation' model: your profit accounts for both cash on hand and the value of your shelf inventory. This provides a true 'Break-Even' point for your initial capital investment.",
+        subsections: [
+          {
+            title: "Invoicing & Payments",
+            content: "Manage the complete billing lifecycle. Mark jobs as 'Paid' to instantly move revenue into your accounting ledger.",
+            icon: DollarSign
+          }
+        ]
+      },
+      {
+        title: "Reports Center Masterclass",
+        content: "The Reports Center is your business intelligence hub. It aggregates live data from every corner of the shop. Use 'Temporal Scanning' (Date Filters) to analyze performance by day, week, month, or custom range. This allows you to identify seasonal trends and high-margin services.",
+        subsections: [
+          {
+            title: "Sales Tax Audits",
+            content: "Generate PDF reports for Sales Tax and Deductible Expenses with one click to simplify your quarterly filings.",
+            icon: FileText
+          }
+        ]
+      },
+      {
+        title: "Business Goals & Milestones",
+        content: "Turning targets into reality. Use the Goals module to set monthly revenue quotas or job-count milestones. The system provides a visual progress gauge that motivates the entire team. Goals are automatically updated as jobs are marked 'Paid', ensuring 100% accuracy.",
+        subsections: [
+          {
+            title: "Progress Tracking",
+            content: "Set revenue targets, booking counts, or CSAT scores to gamify shop performance.",
+            icon: Target
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Aim for a 20% Net Profit margin after factoring in all chemical and labor costs.",
+      "Compare this month's analytics to the same month last year to identify seasonal growth trends."
+    ],
+    warnings: [
+      "Incomplete expense logging will result in 'False Positive' profit reports; be meticulous.",
+      "Never mix Personal and Business expenses in the ledger to maintain IRS compliance."
+    ]
+  },
+  {
+    id: "asset-management",
+    title: "03: Asset & Media Management",
+    icon: Database,
+    color: "from-emerald-600 to-teal-800",
+    summary: "Organizing the physical and digital artifacts of the business. Vehicle Gallery, File Manager, and Inventory (2).",
+    sections: [
+      {
+        title: "The Vehicle Gallery",
+        content: "Your work is your best advertisement. The Vehicle Gallery stores every 'Before' and 'After' transformation. Images are automatically tagged by vehicle type and customer name. This gallery feeds into the 'Elite Stories' blog and provides a legal condition archive for every vehicle that enters the shop.",
+        subsections: [
+          {
+            title: "High-Res Evidence",
+            content: "Photos uploaded here serve as a legal record of the vehicle's condition upon entry and exit.",
+            icon: ShieldCheck
+          }
+        ]
+      },
+      {
+        title: "File Manager & Asset Pool",
+        content: "Hardware and Documentation are the foundation of your shop. The **File Manager** stores insurance, leases, and SDS sheets. The **Asset Pool** (Inventory & Assets 2) tracks physical hardware: buffers, pressure washers, and extractors. Every asset has a 'Maintenance Schedule' alert.",
+        subsections: [
+          {
+            title: "Asset Depletion",
+            content: "The system calculates the depreciation of your hardware to provide accurate tax deductions.",
+            icon: BarChart3
+          }
+        ]
+      },
+      {
+        title: "Inventory Control (Consumables)",
+        content: "Never run out of product during a job. Inventory Control tracks your 'consumables' (Chemicals, Towels, Pads). Set 'Low Threshold' alerts to trigger restock notifications. The system integrates directly with the 'Prep Summary' to ensure your mobile rigs are always fully loaded.",
+        subsections: [
+          {
+            title: "Smart Sync Engine",
+            content: "Audits your entire shop for unlinked items and links them to the Chemical Knowledge Base.",
+            icon: Zap
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Tag photos in the gallery with keywords like 'Ceramic' or 'Pet Hair' for faster marketing searches.",
+      "Set your 'Low Stock' alert to trigger when you have 1 gallon of chemical left."
+    ],
+    warnings: [
+      "Large video files can slow down the sync; use the 'Optimize for Web' button when uploading.",
+      "Missing asset maintenance (e.g. polisher brushes) can lead to equipment failure during a job."
+    ]
+  },
+  {
+    id: "operational-logistics",
+    title: "04: Operational Logistics",
+    icon: Cpu,
+    color: "from-rose-600 to-red-800",
+    summary: "The mechanical heart of the service. Customer Intake, Operations (3), and Role Simulation.",
+    sections: [
+      {
+        title: "Customer Intake & Signing",
+        content: "The 'Intake' is the handshake. It gathers the client's digital signature and confirms the scope of work. Use the Intake Module to verify client expectations and sign-off on the 'Terms of Service'. This document is legally binding and protects the shop from scope creep or liability disputes.",
         subsections: [
           {
             title: "Identity Verification",
-            content: "The system uses 'Smart Dedup' logic. Always search for an email or phone number before creating a new profile to prevent duplicate history.",
+            content: "The system uses 'Smart Dedup' to prevent duplicate records when a new client books online.",
             icon: Search
           }
         ]
       },
       {
-        title: "Phase 2: The Commitment (The Booking)",
-        content: "Once a lead is ready to move forward, we create a **Booking**. This locks in the slot on the calendar and triggers the automated pricing engine.",
+        title: "Operations (3): Checklist, Active & History",
+        content: "Operations is split into three phases: **1. Active Jobs** (Now), **2. Service Checklist** (Execution), and **3. Job History** (Archive). The Checklist is the most critical tool, ensuring a 100% consistent result regardless of which technician is on the job.",
         subsections: [
           {
-            title: "Vehicle Sizing",
-            content: "Pricing is calculated based on Vehicle Type (SUV, Truck, Compact). Ensure the sizing is correct in the profile to prevent billing errors.",
+            title: "Job Timer Logic",
+            content: "The timer tracks efficiency. Start it upon arrival and stop it only when the client signs off.",
+            icon: Clock
+          },
+          {
+            title: "3-Step Mobile Sync",
+            content: "Assignment → Execution → Verification. Data is preserved even in offline mobile rig scenarios.",
             icon: Truck
           }
         ]
       },
       {
-        title: "Phase 3: Preparation (The Setup)",
-        content: "Preparation is the key to speed. We use the **Prep Summary PDF** generated from the checklist to gather 100% of the tools and chemicals needed for the specific job before we ever touch the paint.",
+        title: "View As (Role Simulation)",
+        content: "As an Admin, you can 'teleport' into the experience of an Employee or Customer. This tool is essential for testing new pricing models or training staff. By simulating an Employee view, you can ensure that a technician can only see the information they need to perform their job safely.",
         subsections: [
           {
-            title: "Chemical Audit",
-            content: "Check your shelf inventory against the prep list. If you're low, the system will show a red warning.",
-            icon: Beaker
+            title: "UX Verification",
+            content: "Always use 'View As: Customer' when setting up a new service package to see the booking flow.",
+            icon: Users
           }
         ]
-      },
+      }
+    ],
+    proTips: [
+      "Open the 'Prep Summary' PDF from the checklist to gather all chemicals before you touch the car.",
+      "Use 'View As' mode to verify that a new employee can only see the sections they need."
+    ],
+    warnings: [
+      "Never 'Force Finish' a job without a customer signature unless explicitly authorized.",
+      "The 'Intake' signature is a legal document; ensure the client sees the terms clearly."
+    ]
+  },
+  {
+    id: "chemical-science",
+    title: "05: Chemical Science",
+    icon: Beaker,
+    color: "from-cyan-500 to-blue-700",
+    summary: "The technical advantage. Chemicals Library, Label System, and Ph Diagnostics.",
+    sections: [
       {
-        title: "Phase 4: Execution (The Service)",
-        content: "During the service, the **Job Timer** is active. This isn't just for payroll; it's for performance analytics. Every step checked creates a timestamped audit trail.",
+        title: "Chemicals Library & AI Assistant",
+        content: "Professional detailing is chemistry. The Chemicals Library stores the 'Ph-Profile' and SDS sheets for every product. Use the AI Assistant to cross-reference your inventory with specific contaminants (like Tree Sap or Concrete Dust) for the safest and most effective chemical response.",
         subsections: [
           {
-            title: "Digital Inspection",
-            content: "Document pre-existing damage BEFORE starting. Upload 'Before' photos directly to the checklist gallery.",
-            icon: Camera
-          },
-          {
-            title: "Chemical Dilution",
-            content: "Use the built-in Dilution Calculator to ensure chemical safety on sensitive surfaces.",
-            icon: Beaker
-          }
-        ]
-      },
-      {
-        title: "Phase 5: Completion & Billing",
-        content: "Finishing the job stops the timer and automatically generates the **Pending Invoice**. Review the subtotal, add any add-ons or discounts, and finalize.",
-        subsections: [
-          {
-            title: "Verified Sent Emails",
-            content: "When sending the invoice, use the Preview modal to verify the client's information and the audit timestamp.",
-            icon: Mail
-          }
-        ]
-      },
-      {
-        title: "Phase 6: Retention (The Loop)",
-        content: "Our business survives on repeat clients. The **Retention Hub** alerts us when a client is due for their maintenance refresh (Monthly, Quarterly, etc.).",
-        subsections: [
-          {
-            title: "Personalized Outreach",
-            content: "Use the custom notes in the follow-up center to mention details from their last visit to increase conversion.",
+            title: "Master Ratio Sync",
+            content: "Updating a ratio on a chemical card instantly propagates that change to every checklist.",
             icon: Zap
           }
         ]
-      }
-    ],
-    proTips: [
-      "The 'Prep Summary' saves an average of 15 minutes per job by eliminating trips to the chemical room.",
-      "Always mark a job 'Paid' immediately upon receiving funds to keep accounting accurate."
-    ],
-    warnings: [
-      "Never 'Finish' a job without double-checking the checklist for uncompleted items.",
-      "The Job Timer must be accurate; do not leave it running after the job is finished."
-    ]
-  },
-  {
-    id: "crm",
-    title: "CRM: The Relationship Master",
-    icon: Users,
-    color: "from-purple-400 to-fuchsia-600",
-    summary: "How to manage the core asset of the business: the customer database. Understanding profiles, garages, and communication history.",
-    sections: [
-      {
-        title: "Prospects vs. Customers",
-        content: "The system makes a hard distinction between 'Potential' and 'Active'. **Prospects** are leads. **Customers** are those with at least one confirmed booking. Moving someone between these types is a manual or automated promotion based on their first confirmed appointment."
       },
       {
-        title: "The Virtual Garage",
-        content: "Each client has a 'Garage' that persists between visits. This stores their vehicle specifications (Year, Make, Model, VIN, Color) so we never have to ask twice.",
+        title: "OSHA Label System (QR Codes)",
+        content: "Safety and compliance are non-negotiable. The app generates OSHA-compliant labels for every secondary bottle. Each label includes a QR code that, when scanned by a technician's phone, opens the exact dilution instructions and safety warnings for that chemical.",
         subsections: [
           {
-            title: "Vehicle Deduplication",
-            content: "The system automatically merges duplicate vehicles. If you see two of the same car, the 'Smart Sync' tool will combine them on save.",
-            icon: Layers
-          }
-        ]
-      },
-      {
-        title: "Communication Overview",
-        content: "The CRM tracks every interaction. This includes email logs, manual notes, and the 'Last Contact' date. We use this to ensure we aren't over-communicating or neglecting our clients.",
-        subsections: [
-          {
-            title: "Verified Sent Tracking",
-            content: "We only display 'Verified Sent' timestamps for emails that actually left the server. If it says 'Draft', it hasn't been sent.",
-            icon: ShieldCheck
-          }
-        ]
-      }
-    ],
-    proTips: [
-      "Search by the last 4 digits of a phone number for the fastest customer lookup.",
-      "Add personal notes (e.g., 'Dog owner', 'Loves gloss') to the client profile to build rapport."
-    ],
-    warnings: [
-      "NEVER use the 'Generic Customer' for real business transactions. It is for testing only.",
-      "Ensure the email address is 100% correct before saving, as this is our primary identity key."
-    ]
-  },
-  {
-    id: "logistics",
-    title: "Logistics: The Mobile Rig",
-    icon: Truck,
-    color: "from-emerald-400 to-teal-600",
-    summary: "Operating procedures for mobile detailing units and the F150 Command Center integration.",
-    sections: [
-      {
-        title: "Mobile Command Center",
-        content: "The **Mobile Setup** page is the hub for rig operations. It allows technicians to perform rig audits, check equipment status, and sync with the main shop database in real-time."
-      },
-      {
-        title: "Visual Rig Audits",
-        content: "Every morning, the rig lead must perform a visual walk-around. We use the 'Add View' button to record videos or photos of the equipment layout. This ensures that every tool is in its place and the rig is 'Job Ready'.",
-        subsections: [
-          {
-            title: "Direct Camera Sync",
-            content: "On mobile devices, you can upload photos directly from the camera to the cloud storage.",
-            icon: Camera
-          }
-        ]
-      },
-      {
-        title: "Equipment Inventory",
-        content: "Mobile units carry a specific subset of the shop's inventory. Use the 'Equipment Pool' to track what's currently on the truck.",
-        subsections: [
-          {
-            title: "Low Stock Sync",
-            content: "When a chemical runs low on the truck, mark it immediately so the shop manager can prepare a refill for your return.",
+            title: "Visual Standardization",
+            content: "Color-coded labels ensure that 'Acidic' chemicals are never confused with 'Alkaline' ones.",
             icon: AlertTriangle
           }
         ]
-      }
-    ],
-    proTips: [
-      "Use the 'Rig Layout' photos as a training guide for new mobile technicians.",
-      "Check your water tank level and pump pressure before leaving the shop."
-    ],
-    warnings: [
-      "Equipment not marked as 'Rig Assigned' will not appear in the mobile view.",
-      "Always verify sync status (green light) before leaving a job site to ensure the customer's invoice is ready."
-    ]
-  },
-  {
-    id: "chemistry",
-    title: "Chemistry: The Dilution Engine",
-    icon: Beaker,
-    color: "from-cyan-400 to-blue-500",
-    summary: "Standard operating procedures for chemical management, Ph-scale diagnostics, and AI-driven consultations.",
-    sections: [
-      {
-        title: "Ph-Scale Diagnostics",
-        content: "Detailing is chemistry. Our SOP requires a 'Severity Assessment' before chemical selection. Light contamination gets Ph-Neutral solutions; severe contamination (Bugs, Tar, Water Spots) requires Acidic or Alkaline responses based on the substrate."
       },
       {
-        title: "The Dilution Calculator",
-        content: "We NEVER 'eyeball' our mixes. The Dilution Calculator ensures that we hit the professional target (e.g., 10:1 or 4:1) perfectly to maximize cleaning power while minimizing chemical waste.",
+        title: "Dilution Engine & Diagnostics",
+        content: "We never 'eyeball' our mixes. The Dilution Calculator provides precise measurements based on target ratios (e.g. 10:1). The Ph Diagnostic tool helps you choose the right chemical for the substrate—Acidic for mineral spots, Alkaline for organic grime, and Ph-Neutral for preservation.",
         subsections: [
           {
-            title: "Smart Inventory Sync",
-            content: "Changes made in the calculator or on a chemical card sync across the entire shop instantly.",
-            icon: Zap
-          }
-        ]
-      },
-      {
-        title: "AI Chemical Consultant",
-        content: "For complex problems like paint transfer or heavy industrial fallout, use the AI Assistant. It cross-references your current shelf inventory to recommend the best product you ALREADY OWN to solve the problem.",
-        subsections: [
-          {
-            title: "Substrate Safety",
-            content: "Always mention the surface type (Leather, Raw Aluminum, Clear Coat) to the AI for safe reasoning.",
-            icon: ShieldCheck
+            title: "Cost per Ounce",
+            content: "The engine calculates the 'Ready-to-Use' cost to help you refine your package pricing.",
+            icon: DollarSign
           }
         ]
       }
     ],
     proTips: [
-      "Label every bottle with the dilution ratio and its current Ph-level.",
-      "Use the 'Auto-Suggest' button in the checklist to get chemical recommendations based on the step name."
+      "Print fresh labels every quarter to ensure all safety QR codes remain scannable.",
+      "Use Ph-Neutral chemicals for 90% of maintenance washes to preserve existing coatings."
     ],
     warnings: [
-      "Never mix chemicals without consulting the SDS (Safety Data Sheet) in the app.",
-      "High-alkaline cleaners can stain raw aluminum; always test a small area first."
+      "Never mix incompatible chemicals; use the AI compatibility checker before experimenting.",
+      "Unlabeled secondary bottles are a safety violation and can lead to expensive surface damage."
     ]
   },
   {
-    id: "finance",
-    title: "Finance: The Profit Lab",
-    icon: DollarSign,
-    color: "from-green-400 to-emerald-600",
-    summary: "Procedures for invoicing, estimates, accounting, and financial reporting accuracy.",
+    id: "staff-education",
+    title: "06: Staff & Education",
+    icon: Book,
+    color: "from-purple-600 to-fuchsia-800",
+    summary: "Managing the team. Staff Management, Learning Center, and Commission Logic.",
     sections: [
       {
-        title: "Invoicing & Estimates",
-        content: "Every job must have an invoice. **Estimates** are for the sales phase; **Invoices** are for the billing phase. We use the 'Convert to Invoice' feature to ensure pricing stays consistent from quote to completion."
-      },
-      {
-        title: "Accounting & Profitability",
-        content: "We track **Gross Revenue**, **Operating Expenses**, and **Net Profit**. Our 'Net Valuation Model' includes the value of our on-shelf inventory to give us a true 'Break-Even' point.",
+        title: "Staff Management & Schedules",
+        content: "Control who sees what. The system utilizes Role-Based Access Control (RBAC). **Admins** see the financials; **Employees** see the checklists. Use the Management page to set these roles and track technician performance through 'Checklist Audit Scores' and schedule assignments.",
         subsections: [
           {
-            title: "Revenue Isolation",
-            content: "Testing revenue from the 'Generic Customer' is automatically excluded from all professional financial reports.",
+            title: "Technician Tracking",
+            content: "Monitor job completion times and quality scores to identify top-performing staff.",
+            icon: Users
+          }
+        ]
+      },
+      {
+        title: "Prime Learning Center",
+        content: "Continuous education is our secret weapon. The Learning Center contains video tutorials, safety quizzes, and these very procedures. Every new hire must complete the 'Prime Foundation' course and pass the exam before they are assigned their first client vehicle.",
+        subsections: [
+          {
+            title: "Digital Handbooks",
+            content: "Access this Procedures Manual directly from the Learning Center for on-the-job reference.",
+            icon: Book
+          }
+        ]
+      },
+      {
+        title: "Commissions & Payroll",
+        content: "Pay your team accurately. The Payroll module automatically calculates technician commissions based on their Tier (Level 1-5) and the jobs they have marked as 'Paid'. This eliminates manual accounting errors and provides technicians with a clear view of their earnings.",
+        subsections: [
+          {
+            title: "Tiered Growth",
+            content: "Technicians earn higher commissions as their 'Quality Score' increases in the system.",
+            icon: Trophy
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Review the 'Staff Leaderboard' during weekly meetings to reward the highest quality scores.",
+      "Assign 'Self-Study' modules in the Learning Center during rain delays or shop downtime."
+    ],
+    warnings: [
+      "Unauthorized access to Payroll can lead to data privacy breaches; restrict Admin roles strictly.",
+      "Never allow a technician to perform a service they haven't completed the Learning module for."
+    ]
+  },
+  {
+    id: "marketing-retention",
+    title: "07: Marketing & Retention",
+    icon: Mail,
+    color: "from-amber-600 to-orange-800",
+    summary: "Closing the loop. Retention Engine, Follow-up Center, and AI Blog.",
+    sections: [
+      {
+        title: "Retention Engine & Follow-ups",
+        content: "Acquisition is expensive; retention is profitable. The Retention Engine monitors every client's 'Maintenance Cycle'. It identifies who is due for a wash or ceramic refresh (Monthly, Quarterly, etc.) and provides personalized outreach templates and SMS/Email reminders.",
+        subsections: [
+          {
+            title: "Personalized Outreach",
+            content: "Embed loyalty coupons directly into retention emails to reward repeat business.",
+            icon: Sparkles
+          }
+        ]
+      },
+      {
+        title: "The AI Blog (Elite Stories)",
+        content: "Turn your gallery photos into marketing content. The AI Blog assistant analyzes your 'Before & After' shots to write professional, SEO-optimized blog posts about the transformations. These stories are published to your website, driving organic search traffic to your booking portal.",
+        subsections: [
+          {
+            title: "Social Blast",
+            content: "Push your best 'Transformations' directly to social media from the marketing hub.",
+            icon: Share2
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Set a 'Quarterly' maintenance cycle for every Ceramic Coating client for warranty compliance.",
+      "Use the 'Engagement History' tab to see exactly when and how you last contacted a client."
+    ],
+    warnings: [
+      "Over-marketing to the retention list can lead to high unsubscribe rates; limit automated emails.",
+      "Ensure all AI-generated blog content is reviewed for technical accuracy before publishing."
+    ]
+  },
+  {
+    id: "data-security",
+    title: "08: Data & Security",
+    icon: ShieldCheck,
+    color: "from-slate-600 to-zinc-900",
+    summary: "The bedrock of the app. Privacy, Database Integrity, and System Backups.",
+    sections: [
+      {
+        title: "Privacy & Data Protection",
+        content: "Customer trust is built on privacy. The system follows strict 'Privacy First' protocols. This means personal calendar details are never exposed, and customer contact info is only visible to authorized personnel. All data is encrypted during transit to the Supabase cloud.",
+        subsections: [
+          {
+            title: "Secure Access",
+            content: "Uses industry-standard OAuth 2.0 and session management to prevent unauthorized access.",
             icon: ShieldCheck
           }
         ]
       },
       {
-        title: "Payroll & Commissions",
-        content: "Technicians are paid based on their tier and job performance. The system calculates these commissions automatically based on completed and paid jobs.",
+        title: "Database Integrity & Backups",
+        content: "Your business data is your most valuable asset. The system performs automated 'Point-in-Time' backups to the cloud. Deleting a record is a 3-step process to prevent accidental loss. Always 'Archive' inactive records instead of deleting to maintain your service history for tax purposes.",
         subsections: [
           {
-            title: "Disbursement Log",
-            content: "Always log every paycheck in the 'Payroll History' to maintain a clean tax trail.",
+            title: "Audit Trail",
+            content: "Every modification to a job or financial record is timestamped and tied to a specific user.",
             icon: History
           }
         ]
       }
     ],
     proTips: [
-      "Categorize all expenses (Rent, Chemicals, Marketing) for easier tax preparation.",
-      "The 'Financial Summary' should balance to zero on day one, representing your initial capital investment."
+      "Perform a monthly 'Data Audit' to ensure all customer records have valid phone numbers and emails.",
+      "Set your 'Session Timeout' to 1 hour on shared shop tablets."
     ],
     warnings: [
-      "Never delete an invoice; if a mistake is made, 'Void' it instead to preserve the sequence.",
-      "Payments must be logged against an invoice to count as revenue."
-    ]
-  },
-  {
-    id: "content",
-    title: "Content: Elite Story Master",
-    icon: Share2,
-    color: "from-rose-400 to-red-600",
-    summary: "Managing the brand's digital presence through the Blog AI Content Strategist and Social Blast Engine.",
-    sections: [
-      {
-        title: "Storytelling & The Blog",
-        content: "We don't just 'post photos'; we tell stories. Each entry in the Elite Story Master should highlight a specific problem we solved and the transformation we achieved."
-      },
-      {
-        title: "AI Content Strategist",
-        content: "Stuck on a caption? Use the ✨ AI button inside the blog editor. It generates viral titles, engaging story drafts, and social media hooks tailored to the specific car and service.",
-        subsections: [
-          {
-            title: "Apply & Save",
-            content: "Review the AI suggestion and click 'Apply to Post' to instantly fill your editor.",
-            icon: Sparkles
-          }
-        ]
-      },
-      {
-        title: "Social Blast Engine",
-        content: "Don't copy-paste. Use the 🚀 Rocket button to push your content directly to Facebook, Instagram, and TikTok. For Facebook, we always send as a 'Draft' first for final review.",
-        subsections: [
-          {
-            title: "Platform Integration",
-            content: "Ensure your Page ID and Access Tokens are correctly configured in the settings tab for seamless posting.",
-            icon: LayoutDashboard
-          }
-        ]
-      }
-    ],
-    proTips: [
-      "Use 'Before & After' sliders in your blog posts to maximize engagement.",
-      "Pin your best work to the top of the feed to greet new visitors."
-    ],
-    warnings: [
-      "Ensure all customer privacy (License Plates) is respected or blurred before publishing.",
-      "Never publish AI content without a quick human proofread for accuracy."
+      "A deletion is permanent and cannot be undone; use 'Archive' as your first course of action.",
+      "Sharing Admin credentials is a violation of shop security policy and voids technical support."
     ]
   }
 ];
@@ -507,7 +550,7 @@ export default function ProceduresBooklet() {
               )}
               <div className="relative z-10 space-y-4">
                 <Badge className="bg-white/20 hover:bg-white/30 text-white border-none text-[10px] uppercase font-black tracking-widest px-3 py-1">
-                  Manual Section
+                  Manual Chapter
                 </Badge>
                 <div className="flex items-center gap-6">
                   <div className={`w-16 h-16 rounded-2xl ${isPrinting ? 'hidden' : 'bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-2xl'}`}>
@@ -526,10 +569,10 @@ export default function ProceduresBooklet() {
             {/* Main Content Sections */}
             <div className="space-y-16">
               {activeProcedure.sections.map((section, idx) => (
-                <div key={idx} className="space-y-6">
+                <div key={idx} className="space-y-6 break-inside-avoid-page">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-400 font-black text-sm border border-zinc-800">
-                      0{idx + 1}
+                      {idx + 1}
                     </div>
                     <h2 className="text-2xl font-black uppercase tracking-tight text-white border-b-2 border-zinc-800 pb-2 flex-1">
                       {section.title}
@@ -543,7 +586,7 @@ export default function ProceduresBooklet() {
                   {section.subsections && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-14 mt-8">
                       {section.subsections.map((sub, sIdx) => (
-                        <Card key={sIdx} className="bg-zinc-900/40 border-zinc-800/50 backdrop-blur-sm hover:border-zinc-700 transition-colors">
+                        <Card key={sIdx} className="bg-zinc-900/40 border-zinc-800/50 backdrop-blur-sm hover:border-zinc-700 transition-colors break-inside-avoid">
                           <CardContent className="p-6 space-y-3">
                             <div className="flex items-center gap-3">
                               {sub.icon && (
@@ -568,7 +611,7 @@ export default function ProceduresBooklet() {
             </div>
 
             {/* Pros & Cons / Tips & Warnings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-20 pt-12 border-t border-zinc-900">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-20 pt-12 border-t border-zinc-900 break-inside-avoid-page">
               
               {/* Pro Tips */}
               <div className="space-y-6">
@@ -612,19 +655,21 @@ export default function ProceduresBooklet() {
             </div>
 
             {/* Page Footer */}
-            <div className="mt-32 p-12 rounded-[40px] bg-zinc-900/30 border border-zinc-800 text-center space-y-6 relative overflow-hidden">
-               <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
-               <Info className="w-12 h-12 text-zinc-700 mx-auto" />
-               <div className="space-y-2">
-                 <h3 className="text-xl font-black uppercase tracking-tighter text-zinc-300">Need more technical detail?</h3>
-                 <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
-                   The technical reference guide contains 50+ additional topics on specific chemical ratios and software configurations.
-                 </p>
-               </div>
-               <Button variant="outline" className="border-zinc-800 text-zinc-400 hover:bg-zinc-800 uppercase text-[10px] font-black tracking-widest px-8">
-                 Jump to Technical Guide
-               </Button>
-            </div>
+            {!isPrinting && (
+              <div className="mt-32 p-12 rounded-[40px] bg-zinc-900/30 border border-zinc-800 text-center space-y-6 relative overflow-hidden">
+                 <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent pointer-events-none" />
+                 <Info className="w-12 h-12 text-zinc-700 mx-auto" />
+                 <div className="space-y-2">
+                   <h3 className="text-xl font-black uppercase tracking-tighter text-zinc-300">Need more technical detail?</h3>
+                   <p className="text-sm text-zinc-500 max-w-md mx-auto leading-relaxed">
+                     The technical reference guide contains 50+ additional topics on specific chemical ratios and software configurations.
+                   </p>
+                 </div>
+                 <Button variant="outline" className="border-zinc-800 text-zinc-400 hover:bg-zinc-800 uppercase text-[10px] font-black tracking-widest px-8">
+                   Jump to Technical Guide
+                 </Button>
+              </div>
+            )}
           </div>
 
           {/* Print Version - Extra Pages */}
@@ -691,13 +736,22 @@ export default function ProceduresBooklet() {
             background: white !important;
             color: black !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .min-h-screen {
             min-height: auto !important;
             background: white !important;
           }
           @page {
-            margin: 2cm;
+            margin: 1.5cm;
+            size: auto;
+          }
+          .break-inside-avoid {
+            break-inside: avoid;
+          }
+          .break-inside-avoid-page {
+            break-inside: avoid-page;
           }
           .break-before-page {
             break-before: page;
@@ -706,18 +760,23 @@ export default function ProceduresBooklet() {
             color: black !important;
           }
           p, span {
-            color: #333 !important;
+            color: #111 !important;
           }
           .bg-gradient-to-br {
-            background: none !important;
-            border-bottom: 2px solid black !important;
+             border-bottom: 4px solid #333 !important;
+             background-color: #f8f9fa !important;
+             border-radius: 0 !important;
           }
           .bg-zinc-900, .bg-zinc-900\/50, .bg-black {
             background: transparent !important;
-            border-color: #eee !important;
+            border-color: #ccc !important;
           }
           .text-white, .text-zinc-100 {
             color: black !important;
+          }
+          .Card, .CardContent {
+             border: 1px solid #ddd !important;
+             background: #fff !important;
           }
         }
       `}</style>
