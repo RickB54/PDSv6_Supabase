@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { makeToc, HelpTopic } from './helpData';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Zap, Printer, X } from 'lucide-react';
+import { Search, ChevronRight, Zap, Printer, X, Book } from 'lucide-react';
 import { exportHelpTopicPDF } from '@/lib/help-pdf';
 
 type HelpModalProps = {
@@ -186,6 +186,20 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
 
           <div className="flex flex-col gap-3">
+            {/* Procedures Manual Shortcut */}
+            {(role === 'admin' || role === 'employee') && (
+              <Button 
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate('/procedures-manual');
+                }}
+                className="w-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-black text-xs uppercase tracking-widest py-6 flex items-center justify-center gap-3 rounded-xl transition-all hover:scale-[1.01]"
+              >
+                <Book className="w-5 h-5" />
+                View Full Procedures Manual & Booklet
+              </Button>
+            )}
+
             {/* Navigation Selector */}
             <Accordion type="single" collapsible value={accordionValue} onValueChange={setAccordionValue} className="w-full bg-[#1a2035] border border-slate-700 rounded-lg overflow-hidden relative z-50">
               <AccordionItem value="toc" className="border-none">

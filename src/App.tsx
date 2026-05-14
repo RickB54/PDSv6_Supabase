@@ -111,6 +111,7 @@ import HelpModal from "@/components/help/HelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
 import StickerMaker from "./pages/StickerMaker";
 import LetterMaker from "./pages/LetterMaker";
+import ProceduresBooklet from "./pages/ProceduresBooklet";
 import { PerspectiveBanner } from "./components/PerspectiveBanner";
 
 const queryClient = new QueryClient();
@@ -407,6 +408,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
           <Route path="/letter-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><LetterMaker /></ProtectedRoute>} />
           <Route path="/elite-master" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
+          <Route path="/procedures-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ProceduresBooklet /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<Navigate to="/elite-master" replace />} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
           <Route path="/active-jobs" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
