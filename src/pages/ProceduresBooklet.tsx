@@ -222,54 +222,75 @@ const procedures: ProcedurePage[] = [
     title: "04: Operational Logistics",
     icon: Cpu,
     color: "from-rose-600 to-red-800",
-    summary: "The mechanical heart of the service. Customer Intake, Operations (3), and Role Simulation.",
+    summary: "The master workflow of Prime Auto Detail. Mastering the Bookings lifecycle and the high-precision Service Checklist.",
     sections: [
       {
-        title: "Customer Intake & Signing",
-        content: "The 'Intake' is the handshake. It gathers the client's digital signature and confirms the scope of work. Use the Intake Module to verify client expectations and sign-off on the 'Terms of Service'. This document is legally binding and protects the shop from scope creep or liability disputes.",
+        title: "Bookings & Appointment Lifecycle",
+        content: "The Booking system is the engine of our revenue. The lifecycle begins when a customer submits a request via the 'Book Now' portal. 1. **Initial Lead**: The request appears in the Central Hub for review. 2. **Verification**: Admins check for vehicle size accuracy and service availability. 3. **Confirmation**: Once approved, an automated confirmation email is sent with a calendar invite. 4. **Pre-Arrival**: The system sends a reminder 24 hours prior. This end-to-end automation ensures a zero-friction experience for the client while protecting the shop's schedule.",
         subsections: [
           {
-            title: "Identity Verification",
-            content: "The system uses 'Smart Dedup' to prevent duplicate records when a new client books online.",
+            title: "Lead Management",
+            content: "Leads must be converted to 'Confirmed' within 4 hours to maintain a high customer acquisition rate.",
             icon: Search
+          },
+          {
+            title: "Calendar Sync",
+            content: "The system bi-directionally syncs with the shop's Google Calendar to prevent double-booking mobile rigs.",
+            icon: History
           }
         ]
       },
       {
-        title: "Operations (3): Checklist, Active & History",
-        content: "Operations is split into three phases: **1. Active Jobs** (Now), **2. Service Checklist** (Execution), and **3. Job History** (Archive). The Checklist is the most critical tool, ensuring a 100% consistent result regardless of which technician is on the job.",
+        title: "The Master Service Checklist (Detailed)",
+        content: "The Service Checklist is our technical 'Source of Truth'. It dictates exactly how a vehicle is transformed. **Step 1: Arrival & Intake**: The tech performs a walk-around, noting pre-existing damage. **Step 2: Execution**: The tech follows the categorical steps (Exterior, Interior, Protection). Each step is timestamped for efficiency tracking. **Step 3: Verification**: High-resolution 'After' photos are mandatory for every package. **Step 4: Final Sign-off**: The tech presents the results to the client, who provides a digital signature directly on the mobile device. This process guarantees 100% consistency and eliminates liability.",
         subsections: [
           {
-            title: "Job Timer Logic",
-            content: "The timer tracks efficiency. Start it upon arrival and stop it only when the client signs off.",
+            title: "Step-by-Step Precision",
+            content: "Every item in the checklist must be green-lit or skipped with a valid technical reason.",
+            icon: CheckCircle2
+          },
+          {
+            title: "Digital Sign-Off",
+            content: "The client's signature is automatically embedded into the final PDF invoice as a permanent record.",
+            icon: ShieldCheck
+          }
+        ]
+      },
+      {
+        title: "Active Jobs & Job History",
+        content: "The **Active Jobs** view is the live dashboard for technicians in the field. It shows their current timer, assigned rig, and client contact info. Once a job is finished and the signature is captured, it moves to **Job History**. The History module is a permanent archive used for returning customer research and revenue audits. Never delete a history record; use it to identify 'Legacy Add-ons' the client previously purchased.",
+        subsections: [
+          {
+            title: "Timer Accuracy",
+            content: "Technicians must start the timer the moment they arrive to ensure accurate 'Labor per Hour' reporting.",
             icon: Clock
           },
           {
-            title: "3-Step Mobile Sync",
-            content: "Assignment → Execution → Verification. Data is preserved even in offline mobile rig scenarios.",
-            icon: Truck
+            title: "Historical Audits",
+            content: "Access previous condition reports to ensure we are not held liable for old damages.",
+            icon: History
           }
         ]
       },
       {
         title: "View As (Role Simulation)",
-        content: "As an Admin, you can 'teleport' into the experience of an Employee or Customer. This tool is essential for testing new pricing models or training staff. By simulating an Employee view, you can ensure that a technician can only see the information they need to perform their job safely.",
+        content: "The 'View As' tool is a powerful administrative feature that allows you to see the app exactly as an Employee or a Customer would. This is essential for: 1. **Staff Training**: Verifying that a new technician only sees their assigned checklists. 2. **UI Testing**: Ensuring that a new service package displays correctly in the customer's booking portal. 3. **Troubleshooting**: Diagnosing what a user is seeing in real-time without needing their credentials. It is the ultimate tool for verifying the 'User Experience' at every level.",
         subsections: [
           {
-            title: "UX Verification",
-            content: "Always use 'View As: Customer' when setting up a new service package to see the booking flow.",
+            title: "Safe Simulation",
+            content: "Simulating a role does not affect your administrative permissions; it simply filters the UI view.",
             icon: Users
           }
         ]
       }
     ],
     proTips: [
-      "Open the 'Prep Summary' PDF from the checklist to gather all chemicals before you touch the car.",
-      "Use 'View As' mode to verify that a new employee can only see the sections they need."
+      "Use the 'Active Job' timer to compare real-world performance against estimated labor hours.",
+      "Review the 'Job History' before arriving at a repeat client's house to wow them with your memory."
     ],
     warnings: [
-      "Never 'Force Finish' a job without a customer signature unless explicitly authorized.",
-      "The 'Intake' signature is a legal document; ensure the client sees the terms clearly."
+      "Skipping checklist steps without a note is a violation of shop protocol and voids service warranties.",
+      "A job cannot be moved to 'Paid' until a digital signature has been captured and verified."
     ]
   },
   {
