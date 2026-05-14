@@ -136,7 +136,7 @@ const procedures: ProcedurePage[] = [
         ]
       },
       {
-        title: "Reports Center Masterclass",
+        title: "Analytics & Reports Center",
         content: "The Reports Center is your business intelligence hub. It aggregates live data from every corner of the shop. Use 'Temporal Scanning' (Date Filters) to analyze performance by day, week, month, or custom range. This allows you to identify seasonal trends and high-margin services.",
         subsections: [
           {
@@ -380,7 +380,7 @@ const procedures: ProcedurePage[] = [
     summary: "Closing the loop. Retention Engine, Follow-up Center, and AI Blog.",
     sections: [
       {
-        title: "Retention Engine & Follow-ups",
+        title: "Marketing & Retention Engine",
         content: "Acquisition is expensive; retention is profitable. The Retention Engine monitors every client's 'Maintenance Cycle'. It identifies who is due for a wash or ceramic refresh (Monthly, Quarterly, etc.) and provides personalized outreach templates and SMS/Email reminders.",
         subsections: [
           {
