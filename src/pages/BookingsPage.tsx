@@ -184,6 +184,39 @@ export default function BookingsPage() {
   };
 
 
+  const handleConvertToProspect = async (booking: Booking, type: 'prospect' | 'customer' = 'prospect') => {
+    if (!booking) return;
+    const loadToast = toast.loading(`Creating ${type} profile for ${booking.customer}...`);
+    try {
+      const payload = {
+        name: booking.customer,
+        email: booking.customerEmail,
+        phone: booking.customerPhone,
+        address: booking.address,
+        type: type,
+        notes: `Created manually from booking history. Original Booking: ${booking.title} (${booking.date})`,
+        vehicles: [{
+          make: booking.vehicleMake || '',
+          model: booking.vehicleModel || '',
+          year: booking.vehicleYear || '',
+          type: booking.vehicle || ''
+        }]
+      };
+
+      const result = await upsertSupabaseCustomer(payload as any);
+      if (result && result.id) {
+        // Link the booking to the new customer
+        await update(booking.id, { customerId: result.id });
+        toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} profile created and linked!`, { id: loadToast });
+        fetchCustomers();
+        refresh();
+      }
+    } catch (err) {
+      console.error("Conversion failed:", err);
+      toast.error(`Failed to create ${type} profile.`, { id: loadToast });
+    }
+  };
+
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -3046,12 +3079,20 @@ export default function BookingsPage() {
                                   className="h-8 w-8 p-0 text-primary hover:text-primary/80"
                                   onClick={async (e) => { 
                                     e.stopPropagation(); 
-                                    const relatedBookings = items.filter(b => 
-                                      (b.customerId === customer.id) || 
-                                      (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-                                      (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-                                    );
-                                    const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); const detailedHistory = await getCustomerDetailedHistory(customer.id!); if (detailedHistory) await exportCustomerHistoryPDF(detailedHistory, true); 
+                                    const reportToast = toast.loading(`Building history report for ${customer.name}...`);
+                                    try {
+                                      const { getCustomerDetailedHistory } = await import('@/lib/supa-data'); 
+                                      const detailedHistory = await getCustomerDetailedHistory(customer.id!); 
+                                      if (detailedHistory) {
+                                        await exportCustomerHistoryPDF(detailedHistory, true); 
+                                        toast.success("Report generated successfully", { id: reportToast });
+                                      } else {
+                                        toast.error("Could not find detailed history for this customer", { id: reportToast });
+                                      }
+                                    } catch (err) {
+                                      console.error("Report generation failed:", err);
+                                      toast.error("Failed to build PDF report", { id: reportToast });
+                                    }
                                   }}
                                   title="Preview History Report"
                                 >
@@ -3113,6 +3154,41 @@ export default function BookingsPage() {
                                        </div>
                                        <div className="text-sm text-zinc-300 font-bold">{customer.address || '—'}</div>
                                     </div>
+
+                                    {!customer.id && (
+                                      <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                          <Shield className="w-3 h-3 text-red-500" />
+                                          <span className="text-[10px] text-red-500 uppercase font-black tracking-widest">Database Record Missing</span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-500 leading-relaxed">This person is not yet in your CRM. You can manually add them and link this booking history below.</p>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            size="sm"
+                                            className="h-7 text-[9px] font-black uppercase bg-zinc-100 text-black hover:bg-white flex-1"
+                                            onClick={() => {
+                                              const firstBooking = customer.events?.find((e: any) => e.type === 'booking');
+                                              const original = firstBooking ? items.find(i => i.id === firstBooking.id) : null;
+                                              if (original) handleConvertToProspect(original, 'prospect');
+                                            }}
+                                          >
+                                            Add as Prospect
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-7 text-[9px] font-black uppercase border-zinc-800 text-zinc-400 hover:text-white flex-1"
+                                            onClick={() => {
+                                              const firstBooking = customer.events?.find((e: any) => e.type === 'booking');
+                                              const original = firstBooking ? items.find(i => i.id === firstBooking.id) : null;
+                                              if (original) handleConvertToProspect(original, 'customer');
+                                            }}
+                                          >
+                                            Add as Customer
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
                                     
                                     <div className="space-y-3">
                                       <div className="flex items-center justify-between">
