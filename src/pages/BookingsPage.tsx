@@ -221,6 +221,7 @@ export default function BookingsPage() {
 
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [isGoogleSynced, setIsGoogleSynced] = useState(isSignedIn());
   const lastLoadTimeRef = useRef<number>(0);
 
   const uniqueCustomers = useMemo(() => {
@@ -503,6 +504,7 @@ export default function BookingsPage() {
     } finally {
       if (lastLoadTimeRef.current === timestamp) {
         setEventsLoading(false);
+        setIsGoogleSynced(isSignedIn());
       }
     }
   }, [viewMode, currentDate, items]); // Removed refresh from deps
@@ -697,10 +699,34 @@ export default function BookingsPage() {
     const onFocus = () => {
       refresh();
       loadUnifiedEvents();
+      setIsGoogleSynced(isSignedIn());
     };
     window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    
+    const handleAuthComplete = () => {
+      setIsGoogleSynced(true);
+      loadUnifiedEvents();
+    };
+    window.addEventListener('g_cal_auth_complete', handleAuthComplete);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener('g_cal_auth_complete', handleAuthComplete);
+    };
   }, [loadUnifiedEvents, refresh]);
+
+  const handleSyncGoogleCalendar = async () => {
+    const syncToast = toast.loading("Syncing Google Calendar...");
+    try {
+      await signInToGoogle();
+      setIsGoogleSynced(true);
+      await loadUnifiedEvents();
+      toast.success("Personal calendar items synchronized!", { id: syncToast });
+    } catch (err: any) {
+      console.error("Manual sync failed:", err);
+      toast.error(err.message || "Failed to sync calendar", { id: syncToast });
+    }
+  };
 
   // Calendar Grid Generation
   const calendarDays = useMemo(() => {
@@ -1543,6 +1569,28 @@ export default function BookingsPage() {
               <Printer className="h-3 w-3" />
             </Button>
 
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSyncGoogleCalendar} 
+                    className={cn(
+                      "h-8 text-xs gap-2 transition-all",
+                      isGoogleSynced ? "border-blue-500/50 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10" : "border-zinc-700 text-zinc-400"
+                    )}
+                  >
+                    <CalendarIcon className={cn("h-3 w-3", isGoogleSynced && "animate-pulse")} />
+                    {isGoogleSynced ? "Personal Sync Active" : "Show My Personal Calendar"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isGoogleSynced ? "Your Google Calendar is connected and syncing personal items." : "Click to authorize and show your personal Google Calendar events."}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
 
             <Button variant="outline" size="icon" onClick={handlePurgeGenericBookings} className="h-8 w-8 text-red-500/50 hover:text-red-500 border-red-500/20" title="Cleanup Generic Test Bookings">
@@ -1584,6 +1632,15 @@ export default function BookingsPage() {
               </Button>
               <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} title="Print All Bookings">
                 <Printer className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={handleSyncGoogleCalendar} 
+                className={cn(isGoogleSynced ? "border-blue-500 text-blue-400" : "text-zinc-400")}
+                title="Sync Google Calendar"
+              >
+                <CalendarIcon className={cn("h-4 w-4", isGoogleSynced && "animate-pulse")} />
               </Button>
               <Button className="bg-primary hover:bg-primary/90" size="sm" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
                 <Plus className="h-4 w-4" />

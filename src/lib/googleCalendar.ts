@@ -144,19 +144,25 @@ export async function initGoogleCalendar(config: CalendarConfig): Promise<void> 
 
                 // Restore token if exists
                 const storedToken = localStorage.getItem('g_cal_token');
+                const wasConnected = localStorage.getItem('g_cal_connected') === 'true';
+
                 if (storedToken) {
                     try {
                         const token = JSON.parse(storedToken);
                         if (token.expires_at > Date.now()) {
                             (window as any).gapi.client.setToken({ access_token: token.access_token });
-                        } else if (localStorage.getItem('g_cal_connected') === 'true') {
+                        } else if (wasConnected) {
                             // Proactively try to refresh if it was previously connected
                             console.log("[GoogleCalendar] Proactively refreshing expired token...");
-                            setTimeout(() => ensureSignedIn().catch(() => { }), 1000);
+                            ensureSignedIn().catch(() => { });
                         }
                     } catch (e) {
                         console.warn("[GoogleCalendar] Failed to restore token:", e);
                     }
+                } else if (wasConnected) {
+                    // Even if no local token, try to load from Supabase shared storage
+                    console.log("[GoogleCalendar] Local token missing but previously connected. Loading shared session...");
+                    ensureSignedIn().catch(() => { });
                 }
 
                 resolve();
