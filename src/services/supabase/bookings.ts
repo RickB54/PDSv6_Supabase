@@ -110,7 +110,7 @@ export async function create(input: BookingInput) {
     }
 
     // 3. Create Booking
-    const bookedByInfo = input.booked_by || 'Customer Web';
+    const bookedByInfo = input.booked_by || 'Public Website';
     const fullNotes = input.add_ons && input.add_ons.length > 0
       ? (input.notes ? `${input.notes}\n\nAdd-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}` : `Add-Ons: ${input.add_ons.join(', ')}\nBooked by: ${bookedByInfo}`)
       : (input.notes ? `${input.notes}\nBooked by: ${bookedByInfo}` : `Booked by: ${bookedByInfo}`);

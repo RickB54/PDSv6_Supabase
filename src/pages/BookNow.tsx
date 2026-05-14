@@ -631,7 +631,7 @@ const BookNow = () => {
             notes: finalNotes,
             price_total: discountedTotal,
             status: 'tentative',
-            booked_by: 'Customer Web'
+            booked_by: 'Public Website'
           });
 
           if (!createdBooking) {

@@ -42,7 +42,7 @@ import { exportCustomerHistoryPDF } from "@/lib/pdf-export";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import supabase from "@/lib/supabase"; // Realtime import
 import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } from "@/lib/unifiedCalendar";
-import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig } from "@/lib/googleCalendar";
+import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig, signInToGoogle } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
 import VehicleClassificationDialog from "@/components/bookings/VehicleClassificationDialog";
@@ -232,7 +232,7 @@ export default function BookingsPage() {
         ...items.map(b => (b.customer || '').trim()),
         ...unifiedEvents.map(e => (e.customer || 'INTERNAL: System Blocks').trim())
       ])
-    ).filter(name => name && (name !== 'INTERNAL: System Blocks' || sourceFilter === 'HYBRID AVAILABILITY SYSTEM')).map(customerName => {
+    ).filter(name => name && (name !== 'INTERNAL: System Blocks' || sourceFilter === 'Hybrid Availability System' || sourceFilter === 'INTERNAL: System Blocks')).map(customerName => {
       if (!customerName) return null;
       
       const customerData = customers.find(c => {
@@ -255,7 +255,7 @@ export default function BookingsPage() {
             archiveFilter === 'archived' ? isArchived : !isArchived;
           
           const isBlocked = b.status === 'blocked' || (b as any).type === 'manual-block';
-          const isBlockedVisible = sourceFilter === 'HYBRID AVAILABILITY SYSTEM' ? true : !isBlocked;
+          const isBlockedVisible = (sourceFilter === 'Hybrid Availability System' || sourceFilter === 'INTERNAL: System Blocks') ? true : !isBlocked;
           
           return isCustMatch && isArchiveVisible && isBlockedVisible;
         }).map(b => ({ ...b, type: 'booking' as const })),
@@ -268,14 +268,27 @@ export default function BookingsPage() {
             archiveFilter === 'archived' ? isArchived : !isArchived;
             
           const isBlocked = e.type === 'manual-block' || (e as any).status === 'blocked';
-          const isBlockedVisible = sourceFilter === 'HYBRID AVAILABILITY SYSTEM' ? true : !isBlocked;
+          const isBlockedVisible = (sourceFilter === 'Hybrid Availability System' || sourceFilter === 'INTERNAL: System Blocks') ? true : !isBlocked;
             
           return isCustMatch && isArchiveVisible && e.type !== 'booking' && isBlockedVisible;
         })
       ];
 
       // Filters
-      if (sourceFilter) customerEvents = customerEvents.filter(e => ((e as any).source || (e as any).source_origin) === sourceFilter);
+      if (sourceFilter) {
+        customerEvents = customerEvents.filter(e => {
+          const s = ((e as any).source || (e as any).source_origin || '').toLowerCase();
+          const f = sourceFilter.toLowerCase();
+          // Match the specific source or if we're looking at Hybrid/System blocks
+          if (f === 'hybrid availability system' || f === 'internal: system blocks') {
+            return s === 'hybrid availability system' || s === 'internal: system blocks' || s === 'manual' || s === 'google';
+          }
+          if (f === 'public website') {
+            return s === 'public website' || s === 'customer web';
+          }
+          return s === f;
+        });
+      }
       if (statusFilter) customerEvents = customerEvents.filter(e => ((e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending')) === statusFilter);
       if (dateFilter.start) {
         customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { 
@@ -2777,6 +2790,7 @@ export default function BookingsPage() {
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuItem onClick={() => setSourceFilter('Business Launch Manager')} className="cursor-pointer">Business Launch Manager</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSourceFilter('Hybrid Availability System')} className="cursor-pointer">Hybrid Availability System</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSourceFilter('INTERNAL: System Blocks')} className="cursor-pointer">Internal System Blocks</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSourceFilter('Public Website')} className="cursor-pointer">Public Website</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setSourceFilter('Manual Entry')} className="cursor-pointer">Manual Entry</DropdownMenuItem>
                   </DropdownMenuContent>

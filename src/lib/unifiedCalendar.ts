@@ -182,6 +182,7 @@ export async function getUnifiedCalendarEvents(
                     date: start,
                     endTime: end,
                     source: 'google',
+                    source_origin: 'Hybrid Availability System',
                     isDeletable: false,
                     color: 'blue',
                     icon: '📅'
