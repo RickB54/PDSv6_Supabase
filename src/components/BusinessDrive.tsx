@@ -6,7 +6,7 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw
+    RefreshCw, Camera
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -451,12 +451,16 @@ export default function BusinessDrive() {
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
                                 <FolderPlus className="w-4 h-4 mr-2" /> New Folder
                             </DropdownMenuItem>
+                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer md:hidden" onClick={() => document.getElementById('drive-camera')?.click()}>
+                                <Camera className="w-4 h-4 mr-2" /> Take Photo
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
                                 <Upload className="w-4 h-4 mr-2" /> Upload Files
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <input type="file" id="drive-upload" className="hidden" multiple onChange={handleUpload} />
+                    <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={handleUpload} />
                 </div>
             </div>
 
