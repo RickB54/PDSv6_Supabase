@@ -268,6 +268,51 @@ const FileManager = () => {
     return null;
   };
 
+  const handleViewPDF = async (record: PDFRecord) => {
+    setSelectedRecord(record);
+    setViewerLoading(true);
+    setViewerError(null);
+    markViewed("file", record.id);
+    
+    try {
+      // 1. Check if it's already a valid viewer-ready string
+      const isDataUri = record.pdfData?.startsWith('data:application/pdf');
+      const isBlobUrl = record.pdfData?.startsWith('blob:');
+      
+      if (isDataUri) {
+        // Converting data: URI to Blob URL is much more stable in most browsers
+        const base64Content = record.pdfData.split(',')[1];
+        if (!base64Content) throw new Error("Empty PDF data content");
+        
+        const byteCharacters = atob(base64Content);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        setViewerSrc(blobUrl);
+      } else if (isBlobUrl) {
+        setViewerSrc(record.pdfData);
+      } else {
+        const backendUrl = buildBackendUrl(record);
+        if (backendUrl) {
+          setViewerSrc(backendUrl);
+        } else {
+          setViewerSrc(null);
+          setViewerError("PDF display error: Missing data source.");
+        }
+      }
+    } catch (err: any) {
+      console.error("PDF Preview Logic Error:", err);
+      setViewerError("Unable to display PDF. Try downloading the file instead.");
+    } finally {
+      setViewerLoading(false);
+    }
+  };
+
   const downloadPDF = (record: PDFRecord) => {
     const link = document.createElement('a');
     link.href = record.pdfData;
@@ -450,10 +495,14 @@ const FileManager = () => {
                         [...filteredRecords]
                           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                           .map((record) => (
-                            <TableRow key={record.id}>
+                            <TableRow 
+                              key={record.id} 
+                              className="cursor-pointer hover:bg-zinc-800/30 transition-colors group"
+                              onClick={() => handleViewPDF(record)}
+                            >
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2" title={record.fileName}>
-                                  <span className="truncate max-w-[200px]">{formatDisplayName(record.fileName)}</span>
+                                  <span className="truncate max-w-[200px] group-hover:text-blue-400 transition-colors">{formatDisplayName(record.fileName)}</span>
                                   {isViewed("file", record.id) ? (
                                     <span className="text-xs text-zinc-500 shrink-0">• viewed</span>
                                   ) : null}
@@ -470,56 +519,8 @@ const FileManager = () => {
                                 {new Date(record.timestamp).toLocaleString()}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex gap-2 justify-end">
-                                  <Button size="icon" variant="ghost" onClick={async () => {
-                                    setSelectedRecord(record);
-                                    setViewerLoading(true);
-                                    setViewerError(null);
-                                    // Mark record as viewed
-                                    markViewed("file", record.id);
-                                    
-                                    try {
-                                      // Prefer local data/blob URL first, then backend URL
-                                      const isDataUri = record.pdfData?.startsWith('data:application/pdf');
-                                      const isBlobUrl = record.pdfData?.startsWith('blob:');
-                                      
-                                      if (isDataUri) {
-                                        // Converting data: URI to Blob URL is much more stable in most browsers
-                                        const base64Content = record.pdfData.split(',')[1];
-                                        if (!base64Content) throw new Error("Empty PDF data content");
-                                        
-                                        const byteCharacters = atob(base64Content);
-                                        const byteNumbers = new Array(byteCharacters.length);
-                                        for (let i = 0; i < byteCharacters.length; i++) {
-                                          byteNumbers[i] = byteCharacters.charCodeAt(i);
-                                        }
-                                        const byteArray = new Uint8Array(byteNumbers);
-                                        const blob = new Blob([byteArray], { type: 'application/pdf' });
-                                        const blobUrl = URL.createObjectURL(blob);
-                                        
-                                        setViewerSrc(blobUrl);
-                                        setViewerLoading(false);
-                                      } else if (isBlobUrl) {
-                                        setViewerSrc(record.pdfData);
-                                        setViewerLoading(false);
-                                      } else {
-                                        const backendUrl = buildBackendUrl(record);
-                                        if (backendUrl) {
-                                          setViewerSrc(backendUrl);
-                                          setViewerLoading(false);
-                                        } else {
-                                          setViewerSrc(null);
-                                          setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
-                                          setViewerLoading(false);
-                                        }
-                                      }
-                                    } catch (err: any) {
-                                      console.error("PDF Preview Conversion Error:", err);
-                                      setViewerSrc(null);
-                                      setViewerError("PDF display error: " + (err.message || String(err)));
-                                      setViewerLoading(false);
-                                    }
-                                  }}>
+                                <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                                  <Button size="icon" variant="ghost" className="hover:bg-blue-600/20 hover:text-blue-400" onClick={() => handleViewPDF(record)}>
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                   <Button size="icon" variant="ghost" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
@@ -533,19 +534,10 @@ const FileManager = () => {
                                     variant="ghost"
                                     onClick={() => {
                                       try {
-                                        // Deterministically map bell state to viewed status
-                                        // Bell ON (yellow) means unviewed; Bell OFF (white) means viewed
                                         const viewed = isViewed("file", record.id);
-                                        if (viewed) {
-                                          // Turn bell ON → mark as unviewed
-                                          unmarkViewed("file", record.id);
-                                        } else {
-                                          // Turn bell OFF → mark as viewed
-                                          markViewed("file", record.id);
-                                        }
-                                        // Clear any historical admin alerts tied to this exact archive ID
+                                        if (viewed) unmarkViewed("file", record.id);
+                                        else markViewed("file", record.id);
                                         try { dismissAlertsForRecord(record.recordType, record.id); } catch { }
-                                        // Force re-render
                                         setRecords(prev => [...prev]);
                                       } catch { }
                                     }}
@@ -580,7 +572,11 @@ const FileManager = () => {
                     [...filteredRecords]
                       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                       .map((record) => (
-                        <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+                        <div 
+                          key={record.id} 
+                          className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3 active:bg-zinc-800 transition-colors cursor-pointer"
+                          onClick={() => handleViewPDF(record)}
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="font-semibold text-base truncate flex items-center gap-2" title={record.fileName}>
@@ -598,76 +594,24 @@ const FileManager = () => {
                             {new Date(record.timestamp).toLocaleString()}
                           </div>
 
-                          <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                          <div className="flex items-center justify-between pt-3 border-t border-zinc-800" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-1">
-                              {/* Viewer Toggle */}
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
-                                setSelectedRecord(record);
-                                setViewerLoading(true);
-                                setViewerError(null);
-                                // Mark record as viewed
-                                markViewed("file", record.id);
-                                
-                                try {
-                                  // Prefer local data/blob URL first, then backend URL
-                                  const isDataUri = record.pdfData?.startsWith('data:application/pdf');
-                                  const isBlobUrl = record.pdfData?.startsWith('blob:');
-                                  
-                                  if (isDataUri) {
-                                    // Converting data: URI to Blob URL is much more stable in most browsers
-                                    const base64Content = record.pdfData.split(',')[1];
-                                    if (!base64Content) throw new Error("Empty PDF data content");
-                                    
-                                    const byteCharacters = atob(base64Content);
-                                    const byteNumbers = new Array(byteCharacters.length);
-                                    for (let i = 0; i < byteCharacters.length; i++) {
-                                      byteNumbers[i] = byteCharacters.charCodeAt(i);
-                                    }
-                                    const byteArray = new Uint8Array(byteNumbers);
-                                    const blob = new Blob([byteArray], { type: 'application/pdf' });
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    
-                                    setViewerSrc(blobUrl);
-                                    setViewerLoading(false);
-                                  } else if (isBlobUrl) {
-                                    setViewerSrc(record.pdfData);
-                                    setViewerLoading(false);
-                                  } else {
-                                    const backendUrl = buildBackendUrl(record);
-                                    if (backendUrl) {
-                                      setViewerSrc(backendUrl);
-                                      setViewerLoading(false);
-                                    } else {
-                                      setViewerSrc(null);
-                                      setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
-                                      setViewerLoading(false);
-                                    }
-                                  }
-                                } catch (err: any) {
-                                  console.error("Mobile PDF Preview Conversion Error:", err);
-                                  setViewerSrc(null);
-                                  setViewerError("PDF display error: " + (err.message || String(err)));
-                                  setViewerLoading(false);
-                                }
-                              }}>
-                                <Eye className="h-4 w-4" />
+                              <Button size="icon" variant="ghost" className="h-10 w-10 bg-blue-600/10 text-blue-400" onClick={() => handleViewPDF(record)}>
+                                <Eye className="h-5 w-5" />
                               </Button>
-                              {/* Download */}
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
-                                <Download className="h-4 w-4" />
+                              <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
+                                <Download className="h-5 w-5" />
                               </Button>
-                              {/* Print */}
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }}>
-                                <Printer className="h-4 w-4" />
+                              <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }}>
+                                <Printer className="h-5 w-5" />
                               </Button>
                             </div>
 
                             <div className="flex gap-1">
-                              {/* Alert Toggle */}
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8"
+                                className="h-10 w-10"
                                 onClick={() => {
                                   try {
                                     const viewed = isViewed("file", record.id);
@@ -679,14 +623,13 @@ const FileManager = () => {
                                 }}
                               >
                                 {!isViewed("file", record.id) ? (
-                                  <Bell className="h-4 w-4 text-yellow-400" />
+                                  <Bell className="h-5 w-5 text-yellow-400" />
                                 ) : (
-                                  <Bell className="h-4 w-4 text-zinc-600" />
+                                  <Bell className="h-5 w-5 text-zinc-600" />
                                 )}
                               </Button>
-                              {/* Delete */}
-                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(record.id)}>
-                                <Trash2 className="h-4 w-4" />
+                              <Button size="icon" variant="ghost" className="h-10 w-10 text-destructive hover:text-destructive" onClick={() => setDeleteId(record.id)}>
+                                <Trash2 className="h-5 w-5" />
                               </Button>
                             </div>
                           </div>
@@ -870,8 +813,8 @@ const FileManager = () => {
         </DialogContent>
       </Dialog >
 
-      {/* PDF Preview Dialog */}
-      < Dialog open={!!selectedRecord} onOpenChange={(open) => {
+      {/* Immersive PDF Preview Dialog (PC and Mobile Optimized) */}
+      <Dialog open={!!selectedRecord} onOpenChange={(open) => {
         if (!open) {
           setSelectedRecord(null);
           setViewerSrc(null);
@@ -879,37 +822,77 @@ const FileManager = () => {
           setViewerLoading(false);
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-          <DialogHeader>
-            <DialogTitle>{selectedRecord?.fileName || "PDF Preview"}</DialogTitle>
-          </DialogHeader>
-          {selectedRecord && (
-            <div className="w-full h-[90vh]">
-              {viewerLoading && (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Loading PDF...
-                </div>
-              )}
-              {!viewerLoading && viewerSrc && (
-                <iframe
-                  key={selectedRecord.id}
-                  src={viewerSrc}
-                  title={selectedRecord.fileName}
-                  className="w-full h-full border-0"
-                  onError={() => toast({ title: 'PDF failed to load — download instead', variant: 'destructive' })}
-                />
-              )}
-              {!viewerLoading && !viewerSrc && (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <img src="/placeholder.svg" alt="PDF unavailable" className="w-24 h-24 opacity-40" />
-                  <p className="mt-3 text-sm text-muted-foreground">{viewerError || "PDF unavailable. Try downloading or check the File Manager."}</p>
-                  {selectedRecord?.pdfData && (
-                    <Button className="mt-4" onClick={() => downloadPDF(selectedRecord!)}>
-                      Download {selectedRecord.fileName}
+        <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] p-0 bg-black/95 border-none outline-none overflow-hidden flex flex-col items-stretch z-[9999]">
+          {/* Header Controls */}
+          <div className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
+            <div className="flex items-center gap-4 text-white">
+              <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={() => setSelectedRecord(null)}>
+                <X className="w-6 h-6" />
+              </Button>
+              <div className="flex flex-col">
+                <span className="text-sm font-black truncate max-w-[250px] sm:max-w-[400px]">{selectedRecord?.fileName}</span>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase">{selectedRecord?.recordType} • {selectedRecord?.date}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden sm:flex" onClick={() => selectedRecord && downloadPDF(selectedRecord)}>
+                <Download className="w-5 h-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => window.print()}>
+                <Printer className="w-5 h-5" />
+              </Button>
+              <div className="h-6 w-px bg-white/20 mx-2 hidden sm:block" />
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                <Grid className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Main Viewer Area */}
+          <div className="flex-1 relative flex items-center justify-center overflow-auto p-2 sm:p-4 pt-20 pb-20 sm:pb-4">
+            {selectedRecord && (
+              <div className="w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
+                {viewerLoading && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-white font-bold">Analyzing Document...</p>
+                  </div>
+                )}
+                
+                {!viewerLoading && viewerSrc ? (
+                  <div className="bg-white shadow-2xl w-full max-w-[850px] h-full sm:aspect-[8.5/11] rounded-sm overflow-hidden flex flex-col">
+                    <iframe
+                      key={selectedRecord.id}
+                      src={viewerSrc}
+                      title={selectedRecord.fileName}
+                      className="w-full flex-1 border-0"
+                    />
+                  </div>
+                ) : !viewerLoading && (
+                  <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
+                    <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center">
+                      <FileText className="w-12 h-12 text-zinc-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-white text-lg font-black mb-2">Preview Unavailable</h3>
+                      <p className="text-zinc-400 text-sm">{viewerError || "Mobile security may block inline PDF viewing. Please download to view the full document."}</p>
+                    </div>
+                    <Button className="bg-blue-600 hover:bg-blue-700 w-full font-bold" onClick={() => downloadPDF(selectedRecord)}>
+                      <Download className="w-4 h-4 mr-2" /> Download PDF
                     </Button>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Quick Action Footer */}
+          {!viewerLoading && selectedRecord && (
+            <div className="sm:hidden absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-center">
+              <Button className="bg-blue-600 hover:bg-blue-700 font-bold px-8 shadow-xl" onClick={() => downloadPDF(selectedRecord)}>
+                <Download className="w-4 h-4 mr-2" /> Download Document
+              </Button>
             </div>
           )}
         </DialogContent>

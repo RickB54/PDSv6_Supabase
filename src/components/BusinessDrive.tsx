@@ -316,7 +316,10 @@ export default function BusinessDrive() {
             </div>
 
             {/* Gemini Summary Bar (Aesthetic) */}
-            <div className="bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent p-5 rounded-2xl border border-blue-500/20 flex items-center justify-between shadow-lg relative overflow-hidden group">
+            <div 
+                className="bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent p-5 rounded-2xl border border-blue-500/20 flex items-center justify-between shadow-lg relative overflow-hidden group cursor-pointer"
+                onClick={handleAnalyzeFolder}
+            >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex items-center gap-4 relative z-10">
                     <div className={cn(
@@ -336,7 +339,6 @@ export default function BusinessDrive() {
                 <Button 
                     variant="outline" 
                     className="border-zinc-700 hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest hidden sm:flex relative z-10"
-                    onClick={handleAnalyzeFolder}
                     disabled={isAnalyzing}
                 >
                     {isAnalyzing ? "Processing..." : "Analyze Folder"}
