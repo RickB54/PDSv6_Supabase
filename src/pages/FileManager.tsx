@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getCurrentUser } from "@/lib/auth";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { FileText, Download, Search, Filter, Trash2, Eye, BellOff, Bell, Printer, X } from "lucide-react";
+import { FileText, Download, Search, Filter, Trash2, Eye, BellOff, Bell, Printer, X, Folder, Plus, Grid, List, MoreVertical, ChevronRight, Upload, HardDrive, Archive, File } from "lucide-react";
+import BusinessDrive from "@/components/BusinessDrive";
 import { markViewed, isViewed, unmarkViewed } from "@/lib/viewTracker";
 import {
   AlertDialog,
@@ -24,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -319,140 +321,287 @@ const FileManager = () => {
     <div className="min-h-screen bg-background">
       <PageHeader title="File Manager" />
       <main className="container mx-auto px-4 py-8 max-w-7xl space-y-8 animate-fade-in">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-red-900/20 to-black p-6 rounded-xl border border-red-900/20 shadow-2xl">
-          <div>
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">PDF Archive</h1>
-            <p className="text-zinc-400 mt-2">Manage and organize all your business documents in one secure place.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="text-right hidden md:block">
-              <div className="text-2xl font-bold text-white mb-1">{records.length}</div>
-              <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Files</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto">
-            <Button
-              variant="destructive"
-              onClick={() => setDeleteAllOpen(true)}
+        <Tabs defaultValue="archive" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-[#0d1117] border border-zinc-800 h-14 p-1 rounded-xl shadow-lg">
+            <TabsTrigger 
+              value="archive" 
+              className="data-[state=active]:bg-red-700 data-[state=active]:text-white font-black uppercase tracking-widest text-xs h-full rounded-lg transition-all"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete All Files
-            </Button>
-            <Button className="bg-red-700 hover:bg-red-800" onClick={() => setAdminModalOpen(true)}>
-              Create Admin Update PDF
-            </Button>
-          </div>
+              <Archive className="w-4 h-4 mr-2" /> Alerts & PDF Archive
+            </TabsTrigger>
+            <TabsTrigger 
+              value="drive" 
+              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white font-black uppercase tracking-widest text-xs h-full rounded-lg transition-all"
+            >
+              <HardDrive className="w-4 h-4 mr-2" /> Business Drive (Docs)
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Filters */}
-          <Card className="p-4 bg-gradient-card border-border">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by file name or customer..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-10"
-                />
-                {searchTerm && (
-                  <button 
-                    onClick={() => setSearchTerm('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+          <TabsContent value="archive" className="space-y-8 focus-visible:outline-none focus-visible:ring-0">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-red-900/20 to-black p-6 rounded-xl border border-red-900/20 shadow-2xl">
+              <div>
+                <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">PDF Archive</h1>
+                <p className="text-zinc-400 mt-2">Manage and organize all your business documents in one secure place.</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="text-right hidden md:block">
+                  <div className="text-2xl font-bold text-white mb-1">{records.length}</div>
+                  <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Files</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 w-full sm:w-auto">
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteAllOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete All Files
+                </Button>
+                <Button className="bg-red-700 hover:bg-red-800" onClick={() => setAdminModalOpen(true)}>
+                  Create Admin Update PDF
+                </Button>
               </div>
 
-              <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val); setUserChangedTypeFilter(true); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Invoice">Invoices</SelectItem>
-                  <SelectItem value="Estimate">Estimates</SelectItem>
-                  <SelectItem value="Job">Jobs</SelectItem>
-                  <SelectItem value="Checklist">Checklists</SelectItem>
-                  <SelectItem value="Customer">Customer Records</SelectItem>
-                  <SelectItem value="Employee Training">Employee Training</SelectItem>
-                  <SelectItem value="Bookings">Bookings</SelectItem>
-                  <SelectItem value="Admin Updates">Admin Updates</SelectItem>
-                  <SelectItem value="Payroll">Payroll</SelectItem>
-                  <SelectItem value="Employee Contact">Employee Contact</SelectItem>
-                  <SelectItem value="add-Ons">Add-Ons</SelectItem>
-                  <SelectItem value="Vehicle History">Vehicle History</SelectItem>
-                  <SelectItem value="Inventory Report">Inventory Report</SelectItem>
-                  <SelectItem value="Prospects">Prospects</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Filters */}
+              <Card className="p-4 bg-gradient-card border-border">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by file name or customer..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-10"
+                    />
+                    {searchTerm && (
+                      <button 
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
 
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Time" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">This Week</SelectItem>
-                  <SelectItem value="month">This Month</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
+                  <Select value={typeFilter} onValueChange={(val) => { setTypeFilter(val); setUserChangedTypeFilter(true); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="Invoice">Invoices</SelectItem>
+                      <SelectItem value="Estimate">Estimates</SelectItem>
+                      <SelectItem value="Job">Jobs</SelectItem>
+                      <SelectItem value="Checklist">Checklists</SelectItem>
+                      <SelectItem value="Customer">Customer Records</SelectItem>
+                      <SelectItem value="Employee Training">Employee Training</SelectItem>
+                      <SelectItem value="Bookings">Bookings</SelectItem>
+                      <SelectItem value="Admin Updates">Admin Updates</SelectItem>
+                      <SelectItem value="Payroll">Payroll</SelectItem>
+                      <SelectItem value="Employee Contact">Employee Contact</SelectItem>
+                      <SelectItem value="add-Ons">Add-Ons</SelectItem>
+                      <SelectItem value="Vehicle History">Vehicle History</SelectItem>
+                      <SelectItem value="Inventory Report">Inventory Report</SelectItem>
+                      <SelectItem value="Prospects">Prospects</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-          {/* File List */}
-          <Card className="bg-gradient-card border-border">
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>File Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">This Week</SelectItem>
+                      <SelectItem value="month">This Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </Card>
+
+              {/* File List */}
+              <Card className="bg-gradient-card border-border">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>File Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRecords.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No files found</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        [...filteredRecords]
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .map((record) => (
+                            <TableRow key={record.id}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2" title={record.fileName}>
+                                  <span className="truncate max-w-[200px]">{formatDisplayName(record.fileName)}</span>
+                                  {isViewed("file", record.id) ? (
+                                    <span className="text-xs text-zinc-500 shrink-0">• viewed</span>
+                                  ) : null}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded-full">
+                                  {record.recordType}
+                                </span>
+                              </TableCell>
+                              <TableCell>{record.customerName}</TableCell>
+                              <TableCell>{record.date}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {new Date(record.timestamp).toLocaleString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button size="icon" variant="ghost" onClick={async () => {
+                                    setSelectedRecord(record);
+                                    setViewerLoading(true);
+                                    setViewerError(null);
+                                    // Mark record as viewed
+                                    markViewed("file", record.id);
+                                    
+                                    try {
+                                      // Prefer local data/blob URL first, then backend URL
+                                      const isDataUri = record.pdfData?.startsWith('data:application/pdf');
+                                      const isBlobUrl = record.pdfData?.startsWith('blob:');
+                                      
+                                      if (isDataUri) {
+                                        // Converting data: URI to Blob URL is much more stable in most browsers
+                                        const base64Content = record.pdfData.split(',')[1];
+                                        if (!base64Content) throw new Error("Empty PDF data content");
+                                        
+                                        const byteCharacters = atob(base64Content);
+                                        const byteNumbers = new Array(byteCharacters.length);
+                                        for (let i = 0; i < byteCharacters.length; i++) {
+                                          byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                        }
+                                        const byteArray = new Uint8Array(byteNumbers);
+                                        const blob = new Blob([byteArray], { type: 'application/pdf' });
+                                        const blobUrl = URL.createObjectURL(blob);
+                                        
+                                        setViewerSrc(blobUrl);
+                                        setViewerLoading(false);
+                                      } else if (isBlobUrl) {
+                                        setViewerSrc(record.pdfData);
+                                        setViewerLoading(false);
+                                      } else {
+                                        const backendUrl = buildBackendUrl(record);
+                                        if (backendUrl) {
+                                          setViewerSrc(backendUrl);
+                                          setViewerLoading(false);
+                                        } else {
+                                          setViewerSrc(null);
+                                          setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
+                                          setViewerLoading(false);
+                                        }
+                                      }
+                                    } catch (err: any) {
+                                      console.error("PDF Preview Conversion Error:", err);
+                                      setViewerSrc(null);
+                                      setViewerError("PDF display error: " + (err.message || String(err)));
+                                      setViewerLoading(false);
+                                    }
+                                  }}>
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }} title="Print">
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      try {
+                                        // Deterministically map bell state to viewed status
+                                        // Bell ON (yellow) means unviewed; Bell OFF (white) means viewed
+                                        const viewed = isViewed("file", record.id);
+                                        if (viewed) {
+                                          // Turn bell ON → mark as unviewed
+                                          unmarkViewed("file", record.id);
+                                        } else {
+                                          // Turn bell OFF → mark as viewed
+                                          markViewed("file", record.id);
+                                        }
+                                        // Clear any historical admin alerts tied to this exact archive ID
+                                        try { dismissAlertsForRecord(record.recordType, record.id); } catch { }
+                                        // Force re-render
+                                        setRecords(prev => [...prev]);
+                                      } catch { }
+                                    }}
+                                    title="Toggle alert flag for this file"
+                                  >
+                                    {!isViewed("file", record.id) ? (
+                                      <Bell className="h-4 w-4 text-yellow-400" />
+                                    ) : (
+                                      <Bell className="h-4 w-4 text-white" />
+                                    )}
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => setDeleteId(record.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4 p-4">
                   {filteredRecords.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
-                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No files found</p>
-                      </TableCell>
-                    </TableRow>
+                    <div className="text-center text-muted-foreground py-8">
+                      <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p>No files found</p>
+                    </div>
                   ) : (
                     [...filteredRecords]
                       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                       .map((record) => (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2" title={record.fileName}>
-                              <span className="truncate max-w-[200px]">{formatDisplayName(record.fileName)}</span>
-                              {isViewed("file", record.id) ? (
-                                <span className="text-xs text-zinc-500 shrink-0">• viewed</span>
-                              ) : null}
+                        <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-base truncate flex items-center gap-2" title={record.fileName}>
+                                {formatDisplayName(record.fileName)}
+                                {isViewed("file", record.id) && <span className="text-xs text-zinc-500 font-normal shrink-0">• viewed</span>}
+                              </div>
+                              <div className="text-sm text-zinc-400 mt-1">{record.customerName}</div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded-full">
+                            <span className="shrink-0 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
                               {record.recordType}
                             </span>
-                          </TableCell>
-                          <TableCell>{record.customerName}</TableCell>
-                          <TableCell>{record.date}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          </div>
+
+                          <div className="text-xs text-zinc-500">
                             {new Date(record.timestamp).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
-                              <Button size="icon" variant="ghost" onClick={async () => {
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                            <div className="flex gap-1">
+                              {/* Viewer Toggle */}
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
                                 setSelectedRecord(record);
                                 setViewerLoading(true);
                                 setViewerError(null);
@@ -495,7 +644,7 @@ const FileManager = () => {
                                     }
                                   }
                                 } catch (err: any) {
-                                  console.error("PDF Preview Conversion Error:", err);
+                                  console.error("Mobile PDF Preview Conversion Error:", err);
                                   setViewerSrc(null);
                                   setViewerError("PDF display error: " + (err.message || String(err)));
                                   setViewerLoading(false);
@@ -503,181 +652,58 @@ const FileManager = () => {
                               }}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
+                              {/* Download */}
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }} title="Print">
+                              {/* Print */}
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }}>
                                 <Printer className="h-4 w-4" />
                               </Button>
+                            </div>
+
+                            <div className="flex gap-1">
+                              {/* Alert Toggle */}
                               <Button
                                 size="icon"
                                 variant="ghost"
+                                className="h-8 w-8"
                                 onClick={() => {
                                   try {
-                                    // Deterministically map bell state to viewed status
-                                    // Bell ON (yellow) means unviewed; Bell OFF (white) means viewed
                                     const viewed = isViewed("file", record.id);
-                                    if (viewed) {
-                                      // Turn bell ON → mark as unviewed
-                                      unmarkViewed("file", record.id);
-                                    } else {
-                                      // Turn bell OFF → mark as viewed
-                                      markViewed("file", record.id);
-                                    }
-                                    // Clear any historical admin alerts tied to this exact archive ID
+                                    if (viewed) unmarkViewed("file", record.id);
+                                    else markViewed("file", record.id);
                                     try { dismissAlertsForRecord(record.recordType, record.id); } catch { }
-                                    // Force re-render
                                     setRecords(prev => [...prev]);
                                   } catch { }
                                 }}
-                                title="Toggle alert flag for this file"
                               >
                                 {!isViewed("file", record.id) ? (
                                   <Bell className="h-4 w-4 text-yellow-400" />
                                 ) : (
-                                  <Bell className="h-4 w-4 text-white" />
+                                  <Bell className="h-4 w-4 text-zinc-600" />
                                 )}
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => setDeleteId(record.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                              {/* Delete */}
+                              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(record.id)}>
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                        </div>
                       ))
                   )}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4 p-4">
-              {filteredRecords.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>No files found</p>
                 </div>
-              ) : (
-                [...filteredRecords]
-                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                  .map((record) => (
-                    <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-base truncate flex items-center gap-2" title={record.fileName}>
-                            {formatDisplayName(record.fileName)}
-                            {isViewed("file", record.id) && <span className="text-xs text-zinc-500 font-normal shrink-0">• viewed</span>}
-                          </div>
-                          <div className="text-sm text-zinc-400 mt-1">{record.customerName}</div>
-                        </div>
-                        <span className="shrink-0 px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full">
-                          {record.recordType}
-                        </span>
-                      </div>
-
-                      <div className="text-xs text-zinc-500">
-                        {new Date(record.timestamp).toLocaleString()}
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
-                        <div className="flex gap-1">
-                          {/* Viewer Toggle */}
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
-                            setSelectedRecord(record);
-                            setViewerLoading(true);
-                            setViewerError(null);
-                            // Mark record as viewed
-                            markViewed("file", record.id);
-                            
-                            try {
-                              // Prefer local data/blob URL first, then backend URL
-                              const isDataUri = record.pdfData?.startsWith('data:application/pdf');
-                              const isBlobUrl = record.pdfData?.startsWith('blob:');
-                              
-                              if (isDataUri) {
-                                // Converting data: URI to Blob URL is much more stable in most browsers
-                                const base64Content = record.pdfData.split(',')[1];
-                                if (!base64Content) throw new Error("Empty PDF data content");
-                                
-                                const byteCharacters = atob(base64Content);
-                                const byteNumbers = new Array(byteCharacters.length);
-                                for (let i = 0; i < byteCharacters.length; i++) {
-                                  byteNumbers[i] = byteCharacters.charCodeAt(i);
-                                }
-                                const byteArray = new Uint8Array(byteNumbers);
-                                const blob = new Blob([byteArray], { type: 'application/pdf' });
-                                const blobUrl = URL.createObjectURL(blob);
-                                
-                                setViewerSrc(blobUrl);
-                                setViewerLoading(false);
-                              } else if (isBlobUrl) {
-                                setViewerSrc(record.pdfData);
-                                setViewerLoading(false);
-                              } else {
-                                const backendUrl = buildBackendUrl(record);
-                                if (backendUrl) {
-                                  setViewerSrc(backendUrl);
-                                  setViewerLoading(false);
-                                } else {
-                                  setViewerSrc(null);
-                                  setViewerError("Unable to display PDF. Please check the file path or re-generate document.");
-                                  setViewerLoading(false);
-                                }
-                              }
-                            } catch (err: any) {
-                              console.error("Mobile PDF Preview Conversion Error:", err);
-                              setViewerSrc(null);
-                              setViewerError("PDF display error: " + (err.message || String(err)));
-                              setViewerLoading(false);
-                            }
-                          }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {/* Download */}
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); downloadPDF(record); }}>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {/* Print */}
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { markViewed("file", record.id); openPrintPreview(record); }}>
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        </div>
-
-                        <div className="flex gap-1">
-                          {/* Alert Toggle */}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => {
-                              try {
-                                const viewed = isViewed("file", record.id);
-                                if (viewed) unmarkViewed("file", record.id);
-                                else markViewed("file", record.id);
-                                try { dismissAlertsForRecord(record.recordType, record.id); } catch { }
-                                setRecords(prev => [...prev]);
-                              } catch { }
-                            }}
-                          >
-                            {!isViewed("file", record.id) ? (
-                              <Bell className="h-4 w-4 text-yellow-400" />
-                            ) : (
-                              <Bell className="h-4 w-4 text-zinc-600" />
-                            )}
-                          </Button>
-                          {/* Delete */}
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteId(record.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
+              </Card>
             </div>
-          </Card>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="drive" className="focus-visible:outline-none focus-visible:ring-0">
+            <BusinessDrive />
+          </TabsContent>
+        </Tabs>
       </main>
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
