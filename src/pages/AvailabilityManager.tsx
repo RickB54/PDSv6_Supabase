@@ -749,7 +749,7 @@ export default function AvailabilityManager() {
 
             toast({ title: "Booking Created", description: `${manualBooking.name} on ${dateStr} (PDF Saved)` });
             setShowManualBooking(false);
-            setManualBooking({ name: '', phone: '', email: '', service: 'Prime Essential Interior', time: '09:00', make: '', model: '', year: '' });
+            setManualBooking({ name: '', phone: '', email: '', service: 'Prime Essential Interior', time: '09:00', make: '', model: '', year: '', address: '' });
             await refreshBookings();
             await loadBlocks();
         } catch (e: any) {
