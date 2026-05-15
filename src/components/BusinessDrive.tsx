@@ -230,7 +230,7 @@ export default function BusinessDrive() {
         setZoom(100);
     };
 
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, skipCompression = false) => {
         const fileList = e.target.files;
         if (!fileList || fileList.length === 0) return;
 
@@ -239,13 +239,14 @@ export default function BusinessDrive() {
         
         toast({ 
             title: uploadCount > 1 ? `Uploading ${uploadCount} files...` : "Uploading...", 
-            description: `Preparing your ${uploadCount > 1 ? 'assets' : 'file'} for secure storage.` 
+            description: skipCompression ? "RAM-Safe Mode: Uploading directly to cloud." : `Preparing your ${uploadCount > 1 ? 'assets' : 'file'} for secure storage.` 
         });
 
         for (const file of filesArray) {
             try {
                 // Upload to Supabase bucket 'customer-photos'
-                const publicUrl = await uploadFile('customer-photos', file, `business-drive/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`);
+                // We pass skipCompression = true for camera to avoid RAM-heavy canvas operations on S20FE
+                const publicUrl = await uploadFile('customer-photos', file, `business-drive/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`, skipCompression);
 
                 const newFile: DriveFile = {
                     id: Math.random().toString(36).substr(2, 9),
@@ -477,8 +478,8 @@ export default function BusinessDrive() {
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <input type="file" id="drive-upload" className="hidden" multiple onChange={handleUpload} />
-                    <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={handleUpload} />
+                    <input type="file" id="drive-upload" className="hidden" multiple onChange={(e) => handleUpload(e, false)} />
+                    <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleUpload(e, true)} />
                 </div>
             </div>
 
