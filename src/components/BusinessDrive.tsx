@@ -67,7 +67,17 @@ const DEFAULT_FOLDERS: DriveFolder[] = [
 export default function BusinessDrive() {
     const { toast } = useToast();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [currentPath, setCurrentPath] = useState<string[]>([]); // empty array means root
+    const [currentPath, setCurrentPath] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('business_drive_current_path');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    });
+    
+    useEffect(() => {
+        localStorage.setItem('business_drive_current_path', JSON.stringify(currentPath));
+    }, [currentPath]);
+
     const [searchTerm, setSearchTerm] = useState("");
     const [files, setFiles] = useState<DriveFile[]>([]);
     const [folders, setFolders] = useState<DriveFolder[]>(DEFAULT_FOLDERS);
@@ -247,7 +257,14 @@ export default function BusinessDrive() {
                     data: publicUrl
                 };
 
-                setFiles(prev => [...prev, newFile]);
+                setFiles(prev => {
+                    const updated = [...prev, newFile];
+                    // Instant Save to Local Cache (IndexedDB) to prevent loss on mobile refresh
+                    import('localforage').then(lf => {
+                        lf.default.setItem('business_drive_files_v3', updated);
+                    });
+                    return updated;
+                });
             } catch (err: any) {
                 console.error(`Upload failed for ${file.name}:`, err);
                 toast({ 
