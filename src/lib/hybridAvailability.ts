@@ -226,25 +226,38 @@ export async function getRangeBlockedDates(
         endTime: b.endTime || null
     }));
 
-    // 1.5 Real Bookings
-    const bookingMapped = existingBookings.filter(b => {
-        const d = safeParse(b.scheduled_at);
-        return d >= start && d <= end;
-    }).map(b => {
-        const dateObj = safeParse(b.scheduled_at);
-        const hStart = dateObj.getHours();
-        const mStart = dateObj.getMinutes();
-        const durationHours = b.estimated_duration || 1;
-        const totalMinutes = Math.round((hStart * 60) + mStart + (durationHours * 60));
-        const actualHEnd = Math.min(23, Math.floor(totalMinutes / 60));
-        const actualMEnd = totalMinutes % 60;
+    // 1.5 Real Bookings - Check overlap for each day in the requested range
+    const bookingMapped: any[] = [];
+    existingBookings.forEach(b => {
+        const bStart = safeParse(b.scheduled_at);
+        const bEnd = new Date(bStart.getTime() + (b.estimated_duration || 1) * 60 * 60 * 1000);
+        
+        // Iterate through each day in the requested [start, end] range
+        let curr = new Date(start);
+        curr.setHours(0, 0, 0, 0);
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
 
-        return {
-            date: format(dateObj, 'yyyy-MM-dd'),
-            source: 'booking' as const,
-            startTime: `${String(hStart).padStart(2, '0')}:${String(mStart).padStart(2, '0')}`,
-            endTime: `${String(actualHEnd).padStart(2, '0')}:${String(actualMEnd).padStart(2, '0')}`
-        };
+        while (curr <= endDay) {
+            const dStr = format(curr, 'yyyy-MM-dd');
+            const slotStart = new Date(`${dStr}T00:00:00`);
+            const slotEnd = new Date(`${dStr}T23:59:59`);
+
+            // If the booking overlaps with THIS day
+            if (bStart < slotEnd && slotStart < bEnd) {
+                // Determine the start/end times for THIS specific day
+                const isStartDay = format(bStart, 'yyyy-MM-dd') === dStr;
+                const isEndDay = format(bEnd, 'yyyy-MM-dd') === dStr;
+                
+                bookingMapped.push({
+                    date: dStr,
+                    source: 'booking' as const,
+                    startTime: isStartDay ? format(bStart, 'HH:mm') : '00:00',
+                    endTime: isEndDay ? format(bEnd, 'HH:mm') : '23:59'
+                });
+            }
+            curr.setDate(curr.getDate() + 1);
+        }
     });
 
     const config = await getCalendarConfig();

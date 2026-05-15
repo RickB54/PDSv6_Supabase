@@ -282,18 +282,21 @@ export async function getDayAvailability(
         // 2. Check if booked by customer (Half-Day Slot Logic)
         const isBooked = existingBookings.some(booking => {
             const bookingDate = safeParse(booking.scheduled_at);
+            // Check if booking is on the exact same date
             if (format(bookingDate, 'yyyy-MM-dd') !== date) return false;
 
             const bookingStartH = bookingDate.getHours();
-            const bookingEndH = bookingStartH + (booking.estimated_duration || 1);
+            const durationHours = booking.estimated_duration || 1;
+            const bookingEndH = bookingStartH + durationHours;
+            
             const [slotH] = slot.start.split(':').map(Number);
 
             const blocksMorning = bookingStartH < 12;
-            const blocksAfternoon = bookingEndH > 12 || (bookingEndH === 12 && bookingDate.getMinutes() > 0);
+            const blocksAfternoon = bookingStartH >= 12 || bookingEndH > 12;
 
             if (blocksMorning && slotH < 12) return true;
             if (blocksAfternoon && slotH >= 12) return true;
-            
+
             return false;
         });
 

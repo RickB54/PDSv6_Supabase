@@ -89,24 +89,16 @@ export function AvailabilityPicker({
                 datesMap[b.date].workFull = true;
             } else {
                 const startH = parseInt(b.startTime.split(':')[0]);
-                const startM = parseInt(b.startTime.split(':')[1]);
                 const endH = parseInt(b.endTime.split(':')[0]);
 
-                // If it starts exactly at 00:00 and lasts significant time, or is exactly 0-duration 12am block
-                if (startH === 0 && (endH === 0 || endH >= 16)) {
+                if (startH < 12) datesMap[b.date].workMorning = true;
+                if (startH >= 12 || endH > 12) datesMap[b.date].workAfternoon = true;
+                
+                // If booking crosses from morning to afternoon, block entire day
+                if (datesMap[b.date].workMorning && datesMap[b.date].workAfternoon) {
                     datesMap[b.date].workFull = true;
-                } else {
-                    // Overlap Morning: [0, 12). If starts at 11:30, it overlaps morning.
-                    if (startH < 12) datesMap[b.date].workMorning = true;
-                    // Overlap Afternoon: [12, 24). If it ends after 12:00, or starts at/after 12:00
-                    if (endH >= 12 || startH >= 12) {
-                        // Special check: if it ends exactly at 12:00, it's just morning
-                        if (endH === 12 && parseInt(b.endTime.split(':')[1]) === 0) {
-                            // strictly morning
-                        } else {
-                            datesMap[b.date].workAfternoon = true;
-                        }
-                    }
+                    datesMap[b.date].workMorning = false;
+                    datesMap[b.date].workAfternoon = false;
                 }
             }
         });
@@ -117,13 +109,12 @@ export function AvailabilityPicker({
         const personal: Date[] = [];
 
         Object.entries(datesMap).forEach(([dStr, info]) => {
-            const dateObj = new Date(dStr + 'T12:00:00'); // Use noon to avoid TZ shift
+            const [y, m, d] = dStr.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d, 0, 0, 0, 0); // Use midnight local for consistent matching
             if (info.workFull) {
                 full.push(dateObj);
             } else if (info.workMorning && info.workAfternoon) {
-                // Special case for multiple blocks on same day
-                // We'll use morning as the base but handle it specially in modifiers
-                personal.push(dateObj); // Misusing personal array for multiple blocks temporarily
+                personal.push(dateObj);
             } else if (info.workMorning) {
                 morning.push(dateObj);
             } else if (info.workAfternoon) {

@@ -858,7 +858,30 @@ export default function BookingsPage() {
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
-    setFormData(prev => ({ ...prev, time: "09:00", addons: [] })); // Reset time default
+    setSelectedBooking(null);
+    setSelectedCustomer(null);
+    setFormData({
+      customerId: undefined,
+      customer: "",
+      email: "",
+      phone: "",
+      service: "",
+      vehicle: "",
+      vehicleYear: "",
+      vehicleMake: "",
+      vehicleModel: "",
+      address: "",
+      time: "09:00",
+      endTime: "17:00",
+      assignedEmployee: "",
+      bookedBy: getCurrentUser()?.name || '',
+      notes: "",
+      addons: [],
+      hasReminder: false,
+      reminderFrequency: "3",
+      status: (getCurrentUser()?.role === 'admin' ? 'confirmed' : 'tentative') as BookingStatus,
+      vehicleId: undefined
+    });
     setIsAddModalOpen(true);
   };
 
@@ -3444,7 +3467,7 @@ export default function BookingsPage() {
                                                      const relevantEngagements = engagements.filter(eng => {
                                                        const isBookingMatch = eng.booking_id === event.id;
                                                        const isNameMatch = eng.customer_name?.toLowerCase() === customer.name.toLowerCase();
-                                                       const isEmailMatch = eng.customer_email && customerData?.email && eng.customer_email.toLowerCase() === customerData.email.toLowerCase();
+                                                       const isEmailMatch = eng.customer_email && customer?.email && eng.customer_email.toLowerCase() === customer.email.toLowerCase();
                                                        return (isBookingMatch || (isNameMatch || isEmailMatch)) && (eng.type === 'email' || eng.type === 'retention' || eng.type === 'initial');
                                                      }).slice(0, 5);
 

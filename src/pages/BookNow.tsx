@@ -197,8 +197,8 @@ const BookNow = () => {
   const mappedBookings = allBookings.map(b => ({
     scheduled_at: b.date,
     estimated_duration: b.endTime
-      ? (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60)
-      : 3
+      ? Math.max(1, (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60))
+      : 1
   }));
 
   // Live pricing + meta state
