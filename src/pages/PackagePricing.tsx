@@ -80,7 +80,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Info, RefreshCw, ShieldAlert, HelpCircle } from "lucide-react";
+import { Trash2, Info, RefreshCw, ShieldAlert, HelpCircle, FileDown, History, Calendar, Clock } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -93,6 +93,7 @@ import * as supaAddOns from "@/services/supabase/addOns";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { isDemoActive } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
+import { cn } from "@/lib/utils";
 
 type Pricing = { compact: number; midsize: number; truck: number; luxury: number };
 type PriceMap = Record<string, string>;
@@ -469,24 +470,26 @@ export default function PackagePricing() {
 
     const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
       const key = `${type}:${id}:${size}`;
-      const savedVal = parseFloat(saved[key]);
-      if (!isNaN(savedVal)) return savedVal;
+      const val = saved[key];
+      if (val !== undefined && val !== null && val !== "") return { value: parseFloat(val), isOverride: true };
 
       // Fallback to built-in or custom definition pricing
       const item = type === 'package'
         ? [...builtInPackages, ...(snapshot?.customPackages || [])].find(p => p.id === id)
         : [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
 
-      return (item as any)?.pricing?.[size] || 0;
+      return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
     };
-    const rowHtml = (name: string, type: 'package' | 'addon', id: string) => `
-      <tr>
-        <td style="padding:8px;border:1px solid #ddd">${name}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'compact').toFixed(2)}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'midsize').toFixed(2)}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'truck').toFixed(2)}</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right">$${getPrice(type, id, 'luxury').toFixed(2)}</td>
-      </tr>`;
+    const rowHtml = (name: string, type: 'package' | 'addon', id: string) => {
+      const sizes = ['compact', 'midsize', 'truck', 'luxury'];
+      const cells = sizes.map(sz => {
+        const { value, isOverride } = getPrice(type, id, sz);
+        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : '';
+        return `<td style="padding:8px;border:1px solid #ddd;text-align:right;${style}">$${value.toFixed(2)}</td>`;
+      }).join('');
+      
+      return `<tr><td style="padding:8px;border:1px solid #ddd">${name}</td>${cells}</tr>`;
+    };
 
     const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
     const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
@@ -541,14 +544,14 @@ export default function PackagePricing() {
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
         const key = `${type}:${id}:${size}`;
-        const savedVal = parseFloat(saved[key]);
-        if (!isNaN(savedVal)) return savedVal;
+        const val = saved[key];
+        if (val !== undefined && val !== null && val !== "") return { value: parseFloat(val), isOverride: true };
 
         const item = type === 'package'
           ? [...builtInPackages, ...(snapshot?.customPackages || [])].find(p => p.id === id)
           : [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
 
-        return (item as any)?.pricing?.[size] || 0;
+        return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
       };
 
       let y = 45;
@@ -588,9 +591,18 @@ export default function PackagePricing() {
         checkPageBreak();
         doc.text(p.name, 20, y);
         vehicleOptions.forEach((v, i) => {
-          const price = getPrice('package', p.id, v);
-          doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
+          const { value, isOverride } = getPrice('package', p.id, v);
+          if (isOverride) {
+            doc.setTextColor(200, 0, 0);
+            doc.setFont("helvetica", "bold");
+          } else {
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "normal");
+          }
+          doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
         });
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
         y += 8;
       });
 
@@ -602,9 +614,18 @@ export default function PackagePricing() {
         checkPageBreak();
         doc.text(a.name, 20, y);
         vehicleOptions.forEach((v, i) => {
-          const price = getPrice('addon', a.id, v);
-          doc.text(`$${price.toFixed(2)}`, xPos[i], y, { align: 'right' });
+          const { value, isOverride } = getPrice('addon', a.id, v);
+          if (isOverride) {
+            doc.setTextColor(200, 0, 0);
+            doc.setFont("helvetica", "bold");
+          } else {
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "normal");
+          }
+          doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
         });
+        doc.setTextColor(0, 0, 0);
+        doc.setFont("helvetica", "normal");
         y += 8;
       });
 
@@ -881,6 +902,155 @@ export default function PackagePricing() {
       </html>
     `);
     win.document.close();
+  };
+
+  const generatePriceAuditPDF = () => {
+    try {
+      const doc = new jsPDF({ orientation: 'l' });
+      const history = getPriceChangeHistory();
+      const classifications = ["compact", "midsize", "truck", "luxury"];
+      const allPkgs = [...builtInPackages, ...getCustomPackages()];
+      const allAddons = [...builtInAddOns, ...getCustomAddOns()];
+
+      doc.setTextColor(220, 38, 38);
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      doc.text("Price Evolution Audit Trail", 14, 20);
+      
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text("This report tracks the most recent price adjustments compared to their previous states.", 14, 33);
+
+      let yPos = 45;
+
+      classifications.forEach((size, sIdx) => {
+        if (sIdx > 0) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        // Section Header
+        doc.setFillColor(30, 30, 30);
+        doc.rect(14, yPos, 270, 12, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(`VEHICLE CLASSIFICATION: ${size.toUpperCase()}`, 20, yPos + 8);
+        yPos += 18;
+
+        const buildTableData = (items: any[], type: 'package' | 'addon') => {
+          return items.map(item => {
+            const key = `${type}:${item.id}:${size}`;
+            
+            // Current Price
+            const latestRec = history.find(r => r.snapshot && r.snapshot[key]);
+            const currentPriceVal = latestRec ? parseFloat(latestRec.snapshot[key]) : (item.pricing as any)[size];
+            const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : 'Current';
+
+            // Before Price (find first record that is different from current)
+            let beforePriceVal = (item.pricing as any)[size];
+            let beforeDate = 'Base Definition';
+            
+            if (latestRec) {
+                const latestIdx = history.indexOf(latestRec);
+                const prevRec = history.slice(latestIdx + 1).find(r => r.snapshot && r.snapshot[key] && parseFloat(r.snapshot[key]) !== currentPriceVal);
+                if (prevRec) {
+                    beforePriceVal = parseFloat(prevRec.snapshot![key]);
+                    beforeDate = new Date(prevRec.date).toLocaleDateString();
+                } else if (parseFloat(String((item.pricing as any)[size])) !== currentPriceVal) {
+                    // It differs from base but no intermediate history found
+                    beforePriceVal = (item.pricing as any)[size];
+                    beforeDate = 'Base Definition';
+                } else {
+                    // No change from base
+                    beforePriceVal = currentPriceVal;
+                    beforeDate = 'Original';
+                }
+            }
+
+            return {
+              name: item.name,
+              beforePrice: `$${beforePriceVal.toFixed(2)}`,
+              beforeDate,
+              currentPrice: `$${currentPriceVal.toFixed(2)}`,
+              currentDate,
+              isChanged: Math.abs(currentPriceVal - beforePriceVal) > 0.01
+            };
+          });
+        };
+
+        const pkgData = buildTableData(allPkgs, 'package');
+        const addonData = buildTableData(allAddons, 'addon');
+
+        // Packages Table
+        doc.setFontSize(11);
+        doc.setTextColor(220, 38, 38);
+        doc.text("PRIMARY SERVICE PACKAGES", 14, yPos);
+        yPos += 4;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Service Name', 'Before Price', 'Before Date', 'Current Changed Price', 'Date Changed']],
+          body: pkgData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
+          theme: 'striped',
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold' },
+          columnStyles: {
+            1: { halign: 'right' },
+            3: { halign: 'right' }
+          },
+          didParseCell: (data) => {
+            if (data.column.index === 3) {
+              const rowIdx = data.row.index;
+              if (pkgData[rowIdx].isChanged) {
+                data.cell.styles.textColor = [220, 38, 38];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          }
+        });
+        
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+
+        // Addons Table
+        doc.setFontSize(11);
+        doc.setTextColor(220, 38, 38);
+        doc.text("ADD-ON SERVICES", 14, yPos);
+        yPos += 4;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Add-On Name', 'Before Price', 'Before Date', 'Current Changed Price', 'Date Changed']],
+          body: addonData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
+          theme: 'striped',
+          styles: { fontSize: 9, cellPadding: 3 },
+          headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: 'bold' },
+          columnStyles: {
+            1: { halign: 'right' },
+            3: { halign: 'right' }
+          },
+          didParseCell: (data) => {
+            if (data.column.index === 3) {
+              const rowIdx = data.row.index;
+              if (addonData[rowIdx].isChanged) {
+                data.cell.styles.textColor = [220, 38, 38];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 20;
+      });
+
+      doc.save(`price_audit_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Price Audit PDF saved");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate Price Audit PDF");
+    }
   };
 
   const downloadMatrixPDF = () => {
@@ -2043,6 +2213,19 @@ export default function PackagePricing() {
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
+                <div className="flex justify-between items-center mb-4 px-2">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                    <History className="w-3 h-3" /> Audit Log Records
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                    onClick={generatePriceAuditPDF}
+                  >
+                    <FileDown className="w-3.5 h-3.5" /> SAVE PRICE AUDIT PDF
+                  </Button>
+                </div>
                 <div className="bg-black/50 border border-zinc-800 rounded-lg p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
                   {priceHistory.length === 0 ? (
                     <div className="text-zinc-500 text-center py-6">No price changes recorded yet.</div>
@@ -3028,19 +3211,24 @@ export default function PackagePricing() {
 
                           .filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
                         return visible.map(p => {
-                          const pricing = {
-                            compact: parseFloat(saved[liveGetKey('package', p.id, 'compact')]) || p.pricing.compact,
-                            midsize: parseFloat(saved[liveGetKey('package', p.id, 'midsize')]) || p.pricing.midsize,
-                            truck: parseFloat(saved[liveGetKey('package', p.id, 'truck')]) || p.pricing.truck,
-                            luxury: parseFloat(saved[liveGetKey('package', p.id, 'luxury')]) || p.pricing.luxury,
+                          const getP = (sz: string) => {
+                            const val = saved[liveGetKey('package', p.id, sz)];
+                            const isO = val !== undefined && val !== null && val !== "";
+                            return { v: isO ? parseFloat(val) : p.pricing[sz as keyof typeof p.pricing], isO };
+                          };
+                          const pr = {
+                            compact: getP('compact'),
+                            midsize: getP('midsize'),
+                            truck: getP('truck'),
+                            luxury: getP('luxury'),
                           };
                           return (
                             <tr key={p.id} className="odd:bg-white even:bg-zinc-50">
-                              <td className="p-2 border">{p.name}</td>
-                              <td className="p-2 border text-right">${pricing.compact}</td>
-                              <td className="p-2 border text-right">${pricing.midsize}</td>
-                              <td className="p-2 border text-right">${pricing.truck}</td>
-                              <td className="p-2 border text-right">${pricing.luxury}</td>
+                              <td className="p-2 border font-medium">{p.name}</td>
+                              <td className={cn("p-2 border text-right", pr.compact.isO && "text-red-600 font-bold")}>${pr.compact.v}</td>
+                              <td className={cn("p-2 border text-right", pr.midsize.isO && "text-red-600 font-bold")}>${pr.midsize.v}</td>
+                              <td className={cn("p-2 border text-right", pr.truck.isO && "text-red-600 font-bold")}>${pr.truck.v}</td>
+                              <td className={cn("p-2 border text-right", pr.luxury.isO && "text-red-600 font-bold")}>${pr.luxury.v}</td>
                             </tr>
                           );
                         });
@@ -3073,19 +3261,24 @@ export default function PackagePricing() {
 
                           .filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
                         return visible.map(a => {
-                          const pricing = {
-                            compact: parseFloat(saved[liveGetKey('addon', a.id, 'compact')]) || a.pricing.compact,
-                            midsize: parseFloat(saved[liveGetKey('addon', a.id, 'midsize')]) || a.pricing.midsize,
-                            truck: parseFloat(saved[liveGetKey('addon', a.id, 'truck')]) || a.pricing.truck,
-                            luxury: parseFloat(saved[liveGetKey('addon', a.id, 'luxury')]) || a.pricing.luxury,
+                          const getP = (sz: string) => {
+                            const val = saved[liveGetKey('addon', a.id, sz)];
+                            const isO = val !== undefined && val !== null && val !== "";
+                            return { v: isO ? parseFloat(val) : (a.pricing as any)[sz], isO };
+                          };
+                          const pr = {
+                            compact: getP('compact'),
+                            midsize: getP('midsize'),
+                            truck: getP('truck'),
+                            luxury: getP('luxury'),
                           };
                           return (
                             <tr key={a.id} className="odd:bg-white even:bg-zinc-50">
-                              <td className="p-2 border">{a.name}</td>
-                              <td className="p-2 border text-right">${pricing.compact}</td>
-                              <td className="p-2 border text-right">${pricing.midsize}</td>
-                              <td className="p-2 border text-right">${pricing.truck}</td>
-                              <td className="p-2 border text-right">${pricing.luxury}</td>
+                              <td className="p-2 border font-medium">{a.name}</td>
+                              <td className={cn("p-2 border text-right", pr.compact.isO && "text-red-600 font-bold")}>${pr.compact.v}</td>
+                              <td className={cn("p-2 border text-right", pr.midsize.isO && "text-red-600 font-bold")}>${pr.midsize.v}</td>
+                              <td className={cn("p-2 border text-right", pr.truck.isO && "text-red-600 font-bold")}>${pr.truck.v}</td>
+                              <td className={cn("p-2 border text-right", pr.luxury.isO && "text-red-600 font-bold")}>${pr.luxury.v}</td>
                             </tr>
                           );
                         });

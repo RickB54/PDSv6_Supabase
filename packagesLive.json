@@ -133,7 +133,7 @@
       "package:prime-essential-exterior:midsize": "110",
       "package:prime-essential-exterior:truck": "120",
       "package:prime-essential-exterior:luxury": "130",
-      "package:prime-essential-full:compact": "260",
+      "package:prime-essential-full:compact": "265",
       "package:prime-essential-full:midsize": "270",
       "package:prime-essential-full:truck": "290",
       "package:prime-essential-full:luxury": "320",
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1778633365040
+    "version": 1778816151813
   },
   "vehicleTypesLive": [
     {
