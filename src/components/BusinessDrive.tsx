@@ -35,6 +35,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage-utils";
+import supabase from "@/lib/supabase";
 
 interface DriveFile {
     id: string;
@@ -181,10 +182,10 @@ export default function BusinessDrive() {
                     const syncPath = `users/${user.id}/drive_metadata.json`;
                     const metadata = JSON.stringify({ files, folders, syncedAt: new Date().toISOString() });
                     const blob = new Blob([metadata], { type: 'application/json' });
-                    const file = new File([blob], 'drive_metadata.json', { type: 'application/json' });
                     
-                    await supabase.storage.from('customer-photos').upload(syncPath, file, {
-                        upsert: true
+                    await supabase.storage.from('customer-photos').upload(syncPath, blob, {
+                        upsert: true,
+                        contentType: 'application/json'
                     });
                 }
             } catch (err) {
@@ -451,7 +452,7 @@ export default function BusinessDrive() {
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
                                 <FolderPlus className="w-4 h-4 mr-2" /> New Folder
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer md:hidden" onClick={() => document.getElementById('drive-camera')?.click()}>
+                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-camera')?.click()}>
                                 <Camera className="w-4 h-4 mr-2" /> Take Photo
                             </DropdownMenuItem>
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
