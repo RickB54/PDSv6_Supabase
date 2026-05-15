@@ -185,23 +185,37 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
 
 
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             {/* Procedures Manual Shortcut */}
             {(role === 'admin' || role === 'employee') && (
-              <Button 
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate('/procedures-manual');
-                }}
-                className="w-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-black text-xs uppercase tracking-widest py-6 flex items-center justify-center gap-3 rounded-xl transition-all hover:scale-[1.01]"
-              >
-                <Book className="w-5 h-5" />
-                View Full Procedures Manual & Booklet
-              </Button>
+              <>
+                <Button 
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate('/app-manual');
+                  }}
+                  className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-black text-xs uppercase tracking-widest py-6 flex items-center justify-center gap-3 rounded-xl transition-all hover:scale-[1.01]"
+                >
+                  <Book className="w-5 h-5" />
+                  View Full Manual
+                </Button>
+                
+                <Button 
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate('/app-manual?print=true');
+                  }}
+                  className="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-black text-xs uppercase tracking-widest py-6 flex items-center justify-center gap-3 rounded-xl transition-all hover:scale-[1.01]"
+                >
+                  <Printer className="w-5 h-5" />
+                  Print Manual (PDF)
+                </Button>
+              </>
             )}
+          </div>
 
             {/* Navigation Selector */}
-            <Accordion type="single" collapsible value={accordionValue} onValueChange={setAccordionValue} className="w-full bg-[#1a2035] border border-slate-700 rounded-lg overflow-hidden relative z-50">
+            <Accordion type="single" collapsible value={accordionValue} onValueChange={setAccordionValue} className="w-full bg-[#1a2035] border border-slate-700 rounded-lg overflow-hidden relative z-50 mt-3">
               <AccordionItem value="toc" className="border-none">
                 <AccordionTrigger className="px-4 py-2 hover:bg-slate-800/50 hover:no-underline data-[state=open]:bg-slate-800 text-white font-medium">
                   <span className="flex items-center gap-2">
@@ -246,7 +260,6 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
         </DialogHeader>
 
         {/* Content Area */}
