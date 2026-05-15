@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { 
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
-    Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft
+    Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
+    RefreshCw
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -77,22 +78,61 @@ export default function BusinessDrive() {
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     
-    // Persistence & Migration to localforage (IndexedDB) to avoid QuotaExceededError
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSync = async (showToast = false) => {
+        setIsSyncing(true);
+        if (showToast) toast({ title: "Syncing...", description: "Fetching latest data from your cloud drive." });
+        
+        try {
+            const { default: localforage } = await import('localforage');
+            const { getCurrentUser } = await import('@/lib/auth');
+            const user = getCurrentUser();
+
+            if (user) {
+                const syncPath = `users/${user.id}/drive_metadata.json`;
+                const { data: cloudBlob, error } = await supabase.storage.from('customer-photos').download(syncPath);
+                
+                if (cloudBlob && !error) {
+                    const text = await cloudBlob.text();
+                    const { files: cloudFiles, folders: cloudFolders } = JSON.parse(text);
+                    
+                    if (cloudFiles) setFiles(cloudFiles);
+                    if (cloudFolders) setFolders(cloudFolders);
+                    
+                    await localforage.setItem('business_drive_files_v3', cloudFiles);
+                    await localforage.setItem('business_drive_folders_v3', cloudFolders);
+                    if (showToast) toast({ title: "Sync Complete", description: "Your drive is up to date." });
+                } else if (showToast) {
+                    toast({ title: "Sync Check", description: "No new updates found in the cloud." });
+                }
+            }
+        } catch (err) {
+            console.warn("Manual sync failed:", err);
+            if (showToast) toast({ title: "Sync Error", description: "Could not reach the cloud. Using local data.", variant: "destructive" });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    // Persistence & Cloud Sync to avoid QuotaExceededError and enable cross-device usage
     useEffect(() => {
         const loadData = async () => {
             try {
                 const { default: localforage } = await import('localforage');
                 
-                // 1. Check localforage first (Primary storage)
-                const savedFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
-                const savedFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3');
-
-                if (savedFiles) setFiles(savedFiles);
-                if (savedFolders) setFolders(savedFolders);
+                // 1. Load Local Cache first for speed
+                const localFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
+                const localFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3');
+                if (localFiles) setFiles(localFiles);
+                if (localFolders) setFolders(localFolders);
                 else setFolders(DEFAULT_FOLDERS);
 
-                // 2. Migration: If empty, try migrating from localStorage (Old storage)
-                if (!savedFiles) {
+                // 2. Initial Cloud Sync
+                handleSync(false);
+
+                // 3. Migration: If both local and cloud are empty, try migrating from legacy localStorage
+                if (!localFiles && !files.length) {
                     const legacyFiles = localStorage.getItem('business_drive_files_v2');
                     if (legacyFiles) {
                         try {
@@ -103,7 +143,7 @@ export default function BusinessDrive() {
                         } catch (e) { console.error("Legacy file migration failed", e); }
                     }
                 }
-                if (!savedFolders || savedFolders.length === 0) {
+                if ((!localFolders || localFolders.length === 0) && folders.length === DEFAULT_FOLDERS.length) {
                     const legacyFolders = localStorage.getItem('business_drive_folders_v2');
                     if (legacyFolders) {
                         try {
@@ -129,13 +169,32 @@ export default function BusinessDrive() {
         const saveData = async () => {
             try {
                 const { default: localforage } = await import('localforage');
+                const { getCurrentUser } = await import('@/lib/auth');
+                const user = getCurrentUser();
+
+                // Save to local cache (Fast)
                 await localforage.setItem('business_drive_files_v3', files);
                 await localforage.setItem('business_drive_folders_v3', folders);
+
+                // Push to Cloud Sync (Cross-device)
+                if (user) {
+                    const syncPath = `users/${user.id}/drive_metadata.json`;
+                    const metadata = JSON.stringify({ files, folders, syncedAt: new Date().toISOString() });
+                    const blob = new Blob([metadata], { type: 'application/json' });
+                    const file = new File([blob], 'drive_metadata.json', { type: 'application/json' });
+                    
+                    await supabase.storage.from('customer-photos').upload(syncPath, file, {
+                        upsert: true
+                    });
+                }
             } catch (err) {
-                console.warn("Auto-save failed:", err);
+                console.warn("Auto-save/Sync failed:", err);
             }
         };
-        saveData();
+        
+        // Debounce sync to avoid spamming Supabase on rapid changes
+        const timer = setTimeout(saveData, 2000);
+        return () => clearTimeout(timer);
     }, [files, folders, isLoaded]);
 
     const currentItems = useMemo(() => {
@@ -354,6 +413,15 @@ export default function BusinessDrive() {
                             className="pl-9 bg-[#161b22] border-zinc-800 w-full md:w-64 focus:ring-blue-500/20"
                         />
                     </div>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
+                        onClick={() => handleSync(true)}
+                        title="Cloud Sync"
+                    >
+                        <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
+                    </Button>
                     <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800">
                         <Button 
                             variant="ghost" 
