@@ -526,14 +526,14 @@ export default function PackagePricing() {
 
   const downloadPricesPDF = () => {
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF({ orientation: 'p' });
       doc.setTextColor(200, 0, 0);
-      doc.setFontSize(22);
-      doc.text("Current Live Pricing — Prime Auto Detail", 20, 20);
+      doc.setFontSize(20);
+      doc.text("Current Live Pricing — Prime Auto Detail", 14, 20);
 
       doc.setTextColor(100, 100, 100);
-      doc.setFontSize(10);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 30);
+      doc.setFontSize(9);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
       const snapshot = liveSnapshot;
       const pkgMeta = snapshot?.packageMeta || {};
@@ -554,8 +554,8 @@ export default function PackagePricing() {
         return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
       };
 
-      let y = 45;
-      const xPos = [90, 120, 150, 180];
+      let y = 40;
+      const xPos = [95, 120, 145, 170]; // Shifted left for portrait
 
       const checkPageBreak = (needed = 10) => {
         if (y + needed > 280) {
@@ -564,32 +564,33 @@ export default function PackagePricing() {
         }
       };
 
-      const drawHeader = (title: string, yPos: number) => {
+      const drawHeader = (title: string) => {
         checkPageBreak(20);
-        doc.setFontSize(14);
+        doc.setFontSize(12);
         doc.setTextColor(200, 0, 0);
         doc.setFont("helvetica", "bold");
-        doc.text(title, 20, y);
+        doc.text(title, 14, y);
         y += 8;
 
         doc.setFillColor(240, 240, 240);
-        doc.rect(15, y - 6, 180, 8, "F");
-        doc.setFontSize(10);
+        doc.rect(14, y - 6, 182, 8, "F");
+        doc.setFontSize(8);
         doc.setTextColor(0, 0, 0);
-        doc.text("Service", 20, y);
-        doc.text("Compact", xPos[0], y, { align: 'right' });
-        doc.text("Midsize", xPos[1], y, { align: 'right' });
-        doc.text("Truck", xPos[2], y, { align: 'right' });
-        doc.text("Luxury", xPos[3], y, { align: 'right' });
+        doc.text("Service", 18, y);
+        doc.text("Compact", 100, y, { align: 'right' });
+        doc.text("Midsize", 125, y, { align: 'right' });
+        doc.text("Truck", 150, y, { align: 'right' });
+        doc.text("Luxury", 175, y, { align: 'right' });
         doc.setFont("helvetica", "normal");
         y += 10;
       };
 
       // Packages
-      drawHeader("Packages", y);
+      drawHeader("Packages");
       visiblePkgs.forEach(p => {
         checkPageBreak();
-        doc.text(p.name, 20, y);
+        doc.setFontSize(9);
+        doc.text(p.name, 18, y);
         vehicleOptions.forEach((v, i) => {
           const { value, isOverride } = getPrice('package', p.id, v);
           if (isOverride) {
@@ -603,16 +604,17 @@ export default function PackagePricing() {
         });
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
-        y += 8;
+        y += 7;
       });
 
-      y += 10;
+      y += 8;
 
       // Add-Ons
-      drawHeader("Add-Ons", y);
+      drawHeader("Add-Ons");
       visibleAddons.forEach(a => {
         checkPageBreak();
-        doc.text(a.name, 20, y);
+        doc.setFontSize(9);
+        doc.text(a.name, 18, y);
         vehicleOptions.forEach((v, i) => {
           const { value, isOverride } = getPrice('addon', a.id, v);
           if (isOverride) {
@@ -626,7 +628,7 @@ export default function PackagePricing() {
         });
         doc.setTextColor(0, 0, 0);
         doc.setFont("helvetica", "normal");
-        y += 8;
+        y += 7;
       });
 
       // --- NEW: SERVICE FEATURE COMPARISON MATRIX ---
@@ -906,22 +908,22 @@ export default function PackagePricing() {
 
   const generatePriceAuditPDF = () => {
     try {
-      const doc = new jsPDF({ orientation: 'l' });
+      const doc = new jsPDF({ orientation: 'p' });
       const history = getPriceChangeHistory();
       const classifications = ["compact", "midsize", "truck", "luxury"];
       const allPkgs = [...builtInPackages, ...getCustomPackages()];
       const allAddons = [...builtInAddOns, ...getCustomAddOns()];
 
       doc.setTextColor(220, 38, 38);
-      doc.setFontSize(24);
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
       doc.text("Price Evolution Audit Trail", 14, 20);
       
       doc.setTextColor(100, 100, 100);
-      doc.setFontSize(10);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
-      doc.text("This report tracks the most recent price adjustments compared to their previous states.", 14, 33);
+      doc.text("Tracking most recent price adjustments compared to previous states.", 14, 33);
 
       let yPos = 45;
 
@@ -933,12 +935,12 @@ export default function PackagePricing() {
 
         // Section Header
         doc.setFillColor(30, 30, 30);
-        doc.rect(14, yPos, 270, 12, 'F');
+        doc.rect(14, yPos, 182, 10, 'F');
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.text(`VEHICLE CLASSIFICATION: ${size.toUpperCase()}`, 20, yPos + 8);
-        yPos += 18;
+        doc.text(`VEHICLE CLASSIFICATION: ${size.toUpperCase()}`, 18, yPos + 7);
+        yPos += 15;
 
         const buildTableData = (items: any[], type: 'package' | 'addon') => {
           return items.map(item => {
@@ -949,9 +951,9 @@ export default function PackagePricing() {
             const currentPriceVal = latestRec ? parseFloat(latestRec.snapshot[key]) : (item.pricing as any)[size];
             const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : 'Current';
 
-            // Before Price (find first record that is different from current)
+            // Before Price
             let beforePriceVal = (item.pricing as any)[size];
-            let beforeDate = 'Base Definition';
+            let beforeDate = 'Base';
             
             if (latestRec) {
                 const latestIdx = history.indexOf(latestRec);
@@ -960,13 +962,11 @@ export default function PackagePricing() {
                     beforePriceVal = parseFloat(prevRec.snapshot![key]);
                     beforeDate = new Date(prevRec.date).toLocaleDateString();
                 } else if (parseFloat(String((item.pricing as any)[size])) !== currentPriceVal) {
-                    // It differs from base but no intermediate history found
                     beforePriceVal = (item.pricing as any)[size];
-                    beforeDate = 'Base Definition';
+                    beforeDate = 'Base';
                 } else {
-                    // No change from base
                     beforePriceVal = currentPriceVal;
-                    beforeDate = 'Original';
+                    beforeDate = 'Orig';
                 }
             }
 
@@ -985,21 +985,25 @@ export default function PackagePricing() {
         const addonData = buildTableData(allAddons, 'addon');
 
         // Packages Table
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setTextColor(220, 38, 38);
         doc.text("PRIMARY SERVICE PACKAGES", 14, yPos);
         yPos += 4;
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Service Name', 'Before Price', 'Before Date', 'Current Changed Price', 'Date Changed']],
+          head: [['Service Name', 'Before', 'Date', 'Current', 'Changed']],
           body: pkgData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
           theme: 'striped',
-          styles: { fontSize: 9, cellPadding: 3 },
+          styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold' },
+          margin: { left: 14, right: 14 },
           columnStyles: {
-            1: { halign: 'right' },
-            3: { halign: 'right' }
+            0: { cellWidth: 'auto' },
+            1: { halign: 'right', cellWidth: 28 },
+            2: { halign: 'center', cellWidth: 22 },
+            3: { halign: 'right', cellWidth: 28 },
+            4: { halign: 'center', cellWidth: 22 }
           },
           didParseCell: (data) => {
             if (data.column.index === 3) {
@@ -1012,24 +1016,28 @@ export default function PackagePricing() {
           }
         });
         
-        yPos = (doc as any).lastAutoTable.finalY + 15;
+        yPos = (doc as any).lastAutoTable.finalY + 12;
 
         // Addons Table
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setTextColor(220, 38, 38);
         doc.text("ADD-ON SERVICES", 14, yPos);
         yPos += 4;
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Add-On Name', 'Before Price', 'Before Date', 'Current Changed Price', 'Date Changed']],
+          head: [['Add-On Name', 'Before', 'Date', 'Current', 'Changed']],
           body: addonData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
           theme: 'striped',
-          styles: { fontSize: 9, cellPadding: 3 },
+          styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: 'bold' },
+          margin: { left: 14, right: 14 },
           columnStyles: {
-            1: { halign: 'right' },
-            3: { halign: 'right' }
+            0: { cellWidth: 'auto' },
+            1: { halign: 'right', cellWidth: 28 },
+            2: { halign: 'center', cellWidth: 22 },
+            3: { halign: 'right', cellWidth: 28 },
+            4: { halign: 'center', cellWidth: 22 }
           },
           didParseCell: (data) => {
             if (data.column.index === 3) {
@@ -1042,11 +1050,11 @@ export default function PackagePricing() {
           }
         });
 
-        yPos = (doc as any).lastAutoTable.finalY + 20;
+        yPos = (doc as any).lastAutoTable.finalY + 15;
       });
 
       doc.save(`price_audit_${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success("Price Audit PDF saved");
+      toast.success("Price Audit PDF saved (Portrait)");
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate Price Audit PDF");
