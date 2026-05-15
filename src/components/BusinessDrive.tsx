@@ -213,19 +213,29 @@ export default function BusinessDrive() {
         }
     };
 
+    const [zoom, setZoom] = useState(100);
+
     const handleNext = () => {
         if (!selectedFile) return;
-        const currentIndex = currentItems.files.findIndex(f => f.id === selectedFile.id);
-        if (currentIndex < currentItems.files.length - 1) {
-            setSelectedFile(currentItems.files[currentIndex + 1]);
+        const items = selectedFile.type.startsWith('image/') 
+            ? currentItems.files.filter(f => f.type.startsWith('image/'))
+            : currentItems.files;
+        const currentIndex = items.findIndex(f => f.id === selectedFile.id);
+        if (currentIndex < items.length - 1) {
+            setSelectedFile(items[currentIndex + 1]);
+            setZoom(100);
         }
     };
 
     const handlePrev = () => {
         if (!selectedFile) return;
-        const currentIndex = currentItems.files.findIndex(f => f.id === selectedFile.id);
+        const items = selectedFile.type.startsWith('image/') 
+            ? currentItems.files.filter(f => f.type.startsWith('image/'))
+            : currentItems.files;
+        const currentIndex = items.findIndex(f => f.id === selectedFile.id);
         if (currentIndex > 0) {
-            setSelectedFile(currentItems.files[currentIndex - 1]);
+            setSelectedFile(items[currentIndex - 1]);
+            setZoom(100);
         }
     };
 
@@ -587,15 +597,15 @@ export default function BusinessDrive() {
 
             {/* Full-Page Viewer Dialog */}
             <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
-                <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] p-0 bg-black/95 border-none outline-none overflow-hidden flex flex-col items-stretch">
-                    <div className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
+                <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] p-0 bg-black/98 border-none outline-none overflow-hidden flex flex-col items-stretch z-[9999]">
+                    <div className="absolute top-0 left-0 right-0 z-[100] p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
                         <div className="flex items-center gap-4 text-white">
                             <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={() => setIsViewerOpen(false)}>
                                 <X className="w-6 h-6" />
                             </Button>
                             <div className="flex flex-col">
-                                <span className="text-sm font-black truncate max-w-[300px]">{selectedFile?.name}</span>
-                                <span className="text-[10px] text-zinc-400 font-bold uppercase">{selectedFile?.type} • {selectedFile?.size}</span>
+                                <span className="text-sm font-black truncate max-w-[200px] sm:max-w-[400px]">{selectedFile?.name}</span>
+                                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">{selectedFile?.type} • {selectedFile?.size}</span>
                             </div>
                         </div>
 
@@ -606,64 +616,92 @@ export default function BusinessDrive() {
                             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden sm:flex" onClick={() => window.print()}>
                                 <Printer className="w-5 h-5" />
                             </Button>
-                            <div className="h-6 w-px bg-white/20 mx-2" />
-                            <div className="flex items-center gap-1 bg-white/10 rounded-full px-3 py-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10">
+                            <div className="h-6 w-px bg-white/20 mx-2 hidden sm:block" />
+                            <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-0.5 border border-white/5">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-white hover:bg-white/10"
+                                    onClick={() => setZoom(prev => Math.max(25, prev - 25))}
+                                >
                                     <ZoomOut className="w-4 h-4" />
                                 </Button>
-                                <span className="text-[10px] font-black text-white px-2">100%</span>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/10">
+                                <span className="text-[10px] font-black text-white w-10 text-center">{zoom}%</span>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-white hover:bg-white/10"
+                                    onClick={() => setZoom(prev => Math.min(400, prev + 25))}
+                                >
                                     <ZoomIn className="w-4 h-4" />
                                 </Button>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-white hover:bg-white/10 hidden sm:flex"
+                                onClick={() => setZoom(100)}
+                                title="Reset Zoom"
+                            >
                                 <Maximize2 className="w-5 h-5" />
                             </Button>
                         </div>
                     </div>
 
-                    <div className="flex-1 relative flex items-center justify-center overflow-auto p-4 pt-20">
+                    <div className="flex-1 relative flex items-center justify-center overflow-auto p-4 pt-24 pb-24 sm:pb-32">
                         {selectedFile && (
                             <>
-                                {/* Navigation Buttons */}
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="absolute left-6 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/5 hover:bg-white/20 text-white z-50"
-                                    onClick={handlePrev}
-                                    disabled={currentItems.files.findIndex(f => f.id === selectedFile.id) === 0}
-                                >
-                                    <ChevronLeft className="w-8 h-8" />
-                                </Button>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="absolute right-6 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-white/5 hover:bg-white/20 text-white z-50 rotate-180"
-                                    onClick={handleNext}
-                                    disabled={currentItems.files.findIndex(f => f.id === selectedFile.id) === currentItems.files.length - 1}
-                                >
-                                    <ChevronLeft className="w-8 h-8" />
-                                </Button>
+                                {/* Floating Navigation - Only show if there are multiple items of the same category */}
+                                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-4 sm:px-8 pointer-events-none z-50">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className={cn(
+                                            "h-14 w-14 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md border border-white/10 transition-all pointer-events-auto",
+                                            ((selectedFile.type.startsWith('image/') ? currentItems.files.filter(f => f.type.startsWith('image/')) : currentItems.files).findIndex(f => f.id === selectedFile.id) === 0) && "opacity-0 pointer-events-none"
+                                        )}
+                                        onClick={handlePrev}
+                                    >
+                                        <ChevronLeft className="w-8 h-8" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className={cn(
+                                            "h-14 w-14 rounded-full bg-black/40 hover:bg-black/60 text-white backdrop-blur-md border border-white/10 transition-all pointer-events-auto",
+                                            ((selectedFile.type.startsWith('image/') ? currentItems.files.filter(f => f.type.startsWith('image/')) : currentItems.files).findIndex(f => f.id === selectedFile.id) === (selectedFile.type.startsWith('image/') ? currentItems.files.filter(f => f.type.startsWith('image/')) : currentItems.files).length - 1) && "opacity-0 pointer-events-none"
+                                        )}
+                                        onClick={handleNext}
+                                    >
+                                        <ChevronRight className="w-8 h-8" />
+                                    </Button>
+                                </div>
 
-                                <div className="w-full h-full flex items-center justify-center animate-in zoom-in-95 duration-300">
+                                <div 
+                                    className="w-full h-full flex items-center justify-center transition-transform duration-300 ease-out"
+                                    style={{ transform: `scale(${zoom / 100})` }}
+                                >
                                     {selectedFile.type.startsWith('application/pdf') || selectedFile.name.endsWith('.pdf') ? (
-                                        <div className="bg-white shadow-2xl w-full max-w-[850px] aspect-[8.5/11] rounded-sm overflow-hidden">
+                                        <div className="bg-white shadow-2xl w-full max-w-[850px] aspect-[8.5/11] rounded-sm overflow-hidden border border-white/10">
                                             <iframe src={selectedFile.data} className="w-full h-full border-0" title={selectedFile.name} />
                                         </div>
                                     ) : selectedFile.type.startsWith('image/') ? (
                                         <img 
                                             src={selectedFile.data} 
-                                            className="max-w-full max-h-full object-contain shadow-2xl rounded-sm" 
+                                            className="max-w-full max-h-full object-contain shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-sm" 
                                             alt={selectedFile.name} 
                                         />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-4 text-white">
-                                            <div className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center">
-                                                <FileText className="w-16 h-16 text-zinc-500" />
+                                        <div className="flex flex-col items-center gap-6 text-white text-center">
+                                            <div className="w-32 h-32 bg-white/5 rounded-full flex items-center justify-center animate-pulse">
+                                                <FileText className="w-16 h-16 text-zinc-600" />
                                             </div>
-                                            <p className="text-lg font-bold">Preview not available for this file type</p>
-                                            <Button className="bg-blue-600" onClick={() => downloadFile(selectedFile)}>
-                                                Download {selectedFile.name}
+                                            <div>
+                                                <p className="text-xl font-black mb-2">Preview Unavailable</p>
+                                                <p className="text-zinc-500 text-sm max-w-xs">This file type cannot be rendered directly in the browser.</p>
+                                            </div>
+                                            <Button className="bg-blue-600 hover:bg-blue-700 font-bold px-8" onClick={() => downloadFile(selectedFile)}>
+                                                <Download className="w-4 h-4 mr-2" /> Download Document
                                             </Button>
                                         </div>
                                     )}
@@ -672,21 +710,28 @@ export default function BusinessDrive() {
                         )}
                     </div>
 
-                    <div className="p-4 bg-black/80 flex items-center justify-center gap-2 overflow-x-auto">
-                        {currentItems.files.map(f => (
+                    {/* Bottom Gallery Strip */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-center gap-3 overflow-x-auto z-[100] pb-8 sm:pb-6">
+                        {(selectedFile?.type.startsWith('image/') 
+                            ? currentItems.files.filter(f => f.type.startsWith('image/'))
+                            : currentItems.files
+                        ).map(f => (
                             <div 
                                 key={f.id}
                                 className={cn(
-                                    "w-12 h-16 rounded border-2 transition-all cursor-pointer overflow-hidden shrink-0",
-                                    selectedFile?.id === f.id ? "border-blue-500 scale-110" : "border-transparent opacity-50 hover:opacity-100"
+                                    "w-14 h-14 sm:w-16 sm:h-20 rounded-lg border-2 transition-all cursor-pointer overflow-hidden shrink-0 shadow-lg",
+                                    selectedFile?.id === f.id ? "border-blue-500 scale-110 ring-4 ring-blue-500/20" : "border-white/10 opacity-40 hover:opacity-100"
                                 )}
-                                onClick={() => setSelectedFile(f)}
+                                onClick={() => {
+                                    setSelectedFile(f);
+                                    setZoom(100);
+                                }}
                             >
                                 {f.type.startsWith('image/') ? (
                                     <img src={f.data} className="w-full h-full object-cover" alt="" />
                                 ) : (
-                                    <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                                        <FileText className="w-6 h-6 text-zinc-600" />
+                                    <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+                                        <FileText className="w-6 h-6 text-zinc-700" />
                                     </div>
                                 )}
                             </div>
