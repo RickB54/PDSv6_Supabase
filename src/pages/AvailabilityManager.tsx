@@ -1429,9 +1429,9 @@ export default function AvailabilityManager() {
                             <div className="flex items-start gap-4">
                                 <Shield className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
                                 <div className="space-y-2">
-                                    <h3 className="font-bold text-blue-400 uppercase tracking-tight">Privacy Protected</h3>
+                                    <h3 className="font-bold text-blue-400 uppercase tracking-tight">Administrative Transparency</h3>
                                     <p className="text-sm text-zinc-400 leading-relaxed">
-                                        This integration only checks if you're <strong>busy or free</strong>. Event titles, descriptions, and personal details are <strong>never</strong> accessed or displayed. Your appointments automatically block booking times without exposing any information.
+                                        Your personal calendar events are now synchronized with full <strong>titles and descriptions</strong> for your visibility in the administrative dashboard. <strong>Privacy is still maintained:</strong> public customers will only see these slots as "Booked" or "Unavailable" without any personal details.
                                     </p>
                                 </div>
                             </div>

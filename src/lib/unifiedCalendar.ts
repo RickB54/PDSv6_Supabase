@@ -178,14 +178,15 @@ export async function getUnifiedCalendarEvents(
                 events.push({
                     id: gEvent.id,
                     type: 'google-event',
-                    title: 'Booked (External Calendar Event)',
+                    title: gEvent.summary || 'Booked (External Calendar Event)',
                     date: start,
                     endTime: end,
                     source: 'google',
                     source_origin: 'Hybrid Availability System',
                     isDeletable: false,
                     color: 'blue',
-                    icon: '📅'
+                    icon: '📅',
+                    notes: gEvent.description || ''
                 });
             });
         } catch (error) {

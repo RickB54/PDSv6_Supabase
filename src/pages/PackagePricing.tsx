@@ -3374,10 +3374,10 @@ export default function PackagePricing() {
                           return (
                             <tr key={p.id} className="odd:bg-white even:bg-zinc-50">
                               <td className="p-2 border font-medium">{p.name}</td>
-                              <td className={cn("p-2 border text-right", pr.compact.isO && "text-red-600 font-bold")}>${pr.compact.v}</td>
-                              <td className={cn("p-2 border text-right", pr.midsize.isO && "text-red-600 font-bold")}>${pr.midsize.v}</td>
-                              <td className={cn("p-2 border text-right", pr.truck.isO && "text-red-600 font-bold")}>${pr.truck.v}</td>
-                              <td className={cn("p-2 border text-right", pr.luxury.isO && "text-red-600 font-bold")}>${pr.luxury.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.compact.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.midsize.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.truck.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.luxury.v}</td>
                             </tr>
                           );
                         });
@@ -3424,10 +3424,10 @@ export default function PackagePricing() {
                           return (
                             <tr key={a.id} className="odd:bg-white even:bg-zinc-50">
                               <td className="p-2 border font-medium">{a.name}</td>
-                              <td className={cn("p-2 border text-right", pr.compact.isO && "text-red-600 font-bold")}>${pr.compact.v}</td>
-                              <td className={cn("p-2 border text-right", pr.midsize.isO && "text-red-600 font-bold")}>${pr.midsize.v}</td>
-                              <td className={cn("p-2 border text-right", pr.truck.isO && "text-red-600 font-bold")}>${pr.truck.v}</td>
-                              <td className={cn("p-2 border text-right", pr.luxury.isO && "text-red-600 font-bold")}>${pr.luxury.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.compact.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.midsize.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.truck.v}</td>
+                              <td className="p-2 border text-right font-black text-black">${pr.luxury.v}</td>
                             </tr>
                           );
                         });

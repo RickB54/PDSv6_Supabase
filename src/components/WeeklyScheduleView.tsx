@@ -204,8 +204,13 @@ export function WeeklyScheduleView({
                                                     </span>
                                                 </div>
                                                 <span className="italic opacity-80 text-[10px] uppercase tracking-wide truncate max-w-[120px]">
-                                                    {publicView ? 'Booked' : ((block as any).source === 'google' ? 'Personal' : (block as any).source === 'booking' ? 'Confirmed' : (block as any).source === 'manual' ? 'Blocked' : 'Booked')}
+                                                    {publicView ? 'Booked' : (block.reason || ((block as any).source === 'google' ? 'Personal' : (block as any).source === 'booking' ? 'Confirmed' : (block as any).source === 'manual' ? 'Blocked' : 'Booked')))}
                                                 </span>
+                                                {(!publicView && block.notes) && (
+                                                    <div className="hidden group-hover:block absolute top-full left-0 mt-1 p-2 bg-zinc-900 text-white text-[10px] rounded shadow-lg z-50 w-full max-w-xs">
+                                                        {block.notes}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}

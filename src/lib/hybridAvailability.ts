@@ -296,7 +296,9 @@ export async function getRangeBlockedDates(
                                 date: dStr,
                                 source: 'google',
                                 startTime: null,
-                                endTime: null
+                                endTime: null,
+                                reason: event.summary || 'Personal Time',
+                                notes: event.description || ''
                             });
                         } else {
                             const isFirstDay = curr.toDateString() === startEvent.toDateString();
@@ -313,7 +315,9 @@ export async function getRangeBlockedDates(
                                 date: dStr,
                                 source: 'google',
                                 startTime: sTime,
-                                endTime: eTime
+                                endTime: eTime,
+                                reason: event.summary || 'Personal Time',
+                                notes: event.description || ''
                             });
                         }
 
@@ -338,7 +342,7 @@ export async function getRangeBlockedDates(
 export async function getWeeklyBlocks(
     startDate: Date,
     existingBookings: Array<{ scheduled_at: string; estimated_duration: number }> = []
-): Promise<Array<{ id?: string; date: string; startTime: string | null; endTime: string | null; source: 'manual' | 'google' | 'booking'; reason?: string }>> {
+): Promise<Array<{ id?: string; date: string; startTime: string | null; endTime: string | null; source: 'manual' | 'google' | 'booking'; reason?: string; notes?: string }>> {
     const endDate = addDays(startDate, 7);
     const manualAll = await getManualBlocks();
 
@@ -390,14 +394,25 @@ export async function getWeeklyBlocks(
     try {
         // Fetch Google
         await initGoogleCalendar(config);
-        const freeBusy = await getFreeBusy(config.calendarIds, startDate, endDate);
+        
+        let isGcalSigned = isSignedIn();
+        if (!isGcalSigned) {
+            const shared = await loadGCalTokenFromSupabase();
+            if (shared && (window as any).gapi?.client) {
+                (window as any).gapi.client.setToken({ access_token: shared.access_token });
+                isGcalSigned = true;
+            }
+        }
+
+        if (!isGcalSigned) return [...manualInRange, ...bookingsInRange];
+
         const googleBlocks: any[] = [];
 
         for (const calId of config.calendarIds) {
-            const busy = freeBusy.calendars[calId]?.busy || [];
-            busy.forEach((p, idx) => {
-                const start = new Date(p.start);
-                const end = new Date(p.end);
+            const events = await listCalendarEvents(calId, startDate, endDate);
+            events.forEach((event: any, idx: number) => {
+                const start = new Date(event.start.dateTime || event.start.date);
+                const end = new Date(event.end.dateTime || event.end.date);
 
                 let curr = new Date(start);
                 while (curr < end) {
@@ -425,7 +440,8 @@ export async function getWeeklyBlocks(
                         startTime: sTime,
                         endTime: eTime,
                         source: 'google' as const,
-                        reason: 'Personal Time'
+                        reason: event.summary || 'Personal Time',
+                        notes: event.description || ''
                     });
 
                     curr = addDays(curr, 1);
