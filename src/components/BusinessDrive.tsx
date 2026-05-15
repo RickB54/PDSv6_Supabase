@@ -68,7 +68,7 @@ export default function BusinessDrive() {
     const [searchTerm, setSearchTerm] = useState("");
     const [files, setFiles] = useState<DriveFile[]>([]);
     const [folders, setFolders] = useState<DriveFolder[]>(DEFAULT_FOLDERS);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [isLoaded, setIsLoaded] = useState(false);
     const [selectedFile, setSelectedFile] = useState<DriveFile | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     
@@ -76,26 +76,66 @@ export default function BusinessDrive() {
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     
-    // Load from local storage
+    // Persistence & Migration to localforage (IndexedDB) to avoid QuotaExceededError
     useEffect(() => {
-        const savedFiles = localStorage.getItem('business_drive_files_v2');
-        const savedFolders = localStorage.getItem('business_drive_folders_v2');
-        if (savedFiles) {
-            try { setFiles(JSON.parse(savedFiles)); } catch (e) { }
-        }
-        if (savedFolders) {
-            try { setFolders(JSON.parse(savedFolders)); } catch (e) { }
-        }
-        setIsInitialLoad(false);
+        const loadData = async () => {
+            try {
+                const { default: localforage } = await import('localforage');
+                
+                // 1. Check localforage first (Primary storage)
+                const savedFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
+                const savedFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3');
+
+                if (savedFiles) setFiles(savedFiles);
+                if (savedFolders) setFolders(savedFolders);
+                else setFolders(DEFAULT_FOLDERS);
+
+                // 2. Migration: If empty, try migrating from localStorage (Old storage)
+                if (!savedFiles) {
+                    const legacyFiles = localStorage.getItem('business_drive_files_v2');
+                    if (legacyFiles) {
+                        try {
+                            const parsed = JSON.parse(legacyFiles);
+                            setFiles(parsed);
+                            await localforage.setItem('business_drive_files_v3', parsed);
+                            localStorage.removeItem('business_drive_files_v2');
+                        } catch (e) { console.error("Legacy file migration failed", e); }
+                    }
+                }
+                if (!savedFolders || savedFolders.length === 0) {
+                    const legacyFolders = localStorage.getItem('business_drive_folders_v2');
+                    if (legacyFolders) {
+                        try {
+                            const parsed = JSON.parse(legacyFolders);
+                            setFolders(parsed);
+                            await localforage.setItem('business_drive_folders_v3', parsed);
+                            localStorage.removeItem('business_drive_folders_v2');
+                        } catch (e) { console.error("Legacy folder migration failed", e); }
+                    }
+                }
+                setIsLoaded(true);
+            } catch (err) {
+                console.error("Failed to load Business Drive data:", err);
+                setFolders(DEFAULT_FOLDERS);
+                setIsLoaded(true);
+            }
+        };
+        loadData();
     }, []);
 
-    // Save to local storage
     useEffect(() => {
-        if (!isInitialLoad) {
-            localStorage.setItem('business_drive_files_v2', JSON.stringify(files));
-            localStorage.setItem('business_drive_folders_v2', JSON.stringify(folders));
-        }
-    }, [files, folders, isInitialLoad]);
+        if (!isLoaded) return;
+        const saveData = async () => {
+            try {
+                const { default: localforage } = await import('localforage');
+                await localforage.setItem('business_drive_files_v3', files);
+                await localforage.setItem('business_drive_folders_v3', folders);
+            } catch (err) {
+                console.warn("Auto-save failed:", err);
+            }
+        };
+        saveData();
+    }, [files, folders, isLoaded]);
 
     const currentItems = useMemo(() => {
         const filteredFiles = files.filter(f => {
@@ -425,7 +465,12 @@ export default function BusinessDrive() {
                     ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
                     : "space-y-3"
             )}>
-                {currentItems.folders.length === 0 && currentItems.files.length === 0 ? (
+                {!isLoaded ? (
+                    <div className="col-span-full py-24 text-center">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                        <p className="text-zinc-400 font-medium">Syncing with Secure Storage...</p>
+                    </div>
+                ) : currentItems.folders.length === 0 && currentItems.files.length === 0 ? (
                     <div className="col-span-full py-24 text-center bg-[#0d1117] rounded-3xl border border-dashed border-zinc-800 shadow-inner">
                         <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6">
                             <File className="w-10 h-10 text-zinc-700" />
