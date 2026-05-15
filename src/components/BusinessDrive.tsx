@@ -137,7 +137,7 @@ export default function BusinessDrive() {
         reader.readAsDataURL(file);
     };
 
-    const [isDeletingFolder, setIsDeletingFolder] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{ id: string, type: 'file' | 'folder', name: string } | null>(null);
 
     const handleCreateFolder = () => {
         if (!newFolderName.trim()) return;
@@ -152,14 +152,15 @@ export default function BusinessDrive() {
         toast({ title: "Folder Created", description: `"${newFolder.name}" is ready.` });
     };
 
-    const deleteFile = (id: string) => {
+    const confirmDeleteFile = (id: string) => {
         setFiles(prev => prev.filter(f => f.id !== id));
+        setDeleteTarget(null);
         toast({ title: "File Deleted", variant: "destructive" });
     };
 
     const confirmDeleteFolder = (id: string) => {
         setFolders(prev => prev.filter(f => f.id !== id));
-        setIsDeletingFolder(null);
+        setDeleteTarget(null);
         toast({ title: "Folder Deleted", variant: "destructive" });
     };
 
@@ -350,7 +351,7 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
                                                     <Eye className="w-4 h-4 mr-2" /> Open
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setIsDeletingFolder(folder.id)}>
+                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -381,7 +382,7 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
                                                     <Eye className="w-4 h-4 mr-2" /> Open
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setIsDeletingFolder(folder.id)}>
+                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -426,7 +427,7 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
                                                     <Download className="w-4 h-4 mr-2" /> Download
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => deleteFile(file.id)}>
+                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -471,7 +472,7 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
                                                     <Download className="w-4 h-4 mr-2" /> Download
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => deleteFile(file.id)}>
+                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -620,23 +621,27 @@ export default function BusinessDrive() {
                 </DialogContent>
             </Dialog>
 
-            {/* Folder Deletion Confirmation */}
-            <AlertDialog open={!!isDeletingFolder} onOpenChange={(open) => !open && setIsDeletingFolder(null)}>
+            {/* Deletion Confirmation */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
                 <AlertDialogContent className="bg-[#0d1117] border-zinc-800 text-white">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription className="text-zinc-400">
-                            This action cannot be undone. This will permanently delete the folder
-                            and all of its contents from your Business Drive.
+                            This action cannot be undone. This will permanently delete the {deleteTarget?.type} 
+                            <span className="font-bold text-white px-1">"{deleteTarget?.name}"</span> 
+                            from your Business Drive.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="bg-zinc-800 text-white hover:bg-zinc-700 border-none">Cancel</AlertDialogCancel>
                         <AlertDialogAction 
-                            className="bg-red-600 hover:bg-red-700 text-white border-none"
-                            onClick={() => isDeletingFolder && confirmDeleteFolder(isDeletingFolder)}
+                            className="bg-red-600 hover:bg-red-700 text-white border-none font-bold"
+                            onClick={() => {
+                                if (deleteTarget?.type === 'folder') confirmDeleteFolder(deleteTarget.id);
+                                else if (deleteTarget?.type === 'file') confirmDeleteFile(deleteTarget.id);
+                            }}
                         >
-                            Delete Folder
+                            Delete {deleteTarget?.type === 'folder' ? 'Folder' : 'File'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
