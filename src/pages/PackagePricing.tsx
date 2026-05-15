@@ -147,6 +147,7 @@ export default function PackagePricing() {
 
   const [comparisonMatrixOpen, setComparisonMatrixOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+  const [recentChangesOpen, setRecentChangesOpen] = useState(false);
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
 
   useEffect(() => {
@@ -1058,6 +1059,133 @@ export default function PackagePricing() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate Price Audit PDF");
+    }
+  };
+
+  const generateRecentChangesPDF = () => {
+    try {
+      const doc = new jsPDF({ orientation: 'p' });
+      const history = getPriceChangeHistory();
+      const classifications = ["compact", "midsize", "truck", "luxury"];
+      
+      // Source of truth for "Current" should be currentPrices state
+      const allItems = [
+        ...builtInPackages.map(p => ({ ...p, type: 'package' as const })),
+        ...getCustomPackages().map(p => ({ ...p, type: 'package' as const })),
+        ...builtInAddOns.map(a => ({ ...a, type: 'addon' as const })),
+        ...getCustomAddOns().map(a => ({ ...a, type: 'addon' as const }))
+      ];
+
+      const changedItems = allItems.filter(item => {
+        return classifications.some(size => {
+          const key = `${item.type}:${item.id}:${size}`;
+          const currentVal = parseFloat(currentPrices[key]) || (item.pricing as any)[size];
+          const baseVal = (item.pricing as any)[size];
+          
+          // Case 1: Current override differs from base
+          if (Math.abs(currentVal - baseVal) > 0.01) return true;
+          
+          // Case 2: Historical record shows it once differed from base
+          const hasHistoricalDelta = history.some(r => 
+            r.snapshot && 
+            r.snapshot[key] && 
+            Math.abs(parseFloat(r.snapshot[key]) - baseVal) > 0.01
+          );
+          return hasHistoricalDelta;
+        });
+      });
+
+      doc.setTextColor(220, 38, 38);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("Recent Price Adjustments", 14, 20);
+      
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text("Summary of services with active price overrides across all vehicle classes.", 14, 33);
+
+      let yPos = 45;
+
+      if (changedItems.length === 0) {
+        doc.text("No price changes detected compared to base definitions.", 14, yPos);
+      } else {
+        changedItems.forEach((item, idx) => {
+          if (yPos > 240) { doc.addPage(); yPos = 20; }
+
+          const isAddon = item.type === 'addon';
+          const themeColor: [number, number, number] = isAddon ? [37, 99, 235] : [220, 38, 38];
+
+          // Item Header
+          doc.setFillColor(...themeColor);
+          doc.rect(14, yPos, 182, 10, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(11);
+          doc.setFont("helvetica", "bold");
+          doc.text(`${item.name.toUpperCase()} (${item.type.toUpperCase()})`, 18, yPos + 7);
+          yPos += 12;
+
+          const tableData = classifications.map(size => {
+            const key = `${item.type}:${item.id}:${size}`;
+            const baseVal = (item.pricing as any)[size];
+            
+            const itemHistory = history.filter(r => r.snapshot && r.snapshot[key]);
+            const latestRec = itemHistory[0];
+            const firstRec = [...itemHistory].reverse().find(r => Math.abs(parseFloat(r.snapshot![key]) - baseVal) > 0.01);
+            
+            const currentVal = parseFloat(currentPrices[key]) || baseVal;
+            
+            // If there is ANY history record for this item, it is considered MODIFIED in the audit sense
+            const isActuallyModified = itemHistory.length > 0;
+
+            const firstPrice = firstRec ? `$${parseFloat(firstRec.snapshot![key]).toFixed(2)}` : '—';
+            const firstDate = firstRec ? new Date(firstRec.date).toLocaleDateString() : '—';
+            const currentPrice = `$${currentVal.toFixed(2)}`;
+            const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : '—';
+
+            return [
+              size.toUpperCase(),
+              `$${baseVal.toFixed(2)}`,
+              `${firstPrice} (${firstDate})`,
+              `${currentPrice} (${currentDate})`
+            ];
+          });
+
+          autoTable(doc, {
+            startY: yPos,
+            head: [['Vehicle Class', 'Original (Base)', 'First Change', 'Currently Changed']],
+            body: tableData,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2.5 },
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+              1: { halign: 'right', cellWidth: 35 },
+              2: { halign: 'right', cellWidth: 50 },
+              3: { halign: 'right', cellWidth: 50 }
+            },
+            didParseCell: (data) => {
+              if (data.column.index === 3) {
+                const rowIdx = data.row.index;
+                const itemHistory = history.filter(r => r.snapshot && r.snapshot[`${item.type}:${item.id}:${classifications[rowIdx]}`]);
+                if (itemHistory.length > 0) {
+                  data.cell.styles.textColor = themeColor;
+                  data.cell.styles.fontStyle = 'bold';
+                }
+              }
+            }
+          });
+
+          yPos = (doc as any).lastAutoTable.finalY + 10;
+        });
+      }
+
+      doc.save(`recent_changes_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("Recent Changes PDF saved");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate Recent Changes PDF");
     }
   };
 
@@ -2225,14 +2353,27 @@ export default function PackagePricing() {
                   <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                     <History className="w-3 h-3" /> Audit Log Records
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
-                    onClick={generatePriceAuditPDF}
-                  >
-                    <FileDown className="w-3.5 h-3.5" /> SAVE PRICE AUDIT PDF
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                      onClick={() => {
+                        setPriceHistory(getPriceChangeHistory());
+                        setRecentChangesOpen(true);
+                      }}
+                    >
+                      <Clock className="w-3.5 h-3.5" /> RECENT PRICE CHANGES
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                      onClick={generatePriceAuditPDF}
+                    >
+                      <FileDown className="w-3.5 h-3.5" /> SAVE PRICE AUDIT PDF
+                    </Button>
+                  </div>
                 </div>
                 <div className="bg-black/50 border border-zinc-800 rounded-lg p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
                   {priceHistory.length === 0 ? (
@@ -3295,6 +3436,153 @@ export default function PackagePricing() {
                   </table>
                 </div>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={recentChangesOpen} onOpenChange={setRecentChangesOpen}>
+          <DialogContent className="sm:max-w-4xl bg-zinc-950 border-zinc-800 text-white max-h-[85vh] overflow-y-auto">
+            <DialogHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-4 mb-4">
+              <div>
+                <DialogTitle className="text-2xl font-black text-red-500">RECENT PRICE CHANGES</DialogTitle>
+                <p className="text-zinc-500 text-xs mt-1 uppercase tracking-widest font-bold">Only showing services with active overrides</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={generateRecentChangesPDF} className="border-red-500/30 text-red-400 hover:bg-red-500/10">
+                <FileDown className="w-4 h-4 mr-2" /> Export PDF
+              </Button>
+            </DialogHeader>
+
+            <div className="space-y-12 pr-2 custom-scrollbar">
+              {(() => {
+                const history = priceHistory.length > 0 ? priceHistory : getPriceChangeHistory();
+                const classifications = ["compact", "midsize", "truck", "luxury"];
+                const allPkgs = [
+                  ...builtInPackages.map(p => ({ ...p, type: 'package' as const })),
+                  ...getCustomPackages().map(p => ({ ...p, type: 'package' as const }))
+                ];
+                const allAddons = [
+                  ...builtInAddOns.map(a => ({ ...a, type: 'addon' as const })),
+                  ...getCustomAddOns().map(a => ({ ...a, type: 'addon' as const }))
+                ];
+
+                const filterChanges = (items: any[]) => items.filter(item => {
+                  return classifications.some(size => {
+                    const key = `${item.type}:${item.id}:${size}`;
+                    const currentVal = parseFloat(currentPrices[key]) || (item.pricing as any)[size];
+                    const baseVal = (item.pricing as any)[size];
+                    if (Math.abs(currentVal - baseVal) > 0.01) return true;
+                    return history.some(r => r.snapshot && r.snapshot[key] && Math.abs(parseFloat(r.snapshot[key]) - baseVal) > 0.01);
+                  });
+                });
+
+                const changedPkgs = filterChanges(allPkgs);
+                const changedAddons = filterChanges(allAddons);
+
+                if (changedPkgs.length === 0 && changedAddons.length === 0) {
+                  return <div className="text-center py-20 text-zinc-600 font-bold italic">No active price overrides detected.</div>;
+                }
+
+                const renderItem = (item: any, isAddon: boolean) => (
+                  <div key={item.id} className={cn(
+                    "border rounded-xl overflow-hidden bg-zinc-900/30",
+                    isAddon ? "border-blue-500/20" : "border-zinc-800"
+                  )}>
+                    <div className={cn(
+                      "px-4 py-2 border-b flex justify-between items-center",
+                      isAddon ? "bg-blue-900/20 border-blue-800/30" : "bg-zinc-800/50 border-zinc-800"
+                    )}>
+                      <h4 className="text-sm font-black text-white uppercase tracking-tight">{item.name}</h4>
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded border",
+                        isAddon ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"
+                      )}>{item.type}</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 lg:grid-cols-4 gap-4">
+                      {classifications.map(size => {
+                        const key = `${item.type}:${item.id}:${size}`;
+                        const baseVal = (item.pricing as any)[size];
+                        
+                        const itemHistory = history.filter(r => r.snapshot && r.snapshot[key]);
+                        const latestRec = itemHistory[0];
+                        const firstRec = [...itemHistory].reverse().find(r => Math.abs(parseFloat(r.snapshot![key]) - baseVal) > 0.01);
+                        
+                        const currentVal = parseFloat(currentPrices[key]) || baseVal;
+                        const hasChanged = Math.abs(currentVal - baseVal) > 0.01;
+
+                        const firstPrice = firstRec ? parseFloat(firstRec.snapshot![key]) : null;
+                        const firstDate = firstRec ? new Date(firstRec.date).toLocaleDateString() : null;
+                        const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : null;
+
+                        return (
+                          <div key={size} className={cn(
+                            "p-4 rounded-lg border transition-all space-y-4",
+                            hasChanged 
+                              ? (isAddon ? "bg-blue-950/30 border-blue-500/60 ring-1 ring-blue-500/20" : "bg-red-950/30 border-red-500/60 ring-1 ring-red-500/20")
+                              : "bg-zinc-900 border-zinc-800"
+                          )}>
+                            <div className="text-[11px] font-black text-white uppercase flex justify-between border-b border-zinc-800 pb-2">
+                              <span className={hasChanged ? (isAddon ? "text-blue-400" : "text-red-400") : "text-zinc-400"}>{size}</span>
+                              {hasChanged && <span className={isAddon ? "text-blue-400 font-black" : "text-red-400 font-black"}>● MODIFIED</span>}
+                            </div>
+                            
+                            <div className="space-y-4">
+                              {/* Original Price */}
+                              <div className="flex justify-between items-center">
+                                <span className="text-[10px] text-white uppercase font-black">Original (Base)</span>
+                                <span className="text-sm text-white font-mono font-black">${baseVal}</span>
+                              </div>
+
+                              {/* First -> Current Shift */}
+                              <div className="flex items-center justify-between gap-6 pt-2 border-t border-zinc-800/50">
+                                <div className="flex-1">
+                                  <div className="text-[10px] text-white mb-1 uppercase font-black">
+                                    First {firstDate ? `(${firstDate})` : '(—)'}
+                                  </div>
+                                  <div className="text-base font-black text-white">${firstPrice ?? baseVal}</div>
+                                </div>
+                                <div className="text-zinc-500 font-black">→</div>
+                                <div className="text-right flex-1">
+                                  <div className="text-[10px] text-white mb-1 uppercase font-black">
+                                    Current {currentDate ? `(${currentDate})` : '(—)'}
+                                  </div>
+                                  <div className={cn("text-base font-black", hasChanged ? (isAddon ? "text-blue-400" : "text-red-400") : "text-white")}>
+                                    ${currentVal}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+
+                return (
+                  <div className="space-y-12">
+                    {changedPkgs.length > 0 && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2 text-red-500 font-black text-xs uppercase tracking-[0.2em]">
+                          <div className="h-px flex-1 bg-red-500/20" />
+                          Primary Service Packages
+                          <div className="h-px flex-1 bg-red-500/20" />
+                        </div>
+                        {changedPkgs.map(item => renderItem(item, false))}
+                      </div>
+                    )}
+                    
+                    {changedAddons.length > 0 && (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-2 text-blue-500 font-black text-xs uppercase tracking-[0.2em]">
+                          <div className="h-px flex-1 bg-blue-500/20" />
+                          Add-On Services
+                          <div className="h-px flex-1 bg-blue-500/20" />
+                        </div>
+                        {changedAddons.map(item => renderItem(item, true))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>
