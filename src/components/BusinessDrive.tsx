@@ -172,9 +172,37 @@ export default function BusinessDrive() {
         link.click();
     };
 
-    const openViewer = (file: DriveFile) => {
-        setSelectedFile(file);
-        setIsViewerOpen(true);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+
+    const handleAnalyzeFolder = () => {
+        setIsAnalyzing(true);
+        // Simulate Gemini analysis
+        setTimeout(() => {
+            const folderName = currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Root";
+            const fileCount = currentItems.files.length;
+            const folderCount = currentItems.folders.length;
+            const fileTypes = Array.from(new Set(currentItems.files.map(f => f.type.split('/')[1] || 'document')));
+            
+            let summary = `### Gemini Analysis: ${folderName}\n\n`;
+            summary += `I have analyzed the **${fileCount} files** and **${folderCount} sub-folders** within this directory. Here are the key insights:\n\n`;
+            
+            if (fileCount === 0 && folderCount === 0) {
+                summary += `* **Status:** This directory is currently empty. No actionable data found.\n`;
+                summary += `* **Recommendation:** Upload relevant business documents or pricing sheets to begin analysis.`;
+            } else {
+                summary += `* **Composition:** The folder primarily contains ${fileTypes.join(', ')} assets.\n`;
+                summary += `* **Business Value:** Based on the file names, this directory appears to be central to your **${folderName}** operations.\n`;
+                summary += `* **Suggested Action:** Consider categorizing the ${fileCount} files into specific sub-folders to optimize your workflow.\n\n`;
+                summary += `#### Identified Items:\n`;
+                currentItems.files.forEach(f => {
+                    summary += `* **${f.name}**: A ${f.size} ${f.type.split('/')[1]} modified on ${f.modified.split(',')[0]}.\n`;
+                });
+            }
+            
+            setAnalysisResult(summary);
+            setIsAnalyzing(false);
+        }, 2000);
     };
 
     const handleUpOneLevel = () => {
@@ -288,20 +316,64 @@ export default function BusinessDrive() {
             </div>
 
             {/* Gemini Summary Bar (Aesthetic) */}
-            <div className="bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent p-5 rounded-2xl border border-blue-500/20 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                        <Sparkles className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent p-5 rounded-2xl border border-blue-500/20 flex items-center justify-between shadow-lg relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex items-center gap-4 relative z-10">
+                    <div className={cn(
+                        "w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 transition-all",
+                        isAnalyzing && "animate-pulse scale-110"
+                    )}>
+                        <Sparkles className={cn("w-6 h-6 text-white", isAnalyzing && "animate-spin")} />
                     </div>
                     <div>
                         <div className="text-base font-black text-white flex items-center gap-2">
                             Ask Gemini
+                            {isAnalyzing && <span className="text-[10px] bg-blue-500 px-2 py-0.5 rounded-full animate-bounce">Analyzing...</span>}
                         </div>
                         <div className="text-sm text-zinc-400">Summarize, analyze, and get up to speed with files in this folder.</div>
                     </div>
                 </div>
-                <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest hidden sm:flex">Analyze Folder</Button>
+                <Button 
+                    variant="outline" 
+                    className="border-zinc-700 hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest hidden sm:flex relative z-10"
+                    onClick={handleAnalyzeFolder}
+                    disabled={isAnalyzing}
+                >
+                    {isAnalyzing ? "Processing..." : "Analyze Folder"}
+                </Button>
             </div>
+
+            {/* Gemini Analysis Dialog */}
+            <Dialog open={!!analysisResult} onOpenChange={(open) => !open && setAnalysisResult(null)}>
+                <DialogContent className="sm:max-w-[600px] bg-[#0d1117] border-zinc-800 text-white p-0 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-6 border-b border-zinc-800 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
+                            <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-black">Gemini Insight</h2>
+                            <p className="text-xs text-zinc-400">Intelligence report for current directory</p>
+                        </div>
+                    </div>
+                    <div className="p-8 max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none">
+                        {analysisResult?.split('\n').map((line, i) => (
+                            <p key={i} className={cn(
+                                line.startsWith('###') ? "text-xl font-black text-blue-400 mt-6 mb-2" : 
+                                line.startsWith('####') ? "text-lg font-bold text-zinc-200 mt-4 mb-2" :
+                                line.startsWith('*') ? "flex items-start gap-2 text-zinc-300 ml-2" : "text-zinc-400"
+                            )}>
+                                {line.replace(/^### |^#### |^\* /, '')}
+                            </p>
+                        ))}
+                    </div>
+                    <div className="p-6 border-t border-zinc-800 flex justify-end gap-3 bg-[#161b22]/50">
+                        <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setAnalysisResult(null)}>Close</Button>
+                        <Button className="bg-blue-600 hover:bg-blue-700 font-bold" onClick={() => setAnalysisResult(null)}>
+                            Save Insights
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Content Section */}
             <div className={cn(
