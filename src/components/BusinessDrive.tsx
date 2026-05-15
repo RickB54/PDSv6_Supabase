@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { uploadFile } from "@/lib/storage-utils";
 
 interface DriveFile {
     id: string;
@@ -153,46 +154,29 @@ export default function BusinessDrive() {
         return { files: filteredFiles, folders: filteredFolders };
     }, [files, folders, currentPath, searchTerm]);
 
+    const openViewer = (file: DriveFile) => {
+        setSelectedFile(file);
+        setIsViewerOpen(true);
+        setZoom(100);
+    };
+
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const fileList = e.target.files;
+        if (!fileList || fileList.length === 0) return;
 
-        // Quota check & transition to Supabase Storage
-        toast({ title: "Uploading...", description: `Preparing ${file.name} for secure storage.` });
+        const filesArray = Array.from(fileList);
+        const uploadCount = filesArray.length;
+        
+        toast({ 
+            title: uploadCount > 1 ? `Uploading ${uploadCount} files...` : "Uploading...", 
+            description: `Preparing your ${uploadCount > 1 ? 'assets' : 'file'} for secure storage.` 
+        });
 
-        try {
-            const { uploadFile } = await import('@/lib/storage-utils');
-            
-            // Upload to Supabase bucket 'customer-photos' which is already configured for drive-like usage
-            const publicUrl = await uploadFile('customer-photos', file, `business-drive/${Date.now()}_${file.name}`);
+        for (const file of filesArray) {
+            try {
+                // Upload to Supabase bucket 'customer-photos'
+                const publicUrl = await uploadFile('customer-photos', file, `business-drive/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`);
 
-            const newFile: DriveFile = {
-                id: Math.random().toString(36).substr(2, 9),
-                name: file.name,
-                type: file.type,
-                size: (file.size / 1024).toFixed(1) + ' KB',
-                modified: new Date().toLocaleString(),
-                path: [...currentPath],
-                data: publicUrl // Using the public URL instead of Base64 to save localStorage quota
-            };
-
-            setFiles(prev => [...prev, newFile]);
-            toast({ title: "File Uploaded", description: `"${file.name}" saved to secure cloud storage.` });
-        } catch (err: any) {
-            console.error("Business Drive Upload Error:", err);
-            
-            // If Supabase fails, fallback to Base64 only if small enough, otherwise show error
-            if (file.size > 1024 * 512) { // 512KB limit for fallback
-                toast({ 
-                    title: "Upload Failed", 
-                    description: "File is too large for local storage and cloud upload failed. Please check your connection.",
-                    variant: "destructive"
-                });
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
                 const newFile: DriveFile = {
                     id: Math.random().toString(36).substr(2, 9),
                     name: file.name,
@@ -200,13 +184,24 @@ export default function BusinessDrive() {
                     size: (file.size / 1024).toFixed(1) + ' KB',
                     modified: new Date().toLocaleString(),
                     path: [...currentPath],
-                    data: event.target?.result as string
+                    data: publicUrl
                 };
+
                 setFiles(prev => [...prev, newFile]);
-                toast({ title: "Local Save Successful", description: "File saved locally (Cloud upload failed)." });
-            };
-            reader.readAsDataURL(file);
+            } catch (err: any) {
+                console.error(`Upload failed for ${file.name}:`, err);
+                toast({ 
+                    title: `Failed: ${file.name}`, 
+                    description: "Cloud storage is currently unreachable. Please try again later.",
+                    variant: "destructive"
+                });
+            }
         }
+        
+        toast({ 
+            title: uploadCount > 1 ? "Upload Complete" : "File Uploaded", 
+            description: uploadCount > 1 ? `${uploadCount} files added to your drive.` : "File saved securely to the cloud." 
+        });
     };
 
     const [deleteTarget, setDeleteTarget] = useState<{ id: string, type: 'file' | 'folder', name: string } | null>(null);
@@ -389,11 +384,11 @@ export default function BusinessDrive() {
                                 <FolderPlus className="w-4 h-4 mr-2" /> New Folder
                             </DropdownMenuItem>
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
-                                <Upload className="w-4 h-4 mr-2" /> Upload File
+                                <Upload className="w-4 h-4 mr-2" /> Upload Files
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <input type="file" id="drive-upload" className="hidden" onChange={handleUpload} />
+                    <input type="file" id="drive-upload" className="hidden" multiple onChange={handleUpload} />
                 </div>
             </div>
 
@@ -689,6 +684,15 @@ export default function BusinessDrive() {
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden sm:flex" onClick={() => selectedFile && downloadFile(selectedFile)}>
                                 <Download className="w-5 h-5" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-white hover:bg-white/10" 
+                                onClick={() => selectedFile?.data && window.open(selectedFile.data, '_blank')}
+                                title="Open in New Tab"
+                            >
+                                <Eye className="w-5 h-5" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden sm:flex" onClick={() => window.print()}>
                                 <Printer className="w-5 h-5" />
