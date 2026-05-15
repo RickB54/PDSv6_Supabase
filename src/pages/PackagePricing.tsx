@@ -946,39 +946,25 @@ export default function PackagePricing() {
         const buildTableData = (items: any[], type: 'package' | 'addon') => {
           return items.map(item => {
             const key = `${type}:${item.id}:${size}`;
+            const baseVal = (item.pricing as any)[size];
             
-            // Current Price
-            const latestRec = history.find(r => r.snapshot && r.snapshot[key]);
-            const currentPriceVal = latestRec ? parseFloat(latestRec.snapshot[key]) : (item.pricing as any)[size];
-            const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : 'Current';
-
-            // Before Price
-            let beforePriceVal = (item.pricing as any)[size];
-            let beforeDate = 'Base';
+            const itemHistory = history.filter(r => r.snapshot && r.snapshot[key]);
+            const latestRec = itemHistory[0];
+            const firstRec = [...itemHistory].reverse().find(r => Math.abs(parseFloat(r.snapshot![key]) - baseVal) > 0.01);
             
-            if (latestRec) {
-                const latestIdx = history.indexOf(latestRec);
-                const prevRec = history.slice(latestIdx + 1).find(r => r.snapshot && r.snapshot[key] && parseFloat(r.snapshot[key]) !== currentPriceVal);
-                if (prevRec) {
-                    beforePriceVal = parseFloat(prevRec.snapshot![key]);
-                    beforeDate = new Date(prevRec.date).toLocaleDateString();
-                } else if (parseFloat(String((item.pricing as any)[size])) !== currentPriceVal) {
-                    beforePriceVal = (item.pricing as any)[size];
-                    beforeDate = 'Base';
-                } else {
-                    beforePriceVal = currentPriceVal;
-                    beforeDate = 'Orig';
-                }
-            }
+            const currentVal = parseFloat(currentPrices[key]) || baseVal;
+            
+            const firstPrice = firstRec ? `$${parseFloat(firstRec.snapshot![key]).toFixed(2)}` : '—';
+            const firstDate = firstRec ? new Date(firstRec.date).toLocaleDateString() : '—';
+            const currentPrice = `$${currentVal.toFixed(2)}`;
+            const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : '—';
 
-            return {
-              name: item.name,
-              beforePrice: `$${beforePriceVal.toFixed(2)}`,
-              beforeDate,
-              currentPrice: `$${currentPriceVal.toFixed(2)}`,
-              currentDate,
-              isChanged: Math.abs(currentPriceVal - beforePriceVal) > 0.01
-            };
+            return [
+              item.name,
+              `$${baseVal.toFixed(2)}`,
+              `${firstPrice} (${firstDate})`,
+              `${currentPrice} (${currentDate})`
+            ];
           });
         };
 
@@ -993,27 +979,16 @@ export default function PackagePricing() {
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Service Name', 'Before', 'Date', 'Current', 'Changed']],
-          body: pkgData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
+          head: [['Service Name', 'Original (Base)', 'First Change', 'Currently Changed']],
+          body: pkgData,
           theme: 'striped',
           styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold' },
-          margin: { left: 14, right: 14 },
           columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { halign: 'right', cellWidth: 28 },
-            2: { halign: 'center', cellWidth: 22 },
-            3: { halign: 'right', cellWidth: 28 },
-            4: { halign: 'center', cellWidth: 22 }
-          },
-          didParseCell: (data) => {
-            if (data.column.index === 3) {
-              const rowIdx = data.row.index;
-              if (pkgData[rowIdx].isChanged) {
-                data.cell.styles.textColor = [220, 38, 38];
-                data.cell.styles.fontStyle = 'bold';
-              }
-            }
+            0: { cellWidth: 50 },
+            1: { halign: 'right', cellWidth: 35 },
+            2: { halign: 'right', cellWidth: 45 },
+            3: { halign: 'right', cellWidth: 45 }
           }
         });
         
@@ -1027,27 +1002,16 @@ export default function PackagePricing() {
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Add-On Name', 'Before', 'Date', 'Current', 'Changed']],
-          body: addonData.map(d => [d.name, d.beforePrice, d.beforeDate, d.currentPrice, d.currentDate]),
+          head: [['Add-On Name', 'Original (Base)', 'First Change', 'Currently Changed']],
+          body: addonData,
           theme: 'striped',
           styles: { fontSize: 8, cellPadding: 2 },
           headStyles: { fillColor: [60, 60, 60], textColor: [255, 255, 255], fontStyle: 'bold' },
-          margin: { left: 14, right: 14 },
           columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { halign: 'right', cellWidth: 28 },
-            2: { halign: 'center', cellWidth: 22 },
-            3: { halign: 'right', cellWidth: 28 },
-            4: { halign: 'center', cellWidth: 22 }
-          },
-          didParseCell: (data) => {
-            if (data.column.index === 3) {
-              const rowIdx = data.row.index;
-              if (addonData[rowIdx].isChanged) {
-                data.cell.styles.textColor = [220, 38, 38];
-                data.cell.styles.fontStyle = 'bold';
-              }
-            }
+            0: { cellWidth: 50 },
+            1: { halign: 'right', cellWidth: 35 },
+            2: { halign: 'right', cellWidth: 45 },
+            3: { halign: 'right', cellWidth: 45 }
           }
         });
 
