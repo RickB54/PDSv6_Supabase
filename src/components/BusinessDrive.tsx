@@ -113,12 +113,19 @@ export default function BusinessDrive() {
         return { files: filteredFiles, folders: filteredFolders };
     }, [files, folders, currentPath, searchTerm]);
 
-    const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
+        // Quota check & transition to Supabase Storage
+        toast({ title: "Uploading...", description: `Preparing ${file.name} for secure storage.` });
+
+        try {
+            const { uploadFile } = await import('@/lib/storage-utils');
+            
+            // Upload to Supabase bucket 'customer-photos' which is already configured for drive-like usage
+            const publicUrl = await uploadFile('customer-photos', file, `business-drive/${Date.now()}_${file.name}`);
+
             const newFile: DriveFile = {
                 id: Math.random().toString(36).substr(2, 9),
                 name: file.name,
@@ -126,15 +133,40 @@ export default function BusinessDrive() {
                 size: (file.size / 1024).toFixed(1) + ' KB',
                 modified: new Date().toLocaleString(),
                 path: [...currentPath],
-                data: event.target?.result as string
+                data: publicUrl // Using the public URL instead of Base64 to save localStorage quota
             };
+
             setFiles(prev => [...prev, newFile]);
-            toast({
-                title: "File Uploaded",
-                description: `${file.name} added to ${currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Root"}`
-            });
-        };
-        reader.readAsDataURL(file);
+            toast({ title: "File Uploaded", description: `"${file.name}" saved to secure cloud storage.` });
+        } catch (err: any) {
+            console.error("Business Drive Upload Error:", err);
+            
+            // If Supabase fails, fallback to Base64 only if small enough, otherwise show error
+            if (file.size > 1024 * 512) { // 512KB limit for fallback
+                toast({ 
+                    title: "Upload Failed", 
+                    description: "File is too large for local storage and cloud upload failed. Please check your connection.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const newFile: DriveFile = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: file.name,
+                    type: file.type,
+                    size: (file.size / 1024).toFixed(1) + ' KB',
+                    modified: new Date().toLocaleString(),
+                    path: [...currentPath],
+                    data: event.target?.result as string
+                };
+                setFiles(prev => [...prev, newFile]);
+                toast({ title: "Local Save Successful", description: "File saved locally (Cloud upload failed)." });
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const [deleteTarget, setDeleteTarget] = useState<{ id: string, type: 'file' | 'folder', name: string } | null>(null);
