@@ -288,13 +288,30 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 videoUrls: v.video_urls || []
             }));
 
-            // Deduplicate vehicles by ID
-            const seenVehIds = new Set<string>();
-            const allVehs = allVehsRaw.filter(v => {
-                if (!v.id) return true;
-                if (seenVehIds.has(v.id)) return false;
-                seenVehIds.add(v.id);
-                return true;
+            // Deduplicate vehicles by ID and Content (Year + Model)
+            // Prevents duplicates like "F-150" and "Ford F-150" appearing as separate entries
+            const allVehs: any[] = [];
+            allVehsRaw.forEach((v: any) => {
+                const fullStr = `${v.year} ${v.make} ${v.model}`.toLowerCase().replace(/\s+/g, ' ').trim();
+                
+                const isDuplicate = allVehs.some((existing, idx) => {
+                    const exStr = `${existing.year} ${existing.make} ${existing.model}`.toLowerCase().replace(/\s+/g, ' ').trim();
+                    if (v.year !== existing.year) return false;
+                    
+                    // If one name contains the other (e.g. "Ford F-150" vs "F-150"), they are likely duplicates
+                    if (fullStr.includes(exStr) || exStr.includes(fullStr)) {
+                        // Prefer the entry with more information (longer string)
+                        if (fullStr.length > exStr.length) {
+                            allVehs[idx] = v;
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (!isDuplicate) {
+                    allVehs.push(v);
+                }
             });
 
             const v = allVehs[0] || {};
@@ -857,23 +874,28 @@ export const deleteSupabaseCustomer = async (id: string) => {
             }
         }
 
-        // 2. DETACH BOOKINGS before deletion to prevent cascade from wiping them
-        // Bookings store a full snapshot in booking_vehicle JSONB, so detaching is safe.
-        const { data: linkedBookings } = await supabase
-            .from('bookings')
-            .select('id')
-            .eq('customer_id', id);
+        // 2. DETACH BOOKINGS & ESTIMATES before deletion to prevent cascade errors
+        // Fetch vehicle IDs from the customer record retrieved in Step 1
+        const vehicleIds = (customer?.vehicles || []).map((v: any) => v.id).filter(Boolean);
 
-        if (linkedBookings && linkedBookings.length > 0) {
-            console.log(`[DeleteCustomer] Detaching ${linkedBookings.length} booking(s) before customer deletion to preserve history.`);
-            const { error: detachError } = await supabase
-                .from('bookings')
-                .update({ customer_id: null })
-                .eq('customer_id', id);
-            if (detachError) {
-                console.warn('[DeleteCustomer] Could not detach bookings (will proceed anyway):', detachError);
-            }
+        console.log(`[DeleteCustomer] Detaching linked records for ${id} and ${vehicleIds.length} vehicle(s).`);
+
+        // Nullify vehicle links in Bookings (fixes the FK violation)
+        if (vehicleIds.length > 0) {
+            const { error: vehBookError } = await supabase.from('bookings').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
+            if (vehBookError) console.warn('[DeleteCustomer] Bookings vehicle detach warning:', vehBookError);
         }
+        // Nullify customer link in Bookings
+        const { error: custBookError } = await supabase.from('bookings').update({ customer_id: null }).eq('customer_id', id);
+        if (custBookError) console.warn('[DeleteCustomer] Bookings customer detach warning:', custBookError);
+
+        // Nullify vehicle and customer links in Estimates
+        if (vehicleIds.length > 0) {
+            const { error: vehEstError } = await supabase.from('estimates').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
+            if (vehEstError) console.warn('[DeleteCustomer] Estimates vehicle detach warning:', vehEstError);
+        }
+        const { error: custEstError } = await supabase.from('estimates').update({ customer_id: null }).eq('customer_id', id);
+        if (custEstError) console.warn('[DeleteCustomer] Estimates customer detach warning:', custEstError);
 
         // 3. DATABASE DELETION (CRM)
         const { error: crmError, count: crmCount } = await supabase

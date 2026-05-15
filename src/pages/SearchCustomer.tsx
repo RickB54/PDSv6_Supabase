@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,19 @@ const SearchCustomer = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [activeModalTab, setActiveModalTab] = useState("profile");
+  
+  const customerToDelete = useMemo(() => 
+    customers.find(c => c.id === deleteCustomerId), 
+    [customers, deleteCustomerId]
+  );
+  
+  const impactCounts = useMemo(() => {
+    if (!customerToDelete) return { vehicles: 0, bookings: 0 };
+    return {
+      vehicles: (customerToDelete as any).vehicles?.length || 0,
+      bookings: allBookings.filter(b => b.customerId === customerToDelete.id).length
+    };
+  }, [customerToDelete, allBookings]);
   
   
   const [showEmailPreview, setShowEmailPreview] = useState(false);
@@ -1453,7 +1466,14 @@ const SearchCustomer = () => {
         <AlertDialogContent className="z-[250]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription className="text-zinc-400">
+              This will permanently delete <strong>{customerToDelete?.name || 'this customer'}</strong>, 
+              all <strong>{impactCounts.vehicles} related vehicle(s)</strong>, 
+              and detach <strong>{impactCounts.bookings} booking(s)</strong> from this profile. 
+              <br /><br />
+              Booking history will be preserved as a snapshot, but the link to this customer record will be removed. 
+              <strong> This action cannot be undone.</strong>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

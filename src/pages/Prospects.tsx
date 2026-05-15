@@ -115,6 +115,19 @@ export default function Prospects() {
   const { isDemoMode } = useDemoMode();
   const isAdmin = getCurrentUser()?.role === 'admin' || isDemoMode;
 
+  const customerToDelete = useMemo(() => 
+    customers.find(c => c.id === deleteCustomerId), 
+    [customers, deleteCustomerId]
+  );
+  
+  const impactCounts = useMemo(() => {
+    if (!customerToDelete) return { vehicles: 0, bookings: 0 };
+    return {
+      vehicles: customerToDelete.vehicles?.length || 0,
+      bookings: allBookings.filter(b => b.customerId === customerToDelete.id).length
+    };
+  }, [customerToDelete, allBookings]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const q = params.get('search');
@@ -1569,7 +1582,14 @@ export default function Prospects() {
         <AlertDialogContent className="z-[250]">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            <AlertDialogDescription className="text-zinc-400">
+              This will permanently delete <strong>{customerToDelete?.name || 'this prospect'}</strong>, 
+              all <strong>{impactCounts.vehicles} related vehicle(s)</strong>, 
+              and detach <strong>{impactCounts.bookings} booking(s)</strong> from this profile. 
+              <br /><br />
+              Booking history will be preserved as a snapshot, but the link to this prospect record will be removed. 
+              <strong> This action cannot be undone.</strong>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
