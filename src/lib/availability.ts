@@ -12,6 +12,7 @@ export interface BlockedTimeSlot {
     startTime?: string; // HH:mm (if undefined, blocks entire day)
     endTime?: string; // HH:mm
     reason?: string; // Optional note for admin
+    notes?: string; // Detailed notes
     source?: string; // Origin tracking
     createdAt: string;
 }

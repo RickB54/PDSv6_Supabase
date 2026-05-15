@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import localforage from 'localforage';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,7 +106,8 @@ export default function AvailabilityManager() {
         time: '09:00',
         make: '',
         model: '',
-        year: ''
+        year: '',
+        address: ''
     });
 
     // Quick block states
@@ -688,6 +690,7 @@ export default function AvailabilityManager() {
                 customer_name: manualBooking.name,
                 phone: manualBooking.phone,
                 email: manualBooking.email,
+                address: manualBooking.address || '',
                 vehicle_type: 'Unknown',
                 make: manualBooking.make,
                 model: manualBooking.model,
