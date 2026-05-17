@@ -281,9 +281,13 @@ const CustomerPortal = () => {
       <main id="services" className="container mx-auto px-4 py-24 max-w-7xl scroll-mt-24">
         {/* Step Guide Intro */}
         <div className="mb-12 text-center animate-fade-in bg-blue-50/50 p-8 rounded-2xl border border-blue-100 shadow-sm">
-          <h2 className="text-3xl md:text-4xl font-black text-blue-900 uppercase tracking-tighter">
+          <h2 className="text-3xl md:text-4xl font-black text-blue-900 uppercase tracking-tighter mb-3">
             Follow the <span className="text-red-600 italic">3 easy steps</span> to choose your detail
           </h2>
+          <p className="text-blue-800/80 font-medium text-sm md:text-base max-w-2xl mx-auto leading-relaxed mt-4">
+            <strong className="text-blue-900">Step 1:</strong> Select vehicle, <strong className="text-blue-900">Step 2:</strong> Select service, <strong className="text-blue-900">Step 3:</strong> Select optional add-ons.<br className="hidden md:block" />
+            Then hit <strong className="text-blue-900">"Schedule My Detail"</strong> and fill out the form to select an available time slot.
+          </p>
         </div>
 
         {/* Vehicle Type Selector - Centered */}
