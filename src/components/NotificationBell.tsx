@@ -66,12 +66,28 @@ export default function NotificationBell() {
       // 2. Desktop Notification
       const latestAlert = alerts?.[0];
       if (latestAlert && !latestAlert.read) {
-        // Prevent duplicate PC notifications across multiple mounted bell components (e.g. mobile & desktop views)
-        const notifiedSet = (window as any).__notifiedAlertIds || new Set<string>();
-        (window as any).__notifiedAlertIds = notifiedSet;
-        if (!notifiedSet.has(latestAlert.id)) {
-          notifiedSet.add(latestAlert.id);
-          sendDesktopNotification("New Admin Alert", latestAlert.message);
+        // Exclude utility background alerts from sliding out on the PC
+        const ignoredTypes = [
+          'pdf_saved',
+          'admin_email_sent',
+          'accounting_update',
+          'todo_completed',
+          'todo_acknowledged',
+          'todo_comment',
+          'todo_updated',
+          'cheat_sheet_downloaded',
+          'video_checked',
+          'tip_checked'
+        ];
+        
+        if (!ignoredTypes.includes(latestAlert.type)) {
+          // Prevent duplicate PC notifications across multiple mounted bell components (e.g. mobile & desktop views)
+          const notifiedSet = (window as any).__notifiedAlertIds || new Set<string>();
+          (window as any).__notifiedAlertIds = notifiedSet;
+          if (!notifiedSet.has(latestAlert.id)) {
+            notifiedSet.add(latestAlert.id);
+            sendDesktopNotification("New Admin Alert", latestAlert.message);
+          }
         }
       }
 
