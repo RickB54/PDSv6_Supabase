@@ -62,7 +62,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS, EmailCampaign } from "@/lib/bookingsSync";
 import { toast } from "sonner";
 
 export default function FollowUpCenter() {
@@ -81,6 +81,7 @@ export default function FollowUpCenter() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedProspect, setSelectedProspect] = useState<Customer | null>(null);
   const [customNote, setCustomNote] = useState("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
   const [includeDiscount, setIncludeDiscount] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
@@ -200,6 +201,7 @@ export default function FollowUpCenter() {
   const openFollowUpDialog = (customer: any) => {
     setSelectedCustomer(customer);
     setCustomNote("");
+    setSelectedCampaignId("");
     setIncludeDiscount(false);
     setSelectedCouponId("");
     setIsDialogOpen(true);
@@ -208,9 +210,29 @@ export default function FollowUpCenter() {
   const openProspectDialog = (prospect: Customer) => {
     setSelectedProspect(prospect);
     setCustomNote("");
+    setSelectedCampaignId("");
     setIncludeDiscount(false);
     setSelectedCouponId("");
     setIsProspectDialogOpen(true);
+  };
+
+  const handleCampaignSelect = (campaignId: string, isProspect: boolean) => {
+    setSelectedCampaignId(campaignId);
+    const campaigns = isProspect ? PROSPECT_CAMPAIGNS : CLIENT_CAMPAIGNS;
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      setCustomNote(campaign.defaultText);
+      if (campaign.suggestedIncentive) {
+        setIncludeDiscount(true);
+        if (!selectedCouponId) {
+          const active = allCoupons.filter(c => c.active);
+          if (active.length > 0) {
+            setSelectedCouponId(active[0].id);
+          }
+        }
+      }
+      toast.info(`Campaign Loaded: ${campaign.name}`);
+    }
   };
 
   const executeFollowUp = async () => {
@@ -757,6 +779,24 @@ export default function FollowUpCenter() {
 
           <div className="space-y-8 pt-6">
             <div className="space-y-3">
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
+                Outreach Campaign Template
+              </label>
+              <Select value={selectedCampaignId} onValueChange={(val) => handleCampaignSelect(val, false)}>
+                <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight shadow-xl">
+                  <SelectValue placeholder="CHOOSE EMAIL CAMPAIGN..." />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
+                  {CLIENT_CAMPAIGNS.map(c => (
+                    <SelectItem key={c.id} value={c.id} className="text-[11px] font-black uppercase tracking-tight">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
                   <MessageSquare className="h-3.5 w-3.5" /> High-End Personal Note
@@ -852,6 +892,24 @@ export default function FollowUpCenter() {
           </DialogHeader>
 
           <div className="space-y-8 pt-6">
+            <div className="space-y-3">
+              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
+                Outreach Campaign Template
+              </label>
+              <Select value={selectedCampaignId} onValueChange={(val) => handleCampaignSelect(val, true)}>
+                <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight shadow-xl">
+                  <SelectValue placeholder="CHOOSE EMAIL CAMPAIGN..." />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
+                  {PROSPECT_CAMPAIGNS.map(c => (
+                    <SelectItem key={c.id} value={c.id} className="text-[11px] font-black uppercase tracking-tight">
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">

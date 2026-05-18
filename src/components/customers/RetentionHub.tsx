@@ -3,7 +3,7 @@ import { Customer, supabase } from "@/lib/supa-data";
 import { useBookingsStore, Booking } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { useFollowUpStore } from "@/store/followup";
-import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS } from "@/lib/bookingsSync";
 import { format, differenceInDays, addMonths, isBefore } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +29,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   const [loadingEngs, setLoadingEngs] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [outreachNote, setOutreachNote] = useState("");
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [outreachCouponId, setOutreachCouponId] = useState("");
   const [includeDiscount, setIncludeDiscount] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -131,6 +132,26 @@ export function RetentionHub({ customer, onRefresh }: Props) {
     }, 600);
   };
 
+  const handleCampaignChange = (campaignId: string) => {
+    setSelectedCampaignId(campaignId);
+    const campaigns = isProspect ? PROSPECT_CAMPAIGNS : CLIENT_CAMPAIGNS;
+    const campaign = campaigns.find(c => c.id === campaignId);
+    if (campaign) {
+      setOutreachNote(campaign.defaultText);
+      if (campaign.suggestedIncentive) {
+        setIncludeDiscount(true);
+        // Auto-select first active coupon if available and none selected
+        if (!outreachCouponId) {
+          const activeCoupons = allCoupons.filter(c => c.active);
+          if (activeCoupons.length > 0) {
+            setOutreachCouponId(activeCoupons[0].id);
+          }
+        }
+      }
+      toast.info(`Campaign Loaded: ${campaign.name}`);
+    }
+  };
+
   const handleSendOutreach = async () => {
     setIsSending(true);
     try {
@@ -203,6 +224,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
       toast.success("Engagement Dispatched", { description: `Message sent to ${customer.name}.` });
       
       setOutreachNote("");
+      setSelectedCampaignId("");
       setIncludeDiscount(false);
       setOutreachCouponId("");
       setShowPreview(false);
@@ -280,6 +302,25 @@ export function RetentionHub({ customer, onRefresh }: Props) {
           </div>
 
           <div className="space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5 h-full flex flex-col">
+              <div className="space-y-1.5 mb-4">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Outreach Campaign Template</label>
+                  <Select 
+                    value={selectedCampaignId}
+                    onValueChange={handleCampaignChange}
+                  >
+                    <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase rounded-xl tracking-tight">
+                      <SelectValue placeholder="SELECT AN EMAIL CAMPAIGN..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-950 border-zinc-900 text-white rounded-xl shadow-2xl">
+                      {(isProspect ? PROSPECT_CAMPAIGNS : CLIENT_CAMPAIGNS).map(c => (
+                        <SelectItem key={c.id} value={c.id} className="text-[10px] font-black uppercase tracking-tight">
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+              </div>
+
               <div className="space-y-1.5 flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Personal Message</label>

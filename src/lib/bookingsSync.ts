@@ -730,10 +730,86 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
  
       if (error) throw error;
       return data;
-      
-      console.log(`✅ Professional prospect intro sent to ${prospect.email}`);
     }
   } catch (e) {
     console.error('Failed to send prospect outreach', e);
   }
 }
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  defaultText: string;
+  suggestedIncentive?: boolean;
+}
+
+export const CLIENT_CAMPAIGNS: EmailCampaign[] = [
+  {
+    id: "maintenance_standard",
+    name: "Standard Maintenance Check-in",
+    subject: "✨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder",
+    defaultText: "It's been a while since your last professional detail with us, and we wanted to check in to see how your vehicle is looking! Regular maintenance is key to preserving that showroom shine. We'd love to have you back in for a refresh to keep everything protected."
+  },
+  {
+    id: "seasonal_refresh",
+    name: "Seasonal Protection Refresh",
+    subject: "🍂 Seasonal Care Prep: Protect Your Vehicle with Prime Auto Detail",
+    defaultText: "With the changing season, your vehicle is exposed to unique elements like road salt, pollen, intense heat, and UV rays. A premium seasonal refresh is perfect right now to protect the paint, restore gloss, and deep-clean the interior. Let's get your vehicle fully shielded!"
+  },
+  {
+    id: "ceramic_booster",
+    name: "Ceramic Coating Booster Care",
+    subject: "🛡️ Ceramic Coating Status Check: Keep Your Shield Performing",
+    defaultText: "Just checking in on how your ceramic coating is performing! To preserve the intense hydrophobic qualities, self-cleaning properties, and gloss of your coating, regular booster washes are highly recommended. Let's schedule a professional booster wash to ensure absolute protection."
+  },
+  {
+    id: "dormant_wakeup",
+    name: "We Miss You (Dormant Wake-Up)",
+    subject: "❤️ We Miss You! A Special Offer to Refresh Your Ride",
+    defaultText: "It's been far too long since we pampered your ride! We miss seeing that beautiful vehicle in our garage. If you book a signature refresh detail this week, we'll give it our full white-glove treatment and get it looking brand new again.",
+    suggestedIncentive: true
+  },
+  {
+    id: "vip_special",
+    name: "VIP Holiday / Exclusive Marketing Offer",
+    subject: "🎁 An Exclusive VIP Invitation & Special Offer from Prime",
+    defaultText: "As one of our most valued VIP clients, we wanted to reach out with an exclusive signature offer. Treat your pride and joy to a deep interior reset and professional exterior enhancement. We've set aside a special campaign voucher for you!",
+    suggestedIncentive: true
+  },
+  {
+    id: "thank_you_feedback",
+    name: "Post-Service Thank You & Feedback",
+    subject: "🙏 Thank You from Prime Auto Detail (Your Experience Matters)",
+    defaultText: "Thank you so much for choosing Prime Auto Detail! We take pride in our expert craftsmanship and hope we exceeded your expectations. If you love how your vehicle looks, we would be incredibly grateful if you could share your experience or leave us a review. It helps us continue to deliver perfection!"
+  }
+];
+
+export const PROSPECT_CAMPAIGNS: EmailCampaign[] = [
+  {
+    id: "prospect_welcome",
+    name: "Welcome Intro & First-Time Gift",
+    subject: "✨ A Special Welcome to Prime Auto Detail",
+    defaultText: "Welcome to Prime Auto Detail! We noticed you're looking for premium car care, and we'd love to introduce you to our signature processes. I'd love to discuss how our signature detailing and ceramic protection packages can keep your vehicle looking its absolute best.",
+    suggestedIncentive: true
+  },
+  {
+    id: "ceramic_education",
+    name: "Ceramic Coating Education",
+    subject: "💎 Why Choose a Professional Ceramic Coating?",
+    defaultText: "Did you know that a professional ceramic coating is the ultimate shield for your vehicle? It protects against MA road salt, bird droppings, acid rain, and UV fading while locking in a permanent wet-gloss look. Plus, it makes washing your car virtually effortless! Let's discuss a ceramic package custom-tailored for you."
+  },
+  {
+    id: "seasonal_kickoff",
+    name: "Seasonal Protection Kickoff",
+    subject: "🚗 Kick Off the Season with Absolute Vehicle Protection",
+    defaultText: "Kick off the season with absolute peace of mind! Preserve your vehicle's paint, resale value, and comfort with our signature detailing package. We deep-clean every crevice and apply premium paint sealants. Secure your spot today before our schedule books out!"
+  },
+  {
+    id: "slot_urgency",
+    name: "VIP Limited Slot Warning (Urgency)",
+    subject: "⚠️ Final Call: Limited VIP Detailing Slots Available",
+    defaultText: "Our schedule is filling up incredibly fast for this month and we have only a handful of VIP slots remaining. We hate to see you miss out on premium care. Book your appointment today and give your vehicle the professional treatment it deserves!",
+    suggestedIncentive: true
+  }
+];
