@@ -116,6 +116,8 @@ export default function PackagePricing() {
   const [editServicesType, setEditServicesType] = useState<'package' | 'addon' | null>(null);
   const [editServicesSelection, setEditServicesSelection] = useState<Record<string, boolean>>({});
   const [customServiceRows, setCustomServiceRows] = useState<Array<{ id: string | null; name: string; checked: boolean }>>([]);
+  const [editStepRows, setEditStepRows] = useState<Array<{ id: string; name: string; checked: boolean; isCustom: boolean }>>([]);
+  const [newCustomStepName, setNewCustomStepName] = useState("");
   const [addPackageOpen, setAddPackageOpen] = useState(false);
   const [addAddonOpen, setAddAddonOpen] = useState(false);
   const [newPkgForm, setNewPkgForm] = useState({
@@ -2023,21 +2025,109 @@ export default function PackagePricing() {
   const openEditServices = (type: 'package' | 'addon', id: string) => {
     setEditServicesFor(id);
     setEditServicesType(type);
-    const initial: Record<string, boolean> = {};
+    
     if (type === 'package') {
       const pkg = [...builtInPackages, ...getCustomPackages()].find(p => p.id === id);
-      const override = getPackageMeta(id)?.stepIds || pkg?.steps.map(s => s.id) || [];
-      override.forEach(sid => { initial[sid] = true; });
+      const meta = getPackageMeta(id);
+      
+      const stepIdsOverride = meta?.stepIds;
+      const stepNameOverrides = meta?.stepNameOverrides || {};
+      
+      let rows: Array<{ id: string; name: string; checked: boolean; isCustom: boolean }> = [];
+      
+      if (stepIdsOverride && stepIdsOverride.length > 0) {
+        // 1. Resolve steps in sequence first
+        stepIdsOverride.forEach(sid => {
+          const nameOverride = stepNameOverrides[sid];
+          const builtIn = builtInPackages.flatMap(p => p.steps).find(s => s.id === sid);
+          if (builtIn) {
+            rows.push({
+              id: sid,
+              name: nameOverride || builtIn.name,
+              checked: true,
+              isCustom: false
+            });
+          } else {
+            const customSvc = getCustomServices().find(cs => cs.id === sid);
+            rows.push({
+              id: sid,
+              name: nameOverride || customSvc?.name || sid,
+              checked: true,
+              isCustom: true
+            });
+          }
+        });
+        
+        // 2. Load unchecked steps at the bottom
+        const packageBuiltIns = pkg?.steps || [];
+        packageBuiltIns.forEach(s => {
+          if (!stepIdsOverride.includes(s.id)) {
+            const nameOverride = stepNameOverrides[s.id];
+            rows.push({
+              id: s.id,
+              name: nameOverride || s.name,
+              checked: false,
+              isCustom: false
+            });
+          }
+        });
+        
+        getCustomServices().forEach(cs => {
+          if (!stepIdsOverride.includes(cs.id)) {
+            rows.push({
+              id: cs.id,
+              name: cs.name,
+              checked: false,
+              isCustom: true
+            });
+          }
+        });
+      } else {
+        // No override yet. Load default steps as checked, plus custom steps as unchecked.
+        const packageBuiltIns = pkg?.steps || [];
+        packageBuiltIns.forEach(s => {
+          const nameOverride = stepNameOverrides[s.id];
+          rows.push({
+            id: s.id,
+            name: nameOverride || s.name,
+            checked: true,
+            isCustom: false
+          });
+        });
+        
+        getCustomServices().forEach(cs => {
+          rows.push({
+            id: cs.id,
+            name: cs.name,
+            checked: false,
+            isCustom: true
+          });
+        });
+      }
+      
+      setEditStepRows(rows);
     } else {
-      const override = getAddOnMeta(id)?.stepIds || [];
-      override.forEach(sid => { initial[sid] = true; });
+      // Add-ons
+      const addonMeta = getAddOnMeta(id);
+      const stepIdsOverride = addonMeta?.stepIds || [];
+      const stepNameOverrides = addonMeta?.stepNameOverrides || {};
+      
+      let rows: Array<{ id: string; name: string; checked: boolean; isCustom: boolean }> = [];
+      
+      getCustomServices().forEach(cs => {
+        const isChecked = stepIdsOverride.includes(cs.id);
+        const nameOverride = stepNameOverrides[cs.id];
+        rows.push({
+          id: cs.id,
+          name: nameOverride || cs.name,
+          checked: isChecked,
+          isCustom: true
+        });
+      });
+      
+      rows.sort((a, b) => (b.checked ? 1 : 0) - (a.checked ? 1 : 0));
+      setEditStepRows(rows);
     }
-    setEditServicesSelection(initial);
-    // Load global custom services and add a blank row at bottom
-    const customs = getCustomServices();
-    const rows = customs.map(cs => ({ id: cs.id, name: cs.name, checked: !!initial[cs.id] }));
-    rows.push({ id: null, name: '', checked: false });
-    setCustomServiceRows(rows);
   };
 
   const saveEditServices = async () => {
@@ -2046,32 +2136,37 @@ export default function PackagePricing() {
       return;
     }
     if (!editServicesFor || !editServicesType) return;
-    // Persist all custom rows globally (even unchecked). Create IDs for new rows with non-empty names.
-    const finalCustomIds: string[] = [];
-    const updatedRows = customServiceRows.map(row => {
-      if (row.id) {
-        updateCustomService(row.id, row.name.trim());
-        if (row.checked) finalCustomIds.push(row.id);
-        return row;
+    
+    const stepIds = editStepRows.filter(r => r.checked).map(r => r.id);
+    const stepNameOverrides: Record<string, string> = {};
+    
+    editStepRows.forEach(row => {
+      const builtIn = builtInPackages.flatMap(p => p.steps).find(s => s.id === row.id);
+      if (builtIn) {
+        if (row.name.trim() && row.name.trim() !== builtIn.name) {
+          stepNameOverrides[row.id] = row.name.trim();
+        }
       } else {
-        const name = row.name.trim();
-        if (!name) return row;
-        const created = addCustomService(name);
-        if (row.checked) finalCustomIds.push(created.id);
-        return { ...row, id: created.id };
+        // Update name in global custom services if edited
+        if (row.name.trim()) {
+          updateCustomService(row.id, row.name.trim());
+        }
       }
     });
-    setCustomServiceRows(updatedRows);
-
-    // Selected standard step IDs
-    const standardSelected = Object.keys(editServicesSelection).filter(k => editServicesSelection[k] && !finalCustomIds.includes(k));
-    const stepIds = [...standardSelected, ...finalCustomIds];
-    if (editServicesType === 'package') setPackageMeta(editServicesFor, { stepIds }); else setAddOnMeta(editServicesFor, { stepIds });
-
+    
+    if (editServicesType === 'package') {
+      setPackageMeta(editServicesFor, { stepIds, stepNameOverrides });
+    } else {
+      setAddOnMeta(editServicesFor, { stepIds, stepNameOverrides });
+    }
+    
     setEditServicesFor(null);
     setEditServicesType(null);
-    setEditServicesSelection({});
+    setEditStepRows([]);
+    setNewCustomStepName('');
+    
     await postServicesFullSync();
+    await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
@@ -2081,6 +2176,7 @@ export default function PackagePricing() {
   const addCustomRow = () => {
     setCustomServiceRows(prev => [...prev, { id: null, name: '', checked: false }]);
   };
+  
   const removeCustomRow = async (idx: number) => {
     const row = customServiceRows[idx];
     if (row.id) {
@@ -2093,6 +2189,65 @@ export default function PackagePricing() {
       openPackagesLiveInBrowser();
     }
     setCustomServiceRows(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveStepRow = (idx: number, direction: 'up' | 'down') => {
+    const nextIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (nextIdx < 0 || nextIdx >= editStepRows.length) return;
+    setEditStepRows(prev => {
+      const copy = [...prev];
+      const temp = copy[idx];
+      copy[idx] = copy[nextIdx];
+      copy[nextIdx] = temp;
+      return copy;
+    });
+  };
+
+  const deleteStepRow = (idx: number) => {
+    setEditStepRows(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const editStepRowName = (idx: number, newName: string) => {
+    setEditStepRows(prev => prev.map((r, i) => i === idx ? { ...r, name: newName } : r));
+  };
+
+  const addCustomStepRow = () => {
+    const name = newCustomStepName.trim();
+    if (!name) return;
+    const created = addCustomService(name);
+    setEditStepRows(prev => [
+      ...prev,
+      {
+        id: created.id,
+        name: created.name,
+        checked: true,
+        isCustom: true
+      }
+    ]);
+    setNewCustomStepName('');
+    toast.success(`Custom service "${name}" added to list`);
+  };
+
+  const restoreDefaultSteps = () => {
+    if (!editServicesFor) return;
+    const ok = window.confirm("Are you sure you want to restore this package's default steps and reset all custom overrides?");
+    if (!ok) return;
+    
+    const pkg = [...builtInPackages, ...getCustomPackages()].find(p => p.id === editServicesFor);
+    if (!pkg) return;
+    
+    const rows: Array<{ id: string; name: string; checked: boolean; isCustom: boolean }> = [];
+    pkg.steps.forEach(s => {
+      rows.push({
+        id: s.id,
+        name: s.name,
+        checked: true,
+        isCustom: false
+      });
+    });
+    
+    setEditStepRows(rows);
+    toast.success("Restored default steps in editor. Click Save to apply.");
   };
 
   const confirmDelete = async (type: 'package' | 'addon', id: string) => {
@@ -2835,45 +2990,102 @@ export default function PackagePricing() {
 
         {/* Edit Services Modal */}
         <Dialog open={!!editServicesFor} onOpenChange={(o) => { if (!o) { setEditServicesFor(null); setEditServicesType(null); } }}>
-          <DialogContent className="sm:max-w-[95vw] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[95vw] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl max-h-[85vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
             <DialogHeader>
-              <DialogTitle>Edit Services</DialogTitle>
+              <DialogTitle className="text-xl font-bold uppercase tracking-wider text-red-600">
+                Configure & Reorder Package Steps
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 max-h-[60vh] overflow-auto">
-              {/* Standard services (packages only) */}
-              {editServicesType === 'package' && (
-                <div className="space-y-2">
-                  {([...builtInPackages, ...getCustomPackages()].find(p => p.id === editServicesFor)?.steps || [])
-                    .slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map(step => (
-                      <label key={step.id} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={!!editServicesSelection[step.id]} onChange={(e) => setEditServicesSelection(prev => ({ ...prev, [step.id]: e.target.checked }))} />
-                        <span>{step.name}</span>
-                      </label>
-                    ))}
+            <div className="space-y-4 max-h-[60vh] overflow-auto py-2">
+              <div className="space-y-3">
+                <Label className="text-zinc-300 text-sm font-bold uppercase tracking-wider block mb-1">Active steps & execution sequence</Label>
+                <p className="text-xs text-zinc-400 mb-4">
+                  Enable or disable steps with the checkboxes. Use the <strong className="text-white">↑</strong> and <strong className="text-white">↓</strong> buttons to set the exact order they appear on the website and checklists. Edit step names directly in the text boxes.
+                </p>
+                <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-2">
+                  {editStepRows.map((row, idx) => (
+                    <div key={row.id} className="flex items-center gap-2 bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-850 hover:border-zinc-800 hover:bg-zinc-900 transition-all">
+                      {/* Checkbox */}
+                      <input 
+                        type="checkbox" 
+                        checked={row.checked} 
+                        onChange={(e) => setEditStepRows(prev => prev.map((r, i) => i === idx ? { ...r, checked: e.target.checked } : r))} 
+                        className="w-4 h-4 rounded border-zinc-800 bg-zinc-950 text-red-600 focus:ring-red-500 cursor-pointer"
+                      />
+                      
+                      {/* Name Input */}
+                      <Input 
+                        value={row.name} 
+                        onChange={(e) => editStepRowName(idx, e.target.value)} 
+                        className="flex-1 h-9 bg-zinc-950 border-zinc-800 text-white font-medium focus-visible:ring-red-500"
+                        placeholder="Step Name"
+                      />
+                      
+                      {/* Reorder Up */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-20"
+                        disabled={idx === 0}
+                        onClick={() => moveStepRow(idx, 'up')}
+                      >
+                        ↑
+                      </Button>
+                      
+                      {/* Reorder Down */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-20"
+                        disabled={idx === editStepRows.length - 1}
+                        onClick={() => moveStepRow(idx, 'down')}
+                      >
+                        ↓
+                      </Button>
+                      
+                      {/* Delete */}
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8 bg-red-950/60 text-red-400 hover:bg-red-900 hover:text-white border border-red-900/30"
+                        onClick={() => deleteStepRow(idx)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                  {editStepRows.length === 0 && (
+                    <div className="text-center py-8 text-zinc-500 text-sm">
+                      No steps configured yet. Add custom steps below.
+                    </div>
+                  )}
                 </div>
-              )}
-              {/* Custom services */}
-              <div className="space-y-2">
-                <Label className="text-white">Custom Services</Label>
-                {customServiceRows.map((row, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input type="checkbox" checked={row.checked} onChange={(e) => setCustomServiceRows(prev => prev.map((r, i) => i === idx ? { ...r, checked: e.target.checked } : r))} />
-                    <Input className="flex-1" placeholder="Add Custom Service" value={row.name}
-                      onChange={(e) => setCustomServiceRows(prev => prev.map((r, i) => i === idx ? { ...r, name: e.target.value } : r))} />
-                    <Button variant="destructive" className="bg-red-700" onClick={() => removeCustomRow(idx)}>
-                      <Trash2 className="w-4 h-4" />
+                
+                {/* Add new custom step */}
+                <div className="pt-4 border-t border-zinc-900">
+                  <Label className="text-zinc-300 text-xs font-bold uppercase tracking-wider block mb-2">Create & Add Custom Step</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      value={newCustomStepName}
+                      onChange={(e) => setNewCustomStepName(e.target.value)}
+                      placeholder="e.g. Clay Bar Decontamination, Engine Steam Clean..."
+                      className="flex-1 h-10 bg-zinc-950 border-zinc-900 text-white"
+                      onKeyDown={(e) => { if (e.key === 'Enter') addCustomStepRow(); }}
+                    />
+                    <Button onClick={addCustomStepRow} className="bg-red-600 hover:bg-red-700 text-white h-10 px-4 font-bold uppercase tracking-wider text-xs">
+                      + Add Step
                     </Button>
-                    {idx === customServiceRows.length - 1 && (
-                      <Button onClick={addCustomRow} className="bg-red-600 rounded-full w-8 h-8 p-0 text-white">+</Button>
-                    )}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-            <DialogFooter className="button-group-responsive">
-              <Button onClick={saveEditServices} className="bg-red-600">Save</Button>
+            <DialogFooter className="button-group-responsive flex justify-between items-center gap-2 border-t border-zinc-900 pt-4 mt-4 w-full">
+              <Button onClick={restoreDefaultSteps} variant="outline" className="border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white">
+                Restore Defaults
+              </Button>
+              <Button onClick={saveEditServices} className="bg-red-600 hover:bg-red-700 text-white px-6 font-bold uppercase tracking-widest text-xs h-10">
+                Save Changes
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -3049,17 +3261,23 @@ export default function PackagePricing() {
                       const price = getProjectedPrice('package', p.id, comparisonVehicle);
                       const isSelected = !!comparisonSelection[p.id];
                       // Determine services/steps list
-                      const metaOverride = getPackageMeta(p.id)?.stepIds;
+                      const meta = getPackageMeta(p.id);
+                      const metaOverride = meta?.stepIds;
+                      const stepNameOverrides = meta?.stepNameOverrides || {};
                       const displaySteps = metaOverride && metaOverride.length > 0
                         ? metaOverride.map(sid => {
+                          const nameOverride = stepNameOverrides[sid];
                           // Look up in built-ins
                           const builtIn = builtInPackages.flatMap(pkg => pkg.steps).find(s => s.id === sid);
-                          if (builtIn) return builtIn.name;
+                          if (builtIn) return nameOverride || builtIn.name;
                           // Look up in custom
                           const cus = getCustomServices().find(c => c.id === sid);
-                          return cus ? cus.name : null;
+                          return nameOverride || (cus ? cus.name : sid);
                         }).filter(Boolean)
-                        : p.steps.map(s => s.name);
+                        : p.steps.map(s => {
+                          const nameOverride = stepNameOverrides[s.id];
+                          return nameOverride || s.name;
+                        });
 
                       return (
                         <div
@@ -3113,16 +3331,18 @@ export default function PackagePricing() {
                       const price = getProjectedPrice('addon', a.id, comparisonVehicle);
                       const isSelected = !!comparisonSelection[a.id];
                       // Determine services/steps list
-                      const metaOverride = getAddOnMeta(a.id)?.stepIds;
-                      // Addons by default might not have 'steps' defined in standard object, check fallback
-                      const displaySteps = metaOverride && metaOverride.length > 0
-                        ? metaOverride.map(sid => {
+                      const aMeta = getAddOnMeta(a.id);
+                      const aMetaOverride = aMeta?.stepIds;
+                      const aStepNameOverrides = aMeta?.stepNameOverrides || {};
+                      const displaySteps = aMetaOverride && aMetaOverride.length > 0
+                        ? aMetaOverride.map(sid => {
+                          const nameOverride = aStepNameOverrides[sid];
                           // Look up in built-ins
                           const builtIn = builtInPackages.flatMap(pkg => pkg.steps).find(s => s.id === sid);
-                          if (builtIn) return builtIn.name;
+                          if (builtIn) return nameOverride || builtIn.name;
                           // Look up in custom
                           const cus = getCustomServices().find(c => c.id === sid);
-                          return cus ? cus.name : null;
+                          return nameOverride || (cus ? cus.name : sid);
                         }).filter(Boolean)
                         : [(a as any).description].filter(Boolean); // Fallback to description for addons
 

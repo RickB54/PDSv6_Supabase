@@ -241,9 +241,40 @@ const CustomerPortal = () => {
         truck: parseFloat(savedPricesLive[`package:${p.id}:truck`]) || p.pricing?.truck || 0,
         luxury: parseFloat(savedPricesLive[`package:${p.id}:luxury`]) || p.pricing?.luxury || 0,
       };
-      return { ...p, pricing };
+      
+      // Resolve steps override
+      const meta = packageMetaLive[p.id];
+      const stepIdsOverride = meta?.stepIds;
+      const stepNameOverrides = meta?.stepNameOverrides || {};
+      let steps = p.steps || [];
+      
+      if (stepIdsOverride && stepIdsOverride.length > 0) {
+        steps = stepIdsOverride.map((sid: string) => {
+          const nameOverride = stepNameOverrides[sid];
+          // Check built-in steps
+          const builtIn = builtInPackages.flatMap((pkg: any) => pkg.steps).find((s: any) => s.id === sid);
+          if (builtIn) {
+            return { ...builtIn, name: nameOverride || builtIn.name };
+          }
+          // Check custom steps
+          const customName = customServicesMap[sid];
+          if (customName) {
+            return { id: sid, name: nameOverride || customName, category: 'exterior' };
+          }
+          // Fallback
+          return { id: sid, name: nameOverride || sid, category: 'exterior' };
+        });
+      } else {
+        // Fallback to default steps with name overrides if any
+        steps = steps.map((s: any) => {
+          const nameOverride = stepNameOverrides[s.id];
+          return nameOverride ? { ...s, name: nameOverride } : s;
+        });
+      }
+      
+      return { ...p, pricing, steps };
     });
-  }, [packageMetaLive, customPackagesLive, savedPricesLive]);
+  }, [packageMetaLive, customPackagesLive, savedPricesLive, customServicesMap]);
 
   const liveAddOns = useMemo(() => {
     const visibleBuiltAddOns = builtInAddOns.filter(a => addOnMetaLive[a.id]?.visible === true);

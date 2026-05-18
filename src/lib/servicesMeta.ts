@@ -6,6 +6,7 @@ export interface PackageMeta {
   imageDataUrl?: string; // data URL or remote path
   visible?: boolean; // default true
   stepIds?: string[]; // overrides for steps shown on public pages
+  stepNameOverrides?: Record<string, string>; // custom step names mapped by ID
   descriptionOverride?: string; // overrides package description used in Learn More modal/cards
   deleted?: boolean;
 }
@@ -14,6 +15,7 @@ export interface AddOnMeta {
   id: string;
   visible?: boolean; // default true
   stepIds?: string[];
+  stepNameOverrides?: Record<string, string>; // custom step names mapped by ID
   deleted?: boolean;
 }
 
