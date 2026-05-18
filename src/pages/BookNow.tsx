@@ -73,6 +73,9 @@ const BookNow = () => {
   const { add: addBooking, items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const { refresh: refreshCoupons, items: allCoupons } = useCouponsStore();
   const [testModeActive, setTestModeActive] = useState(false);
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
+  const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
 
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
@@ -146,6 +149,41 @@ const BookNow = () => {
     toast({
       title: "🧪 Mock Data Filled!",
       description: `Loaded profile: ${profile.name}. ${(!date && !selectedTime) ? "Date/Time defaulted." : "Date/Time preserved."}`
+    });
+  };
+
+  const handleFillRickBerubeTest = () => {
+    const matchedService = formData.package || filteredPackages[0]?.id || "prime-essential-full";
+
+    setFormData(prev => ({
+      ...prev,
+      name: "Rick Berube",
+      email: "rberube54@gmail.com",
+      phone: "978-764-5047",
+      address: "54 Boston Street, Methuen, MA",
+      year: "2018",
+      make: "Ford",
+      model: "F-150",
+      package: matchedService,
+      message: "This is a pre-filled test booking request submitted by Rick Berube (Admin) to verify availability booking slots, pricing calculations, notification emails, and PDF archiving workflows.",
+      conditionInside: "Excellent",
+      conditionOutside: "Excellent"
+    }));
+    setVehicleType("truck");
+    setAddOns(["clay-bar", "wheel-cleaning"]);
+
+    // Default future date/time for test booking if not set
+    if (!date && !selectedTime) {
+      const targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + 3); // 3 days in the future
+      setDate(targetDate);
+      setSelectedTime("09:00:00");
+      setIsEditingDate(false);
+    }
+
+    toast({
+      title: "🧪 Sandbox Mode Active",
+      description: "Pre-filled Rick Berube's real test details (2018 Black Ford F-150)!",
     });
   };
 
@@ -879,28 +917,44 @@ const BookNow = () => {
       )}
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {testModeActive && (
-          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center justify-between animate-pulse-subtle shadow-lg shadow-amber-500/5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center shadow-inner ring-2 ring-amber-400/50">
+        {(testModeActive || isRickAdmin) && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse-subtle shadow-lg shadow-amber-500/5">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center shadow-inner ring-2 ring-amber-400/50 shrink-0">
                 <TestTube2 className="h-5 w-5 text-black" />
               </div>
               <div>
                 <h3 className="text-amber-500 font-black italic uppercase tracking-tighter text-sm flex items-center gap-2">
-                  Admin Test Mode Active
+                  Admin Sandbox Active
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping" />
                 </h3>
-                <p className="text-[10px] text-zinc-500 font-medium">Verification mode enabled: form fields are pre-filled with randomized test identities.</p>
+                <p className="text-[10px] text-zinc-500 font-medium">Testing & verification mode enabled: pre-fill with custom or mock profiles.</p>
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-[10px] uppercase font-bold text-amber-500 hover:bg-amber-500 hover:text-black transition-all border border-amber-500/20 hover:border-amber-500 px-4"
-              onClick={fillTestData}
-            >
-              Shuffle Data
-            </Button>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+              {testModeActive && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-[10px] uppercase font-bold text-amber-500 hover:bg-amber-500 hover:text-black transition-all border border-amber-500/20 hover:border-amber-500 px-4 h-9"
+                  onClick={fillTestData}
+                  type="button"
+                >
+                  Shuffle Data
+                </Button>
+              )}
+              {isRickAdmin && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-[10px] uppercase font-black text-emerald-400 hover:bg-emerald-500 hover:text-black transition-all border border-emerald-500/20 hover:border-emerald-500 px-4 h-9 animate-pulse"
+                  onClick={handleFillRickBerubeTest}
+                  type="button"
+                >
+                  🧪 Auto-Fill Rick Berube Test
+                </Button>
+              )}
+            </div>
           </div>
         )}
         <div className="flex items-center justify-between mb-6">
@@ -999,10 +1053,22 @@ const BookNow = () => {
             <div data-netlify-recaptcha="true"></div>
             <div className="space-y-6">
               <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 mb-2">
-                <h3 className="text-lg font-bold text-foreground uppercase tracking-tight mb-4 flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                  Contact & Service Location
-                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <h3 className="text-lg font-bold text-foreground uppercase tracking-tight flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    Contact & Service Location
+                  </h3>
+                  {isRickAdmin && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleFillRickBerubeTest}
+                      className="bg-emerald-950/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30 text-xs font-black uppercase tracking-wider self-start sm:self-center py-2 px-3 h-auto animate-pulse"
+                    >
+                      🧪 Auto-Fill Rick Berube Test
+                    </Button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>

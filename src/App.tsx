@@ -140,7 +140,7 @@ const isAppRoute = (path: string) => {
   const normalizedPath = path.toLowerCase().replace(/\/+/g, '/');
   
   const websitePrefixes = [
-    '/', '/about', '/contact', '/faq', '/services', '/book', '/availability', 
+    '/', '/about', '/contact', '/faq', '/services', '/book', '/book-now', '/availability', 
     '/blog', '/checkout', '/payment-success', '/thank-you', '/login', '/signup', 
     '/forgot-password', '/update-password', '/portal', '/f150-setup', '/contact-support'
   ];
@@ -230,7 +230,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
 
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
-  const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
+  const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/book-now', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
   const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/');
 
   const publicRoutes = (
@@ -240,6 +240,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/contact" element={<Contact />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/book" element={<BookNow />} />
+      <Route path="/book-now" element={<BookNow />} />
       <Route path="/availability" element={<Availability />} />
       <Route path="/services" element={<CustomerPortal />} />
       <Route path="/blog" element={<PrimeBlog />} />

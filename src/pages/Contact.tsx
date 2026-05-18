@@ -31,6 +31,7 @@ const Contact = () => {
   const { isDemoMode } = useDemoMode();
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin' || isDemoMode;
+  const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const { toast } = useToast();
   const [showAbout, setShowAbout] = useState(false);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string } | null>(null);
@@ -85,7 +86,7 @@ const Contact = () => {
     setFormData({
       name: "Rick Berube",
       email: "rberube54@gmail.com",
-      phone: "978-764-4057",
+      phone: "978-764-5047",
       address: "54 Boston Street",
       city: "Methuen",
       vehicleYear: "2018",
@@ -573,7 +574,7 @@ const Contact = () => {
                 <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Service Inquiry Form</h2>
                 <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
               </div>
-              {isAdmin && (
+              {isRickAdmin && (
                 <Button
                   type="button"
                   variant="outline"
