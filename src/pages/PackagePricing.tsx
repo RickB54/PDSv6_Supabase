@@ -216,6 +216,40 @@ export default function PackagePricing() {
     }
   };
 
+  const getHumanReadableChanges = (keys: string[], snapshot: PriceMap) => {
+    if (keys.length === 0) return 'Saved ALL prices and visibility globally.';
+    
+    const pkgList = [...builtInPackages, ...getCustomPackages()];
+    const addList = [...builtInAddOns, ...getCustomAddOns()];
+
+    const formatKey = (key: string) => {
+      const parts = key.split(":");
+      if (parts.length >= 3) {
+        const type = parts[0];
+        const id = parts[1];
+        const size = parts[2];
+
+        const item = type === 'package' 
+          ? pkgList.find(p => p.id === id) 
+          : addList.find(a => a.id === id);
+
+        const displayName = item ? item.name : id;
+        const newPrice = snapshot[key];
+        const sizeLabel = size.charAt(0).toUpperCase() + size.slice(1);
+        
+        return `${displayName} (${sizeLabel}) to $${newPrice}`;
+      }
+      return key;
+    };
+
+    if (keys.length <= 3) {
+      return `Saved changes: ${keys.map(formatKey).join(', ')}`;
+    } else {
+      const subset = keys.slice(0, 3).map(formatKey).join(', ');
+      return `Saved changes to ${keys.length} items: ${subset}, and ${keys.length - 3} others.`;
+    }
+  };
+
   const [searchParams] = useSearchParams();
   useEffect(() => {
     if (searchParams.get("mode") === "scenario") {
@@ -1841,11 +1875,12 @@ export default function PackagePricing() {
     setCurrentPrices(updated);
     
     const label = keys.length === 1 ? keys[0] : `${keys[0].split(":")[0]}:${keys[0].split(":")[1]}`;
+    const logDesc = getHumanReadableChanges(keys, updated);
     await postFullSync();
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
-    logPriceChange({ type: 'manual', description: `Saved changes to items: ${keys.join(', ')}`, snapshot: updated });
+    logPriceChange({ type: 'manual', description: logDesc, snapshot: updated });
     refreshHistory();
     toast.success(`${label} prices and visibility status locked in.`);
   };
@@ -1900,7 +1935,7 @@ export default function PackagePricing() {
     openPackagesLiveInBrowser();
 
     const desc = changedKeys.length > 0
-      ? `Saved changes to items: ${changedKeys.join(', ')}`
+      ? getHumanReadableChanges(changedKeys, rounded)
       : 'Saved ALL prices and visibility globally.';
 
     logPriceChange({ type: 'manual', description: desc, snapshot: rounded });
