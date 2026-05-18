@@ -45,6 +45,7 @@ const Contact = () => {
     vehicleYear: "",
     vehicleMake: "",
     vehicleModel: "",
+    vehicleColor: "",
     vehicleCondition: "",
     vehicleType: "",
     serviceInterested: "",
@@ -89,6 +90,7 @@ const Contact = () => {
       vehicleYear: "2018",
       vehicleMake: "Ford",
       vehicleModel: "F-150",
+      vehicleColor: "Black",
       vehicleCondition: "Excellent",
       vehicleType: "truck",
       serviceInterested: matchedService,
@@ -120,6 +122,7 @@ const Contact = () => {
     if (!formData.vehicleYear) newErrors.vehicleYear = "Vehicle Year is required";
     if (!formData.vehicleMake) newErrors.vehicleMake = "Vehicle Make is required";
     if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Vehicle Model is required";
+    if (!formData.vehicleColor) newErrors.vehicleColor = "Vehicle Color is required";
     if (!formData.vehicleType) newErrors.vehicleType = "Vehicle Type / Class is required";
     if (!formData.serviceInterested) newErrors.serviceInterested = "Please select a service of interest";
 
@@ -195,13 +198,13 @@ const Contact = () => {
               model: formData.vehicleModel,
               year: formData.vehicleYear,
               type: formData.vehicleType,
-              color: 'Black',
+              color: formData.vehicleColor || 'Black',
               conditionOutside: formData.vehicleCondition,
               generalPhotos: fileUrls,
               beforePhotos: fileUrls
             }
           ],
-          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
+          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleColor ? ` (Color: ${formData.vehicleColor})` : ''}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
         });
 
         // Also create a contact record for redundancy and history
@@ -209,7 +212,7 @@ const Contact = () => {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: `Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel} (${formData.vehicleType})${formData.vehicleCondition ? `\nCondition: ${formData.vehicleCondition}` : ''}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`,
+          message: `Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel} (${formData.vehicleType})${formData.vehicleColor ? `, Color: ${formData.vehicleColor}` : ''}${formData.vehicleCondition ? `\nCondition: ${formData.vehicleCondition}` : ''}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`,
         }).catch(() => {});
 
         // Proactively send a premium formatted HTML email to Rick's email address
@@ -243,6 +246,10 @@ const Contact = () => {
                   <tr>
                     <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Spec:</td>
                     <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Color:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.vehicleColor || 'Not Specified'}</td>
                   </tr>
                   <tr>
                     <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Class:</td>
@@ -321,12 +328,13 @@ const Contact = () => {
     doc.text(`Email: ${formData.email}`, 20, 60);
     doc.text(`Phone: ${formData.phone}`, 20, 70);
     doc.text(`Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`, 20, 80);
-    doc.text(`Vehicle Class: ${formData.vehicleType}`, 20, 90);
-    doc.text(`Vehicle Condition: ${formData.vehicleCondition || 'Not Specified'}`, 20, 100);
-    doc.text(`Service: ${formData.serviceInterested}`, 20, 110);
-    doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 120);
+    doc.text(`Vehicle Color: ${formData.vehicleColor || 'Not Specified'}`, 20, 90);
+    doc.text(`Vehicle Class: ${formData.vehicleType}`, 20, 100);
+    doc.text(`Vehicle Condition: ${formData.vehicleCondition || 'Not Specified'}`, 20, 110);
+    doc.text(`Service: ${formData.serviceInterested}`, 20, 120);
+    doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 130);
     
-    let yPos = 135;
+    let yPos = 145;
     if (fileUrls.length > 0) {
       doc.text("Files Attached:", 20, yPos);
       yPos += 10;
@@ -356,6 +364,7 @@ const Contact = () => {
       `Phone: ${formData.phone}\n` +
       `Address: ${formData.address}, ${formData.city}\n` +
       `Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel} (${formData.vehicleType})\n` +
+      `Color: ${formData.vehicleColor || 'Not Specified'}\n` +
       `Condition: ${formData.vehicleCondition || 'Not Specified'}\n` +
       `Interested In: ${formData.serviceInterested}\n` +
       `Timing: ${formData.preferredTiming}\n\n` +
@@ -386,6 +395,7 @@ const Contact = () => {
       vehicleYear: "",
       vehicleMake: "",
       vehicleModel: "",
+      vehicleColor: "",
       vehicleCondition: "",
       vehicleType: "",
       serviceInterested: "",
@@ -641,13 +651,13 @@ const Contact = () => {
               </div>
 
               {/* Vehicle Information Section */}
-              <div className="border-t border-border pt-6 mt-6 space-y-4">
-                <h3 className="text-lg font-bold text-foreground mb-2 uppercase tracking-tight flex items-center gap-2">
-                  <CarFront className="h-5 w-5 text-emerald-500 animate-pulse" />
-                  Vehicle Information
+              <div className="border-2 border-emerald-500/20 bg-emerald-950/5 rounded-2xl p-6 md:p-8 mt-6 space-y-6 shadow-md transition-all duration-300 hover:border-emerald-500/30">
+                <h3 className="text-lg font-black text-emerald-400 mb-2 uppercase tracking-tight flex items-center gap-2">
+                  <CarFront className="h-5 w-5 text-emerald-400 animate-pulse" />
+                  Vehicle Evaluation Details
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="vehicleYear" className="font-bold">Vehicle Year *</Label>
                     <Select value={formData.vehicleYear} onValueChange={(v) => setFormData({ ...formData, vehicleYear: v })}>
@@ -683,7 +693,7 @@ const Contact = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="vehicleModel" className="font-bold">Vehicle Model *</Label>
                     <Input
@@ -713,34 +723,51 @@ const Contact = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="vehicleType" className="font-bold">Vehicle Class / Size *</Label>
-                    <Button
-                      type="button"
-                      variant="link"
-                      onClick={() => setShowClassificationModal(true)}
-                      className="h-auto p-0 text-xs font-black uppercase text-emerald-500 hover:text-emerald-600 flex items-center gap-1 shrink-0"
-                    >
-                      <HelpCircle className="h-3.5 w-3.5" />
-                      Size Finder Guide
-                    </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleColor" className="font-bold">Vehicle Color *</Label>
+                    <Select value={formData.vehicleColor} onValueChange={(v) => setFormData({ ...formData, vehicleColor: v })}>
+                      <SelectTrigger className={`h-12 ${errors.vehicleColor ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Exterior Color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Black", "White", "Silver", "Gray", "Red", "Blue", "Green", "Brown", "Gold", "Yellow", "Orange", "Other"].map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.vehicleColor && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleColor}</p>}
                   </div>
-                  <Select value={formData.vehicleType} onValueChange={(v) => setFormData({ ...formData, vehicleType: v })}>
-                    <SelectTrigger className={`h-12 ${errors.vehicleType ? 'border-destructive' : ''}`}>
-                      <SelectValue placeholder="Autodetected size (or choose manually)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compact">Compact / Sedan</SelectItem>
-                      <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
-                      <SelectItem value="truck">Truck / Van / Large SUV</SelectItem>
-                      <SelectItem value="luxury">Luxury / Specialty</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.vehicleType && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleType}</p>}
-                  <p className="text-[11px] text-zinc-500 italic mt-1 font-medium">
-                    ⚡ Auto-classified: Our intelligent system auto-selects this based on your make and model. Feel free to override it.
-                  </p>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="vehicleType" className="font-bold">Vehicle Class / Size *</Label>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={() => setShowClassificationModal(true)}
+                        className="h-auto p-0 text-xs font-black uppercase text-emerald-500 hover:text-emerald-600 flex items-center gap-1 shrink-0"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" />
+                        Size Finder Guide
+                      </Button>
+                    </div>
+                    <Select value={formData.vehicleType} onValueChange={(v) => setFormData({ ...formData, vehicleType: v })}>
+                      <SelectTrigger className={`h-12 ${errors.vehicleType ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Autodetected size (or choose manually)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="compact">Compact / Sedan</SelectItem>
+                        <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
+                        <SelectItem value="truck">Truck / Van / Large SUV</SelectItem>
+                        <SelectItem value="luxury">Luxury / Specialty</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.vehicleType && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleType}</p>}
+                    <p className="text-[11px] text-zinc-500 italic mt-1 font-medium">
+                      ⚡ Auto-classified: Our intelligent system auto-selects this based on your make and model. Feel free to override it.
+                    </p>
+                  </div>
                 </div>
               </div>
 
