@@ -412,6 +412,22 @@ const procedures: ProcedurePage[] = [
         ]
       },
       {
+        title: "Email Campaigns & Sender Domain Setup",
+        content: "Operationalizing outreach campaigns and configuring the delivery infrastructure. To prevent marketing emails from being marked as spam or blocked by email sandboxes, a verified business domain is required. Administrators utilize Supabase Secrets to control sender emails dynamically, while utilizing the BCC toggle to verify delivery.",
+        subsections: [
+          {
+            title: "Outreach Campaigns",
+            content: "Choose from 6 customer and 4 prospect campaigns (e.g., Seasonal Refresh, Ceramic Coating Booster, VIP Invites) to instantly load targeted drafts.",
+            icon: Sparkles
+          },
+          {
+            title: "Resend Custom Domains",
+            content: "Verify your domain on Resend and run 'supabase secrets set SENDER_EMAIL' to send from your custom email to all clients.",
+            icon: Settings
+          }
+        ]
+      },
+      {
         title: "The AI Blog (Elite Stories)",
         content: "Turn your gallery photos into marketing content. The AI Blog assistant analyzes your 'Before & After' shots to write professional, SEO-optimized blog posts about the transformations. These stories are published to your website, driving organic search traffic to your booking portal.",
         subsections: [
@@ -425,11 +441,13 @@ const procedures: ProcedurePage[] = [
     ],
     proTips: [
       "Set a 'Quarterly' maintenance cycle for every Ceramic Coating client for warranty compliance.",
-      "Use the 'Engagement History' tab to see exactly when and how you last contacted a client."
+      "Use the 'Engagement History' tab to see exactly when and how you last contacted a client.",
+      "Use outreach campaigns like 'Ceramic Coating Booster Care' to drive high-margin repeat booking volume."
     ],
     warnings: [
       "Over-marketing to the retention list can lead to high unsubscribe rates; limit automated emails.",
-      "Ensure all AI-generated blog content is reviewed for technical accuracy before publishing."
+      "Ensure all AI-generated blog content is reviewed for technical accuracy before publishing.",
+      "When in testing mode, Resend restricts sending to the verified developer account owner only. Update the SENDER_EMAIL secret once your domain is live."
     ]
   },
   {
