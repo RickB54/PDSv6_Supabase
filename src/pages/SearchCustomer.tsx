@@ -822,6 +822,7 @@ const SearchCustomer = () => {
                                       <div>
                                         <div className="text-zinc-500 text-[9px] font-black uppercase tracking-widest mb-0.5">Primary Vehicle</div>
                                         <div className="text-zinc-200 text-sm font-black tracking-tight">{v_year ? `${v_year} ` : ''}{v_make} {v_model}</div>
+                                        <div className="text-[9px] text-zinc-500 font-bold uppercase">Legacy Profile {customer.color ? `• ${customer.color}` : ''}</div>
                                       </div>
                                       <Badge variant="outline" className="text-[8px] text-zinc-600 border-zinc-800">LEGACY DATA</Badge>
                                     </div>
@@ -1108,7 +1109,7 @@ const SearchCustomer = () => {
                                                    <div className="grid grid-cols-2 gap-2">
                                                      <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
                                                        <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Vehicle Managed</div>
-                                                       <span className="font-bold text-zinc-300">{booking.vehicleYear || '-'} {booking.vehicleMake || '-'} {booking.vehicleModel || '-'}</span>
+                                                       <span className="font-bold text-zinc-300">{(booking.vehicleYear && booking.vehicleYear !== '-' && booking.vehicleYear !== '---') ? `${booking.vehicleYear} ` : ''}{booking.vehicleMake || '-'} {booking.vehicleModel || '-'}{booking.vehicleColor ? ` • ${booking.vehicleColor}` : ''}</span>
                                                      </div>
                                                      <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
                                                        <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>

@@ -111,7 +111,7 @@ export async function initGoogleCalendar(config: CalendarConfig): Promise<void> 
                 // 2. Initialize Identity Services (GIS)
                 tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
                     client_id: config.clientId,
-                    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+                    scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
                     callback: (response: any) => {
                         if (response.error !== undefined) {
                             console.error("Token error:", response);

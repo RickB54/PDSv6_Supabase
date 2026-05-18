@@ -899,6 +899,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                 model: customer.model || '',
                 year: customer.year || '',
                 type: customer.vehicleType || customer.type || '',
+                color: customer.color || '',
                 customer_id: finalId
             });
             finalVehicles.push(savedVeh);
