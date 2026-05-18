@@ -75,12 +75,6 @@ const Contact = () => {
   }, [formData.vehicleMake, formData.vehicleModel]);
 
   const handleFillTestData = () => {
-    // 1. Create two mock File objects to simulate vehicle condition photos upload
-    const mockBlob1 = new Blob(["mock-image-data-1"], { type: "image/png" });
-    const mockFile1 = new File([mockBlob1], "test_exterior_f150.png", { type: "image/png" });
-    const mockBlob2 = new Blob(["mock-image-data-2"], { type: "image/png" });
-    const mockFile2 = new File([mockBlob2], "test_interior_f150.png", { type: "image/png" });
-
     const matchedService = liveServices.find(s => s.name.toLowerCase().includes("essential full"))?.name || "Prime Essential Full Detail";
 
     setFormData({
@@ -100,11 +94,11 @@ const Contact = () => {
       howFound: "google",
       message: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify real-time notifications, PDF archiving, bucket photo uploads, and display within the Prospects and Customer CRM galleries."
     });
-    setAttachments([mockFile1, mockFile2]);
+    setAttachments([]); // No photos are pre-uploaded
     setErrors({});
     toast({
       title: "🧪 Sandbox Mode Active",
-      description: "Pre-filled Rick Berube's test details and generated mock exterior/interior photos!",
+      description: "Pre-filled Rick Berube's test details (without auto-uploading images)!",
     });
   };
 
