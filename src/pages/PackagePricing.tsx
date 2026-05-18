@@ -385,7 +385,7 @@ export default function PackagePricing() {
 
   const openViewAllAddOns = () => {
     const snapshot = {
-      savedPrices: currentPrices,
+      savedPrices: savedPrices,
       packageMeta: getAllPackageMeta(),
       addOnMeta: getAllAddOnMeta(),
       customPackages: getCustomPackages(),
@@ -532,9 +532,9 @@ export default function PackagePricing() {
   };
 
   const openViewAllPrices = async () => {
-    // Use current in-memory state instead of fetching from backend
+    // Use committed saved state instead of temporary unsaved test state
     const snapshot = {
-      savedPrices: currentPrices,
+      savedPrices: savedPrices,
       packageMeta: getAllPackageMeta(),
       addOnMeta: getAllAddOnMeta(),
       customPackages: getCustomPackages(),
