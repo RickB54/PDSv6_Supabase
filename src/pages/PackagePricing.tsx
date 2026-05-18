@@ -997,6 +997,12 @@ export default function PackagePricing() {
         doc.setFontSize(10);
         doc.setTextColor(220, 38, 38);
         doc.text("PRIMARY SERVICE PACKAGES", 14, yPos);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "normal");
+        doc.text("Original Default Prices Set Date: 5/18/26", 196, yPos, { align: 'right' });
+        doc.setFont("helvetica", "bold");
         yPos += 4;
 
         autoTable(doc, {
@@ -1020,6 +1026,12 @@ export default function PackagePricing() {
         doc.setFontSize(10);
         doc.setTextColor(220, 38, 38);
         doc.text("ADD-ON SERVICES", 14, yPos);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.setFont("helvetica", "normal");
+        doc.text("Original Default Prices Set Date: 5/18/26", 196, yPos, { align: 'right' });
+        doc.setFont("helvetica", "bold");
         yPos += 4;
 
         autoTable(doc, {
@@ -3489,15 +3501,33 @@ export default function PackagePricing() {
                         const baseVal = (item.pricing as any)[size];
                         
                         const itemHistory = history.filter(r => r.snapshot && r.snapshot[key]);
-                        const latestRec = itemHistory[0];
-                        const firstRec = [...itemHistory].reverse().find(r => Math.abs(parseFloat(r.snapshot![key]) - baseVal) > 0.01);
+                        // Filter out baseline seed record to capture actual manual overrides
+                        const changesHistory = itemHistory.filter(r => r.id !== "ph-baseline-seed-2026");
                         
                         const currentVal = parseFloat(currentPrices[key]) || baseVal;
                         const hasChanged = Math.abs(currentVal - baseVal) > 0.01;
 
-                        const firstPrice = firstRec ? parseFloat(firstRec.snapshot![key]) : null;
-                        const firstDate = firstRec ? new Date(firstRec.date).toLocaleDateString() : null;
-                        const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : null;
+                        let firstChangePrice: number | null = null;
+                        let firstChangeDate: string | null = null;
+                        let lastChangePrice: number | null = null;
+                        let lastChangeDate: string | null = null;
+
+                        if (changesHistory.length === 1) {
+                          // Only one change exists: it is the First Change
+                          const rec = changesHistory[0];
+                          firstChangePrice = parseFloat(rec.snapshot![key]) || currentVal;
+                          firstChangeDate = new Date(rec.date).toLocaleDateString();
+                        } else if (changesHistory.length >= 2) {
+                          // Multiple changes exist: oldest is First Change, newest is Last Price Change
+                          const oldestRec = changesHistory[changesHistory.length - 1];
+                          const newestRec = changesHistory[0];
+                          
+                          firstChangePrice = parseFloat(oldestRec.snapshot![key]);
+                          firstChangeDate = new Date(oldestRec.date).toLocaleDateString();
+                          
+                          lastChangePrice = parseFloat(newestRec.snapshot![key]) || currentVal;
+                          lastChangeDate = new Date(newestRec.date).toLocaleDateString();
+                        }
 
                         return (
                           <div key={size} className={cn(
@@ -3511,31 +3541,44 @@ export default function PackagePricing() {
                               {hasChanged && <span className={isAddon ? "text-blue-400 font-black" : "text-red-400 font-black"}>● MODIFIED</span>}
                             </div>
                             
-                            <div className="space-y-4">
-                              {/* Original Price */}
-                              <div className="flex justify-between items-center">
-                                <span className="text-[10px] text-white uppercase font-black">Original (Base)</span>
-                                <span className="text-sm text-white font-mono font-black">${baseVal}</span>
+                            <div className="space-y-3">
+                              {/* Original Base Row */}
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-zinc-400 font-medium">Original (Base)</span>
+                                <div className="text-right">
+                                  <span className="font-mono font-bold text-zinc-300">${baseVal}</span>
+                                  <span className="text-[10px] text-zinc-500 block">5/18/26</span>
+                                </div>
                               </div>
 
-                              {/* First -> Current Shift */}
-                              <div className="flex items-center justify-between gap-6 pt-2 border-t border-zinc-800/50">
-                                <div className="flex-1">
-                                  <div className="text-[10px] text-white mb-1 uppercase font-black">
-                                    First {firstDate ? `(${firstDate})` : '(—)'}
-                                  </div>
-                                  <div className="text-base font-black text-white">${firstPrice ?? baseVal}</div>
-                                </div>
-                                <div className="text-zinc-500 font-black">→</div>
-                                <div className="text-right flex-1">
-                                  <div className="text-[10px] text-white mb-1 uppercase font-black">
-                                    Current {currentDate ? `(${currentDate})` : '(—)'}
-                                  </div>
-                                  <div className={cn("text-base font-black", hasChanged ? (isAddon ? "text-blue-400" : "text-red-400") : "text-white")}>
-                                    ${currentVal}
+                              {/* First Change Row */}
+                              {firstChangePrice !== null && (
+                                <div className="flex justify-between items-center text-xs pt-2 border-t border-zinc-800/50">
+                                  <span className="text-zinc-400 font-medium">First Change</span>
+                                  <div className="text-right">
+                                    <span className="font-mono font-bold text-zinc-300">${firstChangePrice}</span>
+                                    <span className="text-[10px] text-zinc-500 block">({firstChangeDate})</span>
                                   </div>
                                 </div>
-                              </div>
+                              )}
+
+                              {/* Last Price Change Row */}
+                              {lastChangePrice !== null && (
+                                <div className="flex justify-between items-center text-xs pt-2 border-t border-zinc-800/50">
+                                  <span className="text-zinc-400 font-medium">Last Price Change</span>
+                                  <div className="text-right">
+                                    <span className={cn("font-mono font-bold", isAddon ? "text-blue-400" : "text-red-400")}>${lastChangePrice}</span>
+                                    <span className="text-[10px] text-zinc-500 block">({lastChangeDate})</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* If no changes are recorded */}
+                              {firstChangePrice === null && !hasChanged && (
+                                <div className="text-center py-2 text-[10px] text-zinc-600 font-medium uppercase tracking-wider border-t border-zinc-800/40">
+                                  No Changes
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

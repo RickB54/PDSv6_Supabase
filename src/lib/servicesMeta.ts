@@ -175,9 +175,9 @@ export interface PriceChangeRecord {
 export function getPriceChangeHistory(): PriceChangeRecord[] {
   const seedRecord: PriceChangeRecord = {
     id: "ph-baseline-seed-2026",
-    date: "2026-05-18T00:00:00.000Z",
+    date: "2026-05-18T12:00:00.000Z",
     type: "master",
-    description: "New Default Starting Pricing System established",
+    description: "Original Default Prices Set Date",
     snapshot: {
       "package:prime-essential-exterior:compact": "90",
       "package:prime-essential-exterior:midsize": "110",
@@ -213,13 +213,25 @@ export function getPriceChangeHistory(): PriceChangeRecord[] {
       return [seedRecord];
     }
     const history = JSON.parse(raw) as PriceChangeRecord[];
+    // Map over history to force update the baseline log's date and description to today
+    const updatedWithFreshSeed = history.map(r => {
+      if (r.id === "ph-baseline-seed-2026") {
+        return {
+          ...r,
+          date: "2026-05-18T12:00:00.000Z",
+          description: "Original Default Prices Set Date"
+        };
+      }
+      return r;
+    });
     // Filter history so it only retains the new baseline seed and any new manual entries made afterwards
-    const cleanHistory = history.filter(r => r.id === "ph-baseline-seed-2026" || new Date(r.date) > new Date("2026-05-18T03:15:00.000Z"));
+    const cleanHistory = updatedWithFreshSeed.filter(r => r.id === "ph-baseline-seed-2026" || new Date(r.date) > new Date("2026-05-18T03:15:00.000Z"));
     if (cleanHistory.length === 0 || !cleanHistory.some(r => r.id === "ph-baseline-seed-2026")) {
       const updatedHistory = [seedRecord, ...cleanHistory.filter(r => r.id !== "ph-baseline-seed-2026")];
       localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(updatedHistory));
       return updatedHistory;
     }
+    localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(cleanHistory));
     return cleanHistory;
   } catch {
     return [seedRecord];
