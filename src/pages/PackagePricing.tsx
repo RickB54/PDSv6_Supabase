@@ -163,11 +163,44 @@ export default function PackagePricing() {
     setPriceHistory(getPriceChangeHistory());
   };
 
-  const handleDeleteHistoryItem = (id: string) => {
-    if (window.confirm("Are you sure you want to remove this record from your price change history?")) {
+  const handleDeleteHistoryItem = async (id: string) => {
+    const history = getPriceChangeHistory();
+    const idx = history.findIndex(r => r.id === id);
+    if (idx === -1) return;
+
+    const confirmMsg = "Are you sure you want to remove this record from your price change history?\n\nIf you click 'OK', we will also automatically REVERT your live website prices back to the state they were in before this change was saved.";
+    
+    if (window.confirm(confirmMsg)) {
+      // Find the previous snapshot to revert to
+      let revertSnapshot: Record<string, string> | undefined = undefined;
+      for (let i = idx + 1; i < history.length; i++) {
+        if (history[i].snapshot && Object.keys(history[i].snapshot).length > 0) {
+          revertSnapshot = history[i].snapshot;
+          break;
+        }
+      }
+
+      // Fallback to master seed snapshot if no other is found
+      if (!revertSnapshot) {
+        const seed = history.find(r => r.id === "ph-baseline-seed-2026");
+        if (seed) revertSnapshot = seed.snapshot;
+      }
+
+      if (revertSnapshot) {
+        const updated = { ...revertSnapshot };
+        await saveToBackend(updated);
+        await saveToLocalforage(updated);
+        setSavedPrices(updated);
+        setCurrentPrices(updated);
+        await postFullSync();
+        forceWebsiteTabRefresh();
+        forceBookNowTabRefresh();
+        openPackagesLiveInBrowser();
+        toast.success("Prices successfully reverted to the previous state!");
+      }
+
       deletePriceChangeRecord(id);
       refreshHistory();
-      toast.success("Record removed from price history.");
     }
   };
 
@@ -1842,6 +1875,14 @@ export default function PackagePricing() {
       rounded[key] = Math.ceil(parseFloat(currentPrices[key]) || 0).toString();
     });
 
+    // Identify what specifically changed
+    const changedKeys: string[] = [];
+    Object.keys(rounded).forEach(key => {
+      if (rounded[key] !== savedPrices[key]) {
+        changedKeys.push(key);
+      }
+    });
+
     // 3. NOW SAVE TO BACKEND (reads current metadata)
     await saveToBackend(rounded);
     await saveToLocalforage(rounded);
@@ -1857,7 +1898,12 @@ export default function PackagePricing() {
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
-    logPriceChange({ type: 'manual', description: 'Saved ALL prices and visibility globally.', snapshot: rounded });
+
+    const desc = changedKeys.length > 0
+      ? `Saved changes to items: ${changedKeys.join(', ')}`
+      : 'Saved ALL prices and visibility globally.';
+
+    logPriceChange({ type: 'manual', description: desc, snapshot: rounded });
     refreshHistory();
     toast.success("All changes (pricing + visibility) synced to Cloud and Live Website.");
   };
@@ -3813,9 +3859,9 @@ export default function PackagePricing() {
               <DialogTitle className="text-2xl font-black text-blue-500 uppercase tracking-tight">Current Live Add-Ons — Prime Auto Detail</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-end gap-3 mb-6">
-              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={printAddOns}>Print</Button>
-              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={downloadAddOnsPDF}>Download PDF</Button>
-              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={() => setViewAllAddOnsOpen(false)}>Close</Button>
+              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={printAddOns}>Print</Button>
+              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={downloadAddOnsPDF}>Download PDF</Button>
+              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={() => setViewAllAddOnsOpen(false)}>Close</Button>
             </div>
             <div className="bg-black/40 border border-zinc-800 rounded-xl p-4 overflow-x-auto">
               <table className="w-full border-collapse">
