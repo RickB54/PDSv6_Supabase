@@ -2220,7 +2220,7 @@ export default function PackagePricing() {
                   View & Export Pricing
                 </span>
               </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
+              <AccordionContent className="px-4 pb-6 space-y-6">
                 <div className="flex items-center gap-4 flex-wrap">
                   <Button
                     size="lg"
@@ -2245,6 +2245,79 @@ export default function PackagePricing() {
                   >
                     Add-Ons List (PDF)
                   </Button>
+                </div>
+
+                <div className="border-t border-zinc-800/80 pt-6">
+                  <div className="flex justify-between items-center mb-4 px-2">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                      <History className="w-3 h-3 text-purple-500" /> Audit Log Records (Price Change History)
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                        onClick={() => {
+                          setPriceHistory(getPriceChangeHistory());
+                          setRecentChangesOpen(true);
+                        }}
+                      >
+                        <Clock className="w-3.5 h-3.5" /> RECENT PRICE CHANGES
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                        onClick={generatePriceAuditPDF}
+                      >
+                        <FileDown className="w-3.5 h-3.5" /> SAVE PRICE AUDIT PDF
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="bg-black/50 border border-zinc-800 rounded-lg p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+                    {priceHistory.length === 0 ? (
+                      <div className="text-zinc-500 text-center py-6">No price changes recorded yet.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {priceHistory.map(record => (
+                          <div key={record.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
+                            <div className="flex-1">
+                              <div className="text-xs text-zinc-500 mb-0.5">{new Date(record.date).toLocaleString()}</div>
+                              <div className="text-sm text-zinc-300 font-medium">{record.description}</div>
+                            </div>
+                            <div className="flex items-center gap-2 self-start sm:self-auto">
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
+                                record.type === 'percentage' || record.type === 'master' || record.type === 'global' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                                record.type === 'restore' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                record.type === 'reset' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              }`}>
+                                {record.type}
+                              </span>
+                              {record.id !== "ph-baseline-seed-2026" && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditHistoryItem(record.id, record.description)}
+                                    className="text-zinc-500 hover:text-purple-400 p-1 transition-colors rounded hover:bg-zinc-900"
+                                    title="Edit description"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteHistoryItem(record.id)}
+                                    className="text-zinc-500 hover:text-red-500 p-1 transition-colors rounded hover:bg-zinc-900"
+                                    title="Delete this record"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </AccordionContent>
             </AccordionItem>
@@ -2314,89 +2387,7 @@ export default function PackagePricing() {
               </AccordionContent>
             </AccordionItem>
 
-            {/* Price Change History Section */}
-            <AccordionItem value="history" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-purple-900/30 group">
-              <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-purple-400 data-[state=open]:text-purple-400 transition-colors">
-                <span className="text-lg font-semibold flex items-center gap-3">
-                  <span className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  </span>
-                  Price Change History
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="flex justify-between items-center mb-4 px-2">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                    <History className="w-3 h-3" /> Audit Log Records
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
-                      onClick={() => {
-                        setPriceHistory(getPriceChangeHistory());
-                        setRecentChangesOpen(true);
-                      }}
-                    >
-                      <Clock className="w-3.5 h-3.5" /> RECENT PRICE CHANGES
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
-                      onClick={generatePriceAuditPDF}
-                    >
-                      <FileDown className="w-3.5 h-3.5" /> SAVE PRICE AUDIT PDF
-                    </Button>
-                  </div>
-                </div>
-                <div className="bg-black/50 border border-zinc-800 rounded-lg p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
-                  {priceHistory.length === 0 ? (
-                    <div className="text-zinc-500 text-center py-6">No price changes recorded yet.</div>
-                  ) : (
-                    <div className="space-y-3">
-                      {priceHistory.map(record => (
-                        <div key={record.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
-                          <div className="flex-1">
-                            <div className="text-xs text-zinc-500 mb-0.5">{new Date(record.date).toLocaleString()}</div>
-                            <div className="text-sm text-zinc-300 font-medium">{record.description}</div>
-                          </div>
-                          <div className="flex items-center gap-2 self-start sm:self-auto">
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                              record.type === 'percentage' || record.type === 'master' || record.type === 'global' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                              record.type === 'restore' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                              record.type === 'reset' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                              'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            }`}>
-                              {record.type}
-                            </span>
-                            {record.id !== "ph-baseline-seed-2026" && (
-                              <>
-                                <button
-                                  onClick={() => handleEditHistoryItem(record.id, record.description)}
-                                  className="text-zinc-500 hover:text-purple-400 p-1 transition-colors rounded hover:bg-zinc-900"
-                                  title="Edit description"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteHistoryItem(record.id)}
-                                  className="text-zinc-500 hover:text-red-500 p-1 transition-colors rounded hover:bg-zinc-900"
-                                  title="Delete this record"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+
 
           </Accordion>
 
