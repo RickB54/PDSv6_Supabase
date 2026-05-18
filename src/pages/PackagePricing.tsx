@@ -3501,8 +3501,8 @@ export default function PackagePricing() {
                         const baseVal = (item.pricing as any)[size];
                         
                         const itemHistory = history.filter(r => r.snapshot && r.snapshot[key]);
-                        // Filter out baseline seed record to capture actual manual overrides
-                        const changesHistory = itemHistory.filter(r => r.id !== "ph-baseline-seed-2026");
+                        const latestRec = itemHistory[0];
+                        const firstRec = [...itemHistory].reverse().find(r => Math.abs(parseFloat(r.snapshot![key]) - baseVal) > 0.01);
                         
                         const currentVal = parseFloat(currentPrices[key]) || baseVal;
                         const hasChanged = Math.abs(currentVal - baseVal) > 0.01;
@@ -3512,21 +3512,23 @@ export default function PackagePricing() {
                         let lastChangePrice: number | null = null;
                         let lastChangeDate: string | null = null;
 
-                        if (changesHistory.length === 1) {
-                          // Only one change exists: it is the First Change
-                          const rec = changesHistory[0];
-                          firstChangePrice = parseFloat(rec.snapshot![key]) || currentVal;
-                          firstChangeDate = new Date(rec.date).toLocaleDateString();
-                        } else if (changesHistory.length >= 2) {
-                          // Multiple changes exist: oldest is First Change, newest is Last Price Change
-                          const oldestRec = changesHistory[changesHistory.length - 1];
-                          const newestRec = changesHistory[0];
-                          
-                          firstChangePrice = parseFloat(oldestRec.snapshot![key]);
-                          firstChangeDate = new Date(oldestRec.date).toLocaleDateString();
-                          
-                          lastChangePrice = parseFloat(newestRec.snapshot![key]) || currentVal;
-                          lastChangeDate = new Date(newestRec.date).toLocaleDateString();
+                        if (hasChanged) {
+                          const firstPrice = firstRec ? parseFloat(firstRec.snapshot![key]) : null;
+                          const firstDate = firstRec ? new Date(firstRec.date).toLocaleDateString() : null;
+                          const currentDate = latestRec ? new Date(latestRec.date).toLocaleDateString() : new Date().toLocaleDateString();
+
+                          if (firstPrice !== null && Math.abs(currentVal - firstPrice) > 0.01) {
+                            // There is a historical first change that is different from the current price:
+                            // Show first price as "First Change" and current price as "Last Price Change"
+                            firstChangePrice = firstPrice;
+                            firstChangeDate = firstDate;
+                            lastChangePrice = currentVal;
+                            lastChangeDate = currentDate;
+                          } else {
+                            // Otherwise, the current price itself is the "First Change"
+                            firstChangePrice = currentVal;
+                            firstChangeDate = currentDate;
+                          }
                         }
 
                         return (
