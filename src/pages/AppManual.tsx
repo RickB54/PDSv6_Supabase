@@ -313,8 +313,8 @@ export default function AppManual() {
                             />
                             <ManualEntry 
                                 title="Package Pricing Manager" 
-                                description="Central command for all service rates. Manage base prices, size multipliers, and percentage-based adjustments."
-                                features={["Bulk Price Adjustments", "Rounding Logic (Ceiling)", "Backup/Restore Pricing"]}
+                                description="Central command for all service rates. Manage base prices, size multipliers, and percentage-based adjustments, featuring human-readable logs and smart sync comparison logic."
+                                features={["Bulk Price Adjustments", "Human-Readable Audit Trail", "Smart Sync Comparison", "Backup/Restore Pricing"]}
                             />
                             <ManualEntry 
                                 title="Taxes & Budgeting" 
@@ -391,6 +391,11 @@ export default function AppManual() {
                                 title="Detailing Vendors" 
                                 description="Centralized directory of suppliers and restock links to maintain a professional and reliable supply chain."
                                 features={["Vendor Quick-Links", "Supplier Contact Logs", "Preferred Pricing Notes"]}
+                            />
+                            <ManualEntry 
+                                title="Business Drive & File Manager" 
+                                description="Visual cloud-integrated digital storage system inside the File Manager. Organize media, PDFs, and invoices into unified operational folders. Features Gemini AI for instant folder summaries."
+                                features={["Gemini Folder Summaries", "Automatic Estimates/Invoices Folders", "Supabase Cloud Sync"]}
                             />
                         </div>
                     </section>
