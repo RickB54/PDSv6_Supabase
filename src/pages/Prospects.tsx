@@ -54,7 +54,22 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
-import { savePDFToArchive } from "@/lib/pdfArchive";
+const parseAttachedPhotos = (notes?: string) => {
+  if (!notes) return [];
+  const lines = notes.split('\n');
+  const photos: string[] = [];
+  let isPhotoSection = false;
+  for (const line of lines) {
+    if (line.includes('Attached Photos:')) {
+      isPhotoSection = true;
+      continue;
+    }
+    if (isPhotoSection && line.trim().startsWith('http')) {
+      photos.push(line.trim());
+    }
+  }
+  return photos;
+};
 
 export default function Prospects() {
   const navigate = useNavigate();
@@ -1077,7 +1092,43 @@ export default function Prospects() {
                                   <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
                                 </div>
                               )}
-                           </section>
+                                                          {(() => {
+                                 const photos = parseAttachedPhotos(customer.notes);
+                                 if (photos.length === 0) return null;
+                                 return (
+                                   <div className="mt-4 pt-4 border-t border-zinc-800/60 space-y-3">
+                                     <div className="flex items-center gap-2 text-emerald-400 text-xs font-black uppercase tracking-widest">
+                                       <ImageIcon className="h-4 w-4" />
+                                       Customer Uploaded Photos ({photos.length})
+                                     </div>
+                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                       {photos.map((url, i) => (
+                                         <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group">
+                                           <img 
+                                             src={url} 
+                                             alt={`Attached ${i + 1}`} 
+                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                             onClick={(e) => {
+                                               e.stopPropagation();
+                                               window.open(url, '_blank');
+                                             }}
+                                           />
+                                           <a 
+                                             href={url} 
+                                             target="_blank" 
+                                             rel="noopener noreferrer" 
+                                             className="absolute bottom-1.5 right-1.5 p-1 bg-black/85 rounded-md text-[10px] text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+                                             onClick={e => e.stopPropagation()}
+                                           >
+                                             <ExternalLink className="h-3 w-3" /> View Full
+                                           </a>
+                                         </div>
+                                       ))}
+                                     </div>
+                                   </div>
+                                 );
+                               })()}
+                            </section>
                            {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                         </div>
                       </div>

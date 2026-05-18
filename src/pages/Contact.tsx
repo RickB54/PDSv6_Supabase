@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import SuccessMessage from "@/components/SuccessMessage";
-import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake, Image as ImageIcon, X, HelpCircle } from "lucide-react";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
@@ -22,6 +22,8 @@ import * as contactSvc from "@/services/supabase/contact";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/servicesMeta";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
+import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import logo from "@/assets/logo-primary.png";
 
 const Contact = () => {
@@ -29,12 +31,17 @@ const Contact = () => {
   const [showAbout, setShowAbout] = useState(false);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string } | null>(null);
   const [liveServices, setLiveServices] = useState<{ id: string, name: string }[]>([]);
+  const [showClassificationModal, setShowClassificationModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
     city: "",
+    vehicleYear: "",
+    vehicleMake: "",
+    vehicleModel: "",
+    vehicleCondition: "",
     vehicleType: "",
     serviceInterested: "",
     preferredTiming: "",
@@ -49,6 +56,17 @@ const Contact = () => {
   const [businessStatus, setBusinessStatus] = useState<any>(null);
   const [lastMailto, setLastMailto] = useState("");
 
+  // Automatically classify the vehicle class based on selected Make & Model
+  useEffect(() => {
+    if (formData.vehicleMake || formData.vehicleModel) {
+      const query = `${formData.vehicleMake} ${formData.vehicleModel}`.trim();
+      const detected = normalizeVehicleType(query);
+      if (detected) {
+        setFormData(prev => ({ ...prev, vehicleType: detected }));
+      }
+    }
+  }, [formData.vehicleMake, formData.vehicleModel]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -62,7 +80,10 @@ const Contact = () => {
       newErrors.phone = "Phone Number is required";
     }
     if (!formData.city.trim()) newErrors.city = "City / Town is required";
-    if (!formData.vehicleType) newErrors.vehicleType = "Vehicle Type is required";
+    if (!formData.vehicleYear) newErrors.vehicleYear = "Vehicle Year is required";
+    if (!formData.vehicleMake) newErrors.vehicleMake = "Vehicle Make is required";
+    if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Vehicle Model is required";
+    if (!formData.vehicleType) newErrors.vehicleType = "Vehicle Type / Class is required";
     if (!formData.serviceInterested) newErrors.serviceInterested = "Please select a service of interest";
 
     setErrors(newErrors);
@@ -129,7 +150,7 @@ const Contact = () => {
           vehicleType: formData.vehicleType,
           howFound: formData.howFound,
           services: [formData.serviceInterested],
-          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
+          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
         });
 
         // Also create a contact record for redundancy and history
@@ -137,8 +158,103 @@ const Contact = () => {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          message: `Vehicle: ${formData.vehicleType}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`,
+          message: `Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel} (${formData.vehicleType})${formData.vehicleCondition ? `\nCondition: ${formData.vehicleCondition}` : ''}\nService: ${formData.serviceInterested}\nTiming: ${formData.preferredTiming}\n\n${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`,
         }).catch(() => {});
+
+        // Proactively send a premium formatted HTML email to Rick's email address
+        try {
+          const emailHtml = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e4e4e7; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+              <div style="background: linear-gradient(135deg, #065f46 0%, #10b981 100%); padding: 40px 24px; text-align: center; color: #ffffff;">
+                <div style="font-size: 56px; margin-bottom: 16px;">🚗</div>
+                <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">New Vehicle Evaluation Inquiry!</h1>
+                <p style="margin: 8px 0 0; font-size: 16px; opacity: 0.9;">A prospect has submitted vehicle details for condition assessment.</p>
+              </div>
+              <div style="padding: 32px 24px;">
+                <h2 style="color: #18181b; margin-top: 0; font-size: 18px; font-weight: 700; border-bottom: 2px solid #f4f4f5; padding-bottom: 12px; text-transform: uppercase; tracking: 0.05em;">Prospect Details</h2>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 16px; margin-bottom: 28px;">
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; width: 140px; font-size: 14px;">Customer Name:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.name}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Email Address:</td>
+                    <td style="padding: 10px 0; font-size: 14px;"><a href="mailto:${formData.email}" style="color: #10b981; text-decoration: none; font-weight: 700;">${formData.email}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Phone Number:</td>
+                    <td style="padding: 10px 0; font-size: 14px;"><a href="tel:${formData.phone}" style="color: #18181b; text-decoration: none; font-weight: 700;">${formData.phone}</a></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Location:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.address ? `${formData.address}, ` : ''}${formData.city}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Spec:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Class:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px; text-transform: capitalize;">${formData.vehicleType}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Condition:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.vehicleCondition || 'Not Specified'}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Service Desired:</td>
+                    <td style="padding: 10px 0; color: #047857; font-weight: 800; font-size: 14px; text-transform: uppercase;">${formData.serviceInterested}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Preferred Timing:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.preferredTiming}</td>
+                  </tr>
+                </table>
+                
+                <h2 style="color: #18181b; margin-top: 0; font-size: 18px; font-weight: 700; border-bottom: 2px solid #f4f4f5; padding-bottom: 12px; text-transform: uppercase; tracking: 0.05em;">Prospect Message</h2>
+                <div style="background-color: #fafafa; border: 1px solid #e4e4e7; border-radius: 12px; padding: 20px; color: #3f3f46; font-style: italic; line-height: 1.6; margin-top: 14px; margin-bottom: 28px; font-size: 14px; border-left: 4px solid #10b981;">
+                  "${formData.message || 'No additional questions or comments provided.'}"
+                </div>
+                
+                ${fileUrls.length > 0 ? `
+                  <h2 style="color: #18181b; margin-top: 0; font-size: 18px; font-weight: 700; border-bottom: 2px solid #f4f4f5; padding-bottom: 12px; text-transform: uppercase; tracking: 0.05em;">Attached Vehicle Condition Photos (${fileUrls.length})</h2>
+                  <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    ${fileUrls.map((url, index) => `
+                      <div style="border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; background-color: #fafafa; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                        <a href="${url}" target="_blank" style="text-decoration: none; display: block;">
+                          <img src="${url}" alt="Vehicle Attachment ${index + 1}" style="width: 100%; height: 140px; object-fit: cover; display: block; border-bottom: 1px solid #e4e4e7;" />
+                          <div style="padding: 10px; text-align: center; color: #10b981; font-weight: 700; font-size: 12px; text-transform: uppercase; tracking: 0.05em; background-color: #ffffff;">View Full Image</div>
+                        </a>
+                      </div>
+                    `).join('')}
+                  </div>
+                ` : ''}
+                
+                <div style="text-align: center; margin-top: 40px; border-top: 1px solid #f4f4f5; padding-top: 32px;">
+                  <a href="${window.location.origin}/prospects?search=${encodeURIComponent(formData.name)}" 
+                     style="display: inline-block; background-color: #10b981; color: #ffffff; padding: 14px 32px; border-radius: 12px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); font-size: 14px;">
+                     Open in Prospects CRM
+                  </a>
+                </div>
+              </div>
+              <div style="background-color: #fafafa; padding: 24px; text-align: center; border-top: 1px solid #f4f4f5;">
+                <p style="margin: 0; color: #a1a1aa; font-size: 12px; font-weight: 500;">&copy; ${new Date().getFullYear()} Prime Auto Detail. All rights reserved.</p>
+              </div>
+            </div>
+          `;
+
+          await supabase.functions.invoke('send-booking-email', {
+            body: {
+              to: 'Rick.PrimeAutoDetail@gmail.com',
+              subject: `🔔 NEW VEHICLE EVALUATION: ${formData.name} - ${formData.vehicleType}`,
+              customerName: formData.name,
+              service: formData.serviceInterested,
+              html: emailHtml
+            }
+          });
+        } catch (emailErr) {
+          console.warn("Failed to send notification email to Rick:", emailErr);
+        }
       }
     } catch (err) {
       console.error("Failed to save prospect", err);
@@ -153,11 +269,13 @@ const Contact = () => {
     doc.text(`Name: ${formData.name}`, 20, 50);
     doc.text(`Email: ${formData.email}`, 20, 60);
     doc.text(`Phone: ${formData.phone}`, 20, 70);
-    doc.text(`Vehicle Type: ${formData.vehicleType}`, 20, 80);
-    doc.text(`Service: ${formData.serviceInterested}`, 20, 90);
-    doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 100);
+    doc.text(`Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`, 20, 80);
+    doc.text(`Vehicle Class: ${formData.vehicleType}`, 20, 90);
+    doc.text(`Vehicle Condition: ${formData.vehicleCondition || 'Not Specified'}`, 20, 100);
+    doc.text(`Service: ${formData.serviceInterested}`, 20, 110);
+    doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 120);
     
-    let yPos = 115;
+    let yPos = 135;
     if (fileUrls.length > 0) {
       doc.text("Files Attached:", 20, yPos);
       yPos += 10;
@@ -180,13 +298,14 @@ const Contact = () => {
     savePDFToArchive("Prospects", formData.name, `inquiry_${Date.now()}`, pdfDataUrl);
 
     // Generate Universal mailto link for ALL mail clients (Yahoo, Outlook, Apple, etc.)
-    const subject = `Service Inquiry: ${formData.name} [${formData.vehicleType}]`;
+    const subject = `Service Inquiry: ${formData.name} [${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}]`;
     const body = `New Service Inquiry\n\n` +
       `Name: ${formData.name}\n` +
       `Email: ${formData.email}\n` +
       `Phone: ${formData.phone}\n` +
       `Address: ${formData.address}, ${formData.city}\n` +
-      `Vehicle Type: ${formData.vehicleType}\n` +
+      `Vehicle: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel} (${formData.vehicleType})\n` +
+      `Condition: ${formData.vehicleCondition || 'Not Specified'}\n` +
       `Interested In: ${formData.serviceInterested}\n` +
       `Timing: ${formData.preferredTiming}\n\n` +
       (fileUrls.length > 0 ? `ATTACHED PHOTOS (${fileUrls.length}):\n${fileUrls.join('\n')}\n\n` : '') +
@@ -213,6 +332,10 @@ const Contact = () => {
       phone: "",
       address: "",
       city: "",
+      vehicleYear: "",
+      vehicleMake: "",
+      vehicleModel: "",
+      vehicleCondition: "",
       vehicleType: "",
       serviceInterested: "",
       preferredTiming: "",
@@ -354,7 +477,7 @@ const Contact = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-8">
           {/* Inquiry Form */}
           <Card className="p-6 md:p-8 bg-gradient-card border-border shadow-xl">
             <div className="mb-8">
@@ -364,81 +487,185 @@ const Contact = () => {
 
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               
+              {/* Personal Details */}
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="font-bold">Full Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter your full name"
-                    required
-                    className={errors.name ? "border-destructive h-12" : "h-12"}
-                  />
-                  {errors.name && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.name}</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="font-bold">Full Name *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter your full name"
+                      required
+                      className={errors.name ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.name && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.name}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="font-bold">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="your@email.com"
+                      required
+                      className={errors.email ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.email && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.email}</p>}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="font-bold">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="your@email.com"
-                    required
-                    className={errors.email ? "border-destructive h-12" : "h-12"}
-                  />
-                  {errors.email && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.email}</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="font-bold">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="(555) 123-4567"
+                      required
+                      className={errors.phone ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.phone && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.phone}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="font-bold">Street Address (Optional)</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="123 Detail Lane"
+                      className="h-12"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="font-bold">City / Town *</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Methuen, MA"
+                      required
+                      className={errors.city ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.city && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="howFound" className="font-bold">How Did You Hear About Us?</Label>
+                    <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Referral source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="facebook">Facebook</SelectItem>
+                        <SelectItem value="google">Google Search</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="referral">Word of Mouth / Referral</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="font-bold">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="(555) 123-4567"
-                    required
-                    className={errors.phone ? "border-destructive h-12" : "h-12"}
-                  />
-                  {errors.phone && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.phone}</p>}
+              {/* Vehicle Information Section */}
+              <div className="border-t border-border pt-6 mt-6 space-y-4">
+                <h3 className="text-lg font-bold text-foreground mb-2 uppercase tracking-tight flex items-center gap-2">
+                  <CarFront className="h-5 w-5 text-emerald-500 animate-pulse" />
+                  Vehicle Information
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleYear" className="font-bold">Vehicle Year *</Label>
+                    <Select value={formData.vehicleYear} onValueChange={(v) => setFormData({ ...formData, vehicleYear: v })}>
+                      <SelectTrigger className={`h-12 ${errors.vehicleYear ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 27 }, (_, i) => String(2026 - i)).concat("Older than 2000").map(y => (
+                          <SelectItem key={y} value={y}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.vehicleYear && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleYear}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleMake" className="font-bold">Vehicle Make *</Label>
+                    <Select value={formData.vehicleMake} onValueChange={(v) => setFormData({ ...formData, vehicleMake: v })}>
+                      <SelectTrigger className={`h-12 ${errors.vehicleMake ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Manufacturer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "Acura", "Audi", "BMW", "Cadillac", "Chevrolet", "Chrysler", "Dodge", "Ford", "GMC", "Honda",
+                          "Hyundai", "Infiniti", "Jeep", "Kia", "Lexus", "Lincoln", "Mazda", "Mercedes-Benz", "Nissan",
+                          "Porsche", "Ram", "Subaru", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other"
+                        ].map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.vehicleMake && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleMake}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleModel" className="font-bold">Vehicle Model *</Label>
+                    <Input
+                      id="vehicleModel"
+                      value={formData.vehicleModel}
+                      onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
+                      placeholder="e.g. Civic, F-150, RAV4"
+                      required
+                      className={errors.vehicleModel ? "border-destructive h-12" : "h-12"}
+                    />
+                    {errors.vehicleModel && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleModel}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleCondition" className="font-bold">Vehicle Condition (Optional)</Label>
+                    <Select value={formData.vehicleCondition} onValueChange={(v) => setFormData({ ...formData, vehicleCondition: v })}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select General Condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Excellent">Excellent (Fairly Clean, Daily Driver)</SelectItem>
+                        <SelectItem value="Good">Good (Light Dust/Debris, No Heavy Stains)</SelectItem>
+                        <SelectItem value="Fair">Fair (Pet Hair, Light Stains, Spills)</SelectItem>
+                        <SelectItem value="Poor">Poor (Heavy Stains, Odors, Mold/Mildew)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="font-bold">Street Address (Optional)</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="123 Detail Lane"
-                    className="h-12"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="font-bold">City / Town *</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="Methuen, MA"
-                    required
-                    className={errors.city ? "border-destructive h-12" : "h-12"}
-                  />
-                  {errors.city && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleType" className="font-bold">Vehicle Type *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="vehicleType" className="font-bold">Vehicle Class / Size *</Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => setShowClassificationModal(true)}
+                      className="h-auto p-0 text-xs font-black uppercase text-emerald-500 hover:text-emerald-600 flex items-center gap-1 shrink-0"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                      Size Finder Guide
+                    </Button>
+                  </div>
                   <Select value={formData.vehicleType} onValueChange={(v) => setFormData({ ...formData, vehicleType: v })}>
                     <SelectTrigger className={`h-12 ${errors.vehicleType ? 'border-destructive' : ''}`}>
-                      <SelectValue placeholder="Select size" />
+                      <SelectValue placeholder="Autodetected size (or choose manually)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="compact">Compact / Sedan</SelectItem>
@@ -448,55 +675,50 @@ const Contact = () => {
                     </SelectContent>
                   </Select>
                   {errors.vehicleType && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleType}</p>}
+                  <p className="text-[11px] text-zinc-500 italic mt-1 font-medium">
+                    ⚡ Auto-classified: Our intelligent system auto-selects this based on your make and model. Feel free to override it.
+                  </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="service" className="font-bold">Service Interested In *</Label>
-                  <Select value={formData.serviceInterested} onValueChange={(v) => setFormData({ ...formData, serviceInterested: v })}>
-                    <SelectTrigger className={`h-12 ${errors.serviceInterested ? 'border-destructive' : ''}`}>
-                      <SelectValue placeholder="Select service" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {liveServices.map(s => (
-                        <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
-                      ))}
-                      <SelectItem value="Other / Multiple">Other / Multiple</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.serviceInterested && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.serviceInterested}</p>}
-                </div>
+              {/* Detailing Preferences Section */}
+              <div className="border-t border-border pt-6 mt-6 space-y-4">
+                <h3 className="text-lg font-bold text-foreground mb-2 uppercase tracking-tight flex items-center gap-2">
+                  <Snowflake className="h-5 w-5 text-emerald-500 animate-spin-slow" />
+                  Service & Schedule
+                </h3>
 
-                <div className="space-y-2">
-                  <Label htmlFor="timing" className="font-bold">Preferred Timing</Label>
-                  <Select value={formData.preferredTiming} onValueChange={(v) => setFormData({ ...formData, preferredTiming: v })}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="When do you need service?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Immediately upon launch">Immediately upon launch</SelectItem>
-                      <SelectItem value="Within a month of launch">Within a month of launch</SelectItem>
-                      <SelectItem value="Flexible / Just inquiring">Flexible / Just inquiring</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="service" className="font-bold">Service Interested In *</Label>
+                    <Select value={formData.serviceInterested} onValueChange={(v) => setFormData({ ...formData, serviceInterested: v })}>
+                      <SelectTrigger className={`h-12 ${errors.serviceInterested ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {liveServices.map(s => (
+                          <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                        ))}
+                        <SelectItem value="Other / Multiple">Other / Multiple</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.serviceInterested && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.serviceInterested}</p>}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="howFound" className="font-bold">How Did You Hear About Us?</Label>
-                <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
-                  <SelectTrigger className="h-12">
-                    <SelectValue placeholder="Referral source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="facebook">Facebook</SelectItem>
-                    <SelectItem value="google">Google Search</SelectItem>
-                    <SelectItem value="instagram">Instagram</SelectItem>
-                    <SelectItem value="referral">Word of Mouth / Referral</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="timing" className="font-bold">Preferred Timing</Label>
+                    <Select value={formData.preferredTiming} onValueChange={(v) => setFormData({ ...formData, preferredTiming: v })}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="When do you need service?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Immediately upon launch">Immediately upon launch</SelectItem>
+                        <SelectItem value="Within a month of launch">Within a month of launch</SelectItem>
+                        <SelectItem value="Flexible / Just inquiring">Flexible / Just inquiring</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -514,12 +736,15 @@ const Contact = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="attachments" className="font-bold cursor-pointer flex items-center gap-2">
-                    <Star className="h-4 w-4 text-emerald-500" />
-                    Attach Photos (Exterior/Interior)
+                    <Star className="h-4 w-4 text-emerald-500 animate-pulse" />
+                    Attach Photos of Your Vehicle (Optional)
                   </Label>
                   <span className="text-[10px] uppercase font-black text-muted-foreground italic">Max 5 MB per pic</span>
                 </div>
-                <div className="relative group">
+                <div 
+                  className="relative group border-2 border-dashed border-zinc-200 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px]"
+                  onClick={() => document.getElementById("attachments")?.click()}
+                >
                   <Input
                     id="attachments"
                     type="file"
@@ -530,14 +755,32 @@ const Contact = () => {
                         setAttachments(Array.from(e.target.files));
                       }
                     }}
-                    className="h-14 py-3 bg-zinc-50 border-2 border-dashed border-zinc-200 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
+                    className="hidden"
                   />
+                  <ImageIcon className="h-8 w-8 text-zinc-400 group-hover:text-emerald-500 group-hover:scale-110 transition-all duration-300 mb-2" />
+                  <p className="text-sm font-bold text-zinc-700 group-hover:text-emerald-600 transition-colors">
+                    Click to browse or drag & drop pictures
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-1 max-w-[340px]">
+                    Optional: Attach pictures of your vehicle (exterior and interior) to help us determine its condition and provide an accurate estimate.
+                  </p>
                 </div>
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {attachments.map((f, i) => (
-                      <Badge key={i} variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold">
-                        {f.name}
+                      <Badge key={i} variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold py-1 px-2.5 rounded-lg flex items-center gap-1.5 shadow-sm animate-in zoom-in-95 duration-200">
+                        <span className="truncate max-w-[150px]">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAttachments(prev => prev.filter((_, idx) => idx !== i));
+                          }}
+                          className="text-emerald-700 hover:text-red-500 transition-colors"
+                          title="Remove file"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </Badge>
                     ))}
                   </div>
@@ -586,88 +829,92 @@ const Contact = () => {
           </Card>
 
           {/* Contact Information */}
-          <div className="space-y-6">
-            <Card className="p-6 bg-gradient-card border-border">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/20 rounded-lg">
-                  <Mail className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                  <a
-                    href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com')}&su=Website%20Inquiry`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {contactInfo ? (contactInfo.email || 'Rick.PrimeAutoDetail@gmail.com') : 'Loading contact info...'}
-                  </a>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="p-6 bg-gradient-card border-border flex items-start gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg shrink-0">
+                <Mail className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Email</h3>
+                <a
+                  href={`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com')}&su=Website%20Inquiry`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm break-all"
+                >
+                  {contactInfo ? (contactInfo.email || 'Rick.PrimeAutoDetail@gmail.com') : 'Loading contact info...'}
+                </a>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-card border-border">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/20 rounded-lg">
-                  <Phone className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Phone</h3>
-                  <a
-                    href={`tel:${(contactInfo?.phone || '(555) 123-4567').replace(/[^+\d]/g, '')}`}
-                    className="text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {contactInfo ? (contactInfo.phone || '(555) 123-4567') : 'Loading contact info...'}
-                  </a>
-                </div>
+            <Card className="p-6 bg-gradient-card border-border flex items-start gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg shrink-0">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Phone</h3>
+                <a
+                  href={`tel:${(contactInfo?.phone || '(555) 123-4567').replace(/[^+\d]/g, '')}`}
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                >
+                  {contactInfo ? (contactInfo.phone || '(555) 123-4567') : 'Loading contact info...'}
+                </a>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-card border-border">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/20 rounded-lg">
-                  <MapPin className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Location</h3>
-                  <p className="text-muted-foreground">
-                    {contactInfo ? (contactInfo.address || 'Methuen, MA') : 'Loading contact info...'}<br />
-                    Mobile service available
-                  </p>
-                </div>
+            <Card className="p-6 bg-gradient-card border-border flex items-start gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg shrink-0">
+                <MapPin className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Location</h3>
+                <p className="text-muted-foreground text-sm">
+                  {contactInfo ? (contactInfo.address || 'Methuen, MA') : 'Loading contact info...'}<br />
+                  Mobile service available
+                </p>
               </div>
             </Card>
 
-            <Card className="p-6 bg-gradient-card border-border">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/20 rounded-lg">
-                  <Clock className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">Hours</h3>
-                  <div className="text-muted-foreground space-y-1 whitespace-pre-line">
-                    <p>{contactInfo ? (contactInfo.hours || 'Appointments daily 8 AM–6 PM') : 'Loading contact info...'}</p>
-                  </div>
-                </div>
+            <Card className="p-6 bg-gradient-card border-border flex items-start gap-4">
+              <div className="p-3 bg-primary/20 rounded-lg shrink-0">
+                <Clock className="h-6 w-6 text-primary" />
               </div>
-            </Card>
-
-            {/* Map */}
-            <Card className="p-6 bg-gradient-card border-border">
-              <iframe
-                title="Methuen MA Map"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47093.99823879164!2d-71.21912523125!3d42.742358!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e30f8b9f0b3f0d%3A0x3e947e3c90c3e0a3!2sMethuen%2C%20MA!5e0!3m2!1sen!2sus!4v1234567890"
-                width="100%"
-                height="250"
-                style={{ border: 0, borderRadius: '8px' }}
-                allowFullScreen
-                loading="lazy"
-              />
+              <div>
+                <h3 className="font-semibold text-foreground mb-1">Hours</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {contactInfo ? (contactInfo.hours || 'Appointments daily 8 AM–6 PM') : 'Loading contact info...'}
+                </p>
+              </div>
             </Card>
           </div>
+
+          {/* Map */}
+          <Card className="p-6 bg-gradient-card border-border">
+            <iframe
+              title="Methuen MA Map"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d47093.99823879164!2d-71.21912523125!3d42.742358!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89e30f8b9f0b3f0d%3A0x3e947e3c90c3e0a3!2sMethuen%2C%20MA!5e0!3m2!1sen!2sus!4v1234567890"
+              width="100%"
+              height="350"
+              style={{ border: 0, borderRadius: '8px' }}
+              allowFullScreen
+              loading="lazy"
+            />
+          </Card>
         </div>
       </main>
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
+      <VehicleClassificationDialog
+        open={showClassificationModal}
+        onOpenChange={setShowClassificationModal}
+        onSelect={(simpleCategory, details) => {
+          setFormData(prev => ({
+            ...prev,
+            vehicleType: simpleCategory,
+            vehicleMake: details?.make || prev.vehicleMake,
+            vehicleModel: details?.model || prev.vehicleModel
+          }));
+        }}
+      />
       <Footer />
     </div>
   );

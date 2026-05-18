@@ -97,7 +97,7 @@ const FileManager = () => {
   }, [adminModalOpen, refreshAlerts]);
 
   // Normalize category values coming from URL (handle plurals/synonyms)
-  const normalizeCategory = (val: string | null): "all" | "Invoice" | "Estimate" | "Job" | "Checklist" | "Customer" | "Employee Training" | "Bookings" | "Admin Updates" | "Payroll" | "Employee Contact" | "add-Ons" | "Vehicle History" | "Inventory Report" => {
+  const normalizeCategory = (val: string | null): "all" | "Invoice" | "Estimate" | "Job" | "Checklist" | "Customer" | "Employee Training" | "Bookings" | "Admin Updates" | "Payroll" | "Employee Contact" | "add-Ons" | "Vehicle History" | "Inventory Report" | "Prospects" => {
     const s = String(val || '').trim().toLowerCase();
     if (!s) return "all";
     if (s === "all") return "all";
@@ -114,6 +114,7 @@ const FileManager = () => {
     if (s.includes("add-ons") || s.includes("addons") || s.includes("add-on")) return "add-Ons";
     if (s.includes("vehicle") && s.includes("history")) return "Vehicle History";
     if (s.includes("inventory") && s.includes("report")) return "Inventory Report";
+    if (s.includes("prospect")) return "Prospects";
     return "all";
   };
 
