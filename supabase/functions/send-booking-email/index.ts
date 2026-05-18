@@ -24,6 +24,7 @@ serve(async (req) => {
 
     const { 
       to, 
+      bcc,
       subject, 
       html, 
       customerName, 
@@ -52,10 +53,13 @@ serve(async (req) => {
 
     const vehicleInfo = `${vehicleYear} ${vehicleMake} ${vehicleModel} (${vehicleType})`.trim();
 
+    const SENDER_EMAIL = Deno.env.get('SENDER_EMAIL') || 'Prime Auto Detail <onboarding@resend.dev>'
+
     // Send email using Resend
     const payload = {
-      from: 'onboarding@resend.dev', // Plain email for testing mode
-      to: [to],
+      from: SENDER_EMAIL,
+      to: Array.isArray(to) ? to : [to],
+      bcc: bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined,
       reply_to: customerEmail || undefined, // Allow replying to the customer
       subject: subject,
       html: html || `
