@@ -1,7 +1,7 @@
 {
   "packagesLive": {
     "savedPrices": {
-      "package:prime-essential-exterior:compact": "80",
+      "package:prime-essential-exterior:compact": "90",
       "package:prime-essential-exterior:midsize": "110",
       "package:prime-essential-exterior:truck": "120",
       "package:prime-essential-exterior:luxury": "130",
@@ -254,7 +254,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1779115674268
+    "version": 1779116530956
   },
   "vehicleTypesLive": [
     {
