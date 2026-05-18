@@ -432,9 +432,14 @@ export default function AppManual() {
                         <ChapterHeader title="09: Marketing & Retention" subtitle="Fueling growth and maintaining client loyalty." icon={TicketPercent} color="bg-pink-600" />
                         <div className="space-y-6">
                             <ManualEntry 
-                                title="Follow-up Center" 
-                                description="The retention engine. Automatically identifies clients due for maintenance based on their service cycle."
+                                title="Follow-up Center & Retention Engine" 
+                                description="The retention engine. Automatically identifies clients due for maintenance based on their service cycle, with dynamic customer / prospect segmentation."
                                 features={["Maintenance Cycle Tracking", "Nurturing Templates", "Engagement Logs"]}
+                            />
+                            <ManualEntry 
+                                title="Outreach Campaigns & Custom Domains" 
+                                description="Configure Resend custom domain integration and load preset high-converting client/prospect outreach campaigns, featuring dynamic SENDER_EMAIL Supabase secrets and BCC delivery verification copies."
+                                features={["Outreach Presets", "Resend Domain Sync", "BCC Verification", "SENDER_EMAIL Secret"]}
                             />
                             <ManualEntry 
                                 title="Prime Blog & Elite Story Master" 
@@ -469,9 +474,9 @@ export default function AppManual() {
                                 features={["Individual Profile Sync", "Password Management", "Notification Toggles"]}
                             />
                             <ManualEntry 
-                                title="Data Deletion & Archive" 
-                                description="Procedures for safely removing test data or archiving inactive clients without losing history."
-                                features={["Permanent Deletion Safety", "Customer Archiving", "Virtual Profile Cleanup"]}
+                                title="Data Deletion & Deletion Safety" 
+                                description="Procedures for safely removing test data or archiving inactive clients without losing history, protected by cascading DB rules."
+                                features={["Permanent Deletion Safety", "Customer Archiving", "Virtual Profile Cleanup", "Cascading DB Cleanup"]}
                             />
                             <ManualEntry 
                                 title="Master Backups & Sync" 
