@@ -140,8 +140,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
     description: 'Includes everything in the Essential Interior & Essential Exterior combined.',
-    basePrice: 230,
-    pricing: { compact: 230, midsize: 270, truck: 290, luxury: 320 },
+    basePrice: 260,
+    pricing: { compact: 260, midsize: 270, truck: 290, luxury: 320 },
     steps: [
       { id: 'ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
       { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },

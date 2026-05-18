@@ -173,7 +173,57 @@ export interface PriceChangeRecord {
 }
 
 export function getPriceChangeHistory(): PriceChangeRecord[] {
-  try { return JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '[]'); } catch { return []; }
+  const seedRecord: PriceChangeRecord = {
+    id: "ph-baseline-seed-2026",
+    date: "2026-05-18T00:00:00.000Z",
+    type: "master",
+    description: "New Default Starting Pricing System established",
+    snapshot: {
+      "package:prime-essential-exterior:compact": "90",
+      "package:prime-essential-exterior:midsize": "110",
+      "package:prime-essential-exterior:truck": "120",
+      "package:prime-essential-exterior:luxury": "130",
+      "package:prime-essential-interior:compact": "180",
+      "package:prime-essential-interior:midsize": "200",
+      "package:prime-essential-interior:truck": "210",
+      "package:prime-essential-interior:luxury": "240",
+      "package:prime-essential-full:compact": "260",
+      "package:prime-essential-full:midsize": "270",
+      "package:prime-essential-full:truck": "290",
+      "package:prime-essential-full:luxury": "320",
+      "package:prime-elite-exterior:compact": "160",
+      "package:prime-elite-exterior:midsize": "180",
+      "package:prime-elite-exterior:truck": "190",
+      "package:prime-elite-exterior:luxury": "210",
+      "package:prime-elite-interior:compact": "390",
+      "package:prime-elite-interior:midsize": "475",
+      "package:prime-elite-interior:truck": "495",
+      "package:prime-elite-interior:luxury": "590",
+      "package:prime-elite-full:compact": "495",
+      "package:prime-elite-full:midsize": "595",
+      "package:prime-elite-full:truck": "695",
+      "package:prime-elite-full:luxury": "850"
+    }
+  };
+
+  try {
+    const raw = localStorage.getItem(PRICE_HISTORY_KEY);
+    if (!raw) {
+      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify([seedRecord]));
+      return [seedRecord];
+    }
+    const history = JSON.parse(raw) as PriceChangeRecord[];
+    // Filter history so it only retains the new baseline seed and any new manual entries made afterwards
+    const cleanHistory = history.filter(r => r.id === "ph-baseline-seed-2026" || new Date(r.date) > new Date("2026-05-18T03:15:00.000Z"));
+    if (cleanHistory.length === 0 || !cleanHistory.some(r => r.id === "ph-baseline-seed-2026")) {
+      const updatedHistory = [seedRecord, ...cleanHistory.filter(r => r.id !== "ph-baseline-seed-2026")];
+      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(updatedHistory));
+      return updatedHistory;
+    }
+    return cleanHistory;
+  } catch {
+    return [seedRecord];
+  }
 }
 
 export function logPriceChange(record: Omit<PriceChangeRecord, 'id' | 'date'>) {
