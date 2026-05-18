@@ -66,7 +66,13 @@ export default function NotificationBell() {
       // 2. Desktop Notification
       const latestAlert = alerts?.[0];
       if (latestAlert && !latestAlert.read) {
-        sendDesktopNotification("New Admin Alert", latestAlert.message);
+        // Prevent duplicate PC notifications across multiple mounted bell components (e.g. mobile & desktop views)
+        const notifiedSet = (window as any).__notifiedAlertIds || new Set<string>();
+        (window as any).__notifiedAlertIds = notifiedSet;
+        if (!notifiedSet.has(latestAlert.id)) {
+          notifiedSet.add(latestAlert.id);
+          sendDesktopNotification("New Admin Alert", latestAlert.message);
+        }
       }
 
       setTimeout(() => setRing(false), 600);

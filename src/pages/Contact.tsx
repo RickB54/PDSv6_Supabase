@@ -92,7 +92,7 @@ const Contact = () => {
       vehicleCondition: "Excellent",
       vehicleType: "truck",
       serviceInterested: matchedService,
-      preferredTiming: "Flexible / Just inquiring",
+      preferredTiming: "Flexible",
       howFound: "google",
       message: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify real-time notifications, PDF archiving, bucket photo uploads, and display within the Prospects and Customer CRM galleries."
     });
@@ -775,9 +775,9 @@ const Contact = () => {
                         <SelectValue placeholder="When do you need service?" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Immediately upon launch">Immediately upon launch</SelectItem>
-                        <SelectItem value="Within a month of launch">Within a month of launch</SelectItem>
-                        <SelectItem value="Flexible / Just inquiring">Flexible / Just inquiring</SelectItem>
+                        <SelectItem value="First Available">First Available</SelectItem>
+                        <SelectItem value="Flexible">Flexible</SelectItem>
+                        <SelectItem value="Just inquiring">Just inquiring</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
