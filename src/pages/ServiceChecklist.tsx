@@ -2400,7 +2400,7 @@ const ServiceChecklist = () => {
                     <option value="">-- Choose a Vehicle --</option>
                     {(customers.find(c => c.id === selectedCustomer)?.vehicles || []).map((v: any) => (
                       <option key={v.id} value={v.id}>
-                        {v.year} {v.make} {v.model} ({v.type || 'No Type'})
+                        {v.year} {v.make} {v.model} {v.color ? `[Color: ${v.color}]` : ""} ({v.type || 'No Type'})
                       </option>
                     ))}
                   </select>

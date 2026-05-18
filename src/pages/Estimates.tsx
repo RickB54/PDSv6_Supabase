@@ -245,7 +245,7 @@ const Estimates = () => {
 
             const vehicleObj = customer.vehicles?.find(v => v.id === selectedVehicleId);
             let vehicleStr = vehicleObj 
-                ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)}`.replace(/\s+/g, ' ').trim()
+                ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)} ${vehicleObj.color ? `[Color: ${vehicleObj.color}]` : ''}`.replace(/\s+/g, ' ').trim()
                 : `${formatPart(customer.year)} ${formatPart(customer.vehicle)} ${formatPart(customer.model)}`.replace(/\s+/g, ' ').trim();
 
             if (selectedVehicleId === "primary") {
@@ -669,7 +669,7 @@ const Estimates = () => {
                                          <SelectContent>
                                              {customers.find(c => c.id === selectedCustomer)?.vehicles?.map(v => (
                                                  <SelectItem key={v.id} value={v.id!}>
-                                                     {`${formatPart(v.year)} ${formatPart(v.make)} ${formatPart(v.model)}`.trim()} ({v.type})
+                                                     {`${formatPart(v.year)} ${formatPart(v.make)} ${formatPart(v.model)} ${v.color ? `[Color: ${v.color}]` : ''}`.trim()} ({v.type})
                                                  </SelectItem>
                                              )) || (
                                                  ((cust) => (cust && (cust.vehicle || cust.model) ? (
@@ -849,11 +849,19 @@ const Estimates = () => {
                                     variant="outline" 
                                     className="border-zinc-700 text-zinc-300"
                                     onClick={() => {
+                                        const cust = customers.find(c => c.id === selectedCustomer);
+                                        const vehicleObj = cust?.vehicles?.find(v => v.id === selectedVehicleId);
+                                        const vehicleStr = vehicleObj 
+                                            ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)} ${vehicleObj.color ? `[Color: ${vehicleObj.color}]` : ''}`.replace(/\s+/g, ' ').trim()
+                                            : cust 
+                                                ? `${formatPart(cust.year)} ${formatPart(cust.vehicle)} ${formatPart(cust.model)}`.replace(/\s+/g, ' ').trim()
+                                                : "Current Vehicle";
+
                                         const tempEst: Estimate = {
                                             estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : 9999,
                                             customerId: selectedCustomer,
                                                                                         customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Customer",
-                                            vehicle: "Current Vehicle",
+                                            vehicle: vehicleStr,
                                             services,
                                             total: calculateTotal(),
                                             date: new Date().toLocaleDateString(),

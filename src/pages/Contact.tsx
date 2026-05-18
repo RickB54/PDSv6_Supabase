@@ -54,6 +54,7 @@ const Contact = () => {
     message: ""
   });
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -104,6 +105,32 @@ const Contact = () => {
       title: "🧪 Sandbox Mode Active",
       description: "Pre-filled Rick Berube's test details and generated mock exterior/interior photos!",
     });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      const imageFiles = newFiles.filter(f => f.type.startsWith("image/"));
+      
+      setAttachments((prev) => {
+        const existingNames = new Set(prev.map(f => f.name));
+        const uniqueNewFiles = imageFiles.filter(f => !existingNames.has(f.name));
+        return [...prev, ...uniqueNewFiles];
+      });
+    }
   };
 
   const validateForm = () => {
@@ -832,8 +859,16 @@ const Contact = () => {
                   <span className="text-[10px] uppercase font-black text-muted-foreground italic">Max 5 MB per pic</span>
                 </div>
                 <div 
-                  className="relative group border-2 border-dashed border-zinc-200 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px]"
+                  className={`relative group border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[140px] transition-all duration-300 ${
+                    isDragging 
+                      ? "border-emerald-500 bg-emerald-500/10 scale-[0.98] ring-2 ring-emerald-500/20" 
+                      : "border-zinc-200 hover:border-emerald-500/50 hover:bg-emerald-500/5"
+                  }`}
                   onClick={() => document.getElementById("attachments")?.click()}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
                   <Input
                     id="attachments"
@@ -842,7 +877,12 @@ const Contact = () => {
                     accept="image/*"
                     onChange={(e) => {
                       if (e.target.files) {
-                        setAttachments(Array.from(e.target.files));
+                        const newFiles = Array.from(e.target.files);
+                        setAttachments((prev) => {
+                          const existingNames = new Set(prev.map(f => f.name));
+                          const uniqueNewFiles = newFiles.filter(f => !existingNames.has(f.name));
+                          return [...prev, ...uniqueNewFiles];
+                        });
                       }
                     }}
                     className="hidden"

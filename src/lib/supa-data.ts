@@ -2179,7 +2179,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
     try {
         let query = supabase
             .from('bookings')
-            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type)');
+            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type, color)');
 
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
@@ -2249,6 +2249,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 vehicleMake: b.vehicles?.make || b.make || meta.make || (b.booking_vehicle?.make) || '',
                 vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
                 vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
+                vehicleColor: b.vehicles?.color || b.color || meta.color || (b.booking_vehicle?.color) || '',
 
                 // Addons mapping with robust parsing
                 addons: (() => {
@@ -2300,6 +2301,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
               model: booking.vehicleModel || booking.model,
               year: booking.vehicleYear || booking.year,
               type: booking.vehicle || booking.type,
+              color: booking.vehicleColor || booking.color || (booking.booking_vehicle?.color) || '',
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate
             },

@@ -148,7 +148,7 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
       date: b.date || b.created_at,
       type: 'BOOKING',
       activity: b.service || 'Service',
-      details: `${b.vehicleYear} ${b.vehicleMake} ${b.vehicleModel}`,
+      details: `${b.vehicleYear} ${b.vehicleMake} ${b.vehicleModel}${b.vehicleColor ? ` (${b.vehicleColor})` : ''}`,
       value: b.price || 0,
       status: b.status,
       raw: b

@@ -226,7 +226,7 @@ const Invoicing = () => {
     const c = customers.find(x => x.id === cid);
     if (c) {
       const primaryVehicle = c.vehicles && c.vehicles.length > 0 
-        ? `${c.vehicles[0].year || ''} ${c.vehicles[0].make} ${c.vehicles[0].model}`.trim()
+        ? `${c.vehicles[0].year || ''} ${c.vehicles[0].make} ${c.vehicles[0].model} ${c.vehicles[0].color ? `[Color: ${c.vehicles[0].color}]` : ''}`.replace(/\s+/g, ' ').trim()
         : `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim();
       setCustomVehicle(primaryVehicle);
     }
@@ -996,7 +996,7 @@ Precision. Protection. Perfection.`;
                 <SelectContent>
                   <SelectItem value="all">All Vehicles</SelectItem>
                   {customers.find(c => c.id === filterCustomerId)?.vehicles?.map((v, idx) => {
-                    const label = `${v.year || ''} ${v.make} ${v.model}`.trim();
+                    const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
                     return <SelectItem key={v.id || idx} value={label}>{label}</SelectItem>;
                   })}
                   <SelectItem value="clear" className="text-red-400 font-bold border-t border-zinc-800 mt-2">Clear Customer Filter</SelectItem>
@@ -1086,7 +1086,7 @@ Precision. Protection. Perfection.`;
                           </SelectTrigger>
                           <SelectContent>
                             {vels.map((v, idx) => {
-                              const label = `${v.year || ''} ${v.make} ${v.model}`.trim();
+                              const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
                               return <SelectItem key={v.id || idx} value={label}>{label}</SelectItem>;
                             })}
                             <SelectItem value="custom">Manual / Other...</SelectItem>
@@ -1097,7 +1097,7 @@ Precision. Protection. Perfection.`;
                     return null;
                   })()}
                   
-                  {(!selectedCustomer || !customers.find(c => c.id === selectedCustomer)?.vehicles?.length || !customers.find(c => c.id === selectedCustomer)?.vehicles?.some(v => `${v.year || ''} ${v.make} ${v.model}`.trim() === customVehicle)) && (
+                  {(!selectedCustomer || !customers.find(c => c.id === selectedCustomer)?.vehicles?.length || !customers.find(c => c.id === selectedCustomer)?.vehicles?.some(v => `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim() === customVehicle)) && (
                     <Input 
                       placeholder="e.g. 2023 Tesla Model 3"
                       value={customVehicle}

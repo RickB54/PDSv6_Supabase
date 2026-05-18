@@ -129,6 +129,7 @@ export default function BookingsPage() {
     vehicleYear: "",
     vehicleMake: "",
     vehicleModel: "",
+    vehicleColor: "",
     address: "",
     time: "09:00",
     endTime: "17:00",
@@ -426,6 +427,7 @@ export default function BookingsPage() {
     if (formData.vehicleYear) params.set('vehicleYear', formData.vehicleYear);
     if (formData.vehicleMake) params.set('vehicleMake', formData.vehicleMake);
     if (formData.vehicleModel) params.set('vehicleModel', formData.vehicleModel);
+    if (formData.vehicleColor) params.set('vehicleColor', formData.vehicleColor);
 
     if (formData.addons.length > 0) {
       // Map names to IDs
@@ -586,6 +588,7 @@ export default function BookingsPage() {
     const vehicleMake = params.get('vehicleMake');
     const vehicleModel = params.get('vehicleModel');
     const vehicleType = params.get('vehicleType');
+    const vehicleColor = params.get('vehicleColor');
     const address = params.get('address');
 
     if (shouldAdd) {
@@ -599,6 +602,7 @@ export default function BookingsPage() {
         vehicleYear: vehicleYear ? decodeURIComponent(vehicleYear) : prev.vehicleYear,
         vehicleMake: vehicleMake ? decodeURIComponent(vehicleMake) : prev.vehicleMake,
         vehicleModel: vehicleModel ? decodeURIComponent(vehicleModel) : prev.vehicleModel,
+        vehicleColor: vehicleColor ? decodeURIComponent(vehicleColor) : prev.vehicleColor,
         vehicle: vehicleType ? decodeURIComponent(vehicleType) : prev.vehicle
       }));
       setSelectedDate(new Date());
@@ -661,6 +665,7 @@ export default function BookingsPage() {
             vehicleYear: booking.vehicleYear || matchingCust?.year || "",
             vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
             vehicleModel: booking.vehicleModel || matchingCust?.model || "",
+            vehicleColor: booking.vehicleColor || "",
             address: booking.address || "",
             time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
             endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
@@ -870,6 +875,7 @@ export default function BookingsPage() {
       vehicleYear: "",
       vehicleMake: "",
       vehicleModel: "",
+      vehicleColor: "",
       address: "",
       time: "09:00",
       endTime: "17:00",
@@ -925,6 +931,7 @@ export default function BookingsPage() {
       vehicleYear: booking.vehicleYear || matchingCust?.year || "",
       vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
       vehicleModel: booking.vehicleModel || matchingCust?.model || "",
+      vehicleColor: booking.vehicleColor || "",
       address: booking.address || matchingCust?.address || "",
       time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
@@ -1158,6 +1165,7 @@ export default function BookingsPage() {
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
+          vehicleColor: formData.vehicleColor,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy,
@@ -1198,6 +1206,7 @@ export default function BookingsPage() {
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
+          vehicleColor: formData.vehicleColor,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy || getCurrentUser()?.name || 'Staff',
@@ -1275,6 +1284,7 @@ export default function BookingsPage() {
           vehicleYear: "",
           vehicleMake: "",
           vehicleModel: "",
+          vehicleColor: "",
           address: "",
           time: "09:00",
           endTime: "17:00",
@@ -1338,6 +1348,7 @@ export default function BookingsPage() {
       vehicleYear: booking.vehicleYear || "",
       vehicleMake: booking.vehicleMake || "",
       vehicleModel: booking.vehicleModel || "",
+      vehicleColor: booking.vehicleColor || "",
       address: booking.address || "",
       time: "09:00", // Default time for new booking
       endTime: "17:00",
@@ -2306,6 +2317,7 @@ export default function BookingsPage() {
                               vehicleYear: veh.year || prev.vehicleYear,
                               vehicleMake: veh.make || prev.vehicleMake,
                               vehicleModel: veh.model || prev.vehicleModel,
+                              vehicleColor: veh.color || "",
                               vehicle: veh.type || prev.vehicle
                             }));
                           }
@@ -2314,7 +2326,7 @@ export default function BookingsPage() {
                         <option value="">-- Choose from Linked Vehicles --</option>
                         {selectedCustomer.vehicles.map((v: any) => (
                           <option key={v.id} value={v.id}>
-                            {v.year} {v.make} {v.model} ({v.type || 'No Type'})
+                            {v.year} {v.make} {v.model} {v.color ? `[Color: ${v.color}]` : ""} ({v.type || 'No Type'})
                           </option>
                         ))}
                       </select>
@@ -2500,7 +2512,7 @@ export default function BookingsPage() {
 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Vehicle Details</label>
-                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                  <div className="col-span-3 grid grid-cols-4 gap-2">
                     <Input
                       placeholder="Year"
                       className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
@@ -2519,9 +2531,15 @@ export default function BookingsPage() {
                       value={formData.vehicleModel}
                       onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
                     />
+                    <Input
+                      placeholder="Color"
+                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                      value={formData.vehicleColor || ''}
+                      onChange={(e) => setFormData({ ...formData, vehicleColor: e.target.value })}
+                    />
                     {selectedCustomer?.vehicle && (
-                      <p className="col-span-3 text-xs text-gray-400">
-                        Customer's vehicle: {selectedCustomer.year} {selectedCustomer.vehicle} {selectedCustomer.model}
+                      <p className="col-span-4 text-xs text-gray-400">
+                        Customer's vehicle: {selectedCustomer.year} {selectedCustomer.vehicle} {selectedCustomer.model} {selectedCustomer.color ? `[Color: ${selectedCustomer.color}]` : ''}
                       </p>
                     )}
                   </div>
@@ -3247,7 +3265,10 @@ export default function BookingsPage() {
                                                   <div className="text-sm font-bold text-zinc-200">
                                                     {(v.year && v.year !== '-' && v.year !== '---') ? `${v.year} ` : ''}{v.make} {v.model}
                                                   </div>
-                                                  <div className="text-[9px] text-zinc-500 font-bold uppercase">{v.type || 'Standard'}</div>
+                                                  <div className="text-[9px] text-zinc-500 font-bold uppercase">
+                                                    {v.type || 'Standard'}
+                                                    {v.color ? ` • Color: ${v.color}` : ''}
+                                                  </div>
                                                 </div>
                                               </div>
                                               <div className="flex items-center gap-2">

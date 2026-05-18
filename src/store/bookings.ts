@@ -27,6 +27,7 @@ export interface Booking {
   vehicleYear?: string;
   vehicleMake?: string;
   vehicleModel?: string;
+  vehicleColor?: string;
   address?: string;
   assignedEmployee?: string;
   notes?: string;
