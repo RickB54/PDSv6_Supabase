@@ -17,7 +17,8 @@ import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Sno
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
-import { isSupabaseEnabled } from "@/lib/auth";
+import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
+import { useDemoMode } from "@/contexts/DemoContext";
 import * as contactSvc from "@/services/supabase/contact";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
@@ -27,6 +28,9 @@ import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassi
 import logo from "@/assets/logo-primary.png";
 
 const Contact = () => {
+  const { isDemoMode } = useDemoMode();
+  const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin' || isDemoMode;
   const { toast } = useToast();
   const [showAbout, setShowAbout] = useState(false);
   const [contactInfo, setContactInfo] = useState<{ hours: string; phone: string; address: string; email: string } | null>(null);
@@ -74,27 +78,29 @@ const Contact = () => {
     const mockBlob2 = new Blob(["mock-image-data-2"], { type: "image/png" });
     const mockFile2 = new File([mockBlob2], "test_interior_f150.png", { type: "image/png" });
 
+    const matchedService = liveServices.find(s => s.name.toLowerCase().includes("essential full"))?.name || "Prime Essential Full Detail";
+
     setFormData({
-      name: "TEST Customer",
-      email: "test.customer@gmail.com",
-      phone: "(555) 000-TEST",
-      address: "777 Sandbox Lane",
+      name: "Rick Berube",
+      email: "rberube54@gmail.com",
+      phone: "978-764-4057",
+      address: "54 Boston Street",
       city: "Methuen",
-      vehicleYear: "2024",
+      vehicleYear: "2018",
       vehicleMake: "Ford",
       vehicleModel: "F-150",
-      vehicleCondition: "Fair",
+      vehicleCondition: "Excellent",
       vehicleType: "truck",
-      serviceInterested: liveServices[0]?.name || "Prime Essential Interior",
-      preferredTiming: "As soon as possible",
+      serviceInterested: matchedService,
+      preferredTiming: "Flexible / Just inquiring",
       howFound: "google",
-      message: "This is a simulated vehicle condition assessment inquiry using the isolated TEST Customer sandbox account. This account is programmatically isolated from all accounting dashboards and financial reporting figures. Please verify file manager category, alerts, and Gmail notifications."
+      message: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify real-time notifications, PDF archiving, bucket photo uploads, and display within the Prospects and Customer CRM galleries."
     });
     setAttachments([mockFile1, mockFile2]);
     setErrors({});
     toast({
       title: "🧪 Sandbox Mode Active",
-      description: "Pre-filled TEST Customer form details and generated mock exterior/interior photos!",
+      description: "Pre-filled Rick Berube's test details and generated mock exterior/interior photos!",
     });
   };
 
@@ -181,6 +187,20 @@ const Contact = () => {
           vehicleType: formData.vehicleType,
           howFound: formData.howFound,
           services: [formData.serviceInterested],
+          generalPhotos: fileUrls,
+          beforePhotos: fileUrls,
+          vehicles: [
+            {
+              make: formData.vehicleMake,
+              model: formData.vehicleModel,
+              year: formData.vehicleYear,
+              type: formData.vehicleType,
+              color: 'Black',
+              conditionOutside: formData.vehicleCondition,
+              generalPhotos: fileUrls,
+              beforePhotos: fileUrls
+            }
+          ],
           notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
         });
 
@@ -516,14 +536,16 @@ const Contact = () => {
                 <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Service Inquiry Form</h2>
                 <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleFillTestData}
-                className="bg-emerald-950/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30 text-xs font-black uppercase tracking-wider self-start sm:self-center py-2 px-3 h-auto"
-              >
-                🧪 Auto-Fill TEST Customer
-              </Button>
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleFillTestData}
+                  className="bg-emerald-950/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30 text-xs font-black uppercase tracking-wider self-start sm:self-center py-2 px-3 h-auto animate-pulse"
+                >
+                  🧪 Auto-Fill Rick Berube Test
+                </Button>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
