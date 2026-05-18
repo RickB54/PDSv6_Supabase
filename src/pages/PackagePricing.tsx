@@ -1366,8 +1366,6 @@ export default function PackagePricing() {
     // Auto-sync local state to backend/API memory on mount to ensure fresh consistency
     const timer = setTimeout(async () => {
       await postFullSync();
-      // Also trigger a background save to Supabase to ensure cloud integrity
-      saveToBackend(currentPrices);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
