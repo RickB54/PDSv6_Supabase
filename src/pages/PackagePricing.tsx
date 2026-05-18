@@ -44,6 +44,8 @@ import {
   getPriceChangeHistory,
   logPriceChange,
   PriceChangeRecord,
+  deletePriceChangeRecord,
+  updatePriceChangeRecordDescription,
 } from "@/lib/servicesMeta";
 import supabase from "@/lib/supabase";
 import * as supaPkgs from "@/services/supabase/packages";
@@ -80,7 +82,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Info, RefreshCw, ShieldAlert, HelpCircle, FileDown, History, Calendar, Clock } from "lucide-react";
+import { Trash2, Info, RefreshCw, ShieldAlert, HelpCircle, FileDown, History, Calendar, Clock, Pencil } from "lucide-react";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import primeLogo from "@/assets/prime-logo.png";
@@ -156,6 +158,26 @@ export default function PackagePricing() {
   
   const refreshHistory = () => {
     setPriceHistory(getPriceChangeHistory());
+  };
+
+  const handleDeleteHistoryItem = (id: string) => {
+    if (window.confirm("Are you sure you want to remove this record from your price change history?")) {
+      deletePriceChangeRecord(id);
+      refreshHistory();
+      toast.success("Record removed from price history.");
+    }
+  };
+
+  const handleEditHistoryItem = (id: string, currentDesc: string) => {
+    const newDesc = window.prompt("Edit record description:", currentDesc);
+    if (newDesc !== null) {
+      const trimmed = newDesc.trim();
+      if (trimmed) {
+        updatePriceChangeRecordDescription(id, trimmed);
+        refreshHistory();
+        toast.success("Record description updated.");
+      }
+    }
   };
 
   const [searchParams] = useSearchParams();
@@ -1522,8 +1544,6 @@ export default function PackagePricing() {
       updated[key] = String(Math.ceil(preciseValue));
     });
     setCurrentPrices(updated);
-    logPriceChange({ type: 'percentage', description: `Applied ${percent}% increase to package ${id}. (Unsaved)`, snapshot: updated });
-    refreshHistory();
   };
 
   const reset = (id: string) => {
@@ -1538,8 +1558,6 @@ export default function PackagePricing() {
 
   const resetAll = () => {
     setCurrentPrices(savedPrices);
-    logPriceChange({ type: 'reset', description: 'Reset all unsaved changes.' });
-    refreshHistory();
     toast.success("Back to your last SAVED prices");
   };
 
@@ -1558,8 +1576,6 @@ export default function PackagePricing() {
     });
     setCurrentPrices(updated);
     setMasterPct('');
-    logPriceChange({ type: 'master', description: `Applied ${pct}% increase to ${target} (Unsaved)`, snapshot: updated });
-    refreshHistory();
     toast.success(`Applied ${pct > 0 ? '+' : ''}${pct}% to ${target === 'both' ? 'EVERYTHING' : target}`);
   };
 
@@ -1575,8 +1591,6 @@ export default function PackagePricing() {
     });
     setCurrentPrices(updated);
     setGlobalPct('');
-    logPriceChange({ type: 'global', description: `NUCLEAR: Applied ${pct}% to ALL prices (Unsaved)`, snapshot: updated });
-    refreshHistory();
     toast.success(`NUCLEAR UPDATE: ${pct > 0 ? '+' : ''}${pct}% APPLIED TO ALL PRICES`);
   };
 
@@ -2344,18 +2358,38 @@ export default function PackagePricing() {
                     <div className="space-y-3">
                       {priceHistory.map(record => (
                         <div key={record.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/50 pb-3 last:border-0 last:pb-0">
-                          <div>
+                          <div className="flex-1">
                             <div className="text-xs text-zinc-500 mb-0.5">{new Date(record.date).toLocaleString()}</div>
                             <div className="text-sm text-zinc-300 font-medium">{record.description}</div>
                           </div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border self-start sm:self-auto ${
-                            record.type === 'percentage' || record.type === 'master' || record.type === 'global' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
-                            record.type === 'restore' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                            record.type === 'reset' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                            'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          }`}>
-                            {record.type}
-                          </span>
+                          <div className="flex items-center gap-2 self-start sm:self-auto">
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
+                              record.type === 'percentage' || record.type === 'master' || record.type === 'global' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                              record.type === 'restore' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                              record.type === 'reset' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                              'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}>
+                              {record.type}
+                            </span>
+                            {record.id !== "ph-baseline-seed-2026" && (
+                              <>
+                                <button
+                                  onClick={() => handleEditHistoryItem(record.id, record.description)}
+                                  className="text-zinc-500 hover:text-purple-400 p-1 transition-colors rounded hover:bg-zinc-900"
+                                  title="Edit description"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteHistoryItem(record.id)}
+                                  className="text-zinc-500 hover:text-red-500 p-1 transition-colors rounded hover:bg-zinc-900"
+                                  title="Delete this record"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

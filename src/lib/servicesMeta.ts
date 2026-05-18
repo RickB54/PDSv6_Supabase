@@ -249,6 +249,32 @@ export function logPriceChange(record: Omit<PriceChangeRecord, 'id' | 'date'>) {
   localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(history));
 }
 
+export function deletePriceChangeRecord(id: string) {
+  try {
+    const raw = localStorage.getItem(PRICE_HISTORY_KEY);
+    if (raw) {
+      const history = JSON.parse(raw) as PriceChangeRecord[];
+      const updated = history.filter(r => r.id !== id);
+      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error("Failed to delete price change record", e);
+  }
+}
+
+export function updatePriceChangeRecordDescription(id: string, newDescription: string) {
+  try {
+    const raw = localStorage.getItem(PRICE_HISTORY_KEY);
+    if (raw) {
+      const history = JSON.parse(raw) as PriceChangeRecord[];
+      const updated = history.map(r => r.id === id ? { ...r, description: newDescription } : r);
+      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.error("Failed to update price change record description", e);
+  }
+}
+
 // Build a snapshot payload for full-sync API
 export async function buildFullSyncPayload(): Promise<any> {
   // Pricing from localforage
