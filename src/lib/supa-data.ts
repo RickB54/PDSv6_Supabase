@@ -221,6 +221,60 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
 // ------------------------------------------------------------------
 
 /**
+ * Helper to determine if two vehicles are duplicates.
+ * Handles variations in makes, models, and missing years.
+ */
+export function areVehiclesDuplicates(vA: any, vB: any): boolean {
+    const yrA = (vA.year && vA.year !== '-' && vA.year !== '---') ? String(vA.year).trim() : '';
+    const yrB = (vB.year && vB.year !== '-' && vB.year !== '---') ? String(vB.year).trim() : '';
+    
+    // If both have years, and the years are different, they are NOT duplicates
+    if (yrA && yrB && yrA !== yrB) {
+        return false;
+    }
+    
+    // Normalize make and model strings
+    const makeA = (vA.make || '').toLowerCase().trim();
+    const modelA = (vA.model || '').toLowerCase().trim();
+    const makeB = (vB.make || '').toLowerCase().trim();
+    const modelB = (vB.model || '').toLowerCase().trim();
+    
+    // Combine make and model, removing extra whitespace
+    const fullA = `${makeA} ${modelA}`.replace(/\s+/g, ' ').trim();
+    const fullB = `${makeB} ${modelB}`.replace(/\s+/g, ' ').trim();
+    
+    if (fullA === fullB) return true;
+    
+    // List of common car brands to strip for model comparison
+    const brands = [
+        'toyota', 'ford', 'chevrolet', 'chevy', 'honda', 'nissan', 'jeep', 'ram', 'dodge',
+        'hyundai', 'kia', 'subaru', 'gmc', 'volkswagen', 'vw', 'bmw', 'audi', 'lexus',
+        'mazda', 'mercedes-benz', 'mercedes', 'benz', 'tesla', 'chrysler', 'buick', 
+        'cadillac', 'lincoln', 'infiniti', 'acura', 'volvo', 'porsche', 'land rover', 'rover'
+    ];
+    
+    let cleanA = fullA;
+    let cleanB = fullB;
+    brands.forEach(b => {
+        // Strip brand word boundaries
+        cleanA = cleanA.replace(new RegExp(`\\b${b}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
+        cleanB = cleanB.replace(new RegExp(`\\b${b}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
+    });
+    
+    // If clean names are identical after stripping brands, they are duplicates
+    if (cleanA && cleanB && cleanA === cleanB) {
+        return true;
+    }
+    
+    // Check if one clean string is subset of the other
+    if (cleanA && cleanB && (cleanA.includes(cleanB) || cleanB.includes(cleanA))) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
  * Fetches customers directly from Supabase.
  * Deduplicates by name/phone if Supabase contains duplicates.
  */
@@ -289,20 +343,22 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             }));
 
             // Deduplicate vehicles by ID and Content (Year + Model)
-            // Prevents duplicates like "F-150" and "Ford F-150" appearing as separate entries
+            // Prevents duplicates like "F-150" and "Ford F-150" or "Sienna" and "Toyota Sienna"
             const allVehs: any[] = [];
             allVehsRaw.forEach((v: any) => {
-                const fullStr = `${v.year} ${v.make} ${v.model}`.toLowerCase().replace(/\s+/g, ' ').trim();
-                
                 const isDuplicate = allVehs.some((existing, idx) => {
-                    const exStr = `${existing.year} ${existing.make} ${existing.model}`.toLowerCase().replace(/\s+/g, ' ').trim();
-                    if (v.year !== existing.year) return false;
-                    
-                    // If one name contains the other (e.g. "Ford F-150" vs "F-150"), they are likely duplicates
-                    if (fullStr.includes(exStr) || exStr.includes(fullStr)) {
-                        // Prefer the entry with more information (longer string)
-                        if (fullStr.length > exStr.length) {
-                            allVehs[idx] = v;
+                    if (areVehiclesDuplicates(v, existing)) {
+                        // Prefer the entry with more information (longer year or full details)
+                        const yrV = v.year && v.year !== '-' && v.year !== '---';
+                        const yrE = existing.year && existing.year !== '-' && existing.year !== '---';
+                        if (!yrE && yrV) {
+                            allVehs[idx] = v; // Replace with the one that has a year
+                        } else if (yrE === yrV) {
+                            const lenV = `${v.make} ${v.model}`.trim().length;
+                            const lenE = `${existing.make} ${existing.model}`.trim().length;
+                            if (lenV > lenE) {
+                                allVehs[idx] = v; // Replace with the more detailed one
+                            }
                         }
                         return true;
                     }
@@ -468,19 +524,45 @@ export const getCustomerDetailedHistory = async (customerId: string) => {
             generalPhotos: customerData.general_photos || [],
             beforePhotos: customerData.before_photos || [],
             afterPhotos: customerData.after_photos || [],
-            vehicles: (customerData.vehicles || []).map((v: any) => ({
-                id: v.id,
-                make: v.make,
-                model: v.model,
-                year: v.year,
-                type: v.type,
-                color: v.color,
-                vin: v.vin,
-                generalPhotos: v.general_photos || [],
-                beforePhotos: v.before_photos || [],
-                afterPhotos: v.after_photos || [],
-                videoUrls: v.video_urls || []
-            }))
+            vehicles: (() => {
+                const rawVehs = (customerData.vehicles || []).map((v: any) => ({
+                    id: v.id,
+                    make: v.make || '',
+                    model: v.model || '',
+                    year: v.year ? String(v.year) : '',
+                    type: v.type || '',
+                    color: v.color || '',
+                    vin: v.vin || '',
+                    generalPhotos: v.general_photos || [],
+                    beforePhotos: v.before_photos || [],
+                    afterPhotos: v.after_photos || [],
+                    videoUrls: v.video_urls || []
+                }));
+                const deduped: any[] = [];
+                rawVehs.forEach((v: any) => {
+                    const isDup = deduped.some((ex, idx) => {
+                        if (areVehiclesDuplicates(v, ex)) {
+                            const yrV = v.year && v.year !== '-' && v.year !== '---';
+                            const yrE = ex.year && ex.year !== '-' && ex.year !== '---';
+                            if (!yrE && yrV) {
+                                deduped[idx] = v;
+                            } else if (yrE === yrV) {
+                                const lenV = `${v.make} ${v.model}`.trim().length;
+                                const lenE = `${ex.make} ${ex.model}`.trim().length;
+                                if (lenV > lenE) {
+                                    deduped[idx] = v;
+                                }
+                            }
+                            return true;
+                        }
+                        return false;
+                    });
+                    if (!isDup) {
+                        deduped.push(v);
+                    }
+                });
+                return deduped;
+            })()
         };
 
         // 2. Map Bookings (Standardize fields for PDF)
@@ -761,12 +843,28 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         // A. Handle 'vehicles' array (preferred)
         if (customer.vehicles && Array.isArray(customer.vehicles)) {
             // Deduplicate incoming array to prevent processing identical vehicles multiple times
-            const seen = new Set();
-            const uniqueIncoming = customer.vehicles.filter(v => {
-                const key = `${v.make || ''}|${v.model || ''}|${v.year || ''}`.toLowerCase().replace(/\s+/g, '');
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
+            const uniqueIncoming: any[] = [];
+            customer.vehicles.forEach((v: any) => {
+                const isDup = uniqueIncoming.some((ex, idx) => {
+                    if (areVehiclesDuplicates(v, ex)) {
+                        const yrV = v.year && v.year !== '-' && v.year !== '---';
+                        const yrE = ex.year && ex.year !== '-' && ex.year !== '---';
+                        if (!yrE && yrV) {
+                            uniqueIncoming[idx] = v;
+                        } else if (yrE === yrV) {
+                            const lenV = `${v.make} ${v.model}`.trim().length;
+                            const lenE = `${ex.make} ${ex.model}`.trim().length;
+                            if (lenV > lenE) {
+                                uniqueIncoming[idx] = v;
+                            }
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+                if (!isDup) {
+                    uniqueIncoming.push(v);
+                }
             });
 
             for (const v of uniqueIncoming) {

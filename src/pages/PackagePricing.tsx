@@ -2529,12 +2529,27 @@ export default function PackagePricing() {
             {/* View & Export Section */}
             <AccordionItem value="view-export" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-blue-900/30 group">
               <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-blue-400 data-[state=open]:text-blue-400 transition-colors">
-                <span className="text-lg font-semibold flex items-center gap-3">
-                  <span className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <div className="flex items-center justify-between w-full pr-4">
+                  <span className="text-lg font-semibold flex items-center gap-3">
+                    <span className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </span>
+                    View & Export Pricing
                   </span>
-                  View & Export Pricing
-                </span>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-zinc-500 hover:text-white h-8 w-8 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setHelpModalOpen(true);
+                    }}
+                    title="Pricing Help"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                  </Button>
+                </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-6 space-y-6">
                 <div className="flex items-center gap-4 flex-wrap">
@@ -2641,28 +2656,12 @@ export default function PackagePricing() {
             {/* Show Services Section */}
             <AccordionItem value="show-services" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-emerald-900/30 group">
               <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-emerald-400 data-[state=open]:text-emerald-400 transition-colors">
-                <div className="flex items-center justify-between w-full pr-4">
-                  <span className="text-lg font-semibold flex items-center gap-3">
-                    <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    </span>
-                    Show Services
+                <span className="text-lg font-semibold flex items-center gap-3">
+                  <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                   </span>
-                  
-                  {/* Help Button & Dialog moved here */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-zinc-500 hover:text-white h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setHelpModalOpen(true);
-                    }}
-                    title="Proper Procedure Help"
-                  >
-                    <HelpCircle className="w-5 h-5" />
-                  </Button>
-                </div>
+                  Show Services
+                </span>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex flex-col gap-6">
