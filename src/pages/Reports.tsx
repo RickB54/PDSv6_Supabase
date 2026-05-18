@@ -456,7 +456,7 @@ const Reports = () => {
     (employees || []).forEach((emp: any) => {
         employeeStats[emp.name] = { jobs: 0, revenue: 0 };
     });
-    filterByDate(jobs.filter(j => j.customer !== 'Generic Customer'), "finishedAt").forEach((job: any) => {
+    filterByDate(jobs.filter(j => j.customer !== 'Generic Customer' && j.customer !== 'TEST Customer'), "finishedAt").forEach((job: any) => {
         const empName = job.employeeName || 'Unassigned';
         if (!employeeStats[empName]) employeeStats[empName] = { jobs: 0, revenue: 0 };
         employeeStats[empName].jobs += 1;
@@ -493,7 +493,7 @@ const Reports = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
-    const fEstimates = filterByDate(estimates.filter(e => e.customerName !== 'Generic Customer'));
+    const fEstimates = filterByDate(estimates.filter(e => e.customerName !== 'Generic Customer' && e.customerName !== 'TEST Customer'));
     const rows = (fEstimates || []).map(est => [
       est.estimateNumber || est.id?.substring(0, 6) || 'N/A',
       est.customerName || 'N/A',
@@ -567,7 +567,7 @@ const Reports = () => {
     // 2. Financial Summary
     // @ts-ignore
     y = doc.lastAutoTable.finalY + 15;
-    const activeIncome = (income || []).filter(i => (i.customerName !== 'Generic Customer' && i.customer_name !== 'Generic Customer') && filterByDate([i], i.date ? 'date' : 'createdAt').length);
+    const activeIncome = (income || []).filter(i => (i.customerName !== 'Generic Customer' && i.customer_name !== 'Generic Customer' && i.customerName !== 'TEST Customer' && i.customer_name !== 'TEST Customer') && filterByDate([i], i.date ? 'date' : 'createdAt').length);
     const activeExpenses = (expenses || []).filter(e => filterByDate([e]).length);
 
     const totalInc = activeIncome.reduce((s, i) => s + (i.amount || 0), 0);
@@ -736,7 +736,7 @@ const Reports = () => {
       const invs = await getSupabaseInvoices();
       const yearInvoices = (invs || []).filter(inv => {
         const d = inv.date || inv.createdAt;
-        return d && d >= yearStart && d <= yearEnd && inv.customerName !== 'Generic Customer' && inv.customer_full_name !== 'Generic Customer';
+        return d && d >= yearStart && d <= yearEnd && inv.customerName !== 'Generic Customer' && inv.customer_full_name !== 'Generic Customer' && inv.customerName !== 'TEST Customer' && inv.customer_full_name !== 'TEST Customer';
       });
       const grossRevenue = yearInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
 

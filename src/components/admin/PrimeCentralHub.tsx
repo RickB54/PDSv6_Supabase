@@ -329,8 +329,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
         return (activeBookings || []).filter(b => {
             if (!b) return false;
-            // Exclude 'Generic Customer' from accounting/dashboard stats
-            if (b.customer === 'Generic Customer') return false;
+            // Exclude 'Generic Customer' and 'TEST Customer' from accounting/dashboard stats
+            if (b.customer === 'Generic Customer' || b.customer === 'TEST Customer') return false;
             try {
                 const d = b.date ? parseISO(b.date) : new Date();
                 if (isNaN(d.getTime())) return false;
@@ -429,8 +429,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
             const scopeInvoices = (invoices || []).filter(inv => {
                 if (!inv) return false;
-                // Exclude 'Generic Customer' from accounting/dashboard stats
-                if (inv.customerName === 'Generic Customer' || inv.customer_name === 'Generic Customer') return false;
+                // Exclude 'Generic Customer' and 'TEST Customer' from accounting/dashboard stats
+                if (inv.customerName === 'Generic Customer' || inv.customer_name === 'Generic Customer' || inv.customerName === 'TEST Customer' || inv.customer_name === 'TEST Customer') return false;
                 try {
                     const d = inv.createdAt ? parseISO(inv.createdAt) : null;
                     return d && !isNaN(d.getTime()) && isWithinInterval(d, { start, end });

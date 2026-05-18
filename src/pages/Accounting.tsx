@@ -148,7 +148,7 @@ const Accounting = () => {
         const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
         if (!isPaid) return false;
         // Exclude Generic Customer test data
-        if ((inv as any).customerName === 'Generic Customer' || (inv as any).customer_name === 'Generic Customer') return false;
+        if ((inv as any).customerName === 'Generic Customer' || (inv as any).customer_name === 'Generic Customer' || (inv as any).customerName === 'TEST Customer' || (inv as any).customer_name === 'TEST Customer') return false;
         return true;
       });
       
@@ -164,7 +164,7 @@ const Accounting = () => {
       incomes.forEach(inc => {
         const amt = inc.amount || 0;
         // Exclude Generic Customer test data
-        if (inc.customerName === 'Generic Customer') return;
+        if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
         
         const d = new Date(inc.date || inc.createdAt);
         if (d.toDateString() === today) daily += amt;

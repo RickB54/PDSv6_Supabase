@@ -67,6 +67,37 @@ const Contact = () => {
     }
   }, [formData.vehicleMake, formData.vehicleModel]);
 
+  const handleFillTestData = () => {
+    // 1. Create two mock File objects to simulate vehicle condition photos upload
+    const mockBlob1 = new Blob(["mock-image-data-1"], { type: "image/png" });
+    const mockFile1 = new File([mockBlob1], "test_exterior_f150.png", { type: "image/png" });
+    const mockBlob2 = new Blob(["mock-image-data-2"], { type: "image/png" });
+    const mockFile2 = new File([mockBlob2], "test_interior_f150.png", { type: "image/png" });
+
+    setFormData({
+      name: "TEST Customer",
+      email: "test.customer@gmail.com",
+      phone: "(555) 000-TEST",
+      address: "777 Sandbox Lane",
+      city: "Methuen",
+      vehicleYear: "2024",
+      vehicleMake: "Ford",
+      vehicleModel: "F-150",
+      vehicleCondition: "Fair",
+      vehicleType: "truck",
+      serviceInterested: liveServices[0]?.name || "Prime Essential Interior",
+      preferredTiming: "As soon as possible",
+      howFound: "google",
+      message: "This is a simulated vehicle condition assessment inquiry using the isolated TEST Customer sandbox account. This account is programmatically isolated from all accounting dashboards and financial reporting figures. Please verify file manager category, alerts, and Gmail notifications."
+    });
+    setAttachments([mockFile1, mockFile2]);
+    setErrors({});
+    toast({
+      title: "🧪 Sandbox Mode Active",
+      description: "Pre-filled TEST Customer form details and generated mock exterior/interior photos!",
+    });
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -480,9 +511,19 @@ const Contact = () => {
         <div className="space-y-8">
           {/* Inquiry Form */}
           <Card className="p-6 md:p-8 bg-gradient-card border-border shadow-xl">
-            <div className="mb-8">
-              <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Service Inquiry Form</h2>
-              <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
+            <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-foreground mb-2 uppercase tracking-tight">Service Inquiry Form</h2>
+                <p className="text-muted-foreground font-medium italic">Interested in professional detailing? Complete the form below to get started.</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleFillTestData}
+                className="bg-emerald-950/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/30 text-xs font-black uppercase tracking-wider self-start sm:self-center py-2 px-3 h-auto"
+              >
+                🧪 Auto-Fill TEST Customer
+              </Button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6" noValidate>
