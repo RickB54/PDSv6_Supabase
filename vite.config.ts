@@ -83,12 +83,28 @@ export default defineConfig(({ mode }) => {
               req.on('end', () => {
                 try {
                   const payload = JSON.parse(body || '{}');
+                  const newPrices = payload.savedPrices || {};
+                  const newMetaPkg = payload.packageMeta || {};
+                  const newMetaAddon = payload.addOnMeta || {};
+                  const newCustomPkgs = Array.isArray(payload.customPackages) ? payload.customPackages : [];
+                  const newCustomAddons = Array.isArray(payload.customAddOns) ? payload.customAddOns : [];
+
+                  const pricesMatch = JSON.stringify(state.packagesLive.savedPrices || {}) === JSON.stringify(newPrices);
+                  const metaPkgMatch = JSON.stringify(state.packagesLive.packageMeta || {}) === JSON.stringify(newMetaPkg);
+                  const metaAddonMatch = JSON.stringify(state.packagesLive.addOnMeta || {}) === JSON.stringify(newMetaAddon);
+                  const customPkgsMatch = JSON.stringify(state.packagesLive.customPackages || []) === JSON.stringify(newCustomPkgs);
+                  const customAddonsMatch = JSON.stringify(state.packagesLive.customAddOns || []) === JSON.stringify(newCustomAddons);
+
+                  if (pricesMatch && metaPkgMatch && metaAddonMatch && customPkgsMatch && customAddonsMatch && state.packagesLive.version > 0) {
+                    return sendJson(res, { ok: true, version: state.packagesLive.version });
+                  }
+
                   state.packagesLive = {
-                    savedPrices: payload.savedPrices || {},
-                    packageMeta: payload.packageMeta || {},
-                    addOnMeta: payload.addOnMeta || {},
-                    customPackages: Array.isArray(payload.customPackages) ? payload.customPackages : [],
-                    customAddOns: Array.isArray(payload.customAddOns) ? payload.customAddOns : [],
+                    savedPrices: newPrices,
+                    packageMeta: newMetaPkg,
+                    addOnMeta: newMetaAddon,
+                    customPackages: newCustomPkgs,
+                    customAddOns: newCustomAddons,
                     version: Date.now(),
                   };
                   saveState();
