@@ -112,7 +112,7 @@
       "package:prime-elite-exterior:compact": "160",
       "package:prime-elite-interior:compact": "390",
       "package:prime-elite-full:compact": "495",
-      "package:prime-essential-exterior:compact": "90",
+      "package:prime-essential-exterior:compact": "99",
       "addon:ceramic-protection-1yr:compact": "79",
       "addon:ceramic-protection-1yr:midsize": "109",
       "addon:ceramic-protection-1yr:truck": "129",
@@ -298,7 +298,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1779108414641
+    "version": 1779111220590
   },
   "vehicleTypesLive": [
     {

@@ -131,6 +131,7 @@ export default function PackagePricing() {
     pricing: { compact: "", midsize: "", truck: "", luxury: "" } as Record<string, string>,
   });
   const [viewAllOpen, setViewAllOpen] = useState(false);
+  const [viewAllAddOnsOpen, setViewAllAddOnsOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -378,6 +379,154 @@ export default function PackagePricing() {
   const forceBookNowTabRefresh = async () => {
     try { localStorage.setItem('force-refresh-book', String(Date.now())); } catch { }
     try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'booknow' } })); } catch { }
+  };
+
+  const openViewAllAddOns = () => {
+    const snapshot = {
+      savedPrices: currentPrices,
+      packageMeta: getAllPackageMeta(),
+      addOnMeta: getAllAddOnMeta(),
+      customPackages: getCustomPackages(),
+      customAddOns: getCustomAddOns(),
+    };
+    setLiveSnapshot(snapshot);
+    setViewAllAddOnsOpen(true);
+  };
+
+  const printAddOns = () => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const snapshot = liveSnapshot;
+    const addonMeta = snapshot?.addOnMeta || {};
+    const saved = snapshot?.savedPrices || {};
+    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+
+    const getPrice = (id: string, size: string) => {
+      const key = `addon:${id}:${size}`;
+      const val = saved[key];
+      if (val !== undefined && val !== null && val !== "") return { value: parseFloat(val), isOverride: true };
+      const item = [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
+      return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
+    };
+
+    const rowHtml = (name: string, desc: string, id: string) => {
+      const sizes = ['compact', 'midsize', 'truck', 'luxury'];
+      const cells = sizes.map(sz => {
+        const { value, isOverride } = getPrice(id, sz);
+        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : '';
+        return `<td style="padding:8px;border:1px solid #ddd;text-align:right;${style}">$${value.toFixed(2)}</td>`;
+      }).join('');
+      
+      return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">${name}</td><td style="padding:8px;border:1px solid #ddd;color:#555;">${desc}</td>${cells}</tr>`;
+    };
+
+    const addonRows = visibleAddons.map(a => rowHtml(a.name, (a as any).description || '—', a.id)).join('');
+    const today = new Date().toLocaleDateString();
+
+    win.document.write(`
+      <html>
+        <head>
+          <title>Current Live Add-Ons Pricing</title>
+          <style>
+            body{font-family:Arial, sans-serif; padding:24px;}
+            h1{color:#dc2626;}
+            table{border-collapse:collapse;width:100%;margin-bottom:20px;}
+            th{background:#2563eb;color:white;padding:10px;text-align:right;}
+            th:first-child, th:nth-child(2){text-align:left;}
+            td{border:1px solid #ddd;padding:8px;text-align:right;}
+            td:first-child, td:nth-child(2){text-align:left;}
+            tr:nth-child(even){background:#f9f9f9}
+          </style>
+        </head>
+        <body>
+          <h1>Current Live Add-Ons Pricing</h1>
+          <p>${today}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Add-On Service</th>
+                <th>Description</th>
+                <th>Compact</th>
+                <th>Midsize</th>
+                <th>Truck</th>
+                <th>Luxury</th>
+              </tr>
+            </thead>
+            <tbody>${addonRows}</tbody>
+          </table>
+          <script>window.onload = function(){ window.print(); }</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  const downloadAddOnsPDF = () => {
+    try {
+      const doc = new jsPDF({ orientation: 'p' });
+      doc.setTextColor(37, 99, 235); // Blue color for addons
+      doc.setFontSize(20);
+      doc.text("Current Live Add-Ons Pricing — Prime Auto Detail", 14, 20);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(9);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+      const snapshot = liveSnapshot;
+      const addonMeta = snapshot?.addOnMeta || {};
+      const saved = snapshot?.savedPrices || {};
+      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+
+      const getPrice = (id: string, size: string) => {
+        const key = `addon:${id}:${size}`;
+        const val = saved[key];
+        if (val !== undefined && val !== null && val !== "") return { value: parseFloat(val), isOverride: true };
+        const item = [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
+        return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
+      };
+
+      const tableData = visibleAddons.map(a => {
+        const getP = (sz: string) => {
+          const { value } = getPrice(a.id, sz);
+          return `$${value.toFixed(2)}`;
+        };
+        return [
+          a.name,
+          (a as any).description || '—',
+          getP('compact'),
+          getP('midsize'),
+          getP('truck'),
+          getP('luxury')
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 35,
+        head: [['Add-On Service', 'Description', 'Compact', 'Midsize', 'Truck', 'Luxury']],
+        body: tableData,
+        theme: 'striped',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 50 },
+          2: { halign: 'right', cellWidth: 20 },
+          3: { halign: 'right', cellWidth: 20 },
+          4: { halign: 'right', cellWidth: 20 },
+          5: { halign: 'right', cellWidth: 20 }
+        }
+      });
+
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `addons_pricing_${today}.pdf`;
+      const pdfData = doc.output('datauristring');
+      doc.save(fileName);
+      savePDFToArchive('Price Sheets' as any, 'Admin', 'addons_pricing', pdfData, { fileName, path: 'pricing/' });
+      toast.success("Add-Ons Pricing PDF Saved");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    }
   };
 
   const openViewAllPrices = async () => {
@@ -2253,9 +2402,9 @@ export default function PackagePricing() {
                   <Button
                     size="lg"
                     className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-6"
-                    onClick={generateAddOnsListPDF}
+                    onClick={openViewAllAddOns}
                   >
-                    Add-Ons List (PDF)
+                    View All Add-Ons
                   </Button>
                 </div>
 
@@ -3438,6 +3587,67 @@ export default function PackagePricing() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={viewAllAddOnsOpen} onOpenChange={setViewAllAddOnsOpen}>
+          <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
+            <DialogHeader className="border-b border-zinc-800 pb-4 mb-4">
+              <DialogTitle className="text-2xl font-black text-blue-500 uppercase tracking-tight">Current Live Add-Ons — Prime Auto Detail</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-end gap-3 mb-6">
+              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={printAddOns}>Print</Button>
+              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={downloadAddOnsPDF}>Download PDF</Button>
+              <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800" onClick={() => setViewAllAddOnsOpen(false)}>Close</Button>
+            </div>
+            <div className="bg-black/40 border border-zinc-800 rounded-xl p-4 overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="p-3 border border-zinc-800 text-left rounded-tl-lg font-bold">Add-On Service</th>
+                    <th className="p-3 border border-zinc-800 text-left font-bold">Description</th>
+                    <th className="p-3 border border-zinc-800 text-right font-bold">Compact</th>
+                    <th className="p-3 border border-zinc-800 text-right font-bold">Midsize</th>
+                    <th className="p-3 border border-zinc-800 text-right font-bold">Truck</th>
+                    <th className="p-3 border border-zinc-800 text-right rounded-tr-lg font-bold">Luxury</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const snap = liveSnapshot;
+                    if (!snap) return null;
+                    const addonMeta = snap.addOnMeta || {};
+                    const saved = snap.savedPrices || {};
+                    const visible = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
+                      .filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+                    return visible.map(a => {
+                      const getP = (sz: string) => {
+                        const val = saved[liveGetKey('addon', a.id, sz)];
+                        const isO = val !== undefined && val !== null && val !== "";
+                        return { v: isO ? parseFloat(val) : (a.pricing as any)[sz], isO };
+                      };
+                      const pr = {
+                        compact: getP('compact'),
+                        midsize: getP('midsize'),
+                        truck: getP('truck'),
+                        luxury: getP('luxury'),
+                      };
+                      return (
+                        <tr key={a.id} className="border-b border-zinc-800 hover:bg-zinc-900/50">
+                          <td className="p-3 border border-zinc-800 font-bold text-white">{a.name}</td>
+                          <td className="p-3 border border-zinc-800 text-zinc-400 text-sm">{(a as any).description || '—'}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.compact.isO ? "text-blue-400" : "text-zinc-300")}>${pr.compact.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.midsize.isO ? "text-blue-400" : "text-zinc-300")}>${pr.midsize.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.truck.isO ? "text-blue-400" : "text-zinc-300")}>${pr.truck.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.luxury.isO ? "text-blue-400" : "text-zinc-300")}>${pr.luxury.v.toFixed(2)}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={recentChangesOpen} onOpenChange={setRecentChangesOpen}>
           <DialogContent className="sm:max-w-4xl bg-zinc-950 border-zinc-800 text-white max-h-[85vh] overflow-y-auto">
             <DialogHeader className="flex flex-row items-center justify-between border-b border-zinc-800 pb-4 mb-4">
