@@ -8,6 +8,16 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Accordion,
     AccordionContent,
     AccordionItem,
@@ -78,6 +88,7 @@ interface Vehicle {
     mainGoal: string;
     scenarios: Scenario[];
     selectedScenarioId: string | null;
+    selectedServiceId: string | null;
 }
 
 // Mapping Marketing Names to actual Package IDs and sync with services.ts
@@ -153,6 +164,30 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const [callerEmail, setCallerEmail] = useState("");
 
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
+    const [showCloseWarning, setShowCloseWarning] = useState(false);
+    const [unselectedFields, setUnselectedFields] = useState<string[]>([]);
+
+    const handleCloseAttempt = (openState: boolean) => {
+        if (!openState) {
+            const unselected: string[] = [];
+            if (!callerName.trim()) unselected.push("Caller Name");
+            if (!callerPhone.trim()) unselected.push("Caller Phone");
+            if (!callerEmail.trim()) unselected.push("Caller Email");
+            
+            const firstVehicle = vehicles[0];
+            if (!firstVehicle.year.trim()) unselected.push("Vehicle Year");
+            if (!firstVehicle.make.trim()) unselected.push("Vehicle Make");
+            if (!firstVehicle.model.trim()) unselected.push("Vehicle Model");
+            if (!firstVehicle.selectedServiceId) unselected.push("Detailing Service");
+            
+            if (unselected.length > 0) {
+                setUnselectedFields(unselected);
+                setShowCloseWarning(true);
+                return;
+            }
+        }
+        onOpenChange(openState);
+    };
 
     function createEmptyVehicle(): Vehicle {
         const vid = Date.now().toString();
@@ -179,7 +214,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                 { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: [] },
                 { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
             ],
-            selectedScenarioId: null
+            selectedScenarioId: null,
+            selectedServiceId: null
         };
     }
 
@@ -272,6 +308,9 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     conditionOutside: firstVehicle.paintCondition || ''
                 };
 
+                const selectedServicePkg = servicePackages.find(p => p.id === firstVehicle.selectedServiceId);
+                const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
+
                 const customerData = {
                     name: callerName || "Unknown Caller",
                     phone: callerPhone,
@@ -280,6 +319,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     notes: `Added via Phone Assistant. This person was a caller on ${timestamp}.
 
 [EVALUATION SUMMARY]
+• Detailing Service: ${selectedServiceName.toUpperCase()}
 • Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
 • Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
 • Storage: ${firstVehicle.garaged || 'N/A'}
@@ -340,6 +380,9 @@ ${firstVehicle.notes || ''}`.trim(),
                 conditionOutside: firstVehicle.paintCondition || ''
             };
 
+            const selectedServicePkg = servicePackages.find(p => p.id === firstVehicle.selectedServiceId);
+            const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
+
             const customerData = {
                 name: callerName || "Unknown Caller",
                 phone: callerPhone,
@@ -348,6 +391,7 @@ ${firstVehicle.notes || ''}`.trim(),
                 notes: `Added via Phone Assistant. This person was a caller on ${timestamp}.
 
 [EVALUATION SUMMARY]
+• Detailing Service: ${selectedServiceName.toUpperCase()}
 • Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
 • Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
 • Storage: ${firstVehicle.garaged || 'N/A'}
@@ -380,7 +424,7 @@ ${firstVehicle.notes || ''}`.trim(),
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleCloseAttempt}>
             <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border shadow-2xl rounded-2xl">
                 <div className="p-3 sm:p-4 bg-primary/10 border-b border-primary/20 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
@@ -395,21 +439,75 @@ ${firstVehicle.notes || ''}`.trim(),
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <DialogClose asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/20">
-                                <X className="w-5 h-5" />
-                            </Button>
-                        </DialogClose>
+                        <Button variant="ghost" size="icon" onClick={() => handleCloseAttempt(false)} className="h-8 w-8 rounded-full hover:bg-primary/20">
+                            <X className="w-5 h-5" />
+                        </Button>
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-0 custom-scrollbar bg-zinc-950/20">
-                    <Accordion type="single" collapsible defaultValue="pre-qual" className="w-full">
-                        {/* SECTION 1: VEHICLE CONTEXT & EVALUATION */}
+                    <Accordion type="single" collapsible defaultValue="caller-info" className="w-full">
+                        {/* SECTION 1: CALLER IDENTITY */}
+                        <AccordionItem value="caller-info" className="border-b border-zinc-800/80 bg-purple-950/25 shadow-sm">
+                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-purple-900/10 transition-colors">
+                                <div className="flex items-center gap-3 w-full text-left">
+                                    <div className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(147,51,234,0.5)]">
+                                        1
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-black uppercase tracking-tight text-white">
+                                            Caller Identity
+                                        </div>
+                                        {callerName ? (
+                                            <div className="text-[10px] font-bold text-purple-400 uppercase">
+                                                {callerName} {callerPhone ? `• ${callerPhone}` : ''}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">
+                                                Identify customer for CRM record
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-5 pb-5 pt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
+                                        <Input
+                                            placeholder="Enter Client Name"
+                                            value={callerName}
+                                            onChange={(e) => setCallerName(e.target.value)}
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Phone Number</Label>
+                                        <Input
+                                            placeholder="555-0199"
+                                            value={callerPhone}
+                                            onChange={(e) => setCallerPhone(e.target.value)}
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</Label>
+                                        <Input
+                                            placeholder="customer@example.com"
+                                            value={callerEmail}
+                                            onChange={(e) => setCallerEmail(e.target.value)}
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                        />
+                                    </div>
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+
+                        {/* SECTION 2: VEHICLE CONTEXT & EVALUATION */}
                         <AccordionItem value="pre-qual" className="border-b border-zinc-800/80 bg-blue-950/25 shadow-sm">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-blue-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
                                     <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(59,130,246,0.5)]">
-                                        1
+                                        2
                                     </div>
                                     <div>
                                         <div className="text-sm font-black uppercase tracking-tight text-white">
@@ -605,6 +703,21 @@ ${firstVehicle.notes || ''}`.trim(),
                                                     <SelectItem value="full">Full Professional Detail</SelectItem>
                                                 </SelectContent>
                                             </Select>
+
+                                            <div className="space-y-1.5 pt-2 border-t border-zinc-800">
+                                                <Label className="text-[9px] font-black uppercase text-zinc-400">Select Detailing Service (Optional)</Label>
+                                                <Select value={activeVehicle.selectedServiceId || "none"} onValueChange={(v) => updateVehicle(activeVehicleId, { selectedServiceId: v === "none" ? null : v })}>
+                                                    <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase text-zinc-100">
+                                                        <SelectValue placeholder="NO SERVICE SELECTED" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
+                                                        <SelectItem value="none">-- NO SERVICE SELECTED --</SelectItem>
+                                                        {servicePackages.map(pkg => (
+                                                            <SelectItem key={pkg.id} value={pkg.id}>{pkg.name.toUpperCase()}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -641,62 +754,6 @@ ${firstVehicle.notes || ''}`.trim(),
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                    </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-
-                        {/* SECTION 2: CALLER IDENTITY */}
-                        <AccordionItem value="caller-info" className="border-b border-zinc-800/80 bg-purple-950/25 shadow-sm">
-                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-purple-900/10 transition-colors">
-                                <div className="flex items-center gap-3 w-full text-left">
-                                    <div className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(147,51,234,0.5)]">
-                                        2
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-black uppercase tracking-tight text-white">
-                                            Caller Identity
-                                        </div>
-                                        {callerName ? (
-                                            <div className="text-[10px] font-bold text-purple-400 uppercase">
-                                                {callerName} {callerPhone ? `• ${callerPhone}` : ''}
-                                            </div>
-                                        ) : (
-                                            <div className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">
-                                                Identify customer for CRM record
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-5 pb-5 pt-2">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
-                                        <Input
-                                            placeholder="Enter Client Name"
-                                            value={callerName}
-                                            onChange={(e) => setCallerName(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Phone Number</Label>
-                                        <Input
-                                            placeholder="555-0199"
-                                            value={callerPhone}
-                                            onChange={(e) => setCallerPhone(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</Label>
-                                        <Input
-                                            placeholder="customer@example.com"
-                                            value={callerEmail}
-                                            onChange={(e) => setCallerEmail(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
-                                        />
                                     </div>
                                 </div>
                             </AccordionContent>
@@ -920,7 +977,7 @@ ${firstVehicle.notes || ''}`.trim(),
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0 w-full md:w-auto">
                             <Button
                                 variant="destructive"
-                                onClick={() => onOpenChange(false)}
+                                onClick={() => handleCloseAttempt(false)}
                                 className="h-10 font-black uppercase tracking-widest text-[9px] px-3 w-full"
                             >
                                 Cancel
@@ -977,6 +1034,40 @@ ${firstVehicle.notes || ''}`.trim(),
                 }}
             />
             <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
+            <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
+                <AlertDialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-xl font-black text-rose-500 uppercase tracking-tighter">
+                            Warning: Unselected Fields
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400 text-xs font-bold uppercase leading-relaxed pt-2">
+                            The following optional fields have not been filled or selected:
+                            <ul className="list-disc pl-5 mt-2 space-y-1 text-rose-400/80 font-semibold normal-case">
+                                {unselectedFields.map((field, idx) => (
+                                    <li key={idx}>{field}</li>
+                                ))}
+                            </ul>
+                            <div className="mt-4 text-zinc-300 font-bold uppercase tracking-tight">
+                                Are you sure you want to cancel and lose this session?
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4">
+                        <AlertDialogCancel className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 uppercase font-black text-[10px] tracking-widest">
+                            Keep Editing
+                        </AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => {
+                                setShowCloseWarning(false);
+                                onOpenChange(false);
+                            }}
+                            className="bg-rose-600 hover:bg-rose-700 text-white uppercase font-black text-[10px] tracking-widest"
+                        >
+                            Cancel Session
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }
