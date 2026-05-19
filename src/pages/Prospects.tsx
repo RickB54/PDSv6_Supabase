@@ -229,14 +229,9 @@ export default function Prospects() {
       const detailedHistory = await getCustomerDetailedHistory(customerId);
       if (detailedHistory) {
         const { exportCustomerHistoryPDF } = await import('@/lib/pdf-export');
-        // We pass 'true' for preview and 'true' for returnDoc
-        const doc = await exportCustomerHistoryPDF(detailedHistory, true, true);
-        if (doc) {
-          const url = (doc as any).output('bloburl');
-          setPdfUrl(url);
-          setShowPdfViewer(true);
-          toast({ title: "Report Ready", description: "Inspection mode active." });
-        }
+        // Open the preview directly in a new tab, just like in SearchCustomer.tsx!
+        await exportCustomerHistoryPDF(detailedHistory, true);
+        toast({ title: "Report Opened", description: "360 Intelligence Report loaded in new tab." });
       }
     } catch (err) {
       toast({ title: "Report Failed", description: "Generation encountered an error.", variant: "destructive" });

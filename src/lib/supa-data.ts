@@ -291,7 +291,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             .select(`
                 *,
                 vehicles (
-                    id, make, model, year, type, color, vin,
+                    id, make, model, year, type, color, vin, mileage, condition_inside, condition_outside,
                     general_photos, before_photos, after_photos, video_urls
                 )
             `)
