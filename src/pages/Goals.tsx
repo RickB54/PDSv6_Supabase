@@ -252,6 +252,11 @@ export default function Goals() {
         const filteredBookings = bookings.filter(b => {
             try {
                 if (!b.date) return false;
+
+                // Exclude cancelled, deleted, or tentative bookings from core goals
+                const status = String(b.status || '').toLowerCase();
+                if (status === 'cancelled' || status === 'deleted' || status === 'tentative') return false;
+
                 const d = parseISO(b.date);
                 const from = filterRange.from ? new Date(new Date(filterRange.from).setHours(0,0,0,0)) : null;
                 const to = filterRange.to ? new Date(new Date(filterRange.to).setHours(23,59,59,999)) : null;
@@ -374,6 +379,93 @@ export default function Goals() {
             };
         });
     }, [bookings, invoices, receivables, dateFilter, dateRange]);
+
+    // Memoize prospects pipeline data to match selected filter
+    const prospectsChartData = useMemo(() => {
+        const now = new Date();
+        let days: Date[] = [];
+        
+        if (dateFilter === 'daily') {
+            days = eachDayOfInterval({
+                start: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000),
+                end: now
+            });
+        } else if (dateFilter === 'weekly') {
+            days = eachDayOfInterval({
+                start: startOfWeek(now),
+                end: endOfWeek(now)
+            });
+        } else if (dateFilter === 'monthly') {
+            days = eachDayOfInterval({
+                start: startOfMonth(now),
+                end: endOfMonth(now)
+            });
+        } else if (dateFilter === 'yearly') {
+            const months = Array.from({ length: 12 }, (_, i) => new Date(now.getFullYear(), i, 1));
+            return months.map(m => {
+                const mStart = startOfMonth(m);
+                const mEnd = endOfMonth(m);
+                
+                const monthTentative = bookings.filter(b => {
+                    try {
+                        const status = String(b.status || '').toLowerCase();
+                        if (status !== 'tentative') return false;
+                        const d = b.date ? parseISO(b.date) : null;
+                        return d && isWithinInterval(d, { start: mStart, end: mEnd });
+                    } catch { return false; }
+                });
+
+                const monthCompleted = bookings.filter(b => {
+                    try {
+                        const status = String(b.status || '').toLowerCase();
+                        if (status !== 'completed' && status !== 'confirmed') return false;
+                        const d = b.date ? parseISO(b.date) : null;
+                        return d && isWithinInterval(d, { start: mStart, end: mEnd });
+                    } catch { return false; }
+                });
+                
+                return {
+                    name: format(m, 'MMM'),
+                    tentative: monthTentative.length,
+                    completed: monthCompleted.length
+                };
+            });
+        } else if (dateFilter === 'custom') {
+            const from = dateRange.from || startOfWeek(now);
+            const to = dateRange.to || endOfWeek(now);
+            days = eachDayOfInterval({ start: from, end: to });
+        }
+
+        if (days.length > 31) {
+            days = days.slice(0, 31);
+        }
+
+        return days.map(day => {
+            const dayTentative = bookings.filter(b => {
+                try {
+                    const status = String(b.status || '').toLowerCase();
+                    if (status !== 'tentative') return false;
+                    const d = b.date ? parseISO(b.date) : null;
+                    return d && d.toDateString() === day.toDateString();
+                } catch { return false; }
+            });
+
+            const dayCompleted = bookings.filter(b => {
+                try {
+                    const status = String(b.status || '').toLowerCase();
+                    if (status !== 'completed' && status !== 'confirmed') return false;
+                    const d = b.date ? parseISO(b.date) : null;
+                    return d && d.toDateString() === day.toDateString();
+                } catch { return false; }
+            });
+
+            return {
+                name: format(day, dateFilter === 'monthly' ? 'd' : 'EEE d'),
+                tentative: dayTentative.length,
+                completed: dayCompleted.length
+            };
+        });
+    }, [bookings, dateFilter, dateRange]);
 
     // Beautiful high-end, colorful PDF Export function
     const exportPDF = () => {
@@ -537,6 +629,21 @@ export default function Goals() {
                 
                 y += 6.5;
             });
+
+            // SECTION 4: PROSPECTS & PIPELINE ANALYTICS
+            addSection("Prospects & Pipeline Analytics", [249, 115, 22]);
+            
+            const totalTentative = prospectsChartData.reduce((acc, row) => acc + (row.tentative || 0), 0);
+            const totalCompleted = prospectsChartData.reduce((acc, row) => acc + (row.completed || 0), 0);
+            
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8.5);
+            pdf.text("Pipeline Summary:", margin + 4, y);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Total Tentative Prospects (Possible Bookings): ${totalTentative}`, margin + 40, y);
+            y += 5.5;
+            pdf.text(`Total Booked & Completed Prospects (Actual Success): ${totalCompleted}`, margin + 40, y);
+            y += 8;
 
             // Footer
             pdf.setFontSize(8);
@@ -866,6 +973,105 @@ export default function Goals() {
                                         </ResponsiveContainer>
                                     </div>
                                 </Card>
+                            </section>
+
+                            {/* Prospects & Pipeline Section */}
+                            <section className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-px flex-1 bg-zinc-900" />
+                                    <h2 className="text-lg font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-orange-500" /> Prospects & Pipeline
+                                    </h2>
+                                    <div className="h-px flex-1 bg-zinc-900" />
+                                </div>
+                                
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Tentative Pipeline Card */}
+                                    <Card className="p-6 bg-zinc-900/40 border-zinc-800">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400">Tentative Prospects Pipeline</h3>
+                                            <div className="text-[10px] text-amber-500 font-bold uppercase">Possible Bookings (Not Definite)</div>
+                                        </div>
+                                        <div className="h-[260px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={prospectsChartData}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                                    <XAxis 
+                                                        dataKey="name" 
+                                                        stroke="#52525b" 
+                                                        fontSize={10} 
+                                                        tickLine={false} 
+                                                        axisLine={false} 
+                                                    />
+                                                    <YAxis 
+                                                        stroke="#52525b" 
+                                                        fontSize={10} 
+                                                        tickLine={false} 
+                                                        axisLine={false}
+                                                        allowDecimals={false}
+                                                    />
+                                                    <Tooltip 
+                                                        cursor={{fill: '#27272a', opacity: 0.4}}
+                                                        contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
+                                                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                                    />
+                                                    <Bar dataKey="tentative" radius={[4, 4, 0, 0]}>
+                                                        {prospectsChartData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill="#f59e0b" />
+                                                        ))}
+                                                    </Bar>
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </Card>
+
+                                    {/* Booked & Completed Prospects Card */}
+                                    <Card className="p-6 bg-zinc-900/40 border-zinc-800">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400">Booked & Completed Prospects</h3>
+                                            <div className="text-[10px] text-emerald-500 font-bold uppercase">Successful Appointments</div>
+                                        </div>
+                                        <div className="h-[260px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <AreaChart data={prospectsChartData}>
+                                                    <defs>
+                                                        <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                                    <XAxis 
+                                                        dataKey="name" 
+                                                        stroke="#52525b" 
+                                                        fontSize={10} 
+                                                        tickLine={false} 
+                                                        axisLine={false} 
+                                                    />
+                                                    <YAxis 
+                                                        stroke="#52525b" 
+                                                        fontSize={10} 
+                                                        tickLine={false} 
+                                                        axisLine={false}
+                                                        allowDecimals={false}
+                                                    />
+                                                    <Tooltip 
+                                                        contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
+                                                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                                                    />
+                                                    <Area 
+                                                        type="monotone" 
+                                                        dataKey="completed" 
+                                                        stroke="#10b981" 
+                                                        strokeWidth={3}
+                                                        fillOpacity={1} 
+                                                        fill="url(#colorCompleted)" 
+                                                    />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </Card>
+                                </div>
                             </section>
 
                             {/* Summary Footer */}
