@@ -257,18 +257,42 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         // 2. Persist to Database if Caller Name is provided
         if (callerName) {
             try {
+                const timestamp = new Date().toLocaleString("en-US", {
+                    dateStyle: "medium",
+                    timeStyle: "short"
+                });
+
+                const mappedVehicle = {
+                    make: firstVehicle.make || '',
+                    model: firstVehicle.model || '',
+                    year: firstVehicle.year || '',
+                    type: firstVehicle.type || 'midsize',
+                    mileage: firstVehicle.mileage || '',
+                    conditionInside: firstVehicle.interiorCondition || '',
+                    conditionOutside: firstVehicle.paintCondition || ''
+                };
+
                 const customerData = {
                     name: callerName || "Unknown Caller",
                     phone: callerPhone,
                     email: callerEmail,
                     type: accountType,
-                    notes: `Added via Phone Assistant. ${firstVehicle.notes}`,
-                    vehicle_info: {
-                        make: firstVehicle.make,
-                        model: firstVehicle.model,
-                        year: firstVehicle.year,
-                        type: firstVehicle.type
-                    }
+                    notes: `Added via Phone Assistant. This person was a caller on ${timestamp}.
+
+[EVALUATION SUMMARY]
+• Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
+• Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
+• Storage: ${firstVehicle.garaged || 'N/A'}
+• Mileage: ${firstVehicle.mileage || 'N/A'}
+• Detail History: ${firstVehicle.detailHistory || 'N/A'}
+• Seat Material: ${firstVehicle.seatMaterial || 'N/A'}
+• Interior Condition: ${firstVehicle.interiorCondition || 'N/A'}
+• Paint Condition: ${firstVehicle.paintCondition || 'N/A'}
+• Customer Goal: ${firstVehicle.mainGoal || 'N/A'}
+
+${firstVehicle.notes || ''}`.trim(),
+                    vehicle_info: mappedVehicle,
+                    vehicles: [mappedVehicle]
                 };
 
                 upsertSupabaseCustomer(customerData).then(() => {
@@ -306,18 +330,37 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             });
 
             const firstVehicle = vehicles[0];
+            const mappedVehicle = {
+                make: firstVehicle.make || '',
+                model: firstVehicle.model || '',
+                year: firstVehicle.year || '',
+                type: firstVehicle.type || 'midsize',
+                mileage: firstVehicle.mileage || '',
+                conditionInside: firstVehicle.interiorCondition || '',
+                conditionOutside: firstVehicle.paintCondition || ''
+            };
+
             const customerData = {
                 name: callerName || "Unknown Caller",
                 phone: callerPhone,
                 email: callerEmail,
                 type: 'prospect',
-                notes: `Added via Phone Assistant. This person was a caller on ${timestamp}. ${firstVehicle.notes || ''}`.trim(),
-                vehicle_info: {
-                    make: firstVehicle.make || '',
-                    model: firstVehicle.model || '',
-                    year: firstVehicle.year || '',
-                    type: firstVehicle.type || 'midsize'
-                }
+                notes: `Added via Phone Assistant. This person was a caller on ${timestamp}.
+
+[EVALUATION SUMMARY]
+• Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
+• Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
+• Storage: ${firstVehicle.garaged || 'N/A'}
+• Mileage: ${firstVehicle.mileage || 'N/A'}
+• Detail History: ${firstVehicle.detailHistory || 'N/A'}
+• Seat Material: ${firstVehicle.seatMaterial || 'N/A'}
+• Interior Condition: ${firstVehicle.interiorCondition || 'N/A'}
+• Paint Condition: ${firstVehicle.paintCondition || 'N/A'}
+• Customer Goal: ${firstVehicle.mainGoal || 'N/A'}
+
+${firstVehicle.notes || ''}`.trim(),
+                vehicle_info: mappedVehicle,
+                vehicles: [mappedVehicle]
             };
 
             await upsertSupabaseCustomer(customerData);
