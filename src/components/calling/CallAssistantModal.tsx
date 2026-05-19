@@ -470,32 +470,43 @@ ${firstVehicle.notes || ''}`.trim(),
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-5 pt-2">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
-                                        <Input
-                                            placeholder="Enter Client Name"
-                                            value={callerName}
-                                            onChange={(e) => setCallerName(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
-                                        />
+                                <div className="space-y-4 pt-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
+                                            <Input
+                                                placeholder="Enter Client Name"
+                                                value={callerName}
+                                                onChange={(e) => setCallerName(e.target.value)}
+                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Phone Number</Label>
+                                            <Input
+                                                placeholder="555-0199"
+                                                value={callerPhone}
+                                                onChange={(e) => setCallerPhone(e.target.value)}
+                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</Label>
+                                            <Input
+                                                placeholder="customer@example.com"
+                                                value={callerEmail}
+                                                onChange={(e) => setCallerEmail(e.target.value)}
+                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Phone Number</Label>
-                                        <Input
-                                            placeholder="555-0199"
-                                            value={callerPhone}
-                                            onChange={(e) => setCallerPhone(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</Label>
-                                        <Input
-                                            placeholder="customer@example.com"
-                                            value={callerEmail}
-                                            onChange={(e) => setCallerEmail(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Call Notes & Special Requests</Label>
+                                        <Textarea
+                                            placeholder="Type any notes from this call here..."
+                                            value={activeVehicle.notes}
+                                            onChange={(e) => updateVehicle(activeVehicleId, { notes: e.target.value })}
+                                            className="min-h-[80px] bg-background border-zinc-700 font-bold text-zinc-100 placeholder:text-zinc-600 rounded-lg p-2.5 resize-none"
                                         />
                                     </div>
                                 </div>
@@ -958,9 +969,9 @@ ${firstVehicle.notes || ''}`.trim(),
                     </div>
 
                     {/* Responsive Footer Controls */}
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
+                    <div className="flex items-center justify-between gap-2 w-full">
                         {/* Left Side: Select Scenario Dropdown */}
-                        <div className="flex-1 min-w-[160px] md:max-w-xs">
+                        <div className="flex-1 min-w-[120px] max-w-[280px]">
                             <Select value={activeVehicle.selectedScenarioId || ""} onValueChange={(s) => updateVehicle(activeVehicleId, { selectedScenarioId: s })}>
                                 <SelectTrigger className="w-full h-10 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800 text-zinc-100">
                                     <SelectValue placeholder="CONFIRM SELECTION" />
@@ -973,45 +984,55 @@ ${firstVehicle.notes || ''}`.trim(),
                             </Select>
                         </div>
 
-                        {/* Right Side: Action Buttons Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0 w-full md:w-auto">
+                        {/* Right Side: Action Buttons Row (Icon Only) */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                             <Button
+                                type="button"
                                 variant="destructive"
+                                size="icon"
                                 onClick={() => handleCloseAttempt(false)}
-                                className="h-10 font-black uppercase tracking-widest text-[9px] px-3 w-full"
+                                className="h-10 w-10 rounded-xl"
+                                title="Cancel"
                             >
-                                Cancel
+                                <X className="w-5 h-5" />
                             </Button>
 
                             <Button
                                 type="button"
                                 onClick={() => setServiceComparisonOpen(true)}
                                 variant="outline"
-                                className="h-10 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[9px] px-3 w-full"
+                                size="icon"
+                                className="h-10 w-10 rounded-xl border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
+                                title="Services"
                             >
-                                Services
+                                <LayoutDashboard className="w-5 h-5" />
                             </Button>
 
                             <Button
                                 type="button"
                                 onClick={handleSaveProspectOnly}
                                 disabled={!callerName}
-                                className={`h-10 font-black uppercase tracking-widest text-[9px] px-2 w-full border border-blue-500 text-blue-400 bg-blue-500/5 hover:bg-blue-500/15 transition-all
-                                    ${!callerName ? 'opacity-50 cursor-not-allowed' : ''}
+                                variant="outline"
+                                size="icon"
+                                className={`h-10 w-10 rounded-xl border-blue-500 text-blue-400 bg-blue-500/5 hover:bg-blue-500/15 transition-all
+                                    ${!callerName ? 'opacity-50 cursor-not-allowed border-zinc-800 text-zinc-600 bg-transparent' : ''}
                                 `}
+                                title="Save Prospect"
                             >
-                                Save Prospect
+                                <Plus className="w-5 h-5" />
                             </Button>
 
                             <Button
                                 type="button"
                                 onClick={handleHandoff}
                                 disabled={!activeVehicle.selectedScenarioId}
-                                className={`h-10 font-black uppercase tracking-widest text-[9px] px-3 w-full transition-all
+                                size="icon"
+                                className={`h-10 w-10 rounded-xl transition-all
                                     ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] text-white' : 'bg-muted opacity-50'}
                                 `}
+                                title="Confirm & Go"
                             >
-                                Confirm & Go <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
+                                <ArrowRight className="w-5 h-5" />
                             </Button>
                         </div>
                     </div>
