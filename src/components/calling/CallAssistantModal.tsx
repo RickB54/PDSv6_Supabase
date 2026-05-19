@@ -290,6 +290,52 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         toast({ title: "Handoff Successful", description: "Call data passed to Client Evaluation." });
     };
 
+    const handleSaveProspectOnly = async () => {
+        if (!callerName) {
+            toast({
+                title: "Information Required",
+                description: "Please enter the caller's Full Name to record them as a prospect.",
+                variant: "destructive"
+            });
+            return;
+        }
+        try {
+            const timestamp = new Date().toLocaleString("en-US", {
+                dateStyle: "medium",
+                timeStyle: "short"
+            });
+
+            const firstVehicle = vehicles[0];
+            const customerData = {
+                name: callerName || "Unknown Caller",
+                phone: callerPhone,
+                email: callerEmail,
+                type: 'prospect',
+                notes: `Added via Phone Assistant. This person was a caller on ${timestamp}. ${firstVehicle.notes || ''}`.trim(),
+                vehicle_info: {
+                    make: firstVehicle.make || '',
+                    model: firstVehicle.model || '',
+                    year: firstVehicle.year || '',
+                    type: firstVehicle.type || 'midsize'
+                }
+            };
+
+            await upsertSupabaseCustomer(customerData);
+            toast({
+                title: "Prospect Saved",
+                description: `${callerName} recorded successfully under Prospects list.`,
+            });
+            onOpenChange(false);
+        } catch (err) {
+            console.error("Failed to save prospect:", err);
+            toast({
+                title: "Error Saving Prospect",
+                description: "An error occurred while saving the prospect. Please try again.",
+                variant: "destructive"
+            });
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border shadow-2xl rounded-2xl">
@@ -306,9 +352,6 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={addVehicle} className="font-bold border-primary/50 text-primary h-8 px-2">
-                            <Plus className="w-3.5 h-3.5 mr-1" /> Add Vehicle
-                        </Button>
                         <DialogClose asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/20">
                                 <X className="w-5 h-5" />
@@ -319,7 +362,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                 <div className="flex-1 overflow-y-auto p-0 custom-scrollbar bg-zinc-950/20">
                     <Accordion type="single" collapsible defaultValue="pre-qual" className="w-full">
                         {/* SECTION 1: VEHICLE CONTEXT & EVALUATION */}
-                        <AccordionItem value="pre-qual" className="border-b border-border bg-blue-950/10">
+                        <AccordionItem value="pre-qual" className="border-b border-zinc-800/80 bg-blue-950/25 shadow-sm">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-blue-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
                                     <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(59,130,246,0.5)]">
@@ -337,12 +380,27 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-6 pt-2">
                                 <div className="space-y-6">
-                                    {/* Evaluation Guide Logic moved here */}
+                                    {/* Evaluation Guide Logic */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-blue-500/10">
                                         <div className="space-y-2">
-                                            <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
-                                                <Car className="w-3 h-3" /> Vehicle Class
-                                            </Label>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
+                                                    <Car className="w-3.5 h-3.5 text-blue-400" /> Vehicle Class
+                                                </Label>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setShowAutoClassify(true);
+                                                    }}
+                                                    className="h-6 px-2 text-[9px] font-bold text-blue-300 hover:text-white bg-blue-500/15 hover:bg-blue-500/30 border border-blue-500/30 rounded-md transition-colors"
+                                                >
+                                                    <HelpCircle className="w-3 h-3 mr-1 text-blue-400 animate-pulse" /> Classifier Help
+                                                </Button>
+                                            </div>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 {[
                                                     { id: 'compact', label: 'Compact (Sedan)' },
@@ -412,18 +470,18 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                         <div className="space-y-1.5">
                                             <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Year / Make / Model</Label>
                                             <div className="flex gap-2">
-                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold" />
-                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold" />
-                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold" />
+                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
+                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
+                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
                                             <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Reason for Detail</Label>
                                             <Select value={activeVehicle.reasonForDetail} onValueChange={(v) => updateVehicle(activeVehicleId, { reasonForDetail: v })}>
-                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold">
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100">
                                                     <SelectValue placeholder="MOTIVATION" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
                                                     <SelectItem value="maintenance">Maintenance</SelectItem>
                                                     <SelectItem value="selling">Selling</SelectItem>
                                                     <SelectItem value="purchase">Just Purchased</SelectItem>
@@ -493,10 +551,10 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                 ))}
                                             </div>
                                             <Select value={activeVehicle.mainGoal} onValueChange={(v) => updateVehicle(activeVehicleId, { mainGoal: v })}>
-                                                <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase">
+                                                <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase text-zinc-100">
                                                     <SelectValue placeholder="MAIN CUSTOMER GOAL" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
                                                     <SelectItem value="basic">Basic Clean</SelectItem>
                                                     <SelectItem value="interior">Deep Interior Clean</SelectItem>
                                                     <SelectItem value="exterior">Exterior Shine/Protection</SelectItem>
@@ -512,10 +570,10 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                         <div className="space-y-1.5">
                                             <Label className="text-[9px] font-black uppercase text-white/70">Storage</Label>
                                             <Select value={activeVehicle.garaged} onValueChange={(v) => updateVehicle(activeVehicleId, { garaged: v })}>
-                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white">
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-zinc-100">
                                                     <SelectValue placeholder="STORAGE" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
                                                     <SelectItem value="garaged">Always Garaged</SelectItem>
                                                     <SelectItem value="outdoors">Kept Outdoors</SelectItem>
                                                     <SelectItem value="partial">Mix of Both</SelectItem>
@@ -524,15 +582,15 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                         </div>
                                         <div className="space-y-1.5">
                                             <Label className="text-[9px] font-black uppercase text-white/70">Mileage</Label>
-                                            <Input placeholder="e.g. 45k" value={activeVehicle.mileage} onChange={(e) => updateVehicle(activeVehicleId, { mileage: e.target.value })} className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white placeholder:text-zinc-600" />
+                                            <Input placeholder="e.g. 45k" value={activeVehicle.mileage} onChange={(e) => updateVehicle(activeVehicleId, { mileage: e.target.value })} className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-zinc-100 placeholder:text-zinc-600" />
                                         </div>
                                         <div className="space-y-1.5">
                                             <Label className="text-[9px] font-black uppercase text-white/70">History</Label>
                                             <Select value={activeVehicle.detailHistory} onValueChange={(v) => updateVehicle(activeVehicleId, { detailHistory: v })}>
-                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-white">
+                                                <SelectTrigger className="h-9 bg-zinc-950 border-zinc-800 text-[10px] font-bold text-zinc-100">
                                                     <SelectValue placeholder="HISTORY" />
                                                 </SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
                                                     <SelectItem value="never">Never Detailed</SelectItem>
                                                     <SelectItem value="recent">Within 6 Mo</SelectItem>
                                                     <SelectItem value="year">~1 Year Ago</SelectItem>
@@ -546,25 +604,29 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                         </AccordionItem>
 
                         {/* SECTION 2: CALLER IDENTITY */}
-                        <AccordionItem value="caller-info" className="border-b border-border bg-zinc-900/40">
-                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
+                        <AccordionItem value="caller-info" className="border-b border-zinc-800/80 bg-purple-950/25 shadow-sm">
+                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-purple-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
-                                    <div className="bg-zinc-800 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ring-1 ring-zinc-700">
+                                    <div className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(147,51,234,0.5)]">
                                         2
                                     </div>
                                     <div>
                                         <div className="text-sm font-black uppercase tracking-tight text-white">
                                             Caller Identity
                                         </div>
-                                        {callerName && (
-                                            <div className="text-[10px] font-bold text-blue-400 uppercase">
+                                        {callerName ? (
+                                            <div className="text-[10px] font-bold text-purple-400 uppercase">
                                                 {callerName} {callerPhone ? `• ${callerPhone}` : ''}
+                                            </div>
+                                        ) : (
+                                            <div className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">
+                                                Identify customer for CRM record
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </AccordionTrigger>
-                            <AccordionContent className="px-5 pb-5 pt-0">
+                            <AccordionContent className="px-5 pb-5 pt-2">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                                     <div className="space-y-1.5">
                                         <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
@@ -572,7 +634,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                             placeholder="Enter Client Name"
                                             value={callerName}
                                             onChange={(e) => setCallerName(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold"
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -581,7 +643,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                             placeholder="555-0199"
                                             value={callerPhone}
                                             onChange={(e) => setCallerPhone(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold"
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
@@ -590,20 +652,29 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                             placeholder="customer@example.com"
                                             value={callerEmail}
                                             onChange={(e) => setCallerEmail(e.target.value)}
-                                            className="h-9 bg-background border-zinc-700 font-bold"
+                                            className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
                                         />
                                     </div>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
 
-                        {/* SECTION 2: LIVE PRICING SCENARIOS */}
-                        <AccordionItem value="live-pricing" className="border-b border-border">
-                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/30">
-                                <span className="text-sm font-black uppercase tracking-tight text-foreground flex items-center gap-3">
-                                    <span className="bg-primary/10 text-primary w-7 h-7 rounded-full flex items-center justify-center text-xs font-black">3</span>
-                                    Live Pricing Scenarios
-                                </span>
+                        {/* SECTION 3: LIVE PRICING SCENARIOS */}
+                        <AccordionItem value="live-pricing" className="border-b border-zinc-800/80 bg-emerald-950/20 shadow-sm">
+                            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-emerald-900/10 transition-colors">
+                                <div className="flex items-center gap-3 w-full text-left">
+                                    <div className="bg-emerald-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                                        3
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-black uppercase tracking-tight text-white">
+                                            Live Pricing Scenarios
+                                        </div>
+                                        <div className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                                            Instant calculation and scripts
+                                        </div>
+                                    </div>
+                                </div>
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-6 pt-2">
                                 <div className="space-y-6">
@@ -621,7 +692,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                             <Input
                                                                 value={scenario.label}
                                                                 onChange={(e) => updateScenario(activeVehicleId, scenario.id, { label: e.target.value })}
-                                                                className="h-8 flex-1 bg-transparent border-none font-black uppercase tracking-widest text-xs p-0 focus-visible:ring-0 placeholder:text-zinc-700"
+                                                                className="h-8 flex-1 bg-transparent border-none font-black uppercase tracking-widest text-xs p-0 focus-visible:ring-0 placeholder:text-zinc-700 text-zinc-100"
                                                                 placeholder="Scenario Label..."
                                                             />
                                                             <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter shrink-0">
@@ -648,7 +719,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                                         `}
                                                                     >
                                                                         <div className="flex-1">
-                                                                            <div className="text-xs font-black uppercase">{pkg.name}</div>
+                                                                            <div className="text-xs font-black uppercase text-zinc-100">{pkg.name}</div>
                                                                             <div className="text-[10px] text-muted-foreground leading-tight">{pkg.description}</div>
                                                                         </div>
                                                                         {scenario.packageId === pkg.id && <CheckCircle2 className="w-4 h-4 text-primary ml-2 shrink-0" />}
@@ -678,7 +749,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                                                                                 updateScenario(activeVehicleId, scenario.id, { addOnIds: next });
                                                                                             }}
                                                                                         />
-                                                                                        <Label htmlFor={`${scenario.id}-${ao.id}`} className="text-[11px] font-bold cursor-pointer group-hover:text-primary transition-colors">{ao.name}</Label>
+                                                                                        <Label htmlFor={`${scenario.id}-${ao.id}`} className="text-[11px] font-bold cursor-pointer group-hover:text-primary transition-colors text-zinc-200">{ao.name}</Label>
                                                                                     </div>
                                                                                     <span className="text-[11px] font-black text-rose-400 tracking-tighter">${ao.pricing[activeVehicle.type]}</span>
                                                                                 </div>
@@ -728,7 +799,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                                             );
                                         })}
 
-                                        <Button variant="outline" onClick={() => addScenario(activeVehicleId)} className="w-full border-dashed py-6 border-zinc-800 hover:border-primary/50 hover:bg-primary/5 group">
+                                        <Button variant="outline" onClick={() => addScenario(activeVehicleId)} className="w-full border-dashed py-6 border-zinc-800 hover:border-primary/50 hover:bg-primary/5 group text-zinc-300">
                                             <Plus className="w-4 h-4 mr-2" /> Add Comparison Scenario
                                         </Button>
 
@@ -778,50 +849,71 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     </Accordion>
                 </div>
 
-                <div className="p-4 border-t border-border bg-muted/30 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+                <div className="p-3 border-t border-border bg-muted/30 flex flex-col gap-3 w-full shrink-0">
+                    {/* Desktop Only Legend info */}
                     <div className="hidden lg:flex gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${callerName ? 'text-primary' : 'text-zinc-700'}`} /> Identity</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.make ? 'text-primary' : 'text-zinc-700'}`} /> Vehicle</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.selectedScenarioId ? 'text-primary' : 'text-zinc-700'}`} /> Selection</div>
                     </div>
 
-                    <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
-                        <Select value={activeVehicle.selectedScenarioId || ""} onValueChange={(s) => updateVehicle(activeVehicleId, { selectedScenarioId: s })}>
-                            <SelectTrigger className="flex-1 sm:w-48 h-10 sm:h-12 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800">
-                                <SelectValue placeholder="CONFIRM SELECTION" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {activeVehicle.scenarios.map(s => (
-                                    <SelectItem key={s.id} value={s.id}>{s.label} (${calculateTotal(s.packageId, s.addOnIds, activeVehicle.type)})</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    {/* Responsive Footer Controls */}
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
+                        {/* Left Side: Select Scenario Dropdown */}
+                        <div className="flex-1 min-w-[160px] md:max-w-xs">
+                            <Select value={activeVehicle.selectedScenarioId || ""} onValueChange={(s) => updateVehicle(activeVehicleId, { selectedScenarioId: s })}>
+                                <SelectTrigger className="w-full h-10 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800 text-zinc-100">
+                                    <SelectValue placeholder="CONFIRM SELECTION" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
+                                    {activeVehicle.scenarios.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.label} (${calculateTotal(s.packageId, s.addOnIds, activeVehicle.type)})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
 
-                        <Button
-                            variant="destructive"
-                            onClick={() => onOpenChange(false)}
-                            className="flex-1 sm:flex-none h-10 sm:h-12 font-black uppercase tracking-widest text-[10px] px-2 sm:px-4"
-                        >
-                            Cancel
-                        </Button>
+                        {/* Right Side: Action Buttons Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0 w-full md:w-auto">
+                            <Button
+                                variant="destructive"
+                                onClick={() => onOpenChange(false)}
+                                className="h-10 font-black uppercase tracking-widest text-[9px] px-3 w-full"
+                            >
+                                Cancel
+                            </Button>
 
-                        <Button
-                            onClick={() => setServiceComparisonOpen(true)}
-                            variant="outline"
-                            className="h-10 sm:h-12 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[10px] hidden sm:flex"
-                        >
-                            <Info className="w-4 h-4 mr-2" /> Show Services
-                        </Button>
+                            <Button
+                                type="button"
+                                onClick={() => setServiceComparisonOpen(true)}
+                                variant="outline"
+                                className="h-10 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 font-black uppercase tracking-widest text-[9px] px-3 w-full"
+                            >
+                                Services
+                            </Button>
 
-                        <Button
-                            onClick={handleHandoff}
-                            disabled={!activeVehicle.selectedScenarioId}
-                            className={`flex-1 sm:flex-none sm:min-w-[150px] h-10 sm:h-12 font-black uppercase tracking-widest text-[11px] transition-all
-                                ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-muted opacity-50'}
-                            `}
-                        >
-                            Confirm Selection <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
+                            <Button
+                                type="button"
+                                onClick={handleSaveProspectOnly}
+                                disabled={!callerName}
+                                className={`h-10 font-black uppercase tracking-widest text-[9px] px-2 w-full border border-blue-500 text-blue-400 bg-blue-500/5 hover:bg-blue-500/15 transition-all
+                                    ${!callerName ? 'opacity-50 cursor-not-allowed' : ''}
+                                `}
+                            >
+                                Save Prospect
+                            </Button>
+
+                            <Button
+                                type="button"
+                                onClick={handleHandoff}
+                                disabled={!activeVehicle.selectedScenarioId}
+                                className={`h-10 font-black uppercase tracking-widest text-[9px] px-3 w-full transition-all
+                                    ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] text-white' : 'bg-muted opacity-50'}
+                                `}
+                            >
+                                Confirm & Go <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </DialogContent>
