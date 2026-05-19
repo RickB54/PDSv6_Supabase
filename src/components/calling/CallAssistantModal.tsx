@@ -478,7 +478,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                 placeholder="Enter Client Name"
                                                 value={callerName}
                                                 onChange={(e) => setCallerName(e.target.value)}
-                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                                className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -487,7 +487,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                 placeholder="555-0199"
                                                 value={callerPhone}
                                                 onChange={(e) => setCallerPhone(e.target.value)}
-                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                                className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
@@ -496,7 +496,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                 placeholder="customer@example.com"
                                                 value={callerEmail}
                                                 onChange={(e) => setCallerEmail(e.target.value)}
-                                                className="h-9 bg-background border-zinc-700 font-bold text-zinc-100"
+                                                className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
                                             />
                                         </div>
                                     </div>
@@ -506,7 +506,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                             placeholder="Type any notes from this call here..."
                                             value={activeVehicle.notes}
                                             onChange={(e) => updateVehicle(activeVehicleId, { notes: e.target.value })}
-                                            className="min-h-[80px] bg-background border-zinc-700 font-bold text-zinc-100 placeholder:text-zinc-600 rounded-lg p-2.5 resize-none"
+                                            className="min-h-[80px] bg-zinc-950 border-zinc-700 font-bold text-zinc-100 placeholder:text-zinc-600 rounded-lg p-2.5 resize-none"
                                         />
                                     </div>
                                 </div>
