@@ -222,14 +222,35 @@ export default function NotificationBell() {
 
   const items = groupedItems;
 
-  // Compute important unread using full AdminAlert objects, not mapped UI items
-  const importantUnreadActual = useMemo(() => {
-    if (isEmployee) return 0; // employee notifications are all treated equally for now
+  // Compute displayUnreadCount and importantUnread using non-dismissed unread alerts
+  const displayUnreadCount = useMemo(() => {
+    if (isFileManagerView) return 0;
+    if (isEmployee) return empUnreadCount;
+    
+    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+    const activeUnreadAlerts = (alerts || []).filter(a => {
+      if (a.read || a.type === 'payroll_due') return false;
+      const isDismissed = dismissedIds.includes(a.id) || 
+                          (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
+                          (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
+      return !isDismissed;
+    });
+    return activeUnreadAlerts.length;
+  }, [alerts, isEmployee, empUnreadCount, isFileManagerView]);
+
+  const importantUnread = useMemo(() => {
+    if (isEmployee || isFileManagerView) return 0;
+    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     const importantTypes = ['exam_reminder', 'admin_message', 'booking_created', 'pdf_saved'];
-    return (alerts || []).filter(a => !a.read && importantTypes.includes(a.type)).length;
-  }, [alerts, isEmployee]);
-  const importantUnread = isFileManagerView ? 0 : importantUnreadActual;
-  const displayUnreadCount = isFileManagerView ? 0 : (isEmployee ? empUnreadCount : (unreadCount || 0));
+    
+    return (alerts || []).filter(a => {
+      if (a.read || !importantTypes.includes(a.type)) return false;
+      const isDismissed = dismissedIds.includes(a.id) || 
+                          (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
+                          (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
+      return !isDismissed;
+    }).length;
+  }, [alerts, isEmployee, isFileManagerView]);
 
   // Background Sync for Online Bookings (ensure Admin is notified of public website activity)
   useEffect(() => {
