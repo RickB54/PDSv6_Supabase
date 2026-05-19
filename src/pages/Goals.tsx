@@ -639,14 +639,54 @@ export default function Goals() {
             const totalTentative = prospectsChartData.reduce((acc, row) => acc + (row.tentative || 0), 0);
             const totalCompleted = prospectsChartData.reduce((acc, row) => acc + (row.completed || 0), 0);
             
+            // Render two beautiful side-by-side visual mini progress cards (saving vertical space and matching web styling!)
+            const pipeCardWidth = (pageWidth - 2 * margin - 10) / 2;
+            
+            // Card 1: Tentative Prospects Pipeline (Amber Theme)
+            pdf.setFillColor(254, 243, 199);
+            pdf.setDrawColor(252, 211, 77);
+            pdf.roundedRect(margin, y, pipeCardWidth, 18, 1, 1, 'FD');
+            
+            pdf.setTextColor(180, 83, 9);
             pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8.5);
-            pdf.text("Pipeline Summary:", margin + 4, y);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(`Total Tentative Prospects (Possible Bookings): ${totalTentative}`, margin + 40, y);
-            y += 5.5;
-            pdf.text(`Total Booked & Completed Prospects (Actual Success): ${totalCompleted}`, margin + 40, y);
-            y += 8;
+            pdf.setFontSize(7.5);
+            pdf.text("TENTATIVE PROSPECTS PIPELINE", margin + 5, y + 5);
+            
+            pdf.setTextColor(30, 41, 59);
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${totalTentative} possible bookings`, margin + 5, y + 11);
+            
+            // Mini progress bar in Card 1
+            pdf.setFillColor(253, 230, 138);
+            pdf.rect(margin + 5, y + 14, pipeCardWidth - 10, 1.5, 'F');
+            pdf.setFillColor(245, 158, 11);
+            const tentativeBarWidth = Math.min(pipeCardWidth - 10, (totalTentative / 10) * (pipeCardWidth - 10));
+            pdf.rect(margin + 5, y + 14, tentativeBarWidth || 2, 1.5, 'F');
+            
+            // Card 2: Booked & Completed Prospects (Emerald Theme)
+            pdf.setFillColor(209, 250, 229);
+            pdf.setDrawColor(167, 243, 208);
+            pdf.roundedRect(margin + pipeCardWidth + 10, y, pipeCardWidth, 18, 1, 1, 'FD');
+            
+            pdf.setTextColor(4, 120, 87);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7.5);
+            pdf.text("BOOKED & COMPLETED PROSPECTS", margin + pipeCardWidth + 15, y + 5);
+            
+            pdf.setTextColor(30, 41, 59);
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${totalCompleted} successful appointments`, margin + pipeCardWidth + 15, y + 11);
+            
+            // Mini progress bar in Card 2
+            pdf.setFillColor(167, 243, 208);
+            pdf.rect(margin + pipeCardWidth + 15, y + 14, pipeCardWidth - 10, 1.5, 'F');
+            pdf.setFillColor(16, 185, 129);
+            const completedBarWidth = Math.min(pipeCardWidth - 10, (totalCompleted / 10) * (pipeCardWidth - 10));
+            pdf.rect(margin + pipeCardWidth + 15, y + 14, completedBarWidth || 2, 1.5, 'F');
+            
+            y += 24;
 
             // Footer
             pdf.setFontSize(8);
