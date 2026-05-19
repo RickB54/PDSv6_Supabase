@@ -29,12 +29,16 @@ export default function NotificationBell() {
   const isFileManagerView = location.pathname.startsWith('/file-manager');
 
   const sendDesktopNotification = (title: string, body: string) => {
-    if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, {
-        body,
-        icon: '/favicon.ico',
-        silent: true
-      });
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, {
+          body,
+          icon: '/favicon.ico',
+          silent: true
+        });
+      }
+    } catch (err) {
+      console.warn("[NotificationBell] Notification constructor failed (expected on mobile):", err);
     }
   };
 
