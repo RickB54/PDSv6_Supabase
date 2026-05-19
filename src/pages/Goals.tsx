@@ -491,50 +491,48 @@ export default function Goals() {
                 pdf.setTextColor(0, 0, 0);
             };
 
-            // Styled Stat Cards in PDF with visual progress bars
-            const drawCard = (title: string, actual: string, target: string, percent: number, color: number[], iconText: string) => {
+            // Styled Stat Cards in PDF with visual progress bars (Side-by-Side 3-column layout)
+            const drawCard = (x: number, width: number, title: string, actual: string, target: string, percent: number, color: number[], iconText: string) => {
                 pdf.setFillColor(248, 250, 252);
                 pdf.setDrawColor(226, 232, 240);
-                pdf.roundedRect(margin, y, pageWidth - 2 * margin, 28, 2, 2, 'FD');
+                pdf.roundedRect(x, y, width, 24, 1.5, 1.5, 'FD');
 
                 pdf.setTextColor(100, 116, 139);
-                pdf.setFontSize(8);
+                pdf.setFontSize(6.5);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(title.toUpperCase(), margin + 6, y + 7);
+                pdf.text(title.toUpperCase(), x + 4, y + 5);
 
                 pdf.setFillColor(color[0], color[1], color[2]);
-                pdf.roundedRect(pageWidth - margin - 14, y + 4, 8, 8, 1.5, 1.5, 'F');
+                pdf.roundedRect(x + width - 9, y + 2, 6, 6, 1, 1, 'F');
                 pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(9);
+                pdf.setFontSize(7.5);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(iconText, pageWidth - margin - 11.5, y + 9.5);
+                pdf.text(iconText, x + width - 7.5, y + 6.2);
 
                 pdf.setTextColor(30, 41, 59);
-                pdf.setFontSize(16);
+                pdf.setFontSize(12);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text(actual, margin + 6, y + 16);
+                pdf.text(actual, x + 4, y + 13);
 
                 pdf.setTextColor(148, 163, 184);
-                pdf.setFontSize(10);
+                pdf.setFontSize(8);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(`/ ${target}`, margin + 6 + pdf.getTextWidth(actual) + 2, y + 16);
+                pdf.text(`/ ${target}`, x + 4 + pdf.getTextWidth(actual) + 1.5, y + 13);
 
                 const isExceeded = percent >= 100;
                 pdf.setTextColor(isExceeded ? 16 : color[0], isExceeded ? 124 : color[1], isExceeded ? 65 : color[2]);
-                pdf.setFontSize(8);
+                pdf.setFontSize(6.5);
                 pdf.setFont('helvetica', 'bold');
-                const percentText = `${percent}% COMPLETE ${isExceeded ? '★ GOAL MET' : ''}`;
-                pdf.text(percentText, pageWidth - margin - pdf.getTextWidth(percentText) - 6, y + 16);
+                const percentText = `${percent}%`;
+                pdf.text(percentText, x + width - pdf.getTextWidth(percentText) - 4, y + 13);
 
-                // Bar
+                // Progress Bar
                 pdf.setFillColor(230, 235, 240);
-                pdf.rect(margin + 6, y + 21, pageWidth - 2 * margin - 12, 2, 'F');
+                pdf.rect(x + 4, y + 18, width - 8, 1.5, 'F');
 
                 pdf.setFillColor(isExceeded ? 16 : color[0], isExceeded ? 124 : color[1], isExceeded ? 65 : color[2]);
-                const fillWidth = (Math.min(100, percent) / 100) * (pageWidth - 2 * margin - 12);
-                pdf.rect(margin + 6, y + 21, fillWidth, 2, 'F');
-
-                y += 33;
+                const fillWidth = (Math.min(100, percent) / 100) * (width - 8);
+                pdf.rect(x + 4, y + 18, fillWidth, 1.5, 'F');
             };
 
             // Branding Header
@@ -558,7 +556,7 @@ export default function Goals() {
                 rangeDetails = ` (${format(dateRange.from, 'MMM d, yyyy')}${dateRange.to ? ' - ' + format(dateRange.to, 'MMM d, yyyy') : ''})`;
             }
             pdf.text(`Report Period: ${viewText}${rangeDetails} | Generated dynamically matching Accounting ledger`, margin, y);
-            y += 10;
+            y += 8;
 
             // SECTION 1: DUST CARD GRID
             addSection("Goal Achievement Dashboard", [59, 130, 246]);
@@ -567,16 +565,19 @@ export default function Goals() {
             const servPercent = periodStats.targets.services > 0 ? Math.round((periodStats.services / periodStats.targets.services) * 100) : 0;
             const addonPercent = periodStats.targets.addons > 0 ? Math.round((periodStats.addons / periodStats.targets.addons) * 100) : 0;
 
-            drawCard("Revenue Performance", `$${periodStats.revenue.toLocaleString()}`, `$${periodStats.targets.revenue.toLocaleString()}`, revPercent, [59, 130, 246], "$");
-            drawCard("Services Volume", `${periodStats.services}`, `${periodStats.targets.services}`, servPercent, [168, 85, 247], "#");
-            drawCard("Add-on Upsells", `${periodStats.addons}`, `${periodStats.targets.addons}`, addonPercent, [249, 115, 22], "+");
+            // Render Stat Cards Side-by-Side to save enormous vertical space (71mm saved!)
+            const cardWidth = (pageWidth - 2 * margin - 10) / 3;
+            drawCard(margin, cardWidth, "Revenue Performance", `$${periodStats.revenue.toLocaleString()}`, `$${periodStats.targets.revenue.toLocaleString()}`, revPercent, [59, 130, 246], "$");
+            drawCard(margin + cardWidth + 5, cardWidth, "Services Volume", `${periodStats.services}`, `${periodStats.targets.services}`, servPercent, [168, 85, 247], "#");
+            drawCard(margin + 2 * (cardWidth + 5), cardWidth, "Add-on Upsells", `${periodStats.addons}`, `${periodStats.targets.addons}`, addonPercent, [249, 115, 22], "+");
+
+            y += 27;
 
             // SECTION 2: METRICS
-            y += 3;
             addSection("Performance & Efficiency Metrics", [168, 85, 247]);
 
             pdf.setFillColor(250, 250, 250);
-            pdf.roundedRect(margin, y, pageWidth - 2 * margin, 20, 1.5, 1.5, 'F');
+            pdf.roundedRect(margin, y, pageWidth - 2 * margin, 18, 1.5, 1.5, 'F');
 
             const avgTicketVal = periodStats.services > 0 ? (periodStats.revenue / periodStats.services).toFixed(0) : '0';
             
@@ -584,51 +585,53 @@ export default function Goals() {
             pdf.setFontSize(7.5);
             pdf.setFont('helvetica', 'normal');
 
-            pdf.text("GROWTH STATUS", margin + 6, y + 6);
-            pdf.text("TARGET SUCCESS", margin + 70, y + 6);
-            pdf.text("AVERAGE TICKET VALUE", margin + 130, y + 6);
+            pdf.text("GROWTH STATUS", margin + 6, y + 5);
+            pdf.text("TARGET SUCCESS", margin + 70, y + 5);
+            pdf.text("AVERAGE TICKET VALUE", margin + 130, y + 5);
 
             pdf.setTextColor(30, 41, 59);
-            pdf.setFontSize(10);
+            pdf.setFontSize(9.5);
             pdf.setFont('helvetica', 'bold');
-            pdf.text("+12.4% vs last period", margin + 6, y + 13);
-            pdf.text("94% Target Success", margin + 70, y + 13);
-            pdf.text(`$${avgTicketVal} per service`, margin + 130, y + 13);
+            pdf.text("+12.4% vs last period", margin + 6, y + 12);
+            pdf.text("94% Target Success", margin + 70, y + 12);
+            pdf.text(`$${avgTicketVal} per service`, margin + 130, y + 12);
 
-            y += 28;
+            y += 24;
 
             // SECTION 3: TREND ANALYSIS
             addSection("Daily Trend Analysis & Log", [249, 115, 22]);
 
             // Table Header
             pdf.setFillColor(241, 245, 249);
-            pdf.rect(margin, y, pageWidth - 2 * margin, 7, 'F');
+            pdf.rect(margin, y, pageWidth - 2 * margin, 6.5, 'F');
             pdf.setTextColor(100, 116, 139);
-            pdf.setFontSize(8);
+            pdf.setFontSize(7.5);
             pdf.setFont('helvetica', 'bold');
-            pdf.text("Date/Day", margin + 4, y + 5);
-            pdf.text("Revenue", margin + 70, y + 5);
-            pdf.text("Services Completed", margin + 130, y + 5);
-            y += 7;
+            pdf.text("Date/Day", margin + 4, y + 4.5);
+            pdf.text("Revenue", margin + 70, y + 4.5);
+            pdf.text("Services Completed", margin + 130, y + 4.5);
+            y += 6.5;
 
-            // Table Rows
+            // Table Rows (Draw up to 6 rows to perfectly optimize height for single-page printing)
             pdf.setFont('helvetica', 'normal');
             pdf.setTextColor(51, 65, 85);
-            pdf.setFontSize(8);
+            pdf.setFontSize(7.5);
 
-            const rowsToDraw = chartData.slice(0, 10);
+            const rowsToDraw = chartData.slice(0, 6);
             rowsToDraw.forEach((row, idx) => {
                 if (idx % 2 === 0) {
                     pdf.setFillColor(248, 250, 252);
-                    pdf.rect(margin, y, pageWidth - 2 * margin, 6.5, 'F');
+                    pdf.rect(margin, y, pageWidth - 2 * margin, 5.5, 'F');
                 }
                 
-                pdf.text(row.name, margin + 4, y + 4.5);
-                pdf.text(`$${row.revenue.toLocaleString()}`, margin + 70, y + 4.5);
-                pdf.text(`${row.services} services`, margin + 130, y + 4.5);
+                pdf.text(row.name, margin + 4, y + 4);
+                pdf.text(`$${row.revenue.toLocaleString()}`, margin + 70, y + 4);
+                pdf.text(`${row.services} services`, margin + 130, y + 4);
                 
-                y += 6.5;
+                y += 5.5;
             });
+
+            y += 2;
 
             // SECTION 4: PROSPECTS & PIPELINE ANALYTICS
             addSection("Prospects & Pipeline Analytics", [249, 115, 22]);
