@@ -590,6 +590,7 @@ export default function BookingsPage() {
     const vehicleType = params.get('vehicleType');
     const vehicleColor = params.get('vehicleColor');
     const address = params.get('address');
+    const notes = params.get('notes');
 
     if (shouldAdd) {
       setFormData(prev => ({
@@ -603,7 +604,8 @@ export default function BookingsPage() {
         vehicleMake: vehicleMake ? decodeURIComponent(vehicleMake) : prev.vehicleMake,
         vehicleModel: vehicleModel ? decodeURIComponent(vehicleModel) : prev.vehicleModel,
         vehicleColor: vehicleColor ? decodeURIComponent(vehicleColor) : prev.vehicleColor,
-        vehicle: vehicleType ? decodeURIComponent(vehicleType) : prev.vehicle
+        vehicle: vehicleType ? decodeURIComponent(vehicleType) : prev.vehicle,
+        notes: notes ? decodeURIComponent(notes) : prev.notes
       }));
       setSelectedDate(new Date());
       setIsAddModalOpen(true);

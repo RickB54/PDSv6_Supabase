@@ -415,6 +415,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     if (vMake) params.set('vehicleMake', vMake);
     if (vModel) params.set('vehicleModel', vModel);
     if (vType) params.set('vehicleType', vType);
+    if (form.notes) params.set('notes', form.notes);
 
     window.location.href = `/bookings?${params.toString()}`;
   };

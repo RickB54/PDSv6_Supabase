@@ -886,7 +886,7 @@ export default function Prospects() {
                               </Link>
                             </Button>
                             <Button asChild variant="outline" size="sm" className="h-9 border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300">
-                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Appointment</Link>
+                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}&notes=${encodeURIComponent(customer.notes || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Appointment</Link>
                             </Button>
                           </>
                         )}
@@ -1300,7 +1300,7 @@ export default function Prospects() {
                                                       className="h-6 text-[9px] font-black text-emerald-400 hover:text-white border-emerald-500/30 hover:bg-emerald-500 px-2 rounded-lg ml-1"
                                                       onClick={(e) => {
                                                         e.stopPropagation();
-                                                        navigate(`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}`);
+                                                        navigate(`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&notes=${encodeURIComponent(customer.notes || '')}`);
                                                       }}
                                                       title="Convert to Full Customer"
                                                     >
@@ -1556,7 +1556,7 @@ export default function Prospects() {
                             size="sm" 
                             className="h-8 px-3 text-[10px] font-black border-purple-500/30 text-purple-400 bg-purple-500/10"
                           >
-                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}`}>Convert</Link>
+                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&notes=${encodeURIComponent(c.notes || '')}`}>Convert</Link>
                           </Button>
                         )}
                         <Button 

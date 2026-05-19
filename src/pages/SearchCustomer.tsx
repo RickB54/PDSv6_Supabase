@@ -773,7 +773,7 @@ const SearchCustomer = () => {
                               </Link>
                             </Button>
                             <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
-                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
+                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}&notes=${encodeURIComponent(customer.notes || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
                             </Button>
                           </>
                         )}
