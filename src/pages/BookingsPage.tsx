@@ -407,6 +407,30 @@ export default function BookingsPage() {
     return total;
   }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons]);
 
+  const getEventPrice = useCallback((event: any) => {
+    if (event.type !== 'booking') return 0;
+    const booking = items.find(i => i.id === event.id) || event;
+    const title = booking.title || booking.service_package;
+    if (!title) return 0;
+    
+    const vType = mapToServiceVehicleType(booking.vehicle || booking.vehicleType);
+    const svc = allServices.find(s => s.name === title);
+    let total = svc ? getServicePrice(svc.id, vType) : 0;
+    
+    const addons = booking.addons || booking.add_ons || [];
+    const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
+    
+    addonsArray.forEach((a: string) => {
+      const canonical = getCanonicalAddonName(a);
+      const addonDef = allAddons.find(ad => ad.name === canonical);
+      if (addonDef) {
+        total += getAddOnPrice(addonDef.id, vType);
+      }
+    });
+    
+    return total;
+  }, [items, allServices, allAddons]);
+
   const handleArchiveToggle = (booking: Booking) => {
     update(booking.id, { isArchived: !booking.isArchived });
     toast.success(booking.isArchived ? "Booking restored" : "Booking archived");
@@ -3350,8 +3374,25 @@ export default function BookingsPage() {
                                       >
                                         <div className="flex justify-between items-start">
                                           <div>
-                                            <div className="font-medium text-sm">
-                                              {event.title}
+                                            <div className="font-medium text-sm flex items-center flex-wrap gap-2">
+                                              <span>{event.title}</span>
+                                              {event.type === 'booking' && (() => {
+                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '');
+                                                const svcName = event.title || event.service_package || '';
+                                                const svc = allServices.find(s => s.name === svcName || s.id === svcName);
+                                                const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
+                                                const total = getEventPrice(event);
+                                                return (
+                                                  <div className="flex flex-wrap gap-1 items-center">
+                                                    <Badge variant="outline" className="text-[10px] font-black uppercase text-green-400 bg-green-500/10 border-green-500/20 px-1.5 py-0 h-4">
+                                                      Total: ${total}
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-800/40 border-zinc-700/50 px-1.5 py-0 h-4">
+                                                      Service: ${basePrice}
+                                                    </Badge>
+                                                  </div>
+                                                );
+                                              })()}
                                               {(() => {
                                                 const rawAddons = event.addons || event.add_ons || [];
                                                 const addonsArray = Array.isArray(rawAddons) ? rawAddons : 
@@ -3359,13 +3400,20 @@ export default function BookingsPage() {
                                                 
                                                 if (addonsArray.length === 0) return null;
 
+                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '');
+
                                                 return (
                                                   <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1">
-                                                    {addonsArray.map((a: string, i: number) => (
-                                                      <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
-                                                        {a}
-                                                      </Badge>
-                                                    ))}
+                                                    {addonsArray.map((a: string, i: number) => {
+                                                      const canonical = getCanonicalAddonName(a);
+                                                      const addonDef = allAddons.find(ad => ad.name === canonical);
+                                                      const addonPrice = addonDef ? getAddOnPrice(addonDef.id, vType) : 0;
+                                                      return (
+                                                        <Badge key={i} variant="outline" className="text-[9px] font-black uppercase px-2 py-0 h-4 bg-blue-500/10 text-blue-400 border-blue-500/20">
+                                                          {a} (${addonPrice})
+                                                        </Badge>
+                                                      );
+                                                    })}
                                                   </div>
                                                 );
                                               })()}
@@ -3397,7 +3445,14 @@ export default function BookingsPage() {
                                           </div>
                                         </div>
                                         
-                                        <div className="flex items-center gap-3 mt-1">
+                                        {event.type === 'booking' && (items.find(i => i.id === event.id)?.notes || event.notes) && (
+                                          <div className="mt-2 p-2 bg-zinc-900/50 border border-zinc-800 rounded-md">
+                                            <div className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Booking Notes</div>
+                                            <div className="text-xs text-zinc-400 whitespace-pre-wrap">{items.find(i => i.id === event.id)?.notes || event.notes}</div>
+                                          </div>
+                                        )}
+                                        
+                                        <div className="flex items-center gap-3 mt-2">
                                             <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                                                 Source: <span className="text-purple-300 font-medium">{('source_origin' in event ? (event as any).source_origin : (event.source || 'Manual Entry'))}</span>

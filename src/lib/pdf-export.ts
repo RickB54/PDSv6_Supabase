@@ -1,6 +1,20 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { servicePackages, addOns, getServicePrice, getAddOnPrice, getCanonicalAddonName, type VehicleType } from './services';
+
+const mapToServiceVehicleType = (type: string = ""): VehicleType => {
+  const t = type.toLowerCase();
+  if (t.includes('compact') || t.includes('sedan')) return 'compact';
+  if (t.includes('mid') || t.includes('suv')) {
+    if (t.includes('large') || t.includes('truck') || t.includes('van')) return 'truck';
+    return 'midsize';
+  }
+  if (t.includes('truck') || t.includes('van') || t.includes('large')) return 'truck';
+  if (t.includes('luxury')) return 'luxury';
+  return 'compact'; // default
+};
+
 
 const getBase64ImageFromUrl = async (url: string): Promise<string | null> => {
     try {
@@ -201,14 +215,30 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
     return note;
   };
 
-  bookings.forEach(b => ledger.push({
-    date: b.date || b.created_at,
-    src: 'BOOKING',
-    act: b.service || 'Service',
-    tech: `STATUS: ${b.status?.toUpperCase()}\nVEHICLE: ${b.vehicleYear} ${b.vehicleMake} ${b.vehicleModel}\nADDONS: ${Array.isArray(b.addons) ? b.addons.join(', ') : (b.addons || 'None')}`,
-    val: `$${(b.price || 0).toFixed(2)}`,
-    note: sanitize(b.notes)
-  }));
+  bookings.forEach(b => {
+    const vType = mapToServiceVehicleType(b.vehicle || b.vehicleType || '');
+    const svcName = b.service || b.service_package || '';
+    const svc = servicePackages.find(s => s.name === svcName || s.id === svcName);
+    const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
+
+    const addons = b.addons || b.add_ons || [];
+    const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
+    const addonBreakdown = addonsArray.map((a: string) => {
+      const canonical = getCanonicalAddonName(a);
+      const addonDef = addOns.find(ad => ad.name === canonical);
+      const price = addonDef ? getAddOnPrice(addonDef.id, vType) : 0;
+      return `${canonical} ($${price})`;
+    });
+
+    ledger.push({
+      date: b.date || b.created_at,
+      src: 'BOOKING',
+      act: b.service || 'Service',
+      tech: `STATUS: ${b.status?.toUpperCase()}\nVEHICLE: ${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}\nBASE SERVICE: $${basePrice.toFixed(2)}\nADD-ONS: ${addonBreakdown.length > 0 ? addonBreakdown.join(', ') : 'None'}`,
+      val: `$${(b.price || 0).toFixed(2)}`,
+      note: sanitize(b.notes)
+    });
+  });
 
   invoices.forEach(i => ledger.push({
     date: i.date || i.created_at,

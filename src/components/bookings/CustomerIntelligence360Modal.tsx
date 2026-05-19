@@ -69,6 +69,19 @@ import { exportCustomerHistoryPDF } from "@/lib/pdf-export";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType, getCanonicalAddonName } from "@/lib/services";
+
+const mapToServiceVehicleType = (type: string = ""): VehicleType => {
+  const t = type.toLowerCase();
+  if (t.includes('compact') || t.includes('sedan')) return 'compact';
+  if (t.includes('mid') || t.includes('suv')) {
+    if (t.includes('large') || t.includes('truck') || t.includes('van')) return 'truck';
+    return 'midsize';
+  }
+  if (t.includes('truck') || t.includes('van') || t.includes('large')) return 'truck';
+  if (t.includes('luxury')) return 'luxury';
+  return 'compact'; // default
+};
 
 interface CustomerIntelligence360ModalProps {
   customers: any[];
@@ -144,15 +157,35 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
     if (!historyData) return [];
     const items: any[] = [];
     
-    historyData.bookings.forEach((b: any) => items.push({
-      date: b.date || b.created_at,
-      type: 'BOOKING',
-      activity: b.service || 'Service',
-      details: `${b.vehicleYear} ${b.vehicleMake} ${b.vehicleModel}${b.vehicleColor ? ` (${b.vehicleColor})` : ''}`,
-      value: b.price || 0,
-      status: b.status,
-      raw: b
-    }));
+    historyData.bookings.forEach((b: any) => {
+      const vType = mapToServiceVehicleType(b.vehicle || b.vehicleType || '');
+      const svcName = b.service || b.service_package || '';
+      const svc = servicePackages.find(s => s.name === svcName || s.id === svcName);
+      const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
+
+      const addons = b.addons || b.add_ons || [];
+      const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
+      const addonBreakdown = addonsArray.map((a: string) => {
+        const canonical = getCanonicalAddonName(a);
+        const addonDef = addOns.find(ad => ad.name === canonical);
+        const price = addonDef ? getAddOnPrice(addonDef.id, vType) : 0;
+        return `${canonical} ($${price})`;
+      });
+
+      items.push({
+        date: b.date || b.created_at,
+        type: 'BOOKING',
+        activity: b.service || 'Service',
+        details: {
+          vehicle: `${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}${b.vehicleColor ? ` (${b.vehicleColor})` : ''}`.trim() || 'N/A',
+          basePrice: basePrice.toFixed(2),
+          addons: addonBreakdown
+        },
+        value: b.price || 0,
+        status: b.status,
+        raw: b
+      });
+    });
 
     historyData.invoices.forEach((i: any) => items.push({
       date: i.date || i.created_at,
@@ -468,7 +501,23 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                               </Badge>
                             </TableCell>
                             <TableCell className="font-bold text-zinc-200">{item.activity}</TableCell>
-                            <TableCell className="text-zinc-400 text-[10px] max-w-[200px] truncate">{item.details}</TableCell>
+                             <TableCell className="text-zinc-400 text-[10px]">
+                               {item.type === 'BOOKING' ? (
+                                 <div className="space-y-1 py-1">
+                                   <div className="font-semibold text-zinc-300">{item.details.vehicle}</div>
+                                   <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[9px]">
+                                     <span className="text-zinc-500">Base: <strong className="text-emerald-500/80">${item.details.basePrice}</strong></span>
+                                     {item.details.addons.length > 0 && (
+                                       <span className="text-zinc-500">
+                                         Add-ons: <strong className="text-blue-400/80">{item.details.addons.join(', ')}</strong>
+                                       </span>
+                                     )}
+                                   </div>
+                                 </div>
+                               ) : (
+                                 item.details
+                               )}
+                             </TableCell>
                             <TableCell className="text-right font-mono font-bold text-zinc-100">
                               {item.value !== null ? `$${item.value.toFixed(2)}` : '—'}
                             </TableCell>

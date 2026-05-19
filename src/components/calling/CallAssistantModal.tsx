@@ -149,75 +149,97 @@ const BRANDED_PACKAGES = [
     },
 ];
 
+export function createEmptyVehicle(): Vehicle {
+    const vid = Date.now().toString();
+    return {
+        id: vid,
+        year: "",
+        make: "",
+        model: "",
+        type: "midsize",
+        condition: "moderate",
+        dailyDriver: true,
+        needs: { interior: false, exterior: false, both: true },
+        notes: "",
+        garaged: "",
+        mileage: "",
+        reasonForDetail: "",
+        detailHistory: "",
+        interiorCondition: "normal",
+        seatMaterial: "leather",
+        paintCondition: "good",
+        mainGoal: "full",
+        scenarios: [
+            { id: `s1-${vid}`, label: "Scenario A: Full Detail", packageId: "prime-essential-full", addOnIds: [] },
+            { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: [] },
+            { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
+        ],
+        selectedScenarioId: null,
+        selectedServiceId: null
+    };
+}
+
 export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    // Call state
-    const [vehicles, setVehicles] = useState<Vehicle[]>([createEmptyVehicle()]);
-    const [activeVehicleId, setActiveVehicleId] = useState<string>(vehicles[0].id);
-    const [showAutoClassify, setShowAutoClassify] = useState(false);
-
     // Caller Identity State
-    const [callerName, setCallerName] = useState("");
-    const [callerPhone, setCallerPhone] = useState("");
-    const [callerEmail, setCallerEmail] = useState("");
+    const [callerName, setCallerName] = useState(() => localStorage.getItem("phone_assistant_draft_name") || "");
+    const [callerPhone, setCallerPhone] = useState(() => localStorage.getItem("phone_assistant_draft_phone") || "");
+    const [callerEmail, setCallerEmail] = useState(() => localStorage.getItem("phone_assistant_draft_email") || "");
+
+    // Call state
+    const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
+        const saved = localStorage.getItem("phone_assistant_draft_vehicles");
+        if (saved) {
+            try { return JSON.parse(saved); } catch(e) {}
+        }
+        return [createEmptyVehicle()];
+    });
+    
+    const [activeVehicleId, setActiveVehicleId] = useState<string>(() => {
+        const saved = localStorage.getItem("phone_assistant_draft_active_id");
+        if (saved) return saved;
+        return vehicles[0]?.id || "";
+    });
+
+    const [showAutoClassify, setShowAutoClassify] = useState(false);
 
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [unselectedFields, setUnselectedFields] = useState<string[]>([]);
 
+    useEffect(() => { localStorage.setItem("phone_assistant_draft_name", callerName); }, [callerName]);
+    useEffect(() => { localStorage.setItem("phone_assistant_draft_phone", callerPhone); }, [callerPhone]);
+    useEffect(() => { localStorage.setItem("phone_assistant_draft_email", callerEmail); }, [callerEmail]);
+    useEffect(() => { localStorage.setItem("phone_assistant_draft_vehicles", JSON.stringify(vehicles)); }, [vehicles]);
+    useEffect(() => { localStorage.setItem("phone_assistant_draft_active_id", activeVehicleId); }, [activeVehicleId]);
+
+    const clearDraft = () => {
+        localStorage.removeItem("phone_assistant_draft_name");
+        localStorage.removeItem("phone_assistant_draft_phone");
+        localStorage.removeItem("phone_assistant_draft_email");
+        localStorage.removeItem("phone_assistant_draft_vehicles");
+        localStorage.removeItem("phone_assistant_draft_active_id");
+        const v = createEmptyVehicle();
+        setCallerName("");
+        setCallerPhone("");
+        setCallerEmail("");
+        setVehicles([v]);
+        setActiveVehicleId(v.id);
+    };
+
     const handleCloseAttempt = (openState: boolean) => {
         if (!openState) {
-            const unselected: string[] = [];
-            if (!callerName.trim()) unselected.push("Caller Name");
-            if (!callerPhone.trim()) unselected.push("Caller Phone");
-            if (!callerEmail.trim()) unselected.push("Caller Email");
-            
-            const firstVehicle = vehicles[0];
-            if (!firstVehicle.year.trim()) unselected.push("Vehicle Year");
-            if (!firstVehicle.make.trim()) unselected.push("Vehicle Make");
-            if (!firstVehicle.model.trim()) unselected.push("Vehicle Model");
-            if (!firstVehicle.selectedServiceId) unselected.push("Detailing Service");
-            
-            if (unselected.length > 0) {
-                setUnselectedFields(unselected);
+            const hasData = callerName.trim() || callerPhone.trim() || callerEmail.trim() || 
+                            vehicles[0].year.trim() || vehicles[0].make.trim() || vehicles[0].model.trim() || vehicles[0].notes.trim();
+            if (hasData) {
                 setShowCloseWarning(true);
                 return;
             }
         }
         onOpenChange(openState);
     };
-
-    function createEmptyVehicle(): Vehicle {
-        const vid = Date.now().toString();
-        return {
-            id: vid,
-            year: "",
-            make: "",
-            model: "",
-            type: "midsize",
-            condition: "moderate",
-            dailyDriver: true,
-            needs: { interior: false, exterior: false, both: true },
-            notes: "",
-            garaged: "",
-            mileage: "",
-            reasonForDetail: "",
-            detailHistory: "",
-            interiorCondition: "normal",
-            seatMaterial: "leather",
-            paintCondition: "good",
-            mainGoal: "full",
-            scenarios: [
-                { id: `s1-${vid}`, label: "Scenario A: Full Detail", packageId: "prime-essential-full", addOnIds: [] },
-                { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: [] },
-                { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
-            ],
-            selectedScenarioId: null,
-            selectedServiceId: null
-        };
-    }
 
     const addVehicle = () => {
         const v = createEmptyVehicle();
@@ -349,6 +371,7 @@ ${firstVehicle.notes || ''}`.trim(),
         // Store in localStorage for the Eval page to pick up if it wants
         localStorage.setItem("call_assistant_handoff", JSON.stringify(data));
 
+        clearDraft();
         onOpenChange(false);
         navigate("/client-evaluation");
         toast({ title: "Handoff Successful", description: "Call data passed to Client Evaluation." });
@@ -412,6 +435,7 @@ ${firstVehicle.notes || ''}`.trim(),
                 title: "Prospect Saved",
                 description: `${callerName} recorded successfully under Prospects list.`,
             });
+            clearDraft();
             onOpenChange(false);
         } catch (err) {
             console.error("Failed to save prospect:", err);
@@ -1056,36 +1080,52 @@ ${firstVehicle.notes || ''}`.trim(),
             />
             <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
             <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
-                <AlertDialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-black text-rose-500 uppercase tracking-tighter">
-                            Warning: Unselected Fields
+                <AlertDialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 max-w-md p-6">
+                    <AlertDialogHeader className="mb-2">
+                        <AlertDialogTitle className="text-xl font-black text-rose-500 uppercase tracking-tighter flex items-center gap-2">
+                            <X className="w-5 h-5" /> Close Call Session?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-zinc-400 text-xs font-bold uppercase leading-relaxed pt-2">
-                            The following optional fields have not been filled or selected:
-                            <ul className="list-disc pl-5 mt-2 space-y-1 text-rose-400/80 font-semibold normal-case">
-                                {unselectedFields.map((field, idx) => (
-                                    <li key={idx}>{field}</li>
-                                ))}
-                            </ul>
-                            <div className="mt-4 text-zinc-300 font-bold uppercase tracking-tight">
-                                Are you sure you want to cancel and lose this session?
-                            </div>
+                            You have unsaved changes in this draft. What would you like to do?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="mt-4">
-                        <AlertDialogCancel className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 uppercase font-black text-[10px] tracking-widest">
-                            Keep Editing
-                        </AlertDialogCancel>
-                        <AlertDialogAction 
+                    <div className="flex flex-col gap-2 mt-4">
+                        <Button 
+                            variant="outline" 
+                            className="w-full justify-start h-12 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase font-black text-xs tracking-widest"
+                            onClick={() => {
+                                setShowCloseWarning(false);
+                                handleSaveProspectOnly();
+                            }}
+                        >
+                            <Plus className="w-4 h-4 mr-3" /> Save To Prospects
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            className="w-full justify-start h-12 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-700 uppercase font-black text-xs tracking-widest"
                             onClick={() => {
                                 setShowCloseWarning(false);
                                 onOpenChange(false);
                             }}
-                            className="bg-rose-600 hover:bg-rose-700 text-white uppercase font-black text-[10px] tracking-widest"
                         >
-                            Cancel Session
-                        </AlertDialogAction>
+                            <FileText className="w-4 h-4 mr-3" /> Keep Draft & Close
+                        </Button>
+                        <Button 
+                            variant="destructive" 
+                            className="w-full justify-start h-12 uppercase font-black text-xs tracking-widest"
+                            onClick={() => {
+                                setShowCloseWarning(false);
+                                clearDraft();
+                                onOpenChange(false);
+                            }}
+                        >
+                            <Trash2 className="w-4 h-4 mr-3" /> Disregard Caller
+                        </Button>
+                    </div>
+                    <AlertDialogFooter className="mt-4 pt-4 border-t border-zinc-800/50">
+                        <AlertDialogCancel className="w-full bg-transparent border-none hover:bg-zinc-900 text-zinc-500 uppercase font-black text-[10px] tracking-widest">
+                            Cancel / Keep Editing
+                        </AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
