@@ -160,7 +160,14 @@ export default function NotificationBell() {
       return sorted.slice(0, 10).map(i => ({ ...i, group: null, shortTitle: i.title }));
     }
 
+    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     const sortedAlerts = [...(alerts || [])]
+      .filter(a => {
+        const isDismissed = dismissedIds.includes(a.id) || 
+                            (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
+                            (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
+        return !isDismissed;
+      })
       .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
 
     const groups: Record<string, any[]> = {};
@@ -246,10 +253,12 @@ export default function NotificationBell() {
             }
             
             // SYNCHRONIZED DEDUPLICATION:
-            // Check if this specific booking record has already been notified globally
+            // Check if this specific booking record has already been notified globally or locally dismissed
             const isAlreadyNotifiedGlobally = meta.notified === true;
+            const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+            const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(b.id);
             
-            if (!isAlreadyNotifiedGlobally) {
+            if (!isAlreadyNotifiedGlobally && !isLocallyDismissed) {
               const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
               const syncId = `sync_book_${b.id}`;
               let activeCustomerId = b.customer_id;
@@ -382,7 +391,14 @@ export default function NotificationBell() {
                             className="text-[10px] text-zinc-500 hover:text-red-400"
                             onClick={(e) => {
                               e.preventDefault(); e.stopPropagation();
-                              try { useAlertsStore.getState().dismiss(alert.id); } catch { }
+                              try { 
+                                const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+                                dismissed.push(alert.id);
+                                if (alert.payload?.bookingId) dismissed.push(String(alert.payload.bookingId));
+                                if (alert.payload?.recordId) dismissed.push(String(alert.payload.recordId));
+                                localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
+                                useAlertsStore.getState().dismiss(alert.id); 
+                              } catch { }
                             }}
                           >
                             Dismiss
@@ -418,7 +434,14 @@ export default function NotificationBell() {
                       className="text-xs text-muted-foreground hover:text-red-400 px-2 py-1 rounded hover:bg-zinc-900 transition-colors"
                       onClick={(e) => {
                         e.preventDefault(); e.stopPropagation();
-                        try { useAlertsStore.getState().dismiss(a.id); } catch { }
+                        try { 
+                          const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+                          dismissed.push(a.id);
+                          if (a.payload?.bookingId) dismissed.push(String(a.payload.bookingId));
+                          if (a.payload?.recordId) dismissed.push(String(a.payload.recordId));
+                          localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
+                          useAlertsStore.getState().dismiss(a.id); 
+                        } catch { }
                       }}
                     >
                       Dismiss
@@ -441,7 +464,19 @@ export default function NotificationBell() {
               setOpen(false);
             }} className="w-full">Mark all read</Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => { dismissAll(); setOpen(false); }} className="w-full">Dismiss all</Button>
+            <Button variant="outline" size="sm" onClick={() => { 
+              try {
+                const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+                alerts.forEach(a => {
+                  dismissed.push(a.id);
+                  if (a.payload?.bookingId) dismissed.push(String(a.payload.bookingId));
+                  if (a.payload?.recordId) dismissed.push(String(a.payload.recordId));
+                });
+                localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
+              } catch { }
+              dismissAll(); 
+              setOpen(false); 
+            }} className="w-full">Dismiss all</Button>
           )}
         </div>
       </DropdownMenuContent>
