@@ -920,11 +920,16 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             <VehicleClassificationDialog
                 open={showAutoClassify}
                 onOpenChange={setShowAutoClassify}
-                onSelect={(type) => {
-                    updateVehicle(activeVehicleId, { type: type as VehicleType });
+                onSelect={(type, details) => {
+                    const updates: any = { type: type as VehicleType };
+                    if (details?.make) updates.make = details.make;
+                    if (details?.model) updates.model = details.model;
+                    
+                    updateVehicle(activeVehicleId, updates);
+                    
                     toast({
-                        title: "Size Classified",
-                        description: `Vehicle set to ${type.toUpperCase()}`,
+                        title: "Vehicle Set & Classified",
+                        description: `Set to ${details?.make || ''} ${details?.model || ''} (${type.toUpperCase()})`,
                     });
                 }}
             />
