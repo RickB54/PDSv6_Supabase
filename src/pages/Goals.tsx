@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,8 @@ import {
     Plus,
     Users,
     Download,
-    Loader2
+    Loader2,
+    BarChart2
 } from "lucide-react";
 import { 
     BarChart, 
@@ -71,6 +73,7 @@ const DEFAULT_GOALS: GoalSet = {
 };
 
 export default function Goals() {
+    const navigate = useNavigate();
     const { items: bookings, refresh } = useBookingsStore();
     const { toast } = useToast();
     const [goals, setGoals] = useState<GoalSet>(DEFAULT_GOALS);
@@ -790,6 +793,15 @@ export default function Goals() {
                             className="border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 hover:text-white"
                         >
                             <Download className="w-4 h-4 mr-2" /> PDF Report
+                        </Button>
+
+                        {/* CRM & Analytics Navigation Button */}
+                        <Button 
+                            onClick={() => navigate("/bookings-analytics")} 
+                            variant="outline" 
+                            className="border-blue-800/40 bg-blue-900/10 hover:bg-blue-900/30 text-blue-400 hover:text-white font-bold"
+                        >
+                            <BarChart2 className="w-4 h-4 mr-2" /> CRM & Analytics
                         </Button>
 
                         {isEditing ? (
