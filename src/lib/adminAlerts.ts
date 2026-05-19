@@ -100,14 +100,47 @@ export async function performGlobalSync(): Promise<AdminAlert[]> {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 500);
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+  // DEDUPLICATE BOOKINGS BY BOOKING ID TO PREVENT MULTIPLE ALERTS PER BOOKING
+  const uniqueBookingAlerts = new Map<string, AdminAlert>();
+  const finalAlerts: AdminAlert[] = [];
+  
+  merged.forEach(a => {
+    if (a.type === 'booking_created' && a.payload?.bookingId) {
+      const bid = String(a.payload.bookingId);
+      const existing = uniqueBookingAlerts.get(bid);
+      if (!existing) {
+        uniqueBookingAlerts.set(bid, a);
+      } else {
+        // If existing doesn't have customerId, but this one does, prefer the one with customerId
+        if (!existing.payload?.customerId && a.payload?.customerId) {
+          uniqueBookingAlerts.set(bid, a);
+        }
+      }
+    }
+  });
+
+  merged.forEach(a => {
+    if (a.type === 'booking_created' && a.payload?.bookingId) {
+      const bid = String(a.payload.bookingId);
+      if (uniqueBookingAlerts.get(bid)?.id === a.id) {
+        finalAlerts.push(a);
+      }
+    } else {
+      finalAlerts.push(a);
+    }
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(finalAlerts));
+  
+  // Proactively clean up remote DB alerts as well
+  syncToDB(finalAlerts);
   
   // Proactively notify the current tab to refresh alerts
   try {
     window.dispatchEvent(new CustomEvent('admin_alerts_updated'));
   } catch { }
 
-  return merged;
+  return finalAlerts;
 }
 
 export function pushAdminAlert(
@@ -116,6 +149,16 @@ export function pushAdminAlert(
   actor: string,
   payload?: Record<string, any>
 ): void {
+  // Prevent local duplicates of booking alerts before they can even be created
+  if (type === 'booking_created' && payload?.bookingId) {
+    const existingList: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const duplicate = existingList.some(a => 
+      a.type === 'booking_created' && 
+      String(a.payload?.bookingId || '') === String(payload.bookingId)
+    );
+    if (duplicate) return;
+  }
+
   const alert: AdminAlert = {
     id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     type,

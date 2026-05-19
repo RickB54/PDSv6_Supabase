@@ -257,14 +257,17 @@ export default function NotificationBell() {
             }
             
             // SYNCHRONIZED DEDUPLICATION:
-            // Check if this specific booking record has already been notified globally or locally dismissed
+            const syncId = `sync_book_${b.id}`;
             const isAlreadyNotifiedGlobally = meta.notified === true;
             const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
             const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(b.id);
+            const alreadyAlerted = (alerts || []).some(a => 
+              a.type === 'booking_created' && 
+              String(a.payload?.bookingId || '') === String(b.id)
+            );
             
-            if (!isAlreadyNotifiedGlobally && !isLocallyDismissed) {
+            if (!isAlreadyNotifiedGlobally && !isLocallyDismissed && !alreadyAlerted) {
               const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
-              const syncId = `sync_book_${b.id}`;
               let activeCustomerId = b.customer_id;
 
               // AUTO-PROMOTION: If the booking doesn't have a linked customer record,
