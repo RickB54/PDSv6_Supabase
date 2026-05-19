@@ -43,7 +43,7 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    const count = isEmployee ? empUnreadCount : unreadCount;
+    const count = displayUnreadCount;
     if (isFileManagerView) {
       setRing(false);
       prevUnreadRef.current = count;
