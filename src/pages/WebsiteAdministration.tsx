@@ -236,7 +236,8 @@ export default function WebsiteAdministration() {
       isContactBannerActive: false,
       blockedStartDate: '',
       blockedEndDate: '',
-      blockedReason: ''
+      blockedReason: '',
+      shopOnly: false
     },
     'pre-launch': {
       mode: 'pre-launch',
@@ -248,7 +249,8 @@ export default function WebsiteAdministration() {
       isContactBannerActive: true,
       blockedStartDate: '',
       blockedEndDate: '',
-      blockedReason: ''
+      blockedReason: '',
+      shopOnly: false
     },
     'winter-closed': {
       mode: 'winter-closed',
@@ -260,7 +262,8 @@ export default function WebsiteAdministration() {
       isContactBannerActive: true,
       blockedStartDate: '',
       blockedEndDate: '',
-      blockedReason: 'Seasonal Closure'
+      blockedReason: 'Seasonal Closure',
+      shopOnly: false
     },
     'custom': {
       mode: 'custom',
@@ -272,45 +275,59 @@ export default function WebsiteAdministration() {
       isContactBannerActive: true,
       blockedStartDate: '',
       blockedEndDate: '',
-      blockedReason: ''
+      blockedReason: '',
+      shopOnly: false
     }
   };
 
   const CUSTOM_PRESETS = [
     { 
+      id: 'shop-only', 
+      name: '🏢 Shop-Only Detailing (Methuen Facility)', 
+      reason: 'Shop Only Detailing',
+      title: '🏢 PREMIUM SHOP-ONLY DETAILING ACTIVE',
+      desc: 'We are fully operational! Book your professional detailing experience online today for premium service at our state-of-the-art facility located at 54 Boston Street, Methuen, MA.',
+      shopOnly: true
+    },
+    { 
       id: 'vacation', 
       name: '🌴 Vacation / Holiday', 
       reason: 'Vacation',
       title: '🌴 OUT OF OFFICE: VACATION MODE',
-      desc: 'Our team is taking a short break to recharge! We will be out of the office during this period. You can still send inquiries, and we will respond systematically in the order they were received upon our return. Thank you for your patience!'
+      desc: 'Our team is taking a short break to recharge! We will be out of the office during this period. You can still send inquiries, and we will respond systematically in the order they were received upon our return. Thank you for your patience!',
+      shopOnly: false
     },
     { 
       id: 'medical', 
       name: '🏥 Medical / Health', 
       reason: 'Medical Leave',
       title: '🏥 TEMPORARY LEAVE: MEDICAL NOTICE',
-      desc: 'Prime Auto Detail is temporarily pausing operations for medical reasons. We apologize for any disruption to your scheduling! Our inquiry portal remains active, and we will contact you immediately when we resume full mobile detailing services.'
+      desc: 'Prime Auto Detail is temporarily pausing operations for medical reasons. We apologize for any disruption to your scheduling! Our inquiry portal remains active, and we will contact you immediately when we resume full mobile detailing services.',
+      shopOnly: false
     },
     { 
       id: 'family', 
       name: '👨‍👩‍👧‍👦 Family Leave', 
       reason: 'Family Commitments',
       title: '👨‍👩‍👧‍👦 FAMILY LEAVE: TEMPORARY PAUSE',
-      desc: 'We are currently away for family-related reasons. Mobile detailing is paused, but we are accepting inquiries for future bookings. High-end care for your vehicle will resume shortly. Thank you for being a valued customer!'
+      desc: 'We are currently away for family-related reasons. Mobile detailing is paused, but we are accepting inquiries for future bookings. High-end care for your vehicle will resume shortly. Thank you for being a valued customer!',
+      shopOnly: false
     },
     { 
       id: 'emergency', 
       name: '⚠️ Personal Emergency', 
       reason: 'Personal Emergency',
       title: '⚠️ TEMPORARY STATUS UPDATE',
-      desc: 'Due to personal emergency circumstances, we have temporarily paused our active detailing schedule. We will reach out to all pending inquiries and resume operations as soon as possible.'
+      desc: 'Due to personal emergency circumstances, we have temporarily paused our active detailing schedule. We will reach out to all pending inquiries and resume operations as soon as possible.',
+      shopOnly: false
     },
     { 
       id: 'travel', 
       name: '✈️ Business Travel', 
       reason: 'Business Travel',
       title: '✈️ AWAY ON BUSINESS',
-      desc: 'Our mobile units are stationary for a few days while our team is away on business. Inquiry response times may be slightly longer than usual. We look forward to detailing your vehicle upon our return!'
+      desc: 'Our mobile units are stationary for a few days while our team is away on business. Inquiry response times may be slightly longer than usual. We look forward to detailing your vehicle upon our return!',
+      shopOnly: false
     }
   ];
 
@@ -1059,6 +1076,18 @@ export default function WebsiteAdministration() {
                           className="data-[state=checked]:bg-blue-600"
                         />
                       </div>
+
+                      <div className="flex items-center justify-between group">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">Only Accept Shop Detailing</Label>
+                          <p className="text-[10px] text-zinc-500">Restrict bookings and inquiries to our professional shop facility in Methuen only.</p>
+                        </div>
+                        <Switch 
+                          checked={!!businessStatus.shopOnly} 
+                          onCheckedChange={(c) => setBusinessStatus({ ...businessStatus, shopOnly: !!c })} 
+                          className="data-[state=checked]:bg-purple-600"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1088,7 +1117,8 @@ export default function WebsiteAdministration() {
                                     blockedReason: p.reason,
                                     isTopBannerActive: true,
                                     isContactBannerActive: true,
-                                    showBooking: false
+                                    showBooking: p.id === 'shop-only' ? true : false,
+                                    shopOnly: p.shopOnly || false
                                   });
                                   toast({ title: `${p.name} Applied`, description: "Banner fields pre-filled with professional messaging." });
                                 }}

@@ -65,8 +65,10 @@ const BookNow = () => {
     make: urlParams.get('make') || "", model: urlParams.get('model') || "", year: urlParams.get('year') || "",
     color: urlParams.get('color') || "", condition: urlParams.get('condition') || "",
     datetime: "", package: urlPackage || "", message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
-    conditionInside: "", conditionOutside: ""
+    conditionInside: "", conditionOutside: "",
+    placeOfService: "Customer's address"
   });
+  const [businessStatus, setBusinessStatus] = useState<any>(null);
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
 
   // Automatically classify the vehicle class based on selected Make & Model
@@ -210,6 +212,26 @@ const BookNow = () => {
     refreshBookings();
     refreshCoupons();
 
+    const loadBusinessStatus = async () => {
+      try {
+        const meta = await contentService.getServiceMeta('global_settings');
+        if (meta && meta.meta && meta.meta.businessStatus) {
+          const bs = meta.meta.businessStatus;
+          setBusinessStatus(bs);
+          if (bs.shopOnly) {
+            setFormData(prev => ({
+              ...prev,
+              placeOfService: "Shop in Methuen",
+              address: "54 Boston Street, Methuen, MA"
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load business settings in BookNow", e);
+      }
+    };
+    loadBusinessStatus();
+
     const checkTestMode = async () => {
       const meta = await contentService.getServiceMeta('booking_test_mode');
       if (meta?.meta?.active) {
@@ -227,13 +249,16 @@ const BookNow = () => {
             fillTestData();
           } else {
             setTestModeActive(false);
-            setFormData({
+            setFormData(prev => ({
+              ...prev,
               name: "", email: "", phone: "", address: "", make: "", model: "", year: "",
               datetime: "", package: urlPackage || "", message: "", conditionInside: "", conditionOutside: ""
-            });
+            }));
             setAddOns([]);
           }
         });
+      } else if (e.detail?.kind === 'settings') {
+        loadBusinessStatus();
       }
     };
     window.addEventListener('content-changed', handleContentChange as any);
@@ -584,7 +609,9 @@ const BookNow = () => {
       } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
         newErrors.phone = "Phone must be 10 digits";
       }
-      if (!formData.address.trim()) newErrors.address = "Service address is required";
+      if (formData.placeOfService !== 'Shop in Methuen' && !formData.address.trim()) {
+        newErrors.address = "Service address is required";
+      }
       if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
       if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
       if (!formData.year.trim()) newErrors.year = "Year is required";
@@ -1141,7 +1168,32 @@ const BookNow = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address">Service Address *</Label>
+                    <Label htmlFor="placeOfService" className="font-bold">Place of Service *</Label>
+                    <Select 
+                      value={formData.placeOfService || "Customer's address"} 
+                      onValueChange={(val) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          placeOfService: val,
+                          address: val === 'Shop in Methuen' ? '54 Boston Street, Methuen, MA' : (prev.address === '54 Boston Street, Methuen, MA' ? '' : prev.address)
+                        }));
+                      }}
+                      disabled={!!businessStatus?.shopOnly}
+                    >
+                      <SelectTrigger className="h-12 bg-background border-input">
+                        <SelectValue placeholder="Select service location..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Customer's address">Customer's address (Onsite / Mobile Detailing)</SelectItem>
+                        <SelectItem value="Shop in Methuen">Shop in Methuen (54 Boston Street, Methuen, MA)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address" className="font-bold">
+                      {formData.placeOfService === 'Shop in Methuen' ? 'Shop Address' : 'Service Address *'}
+                    </Label>
                     <Input
                       id="address"
                       placeholder="Street, City, State, Zip"
@@ -1150,11 +1202,26 @@ const BookNow = () => {
                         setFormData({ ...formData, address: e.target.value });
                         if (errors.address) setErrors(prev => { const n = { ...prev }; delete n.address; return n; });
                       }}
-                      required
-                      className={errors.address ? "border-destructive h-12" : "h-12"}
+                      required={formData.placeOfService !== 'Shop in Methuen'}
+                      disabled={formData.placeOfService === 'Shop in Methuen'}
+                      className={errors.address && formData.placeOfService !== 'Shop in Methuen' ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.address && <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.address}</p>}
+                    {errors.address && formData.placeOfService !== 'Shop in Methuen' && (
+                      <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.address}</p>
+                    )}
                   </div>
+
+                  {!!businessStatus?.shopOnly && (
+                    <div className="col-span-1 md:col-span-2 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4 flex gap-3 mt-2">
+                      <AlertCircle className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5 animate-bounce-subtle" />
+                      <div>
+                        <p className="text-xs font-black text-purple-800 dark:text-purple-300 uppercase tracking-wider mb-1">📢 Shop-Only Operations Active</p>
+                        <p className="text-[11px] text-purple-700 dark:text-purple-200 leading-relaxed font-medium">
+                          Currently, all professional detailing services are performed exclusively at our climate-controlled, state-of-the-art facility located at <strong>54 Boston Street, Methuen, MA</strong>. This setup ensures maximum quality control, pristine environmental conditions for premium products/ceramic coatings, and superior durability. We are temporarily pausing mobile detailing services, and appreciate your understanding!
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

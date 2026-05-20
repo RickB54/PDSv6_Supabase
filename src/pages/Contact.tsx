@@ -52,7 +52,8 @@ const Contact = () => {
     serviceInterested: "",
     preferredTiming: "",
     howFound: "",
-    message: ""
+    message: "",
+    placeOfService: "Customer's address"
   });
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -140,7 +141,9 @@ const Contact = () => {
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone Number is required";
     }
-    if (!formData.city.trim()) newErrors.city = "City / Town is required";
+    if (formData.placeOfService !== 'Shop in Methuen' && !formData.city.trim()) {
+      newErrors.city = "City / Town is required";
+    }
     if (!formData.vehicleYear) newErrors.vehicleYear = "Vehicle Year is required";
     if (!formData.vehicleMake) newErrors.vehicleMake = "Vehicle Make is required";
     if (!formData.vehicleModel.trim()) newErrors.vehicleModel = "Vehicle Model is required";
@@ -472,7 +475,16 @@ const Contact = () => {
         if (globalMeta && globalMeta.meta) {
           setShowBookNow(globalMeta.meta.showBookNow !== false);
           if (globalMeta.meta.businessStatus) {
-            setBusinessStatus(globalMeta.meta.businessStatus);
+            const bs = globalMeta.meta.businessStatus;
+            setBusinessStatus(bs);
+            if (bs.shopOnly) {
+              setFormData(prev => ({
+                ...prev,
+                placeOfService: "Shop in Methuen",
+                address: "54 Boston Street",
+                city: "Methuen"
+              }));
+            }
           }
         }
       } catch {}
@@ -629,31 +641,65 @@ const Contact = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="font-bold">Street Address (Optional)</Label>
-                    <Input
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="123 Detail Lane"
-                      className="h-12"
-                    />
+                    <Label htmlFor="placeOfService" className="font-bold">Place of Service *</Label>
+                    <Select 
+                      value={formData.placeOfService || "Customer's address"} 
+                      onValueChange={(val) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          placeOfService: val,
+                          address: val === 'Shop in Methuen' ? '54 Boston Street' : (prev.address === '54 Boston Street' ? '' : prev.address),
+                          city: val === 'Shop in Methuen' ? 'Methuen' : (prev.city === 'Methuen' ? '' : prev.city)
+                        }));
+                      }}
+                      disabled={!!businessStatus?.shopOnly}
+                    >
+                      <SelectTrigger className="h-12 bg-background border-input">
+                        <SelectValue placeholder="Select service location..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Customer's address">Customer's address (Onsite / Mobile Detailing)</SelectItem>
+                        <SelectItem value="Shop in Methuen">Shop in Methuen (54 Boston Street, Methuen, MA)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="city" className="font-bold">City / Town *</Label>
+                    <Label htmlFor="address" className="font-bold">
+                      {formData.placeOfService === 'Shop in Methuen' ? 'Shop Street Address' : 'Street Address (Optional)'}
+                    </Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="123 Detail Lane"
+                      disabled={formData.placeOfService === 'Shop in Methuen'}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="font-bold">
+                      {formData.placeOfService === 'Shop in Methuen' ? 'Shop City / Town' : 'City / Town *'}
+                    </Label>
                     <Input
                       id="city"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      placeholder="Methuen, MA"
-                      required
-                      className={errors.city ? "border-destructive h-12" : "h-12"}
+                      placeholder="Methuen"
+                      required={formData.placeOfService !== 'Shop in Methuen'}
+                      disabled={formData.placeOfService === 'Shop in Methuen'}
+                      className={errors.city && formData.placeOfService !== 'Shop in Methuen' ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.city && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>}
+                    {errors.city && formData.placeOfService !== 'Shop in Methuen' && (
+                      <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>
+                    )}
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="howFound" className="font-bold">How Did You Hear About Us?</Label>
                     <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
@@ -670,6 +716,18 @@ const Contact = () => {
                     </Select>
                   </div>
                 </div>
+
+                {!!businessStatus?.shopOnly && (
+                  <div className="bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4 flex gap-3 mt-4">
+                    <Info className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5 animate-bounce-subtle" />
+                    <div>
+                      <p className="text-xs font-black text-purple-800 dark:text-purple-300 uppercase tracking-wider mb-1">📢 Shop-Only Operations Active</p>
+                      <p className="text-[11px] text-purple-700 dark:text-purple-200 leading-relaxed font-medium">
+                        Currently, all professional detailing services are performed exclusively at our climate-controlled, state-of-the-art facility located at <strong>54 Boston Street, Methuen, MA</strong>. This setup ensures maximum quality control, pristine environmental conditions for premium products/ceramic coatings, and superior durability. We are temporarily pausing mobile detailing services, and appreciate your understanding!
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Vehicle Information Section */}
