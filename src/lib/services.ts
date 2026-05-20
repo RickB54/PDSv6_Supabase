@@ -130,7 +130,6 @@ export const servicePackages: ServicePackage[] = [
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
-      { id: 'int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
       { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
       { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
       { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }
@@ -156,7 +155,6 @@ export const servicePackages: ServicePackage[] = [
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
-      { id: 'int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
       { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
       { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
       { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }

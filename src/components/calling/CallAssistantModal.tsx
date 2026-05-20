@@ -56,6 +56,10 @@ import { useNavigate } from "react-router-dom";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
+import localforage from "localforage";
+import * as supaPkgs from "@/services/supabase/packages";
+import * as supaAddOns from "@/services/supabase/addOns";
+import { isSupabaseEnabled } from "@/lib/auth";
 
 interface Scenario {
     id: string;
@@ -149,8 +153,24 @@ const BRANDED_PACKAGES = [
     },
 ];
 
-export function createEmptyVehicle(): Vehicle {
+export function createEmptyVehicle(livePackages?: any[]): Vehicle {
     const vid = Date.now().toString();
+    const essentialPkgs = livePackages 
+        ? livePackages.filter(p => p.id.startsWith('prime-essential'))
+        : [];
+    
+    // Map live packages to scenarios
+    const defaultScenarios = (essentialPkgs.length > 0 ? essentialPkgs : [
+        { id: "prime-essential-full", name: "Prime Essential Full" },
+        { id: "prime-essential-interior", name: "Prime Essential Interior" },
+        { id: "prime-essential-exterior", name: "Prime Essential Exterior" }
+    ]).slice(0, 3).map((pkg, idx) => ({
+        id: `s${idx + 1}-${vid}`,
+        label: `Scenario ${String.fromCharCode(65 + idx)}: ${pkg.name.replace('Prime ', '')}`,
+        packageId: pkg.id,
+        addOnIds: []
+    }));
+
     return {
         id: vid,
         year: "",
@@ -169,15 +189,12 @@ export function createEmptyVehicle(): Vehicle {
         seatMaterial: "leather",
         paintCondition: "good",
         mainGoal: "full",
-        scenarios: [
-            { id: `s1-${vid}`, label: "Scenario A: Full Detail", packageId: "prime-essential-full", addOnIds: [] },
-            { id: `s2-${vid}`, label: "Scenario B: Interior Focus", packageId: "prime-essential-interior", addOnIds: [] },
-            { id: `s3-${vid}`, label: "Scenario C: Exterior Only", packageId: "prime-essential-exterior", addOnIds: [] }
-        ],
+        scenarios: defaultScenarios,
         selectedScenarioId: null,
         selectedServiceId: null
     };
 }
+
 
 export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
     const { toast } = useToast();
@@ -188,6 +205,159 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const [callerPhone, setCallerPhone] = useState(() => localStorage.getItem("phone_assistant_draft_phone") || "");
     const [callerEmail, setCallerEmail] = useState(() => localStorage.getItem("phone_assistant_draft_email") || "");
 
+    // Live pricing + meta state
+    const [savedPrices, setSavedPrices] = useState<Record<string, string>>({});
+    const [packageMetaLive, setPackageMetaLive] = useState<Record<string, any>>({});
+    const [addOnMetaLive, setAddOnMetaLive] = useState<Record<string, any>>({});
+    const [customPackagesLive, setCustomPackagesLive] = useState<any[]>([]);
+    const [customAddOnsLive, setCustomAddOnsLive] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchLive = async () => {
+        let finalSavedPrices: Record<string, string> = {};
+        let finalPackageMeta: Record<string, any> = {};
+        let finalAddOnMeta: Record<string, any> = {};
+        let finalCustomPackages: any[] = [];
+        let finalCustomAddOns: any[] = [];
+
+        // Smart defaults for packages
+        servicePackages.forEach(p => {
+            const isEssential = p.id.startsWith('prime-essential');
+            finalPackageMeta[p.id] = { id: p.id, visible: isEssential, deleted: false };
+        });
+
+        // Smart defaults for add-ons
+        const defaultAddonIds = [
+            'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
+            'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment'
+        ];
+        addOns.forEach(a => {
+            const isDefault = defaultAddonIds.includes(a.id);
+            finalAddOnMeta[a.id] = { id: a.id, visible: isDefault, deleted: false };
+        });
+
+        // Try localforage for local cache first
+        try {
+            const localPrices = await localforage.getItem<Record<string, string>>("savedPrices");
+            if (localPrices) {
+                finalSavedPrices = { ...finalSavedPrices, ...localPrices };
+            }
+            const localPkgsLive = await localforage.getItem<any>("packagesLive");
+            if (localPkgsLive) {
+                if (localPkgsLive.savedPrices) finalSavedPrices = { ...finalSavedPrices, ...localPkgsLive.savedPrices };
+                if (localPkgsLive.packageMeta) finalPackageMeta = { ...finalPackageMeta, ...localPkgsLive.packageMeta };
+                if (localPkgsLive.addOnMeta) finalAddOnMeta = { ...finalAddOnMeta, ...localPkgsLive.addOnMeta };
+                if (localPkgsLive.customPackages) finalCustomPackages = localPkgsLive.customPackages;
+                if (localPkgsLive.customAddOns) finalCustomAddOns = localPkgsLive.customAddOns;
+            }
+        } catch (e) {
+            console.warn("localforage read failed:", e);
+        }
+
+        // Try Supabase if enabled
+        if (isSupabaseEnabled()) {
+            try {
+                const [pkgs, supabaseAddons] = await Promise.all([
+                    supaPkgs.getAll().catch(() => []),
+                    supaAddOns.getAll().catch(() => [])
+                ]);
+
+                if (pkgs && pkgs.length > 0) {
+                    pkgs.forEach((p: any) => {
+                        const id = p.id;
+                        finalPackageMeta[id] = {
+                            id,
+                            visible: p.is_active === true,
+                            deleted: false,
+                            imageDataUrl: p.image_url || ""
+                        };
+                        if (p.compact_price != null) finalSavedPrices[`package:${id}:compact`] = String(p.compact_price);
+                        if (p.midsize_price != null) finalSavedPrices[`package:${id}:midsize`] = String(p.midsize_price);
+                        if (p.truck_price != null) finalSavedPrices[`package:${id}:truck`] = String(p.truck_price);
+                        if (p.luxury_price != null) finalSavedPrices[`package:${id}:luxury`] = String(p.luxury_price);
+                    });
+
+                    const builtInPkgIds = servicePackages.map(b => b.id);
+                    finalCustomPackages = pkgs.filter((p: any) => !builtInPkgIds.includes(p.id)).map((p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        description: p.description || "",
+                        pricing: { compact: p.compact_price, midsize: p.midsize_price, truck: p.truck_price, luxury: p.luxury_price },
+                        steps: []
+                    }));
+                }
+
+                if (supabaseAddons && supabaseAddons.length > 0) {
+                    supabaseAddons.forEach((a: any) => {
+                        const id = a.id;
+                        finalAddOnMeta[id] = {
+                            id,
+                            visible: a.is_active === true,
+                            deleted: false
+                        };
+                        if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);
+                        if (a.midsize_price != null) finalSavedPrices[`addon:${id}:midsize`] = String(a.midsize_price);
+                        if (a.truck_price != null) finalSavedPrices[`addon:${id}:truck`] = String(a.truck_price);
+                        if (a.luxury_price != null) finalSavedPrices[`addon:${id}:luxury`] = String(a.luxury_price);
+                    });
+
+                    const builtInAddOnIds = addOns.map(b => b.id);
+                    finalCustomAddOns = supabaseAddons.filter((a: any) => !builtInAddOnIds.includes(a.id)).map((a: any) => ({
+                        id: a.id,
+                        name: a.name,
+                        description: a.description || "",
+                        pricing: { compact: a.compact_price, midsize: a.midsize_price, truck: a.truck_price, luxury: a.luxury_price }
+                    }));
+                }
+            } catch (e) {
+                console.error("Supabase sync in CallAssistant failed:", e);
+            }
+        }
+
+        setSavedPrices(finalSavedPrices);
+        setPackageMetaLive(finalPackageMeta);
+        setAddOnMetaLive(finalAddOnMeta);
+        setCustomPackagesLive(finalCustomPackages);
+        setCustomAddOnsLive(finalCustomAddOns);
+        setIsLoading(false);
+    };
+
+    useEffect(() => {
+        if (open) {
+            fetchLive();
+        }
+    }, [open]);
+
+    const livePackages = useMemo(() => {
+        const visibleBuiltIns = servicePackages.filter(p => packageMetaLive[p.id]?.visible === true);
+        const visibleCustomPkgs = customPackagesLive.filter((p: any) => packageMetaLive[p.id]?.visible === true);
+
+        return [...visibleBuiltIns, ...visibleCustomPkgs].map((p: any) => {
+            const pricing = {
+                compact: parseFloat(savedPrices[`package:${p.id}:compact`]) || p.pricing?.compact || 0,
+                midsize: parseFloat(savedPrices[`package:${p.id}:midsize`]) || p.pricing?.midsize || 0,
+                truck: parseFloat(savedPrices[`package:${p.id}:truck`]) || p.pricing?.truck || 0,
+                luxury: parseFloat(savedPrices[`package:${p.id}:luxury`]) || p.pricing?.luxury || 0,
+            };
+            return { ...p, pricing };
+        });
+    }, [packageMetaLive, customPackagesLive, savedPrices]);
+
+    const liveAddOns = useMemo(() => {
+        const visibleBuiltAddOns = addOns.filter(a => addOnMetaLive[a.id]?.visible === true);
+        const visibleCustomAddOns = customAddOnsLive.filter((a: any) => addOnMetaLive[a.id]?.visible === true);
+
+        return [...visibleBuiltAddOns, ...visibleCustomAddOns].map((a: any) => {
+            const pricing = {
+                compact: parseFloat(savedPrices[`addon:${a.id}:compact`]) || (a.pricing?.compact ?? 0),
+                midsize: parseFloat(savedPrices[`addon:${a.id}:midsize`]) || (a.pricing?.midsize ?? 0),
+                truck: parseFloat(savedPrices[`addon:${a.id}:truck`]) || (a.pricing?.truck ?? 0),
+                luxury: parseFloat(savedPrices[`addon:${a.id}:luxury`]) || (a.pricing?.luxury ?? 0),
+            };
+            return { ...a, pricing };
+        });
+    }, [addOnMetaLive, customAddOnsLive, savedPrices]);
+
     // Call state
     const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
         const saved = localStorage.getItem("phone_assistant_draft_vehicles");
@@ -196,6 +366,43 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         }
         return [createEmptyVehicle()];
     });
+
+    // Sanitize and update default scenarios once livePackages are loaded
+    useEffect(() => {
+        if (!isLoading && livePackages.length > 0) {
+            setVehicles(prevVehicles => {
+                let changed = false;
+                const updated = prevVehicles.map(v => {
+                    // Check if scenarios contain stale mock packages that are not live
+                    const hasStaleScenarios = v.scenarios.some(s => 
+                        !livePackages.some(lp => lp.id === s.packageId)
+                    );
+                    // Also check if we just have exactly the mock default scenarios (Scenario A: Full Detail, etc.)
+                    const isMockDefault = v.scenarios.length === 3 && 
+                        v.scenarios[0].packageId === "prime-essential-full" &&
+                        v.scenarios[1].packageId === "prime-essential-interior" &&
+                        v.scenarios[2].packageId === "prime-essential-exterior";
+
+                    if (hasStaleScenarios || isMockDefault) {
+                        changed = true;
+                        const essentialPkgs = livePackages.filter(p => p.id.startsWith('prime-essential'));
+                        const targetPkgs = essentialPkgs.length > 0 ? essentialPkgs : livePackages;
+                        return {
+                            ...v,
+                            scenarios: targetPkgs.slice(0, 3).map((pkg, idx) => ({
+                                id: `s${idx + 1}-${v.id}`,
+                                label: `Scenario ${String.fromCharCode(65 + idx)}: ${pkg.name.replace('Prime ', '')}`,
+                                packageId: pkg.id,
+                                addOnIds: []
+                            }))
+                        };
+                    }
+                    return v;
+                });
+                return changed ? updated : prevVehicles;
+            });
+        }
+    }, [livePackages, isLoading]);
     
     const [activeVehicleId, setActiveVehicleId] = useState<string>(() => {
         const saved = localStorage.getItem("phone_assistant_draft_active_id");
@@ -221,7 +428,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         localStorage.removeItem("phone_assistant_draft_email");
         localStorage.removeItem("phone_assistant_draft_vehicles");
         localStorage.removeItem("phone_assistant_draft_active_id");
-        const v = createEmptyVehicle();
+        const v = createEmptyVehicle(livePackages);
         setCallerName("");
         setCallerPhone("");
         setCallerEmail("");
@@ -242,7 +449,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     };
 
     const addVehicle = () => {
-        const v = createEmptyVehicle();
+        const v = createEmptyVehicle(livePackages);
         setVehicles([...vehicles, v]);
         setActiveVehicleId(v.id);
         toast({ title: "Vehicle Added", description: "New vehicle context created for this call." });
@@ -273,25 +480,44 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         setVehicles(prev => prev.map(v => {
             if (v.id !== vid) return v;
             const newSid = `s${v.scenarios.length + 1}-${vid}`;
+            const fallbackPkg = livePackages[0]?.id || "prime-essential-full";
             return {
                 ...v,
-                scenarios: [...v.scenarios, { id: newSid, label: `Scenario ${String.fromCharCode(65 + v.scenarios.length)}`, packageId: "prime-essential-full", addOnIds: [] }]
+                scenarios: [...v.scenarios, { id: newSid, label: `Scenario ${String.fromCharCode(65 + v.scenarios.length)}`, packageId: fallbackPkg, addOnIds: [] }]
             };
         }));
     };
 
-    const calculateTotal = (pkgBrandedId: string, addOnIds: string[], vehicleType: VehicleType) => {
-        const pkg = BRANDED_PACKAGES.find(p => p.id === pkgBrandedId);
-        const actualPkgId = pkg?.actualId || "full-detail";
-        const pkgObj = servicePackages.find(p => p.id === actualPkgId);
-        const pkgPrice = pkgObj?.pricing[vehicleType] || 0;
+    const calculateTotal = (packageId: string, addOnIds: string[], vehicleType: VehicleType) => {
+        const pkgObj = livePackages.find(p => p.id === packageId);
+        const pkgPrice = pkgObj ? (parseFloat(savedPrices[`package:${pkgObj.id}:${vehicleType}`]) || pkgObj.pricing?.[vehicleType] || 0) : 0;
 
         const addonsPrice = addOnIds.reduce((sum, aid) => {
-            const ao = addOns.find(a => a.id === aid);
-            return sum + (ao?.pricing[vehicleType] || 0);
+            const ao = liveAddOns.find(a => a.id === aid);
+            const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
+            return sum + price;
         }, 0);
 
         return pkgPrice + addonsPrice;
+    };
+
+    const getPackagePitchInfo = (pkgId: string) => {
+        const branded = BRANDED_PACKAGES.find(bp => bp.id === pkgId || bp.actualId === pkgId);
+        const livePkg = livePackages.find(lp => lp.id === pkgId);
+        
+        if (branded) {
+            return {
+                name: livePkg?.name || branded.name,
+                script: branded.script,
+                includes: livePkg?.steps?.map((s: any) => s.name || s) || branded.includes
+            };
+        }
+        
+        return {
+            name: livePkg?.name || pkgId,
+            script: `The ${livePkg?.name || pkgId} is designed to deliver exceptional results for your vehicle, tailored to your specific needs.`,
+            includes: livePkg?.steps?.map((s: any) => s.name || s) || []
+        };
     };
 
     const activeVehicle = vehicles.find(v => v.id === activeVehicleId)!;
@@ -330,7 +556,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     conditionOutside: firstVehicle.paintCondition || ''
                 };
 
-                const selectedServicePkg = servicePackages.find(p => p.id === firstVehicle.selectedServiceId);
+                const actualServiceId = selectedScenario?.packageId || firstVehicle.selectedServiceId;
+                const selectedServicePkg = livePackages.find(p => p.id === actualServiceId);
                 const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
 
                 const customerData = {
@@ -403,7 +630,9 @@ ${firstVehicle.notes || ''}`.trim(),
                 conditionOutside: firstVehicle.paintCondition || ''
             };
 
-            const selectedServicePkg = servicePackages.find(p => p.id === firstVehicle.selectedServiceId);
+            const selectedScenario = firstVehicle.scenarios.find(s => s.id === firstVehicle.selectedScenarioId);
+            const actualServiceId = selectedScenario?.packageId || firstVehicle.selectedServiceId;
+            const selectedServicePkg = livePackages.find(p => p.id === actualServiceId);
             const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
 
             const customerData = {
@@ -813,8 +1042,7 @@ ${firstVehicle.notes || ''}`.trim(),
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-6 pt-2">
                                 <div className="space-y-6">
-                                    <div className="space-y-5">
-                                        {activeVehicle.scenarios.map((scenario, sIdx) => {
+                                                             {activeVehicle.scenarios.map((scenario, sIdx) => {
                                             const total = calculateTotal(scenario.packageId, scenario.addOnIds, activeVehicle.type);
 
                                             return (
@@ -835,7 +1063,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-3 shrink-0">
-                                                            <div className="text-2xl sm:text-3xl font-black text-rose-500 font-mono tracking-tighter bg-rose-500/5 px-3 py-1 rounded-lg border border-rose-500/20">
+                                                            <div className="text-2xl sm:text-3xl font-black text-zinc-100 font-mono tracking-tighter bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
                                                                 ${total}
                                                             </div>
                                                         </div>
@@ -845,7 +1073,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         <div>
                                                             <Label className="text-[10px] font-black uppercase text-muted-foreground mb-3 block tracking-widest">Select Package</Label>
                                                             <div className="grid grid-cols-1 gap-1.5">
-                                                                {BRANDED_PACKAGES.filter(p => p.isLive).map(pkg => (
+                                                                {livePackages.map(pkg => (
                                                                     <div
                                                                         key={pkg.id}
                                                                         onClick={() => updateScenario(activeVehicleId, scenario.id, { packageId: pkg.id })}
@@ -855,7 +1083,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                     >
                                                                         <div className="flex-1">
                                                                             <div className="text-xs font-black uppercase text-zinc-100">{pkg.name}</div>
-                                                                            <div className="text-[10px] text-muted-foreground leading-tight">{pkg.description}</div>
+                                                                            <div className="text-[10px] text-muted-foreground leading-tight">{pkg.description || pkg.descriptionOverride}</div>
                                                                         </div>
                                                                         {scenario.packageId === pkg.id && <CheckCircle2 className="w-4 h-4 text-primary ml-2 shrink-0" />}
                                                                     </div>
@@ -871,24 +1099,27 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                     </AccordionTrigger>
                                                                     <AccordionContent className="pt-2">
                                                                         <div className="space-y-0.5 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar border border-zinc-800/50 rounded-lg p-2 bg-black/20">
-                                                                            {addOns.map(ao => (
-                                                                                <div key={ao.id} className="flex items-center justify-between p-1.5 hover:bg-zinc-800/50 rounded transition-colors group">
-                                                                                    <div className="flex items-center space-x-2">
-                                                                                        <Checkbox
-                                                                                            id={`${scenario.id}-${ao.id}`}
-                                                                                            checked={scenario.addOnIds.includes(ao.id)}
-                                                                                            onCheckedChange={(checked) => {
-                                                                                                const next = checked
-                                                                                                    ? [...scenario.addOnIds, ao.id]
-                                                                                                    : scenario.addOnIds.filter(id => id !== ao.id);
-                                                                                                updateScenario(activeVehicleId, scenario.id, { addOnIds: next });
-                                                                                            }}
-                                                                                        />
-                                                                                        <Label htmlFor={`${scenario.id}-${ao.id}`} className="text-[11px] font-bold cursor-pointer group-hover:text-primary transition-colors text-zinc-200">{ao.name}</Label>
+                                                                            {liveAddOns.map(ao => {
+                                                                                const price = parseFloat(savedPrices[`addon:${ao.id}:${activeVehicle.type}`]) || ao.pricing?.[activeVehicle.type] || 0;
+                                                                                return (
+                                                                                    <div key={ao.id} className="flex items-center justify-between p-1.5 hover:bg-zinc-800/50 rounded transition-colors group">
+                                                                                        <div className="flex items-center space-x-2">
+                                                                                            <Checkbox
+                                                                                                id={`${scenario.id}-${ao.id}`}
+                                                                                                checked={scenario.addOnIds.includes(ao.id)}
+                                                                                                onCheckedChange={(checked) => {
+                                                                                                    const next = checked
+                                                                                                        ? [...scenario.addOnIds, ao.id]
+                                                                                                        : scenario.addOnIds.filter(id => id !== ao.id);
+                                                                                                    updateScenario(activeVehicleId, scenario.id, { addOnIds: next });
+                                                                                                }}
+                                                                                            />
+                                                                                            <Label htmlFor={`${scenario.id}-${ao.id}`} className="text-[11px] font-bold cursor-pointer group-hover:text-primary transition-colors text-zinc-200">{ao.name}</Label>
+                                                                                        </div>
+                                                                                        <span className="text-[11px] font-bold text-zinc-100 tracking-tighter bg-zinc-950/80 px-2 py-0.5 rounded border border-zinc-850 font-mono">${price}</span>
                                                                                     </div>
-                                                                                    <span className="text-[11px] font-black text-rose-400 tracking-tighter">${ao.pricing[activeVehicle.type]}</span>
-                                                                                </div>
-                                                                            ))}
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                     </AccordionContent>
                                                                 </AccordionItem>
@@ -898,8 +1129,8 @@ ${firstVehicle.notes || ''}`.trim(),
 
                                                     {/* Talking Points / Script for selected package */}
                                                     {(() => {
-                                                        const pkgInfo = BRANDED_PACKAGES.find(p => p.id === scenario.packageId);
-                                                        if (!pkgInfo) return null;
+                                                        const pkgPitch = getPackagePitchInfo(scenario.packageId);
+                                                        if (!pkgPitch) return null;
 
                                                         return (
                                                             <div className="mt-6 space-y-4">
@@ -912,21 +1143,23 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                         <span className="text-[10px] font-black uppercase tracking-widest text-primary/80">Active Pitch Script</span>
                                                                     </div>
                                                                     <p className="text-xs sm:text-sm text-foreground leading-relaxed italic">
-                                                                        "{pkgInfo.script}"
+                                                                        "{pkgPitch.script}"
                                                                     </p>
                                                                 </div>
 
-                                                                <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
-                                                                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 block">What's Included:</div>
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                                                                        {pkgInfo.includes.map((item, idx) => (
-                                                                            <div key={idx} className="flex items-center gap-2 text-[11px] text-zinc-300">
-                                                                                <div className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                                                                                <span className="truncate">{item}</span>
-                                                                            </div>
-                                                                        ))}
+                                                                {pkgPitch.includes.length > 0 && (
+                                                                    <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+                                                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-3 block">What's Included:</div>
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+                                                                            {pkgPitch.includes.map((item, idx) => (
+                                                                                <div key={idx} className="flex items-center gap-2 text-[11px] text-zinc-300">
+                                                                                    <div className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                                                                                    <span className="truncate">{item}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
                                                                     </div>
-                                                                </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })()}
@@ -946,39 +1179,47 @@ ${firstVehicle.notes || ''}`.trim(),
                                                     Comparison Summary
                                                 </h4>
 
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    {activeVehicle.scenarios.slice(0, 2).map((s, idx) => {
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                    {activeVehicle.scenarios.map((s, idx) => {
                                                         const total = calculateTotal(s.packageId, s.addOnIds, activeVehicle.type);
                                                         return (
-                                                            <div key={s.id} className="p-3 rounded-lg bg-black/40 border border-zinc-800">
-                                                                <div className="text-[9px] font-black uppercase text-zinc-500 tracking-widest">{s.label}</div>
-                                                                <div className="text-xl font-black text-white mt-1">${total}</div>
+                                                            <div key={s.id} className="p-3 rounded-lg bg-black/40 border border-zinc-800 flex flex-col justify-between">
+                                                                <div>
+                                                                    <div className="text-[9px] font-black uppercase text-zinc-500 tracking-widest leading-none">{s.label}</div>
+                                                                    <div className="text-xl font-black text-white mt-1.5 leading-none">${total}</div>
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
 
                                                 {(() => {
-                                                    const s1 = activeVehicle.scenarios[0];
-                                                    const s2 = activeVehicle.scenarios[1];
-                                                    const t1 = calculateTotal(s1.packageId, s1.addOnIds, activeVehicle.type);
-                                                    const t2 = calculateTotal(s2.packageId, s2.addOnIds, activeVehicle.type);
-                                                    const diff = Math.abs(t1 - t2);
-                                                    const moreExp = t1 > t2 ? s1 : s2;
-                                                    const cheaper = t1 > t2 ? s2 : s1;
+                                                    const extPkg = livePackages.find(p => p.id.toLowerCase().includes('exterior'));
+                                                    const intPkg = livePackages.find(p => p.id.toLowerCase().includes('interior'));
+                                                    const fullPkg = livePackages.find(p => p.id.toLowerCase().includes('full'));
+
+                                                    if (!extPkg || !intPkg || !fullPkg) return null;
+
+                                                    const extPrice = parseFloat(savedPrices[`package:${extPkg.id}:${activeVehicle.type}`]) || extPkg.pricing?.[activeVehicle.type] || 0;
+                                                    const intPrice = parseFloat(savedPrices[`package:${intPkg.id}:${activeVehicle.type}`]) || intPkg.pricing?.[activeVehicle.type] || 0;
+                                                    const fullPrice = parseFloat(savedPrices[`package:${fullPkg.id}:${activeVehicle.type}`]) || fullPkg.pricing?.[activeVehicle.type] || 0;
+
+                                                    const individualSum = extPrice + intPrice;
+                                                    const savings = individualSum - fullPrice;
+
+                                                    if (savings <= 0) return null;
 
                                                     return (
-                                                        <div className="mt-4 pt-4 border-t border-zinc-800">
-                                                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-100 font-black text-sm text-center">
-                                                                "{moreExp.label} is only <span className="text-emerald-400 text-lg underline underline-offset-4 decoration-2">${diff}</span> more than {cheaper.label}"
-                                                            </div>
-                                                        </div>
+                                                         <div className="mt-4 pt-4 border-t border-zinc-850">
+                                                             <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-300 font-medium text-xs sm:text-sm text-center shadow-inner">
+                                                                 💡 "Choosing the <span className="text-emerald-400 font-black uppercase">{fullPkg.name.replace('Prime ', '')} (${fullPrice})</span> instead of individual <span className="text-zinc-100 font-black uppercase">Interior (${intPrice})</span> & <span className="text-zinc-100 font-black uppercase">Exterior (${extPrice})</span> will save the customer <span className="text-emerald-400 text-base font-black underline underline-offset-4 decoration-2">${savings}</span>!"
+                                                             </div>
+                                                         </div>
                                                     );
                                                 })()}
                                             </div>
                                         )}
                                     </div>
-                                </div>
                             </AccordionContent>
                         </AccordionItem>
                     </Accordion>
