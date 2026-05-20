@@ -1763,6 +1763,75 @@ export default function WebsiteAdministration() {
                     </div>
                   </div>
                   <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the Home page. Recommended to hide for new businesses.</p>
+                  
+                  {/* Testimonial Management Section */}
+                  <div className="mt-4 pt-4 border-t border-zinc-800/50 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-[10px] uppercase font-black tracking-widest text-zinc-400">Manage Registered Reviews ({testimonials.length})</h5>
+                      <Button 
+                        type="button"
+                        className="bg-red-700 hover:bg-red-800 h-8 text-[10px] font-black uppercase tracking-wider px-3"
+                        onClick={() => {
+                          if (!ensureNotDemo("addition")) return;
+                          setNewTestimonialOpen(true);
+                        }}
+                      >
+                        + Add Review
+                      </Button>
+                    </div>
+
+                    {testimonials.length === 0 ? (
+                      <div className="text-center py-6 text-zinc-600 text-xs italic border border-dashed border-zinc-800 rounded-lg">
+                        No testimonials registered yet. Click "+ Add Review" above to create your first customer review!
+                      </div>
+                    ) : (
+                      <div className="w-full overflow-hidden border border-zinc-800 rounded-xl">
+                        <Table>
+                          <TableHeader className="bg-zinc-950">
+                            <TableRow className="border-zinc-800 hover:bg-transparent">
+                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Customer Name</TableHead>
+                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Review / Quote</TableHead>
+                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest w-20 text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody className="bg-zinc-950/40">
+                            {testimonials.map((t: any) => (
+                              <TableRow key={t.id} className="border-zinc-800 hover:bg-zinc-900/20">
+                                <TableCell className="text-white font-bold text-xs max-w-[150px] truncate">{t.name}</TableCell>
+                                <TableCell className="text-zinc-400 text-xs italic max-w-[300px] truncate">{t.quote}</TableCell>
+                                <TableCell className="text-right flex justify-end gap-1">
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 text-zinc-500 hover:text-white hover:bg-zinc-800" 
+                                    onClick={() => setEditTestimonial(t)}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 text-zinc-500 hover:text-red-500 hover:bg-red-950/20" 
+                                    onClick={async () => {
+                                      if (!ensureNotDemo("deletion")) return;
+                                      if (!confirm(`Delete testimonial from ${t.name}?`)) return;
+                                      await contentService.deleteTestimonial(t.id);
+                                      const updated = await contentService.getTestimonials();
+                                      setTestimonials(Array.isArray(updated) ? updated : []);
+                                      notifyChange('home');
+                                      toast({ title: 'Testimonial deleted' });
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-4 border-l-4 border-red-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
