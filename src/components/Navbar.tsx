@@ -244,18 +244,30 @@ export const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              className="md:hidden p-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6 text-foreground" />
-              ) : (
-                <Menu className="h-6 w-6 text-foreground" />
+            {/* Mobile: Always-visible Phone Assistant + Hamburger */}
+            <div className="md:hidden flex items-center gap-1">
+              {user && (user.role === 'admin' || user.role === 'employee') && (
+                <button
+                  onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                  aria-label="Phone Assistant"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/15 border border-primary/30 text-primary font-black uppercase text-[10px] tracking-tight hover:bg-primary hover:text-white active:scale-95 transition-all shadow-[0_0_10px_rgba(var(--primary),0.3)] animate-pulse-subtle"
+                >
+                  <Phone className="h-4 w-4 shrink-0" />
+                  <span>Assistant</span>
+                </button>
               )}
-            </button>
+              <button
+                className="p-2"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6 text-foreground" />
+                ) : (
+                  <Menu className="h-6 w-6 text-foreground" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Menu */}
