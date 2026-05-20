@@ -87,12 +87,27 @@ const procedures: ProcedurePage[] = [
       },
       {
         title: "Website Administration",
-        content: "This portal manages the 'Public Face' of your business. It allows you to toggle service availability, update pricing packages, and manage your 'Elite Transformations' gallery. Ensuring your Website Admin settings match your shop's actual capacity is critical to prevent over-booking and maintaining customer trust.",
+        content: "This portal manages the 'Public Face' of your business. It allows you to toggle service availability, update pricing packages, manage operational modes, and control home-page testimonials. Ensuring your Website Admin settings match your shop's actual capacity is critical to prevent over-booking and maintaining customer trust.",
         subsections: [
           {
             title: "Live Booking Control",
             content: "Enable or disable specific slots and set SUV/Truck premiums that apply instantly to the online booking portal.",
             icon: Settings
+          },
+          {
+            title: "Operational Status Modes",
+            content: "Toggle between 5 modes: Live, Pre-Launch, Winter Pause, Marketing (Sales Specials via growing dropdown catalog & custom presets), and Custom (a completely blank canvas for typing custom outage/alert messages).",
+            icon: Sparkles
+          },
+          {
+            title: "Facility Banner & Privacy",
+            content: "Default banner displays 'We are serving customers exclusively at our state-of-the-art Methuen facility. Come visit us (By Appointment Only) for a premium experience!' without revealing the street address to protect operational privacy.",
+            icon: ShieldCheck
+          },
+          {
+            title: "Testimonials Control",
+            content: "Toggle a home-page testimonials block to hide it clean when no reviews are on hand. Removed completely from the About Page to eliminate redundancy.",
+            icon: Star
           }
         ]
       },
@@ -193,6 +208,11 @@ const procedures: ProcedurePage[] = [
             title: "Asset Depletion",
             content: "The system calculates the depreciation of your hardware to provide accurate tax deductions.",
             icon: BarChart3
+          },
+          {
+            title: "Visual Folder Indicators",
+            content: "Any folder in the Business Drive of the File Manager that contains at least one active file or image lights up in green to quickly direct detailers to active content.",
+            icon: CheckCircle2
           }
         ]
       },
