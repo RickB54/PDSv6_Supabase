@@ -44,7 +44,8 @@ import {
   Snowflake,
   Construction,
   Info,
-  Settings
+  Settings,
+  Tag
 } from "lucide-react";
 import HelpModal from "@/components/help/HelpModal";
 
@@ -53,9 +54,100 @@ const notifyChange = (kind: string) => {
 };
 import * as bookingsSvc from "@/services/supabase/bookings";
 
+const DEFAULT_PROMO_OPTIONS = [
+  {
+    id: 'ceramic-sale',
+    name: '🔥 Ceramic Coating Sale (15% Off Special)',
+    title: '🔥 SPECIAL OFFER: 15% OFF ALL CERAMIC COATINGS 🔥',
+    desc: 'Book your professional detailing experience online today and save 15% on premium ceramic coatings! This limited-time offer includes professional paint correction and premium surface protection at our state-of-the-art Methuen facility.'
+  },
+  {
+    id: 'shop-wide',
+    name: '✨ 10% Off All Services (Shop Wide Special)',
+    title: '✨ SPECIAL OFFER: 10% OFF ALL SERVICES SHOP WIDE ✨',
+    desc: 'Save 10% on any detailing package booked online! Get premium interior and exterior detailing from our certified team at our Methuen facility. Limited time only!'
+  },
+  {
+    id: 'addon-special',
+    name: '🚀 15% Off All Service Add-Ons!',
+    title: '🚀 SPECIAL OFFER: 15% OFF ALL SERVICE ADD-ONS 🚀',
+    desc: 'Enhance your detail today! Save 15% on premium add-ons including glass ceramic coating, engine bay detailing, leather conditioning, and pet hair removal.'
+  },
+  {
+    id: 'winter-protection',
+    name: '❄️ Winter Protection (Free Windshield Coating)',
+    title: '❄️ WINTER SPECIAL: FREE CERAMIC WINDSHIELD COATING ❄️',
+    desc: 'Book any full exterior or interior detail package and receive a complimentary premium ceramic windshield glass coating to repel rain, snow, and ice!'
+  },
+  {
+    id: 'spring-renewal',
+    name: '🌸 Spring Renewal Detail (10% Off Full Detail)',
+    title: '🌸 SPRING RENEWAL: 10% OFF FULL DETAIL PACKAGES 🌸',
+    desc: 'Wash away winter salt and grime! Save 10% on full interior + exterior renewal packages. Bring back that new car shine and protect your paint today.'
+  }
+];
+
 export default function WebsiteAdministration() {
   const { toast } = useToast();
   const { isDemoMode } = useDemoMode();
+
+  const [customPromoOptions, setCustomPromoOptions] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('prime_custom_sale_ideas');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const promoOptions = [...DEFAULT_PROMO_OPTIONS, ...customPromoOptions];
+
+  const handleSelectPromo = (promoId: string) => {
+    const selected = promoOptions.find(p => p.id === promoId);
+    if (selected) {
+      setBusinessStatus((prev: any) => ({
+        ...prev,
+        topBannerText: selected.title,
+        topBannerDescription: selected.desc,
+        bannerText: selected.title,
+        bannerDescription: selected.desc
+      }));
+      toast({
+        title: "Promo Idea Applied",
+        description: `Loaded preset: ${selected.name}`
+      });
+    }
+  };
+
+  const handleSaveCustomPromo = () => {
+    const title = businessStatus.topBannerText || '';
+    const desc = businessStatus.topBannerDescription || '';
+    if (!title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter an Announcement Title before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const name = prompt("Enter a friendly name for this custom sale preset (e.g. '15% off All Add-Ons!'):");
+    if (!name || !name.trim()) return;
+
+    const newPreset = {
+      id: `custom-promo-${Date.now()}`,
+      name: `✨ ${name.trim()}`,
+      title: title.trim(),
+      desc: desc.trim()
+    };
+
+    const updated = [...customPromoOptions, newPreset];
+    setCustomPromoOptions(updated);
+    localStorage.setItem('prime_custom_sale_ideas', JSON.stringify(updated));
+    toast({
+      title: "Preset Saved",
+      description: `"${name}" has been added to your growing dropdown list!`
+    });
+  };
 
   const ensureNotDemo = (action: string) => {
     if (isDemoMode) {
@@ -230,6 +322,8 @@ export default function WebsiteAdministration() {
       mode: 'live',
       bannerText: '✨ NOW LIVE: PREMIUM MOBILE DETAILING',
       bannerDescription: 'Fully operational! Book your elite detailing experience online today for premium service at your driveway.',
+      topBannerText: '✨ NOW LIVE: PREMIUM MOBILE DETAILING',
+      topBannerDescription: 'Fully operational! Book your elite detailing experience online today for premium service at your driveway.',
       showBooking: true,
       showContact: true,
       isTopBannerActive: false,
@@ -243,6 +337,8 @@ export default function WebsiteAdministration() {
       mode: 'pre-launch',
       bannerText: '🚀 PRE-LAUNCH: GROWING THE WAITLIST',
       bannerDescription: 'We are in the final setup phase. Active detailing is currently paused, but we are accepting inquiries and waitlist signups!',
+      topBannerText: '🚀 PRE-LAUNCH: GROWING THE WAITLIST',
+      topBannerDescription: 'We are in the final setup phase. Active detailing is currently paused, but we are accepting inquiries and waitlist signups!',
       showBooking: false,
       showContact: true,
       isTopBannerActive: true,
@@ -256,6 +352,8 @@ export default function WebsiteAdministration() {
       mode: 'winter-closed',
       bannerText: '❄️ SEASONAL PAUSE: WINTER OPERATIONS',
       bannerDescription: 'We are currently closed for the winter season to protect our equipment and your vehicle. We will resume operations in the Spring! Inquiries are still welcome for future bookings.',
+      topBannerText: '❄️ SEASONAL PAUSE: WINTER OPERATIONS',
+      topBannerDescription: 'We are currently closed for the winter season to protect our equipment and your vehicle. We will resume operations in the Spring! Inquiries are still welcome for future bookings.',
       showBooking: false,
       showContact: true,
       isTopBannerActive: true,
@@ -265,10 +363,27 @@ export default function WebsiteAdministration() {
       blockedReason: 'Seasonal Closure',
       shopOnly: false
     },
+    'marketing': {
+      mode: 'marketing',
+      bannerText: '⚠️ Methuen Shop-Only Operation Updates',
+      bannerDescription: 'We are serving customers exclusively at our state-of-the-art Methuen facility located at 54 Boston Street. Come visit us (By Appointment Only) for a premium experience!',
+      topBannerText: '🔥 SPECIAL OFFER: 15% OFF ALL CERAMIC COATINGS 🔥',
+      topBannerDescription: 'Book your professional detailing experience online today and save 15% on premium ceramic coatings! This limited-time offer includes professional paint correction and premium surface protection at our state-of-the-art Methuen facility.',
+      showBooking: true,
+      showContact: true,
+      isTopBannerActive: true,
+      isContactBannerActive: true,
+      blockedStartDate: '',
+      blockedEndDate: '',
+      blockedReason: '',
+      shopOnly: true
+    },
     'custom': {
       mode: 'custom',
-      bannerText: 'CUSTOM ANNOUNCEMENT',
-      bannerDescription: 'Enter your custom status details here...',
+      bannerText: '',
+      bannerDescription: '',
+      topBannerText: '',
+      topBannerDescription: '',
       showBooking: true,
       showContact: true,
       isTopBannerActive: true,
@@ -281,6 +396,14 @@ export default function WebsiteAdministration() {
   };
 
   const CUSTOM_PRESETS = [
+    { 
+      id: 'ceramic-sale', 
+      name: '🔥 Ceramic Coating Sale (15% Off Special)', 
+      reason: 'Ceramic Coating Sale',
+      title: '🔥 SPECIAL OFFER: 15% OFF ALL CERAMIC COATINGS 🔥',
+      desc: 'Book your professional detailing experience online today and save 15% on premium ceramic coatings! This limited-time offer includes professional paint correction and premium surface protection at our state-of-the-art Methuen facility located at 54 Boston Street, Methuen, MA.',
+      shopOnly: true
+    },
     { 
       id: 'shop-only', 
       name: '🏢 Shop-Only Detailing (Methuen Facility)', 
@@ -690,11 +813,13 @@ export default function WebsiteAdministration() {
                 <div className={`p-3 rounded-xl transition-all duration-500 ${
                   businessStatus.mode === 'live' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 
                   businessStatus.mode === 'winter-closed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' :
+                  businessStatus.mode === 'marketing' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]' :
                   businessStatus.mode === 'custom' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' :
                   'bg-red-500/10 text-red-500 border border-red-500/10'
                 }`}>
                   {businessStatus.mode === 'live' ? <Rocket className="h-6 w-6 animate-pulse" /> : 
                    businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 animate-spin-slow" /> :
+                   businessStatus.mode === 'marketing' ? <Tag className="h-6 w-6 animate-bounce-subtle" /> :
                    businessStatus.mode === 'custom' ? <Settings className="h-6 w-6" /> :
                    <Construction className="h-6 w-6" />}
                 </div>
@@ -706,6 +831,7 @@ export default function WebsiteAdministration() {
                   <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
                     {businessStatus.mode === 'live' ? 'Website Live' : 
                      businessStatus.mode === 'winter-closed' ? 'Winter Mode' : 
+                     businessStatus.mode === 'marketing' ? 'Marketing Mode' : 
                      businessStatus.mode === 'custom' ? 'Custom Mode' : 'Pre-Launch'}
                   </h3>
                 </div>
@@ -755,6 +881,21 @@ export default function WebsiteAdministration() {
                 <div>
                   <p className="text-sm font-bold uppercase italic tracking-tighter">Winter Mode</p>
                   <p className="text-[10px] text-zinc-500">Seasonal closure / Lead preservation</p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="flex items-center gap-3 p-3 focus:bg-amber-500/10 focus:text-amber-400 cursor-pointer rounded-lg mb-1" 
+                onClick={() => {
+                  handleUpdateStatus(STATUS_PRESETS['marketing']);
+                  toast({ title: "Marketing Mode Active", description: "Promo notices and custom sales active." });
+                }}
+              >
+                <div className="p-2 bg-amber-500/20 rounded-md">
+                  <Tag className="h-4 w-4 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold uppercase italic tracking-tighter">Marketing Mode</p>
+                  <p className="text-[10px] text-zinc-500">Special offers / Ceramic Coating sales</p>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem 
@@ -892,11 +1033,12 @@ export default function WebsiteAdministration() {
               </AccordionTrigger>
               <AccordionContent className="p-6 space-y-8 bg-black/20">
                 {/* Advanced Mode Selector */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   {[
                     { id: 'live', name: 'Live Mode', icon: Rocket, color: 'emerald' },
                     { id: 'pre-launch', name: 'Pre-Launch', icon: Construction, color: 'red' },
                     { id: 'winter-closed', name: 'Winter Mode', icon: Snowflake, color: 'blue' },
+                    { id: 'marketing', name: 'Marketing Mode', icon: Tag, color: 'amber' },
                     { id: 'custom', name: 'Custom Mode', icon: Settings, color: 'purple' }
                   ].map((preset) => {
                     const isPreview = businessStatus.mode === preset.id;
@@ -907,18 +1049,21 @@ export default function WebsiteAdministration() {
                       red: isPreview ? 'bg-red-500/10 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
                       blue: isPreview ? 'bg-blue-500/10 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
                       purple: isPreview ? 'bg-purple-500/10 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
+                      amber: isPreview ? 'bg-amber-500/10 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700',
                     };
                     const iconColors: Record<string, string> = {
                       emerald: isPreview ? 'bg-emerald-500 text-white' : 'bg-zinc-800 text-zinc-500',
                       red: isPreview ? 'bg-red-500 text-white' : 'bg-zinc-800 text-zinc-500',
                       blue: isPreview ? 'bg-blue-500 text-white' : 'bg-zinc-800 text-zinc-500',
                       purple: isPreview ? 'bg-purple-500 text-white' : 'bg-zinc-800 text-zinc-500',
+                      amber: isPreview ? 'bg-amber-500 text-white' : 'bg-zinc-800 text-zinc-500',
                     };
                     const textColors: Record<string, string> = {
                       emerald: isPreview ? 'text-emerald-500' : 'text-zinc-500',
                       red: isPreview ? 'text-red-500' : 'text-zinc-500',
                       blue: isPreview ? 'text-blue-500' : 'text-zinc-500',
                       purple: isPreview ? 'text-purple-500' : 'text-zinc-500',
+                      amber: isPreview ? 'text-amber-500' : 'text-zinc-500',
                     };
 
                     return (
@@ -927,7 +1072,21 @@ export default function WebsiteAdministration() {
                       className={`p-4 cursor-pointer transition-all border-2 relative overflow-hidden ${colorStyles[preset.color]}`}
                       onClick={() => {
                         if (preset.id === 'custom') {
-                          setBusinessStatus({ ...businessStatus, mode: 'custom' });
+                          setBusinessStatus({
+                            ...businessStatus,
+                            mode: 'custom',
+                            bannerText: '',
+                            bannerDescription: '',
+                            topBannerText: '',
+                            topBannerDescription: '',
+                            isTopBannerActive: true,
+                            isContactBannerActive: true,
+                            showBooking: true,
+                            showContact: true,
+                            shopOnly: false
+                          });
+                        } else if (preset.id === 'marketing') {
+                          setBusinessStatus({ ...businessStatus, ...STATUS_PRESETS['marketing'] });
                         } else {
                           setBusinessStatus(STATUS_PRESETS[preset.id]);
                         }
@@ -938,7 +1097,8 @@ export default function WebsiteAdministration() {
                            <div className={`h-2 w-2 rounded-full animate-pulse ${
                              preset.color === 'emerald' ? 'bg-emerald-500' : 
                              preset.color === 'red' ? 'bg-red-500' : 
-                             preset.color === 'blue' ? 'bg-blue-500' : 'bg-purple-500'
+                             preset.color === 'blue' ? 'bg-blue-500' : 
+                             preset.color === 'amber' ? 'bg-amber-500' : 'bg-purple-500'
                            }`} />
                            <span className="text-[8px] font-black uppercase text-zinc-500 tracking-tighter">Live Now</span>
                         </div>
@@ -953,7 +1113,8 @@ export default function WebsiteAdministration() {
                           <p className="text-[10px] text-zinc-600 mt-1">
                             {preset.id === 'live' ? 'Full Operations' : 
                              preset.id === 'pre-launch' ? 'Growing Leads' : 
-                             preset.id === 'winter-closed' ? 'Seasonal Pause' : 'Your Config'}
+                             preset.id === 'winter-closed' ? 'Seasonal Pause' : 
+                             preset.id === 'marketing' ? 'Promotions & Sales' : 'Your Config'}
                           </p>
                         </div>
 
@@ -974,7 +1135,8 @@ export default function WebsiteAdministration() {
                              className={`scale-75 ${
                                preset.color === 'emerald' ? 'data-[state=checked]:bg-emerald-600' : 
                                preset.color === 'red' ? 'data-[state=checked]:bg-red-600' : 
-                               preset.color === 'blue' ? 'data-[state=checked]:bg-blue-600' : 'data-[state=checked]:bg-purple-600'
+                               preset.color === 'blue' ? 'data-[state=checked]:bg-blue-600' : 
+                               preset.color === 'amber' ? 'data-[state=checked]:bg-amber-600' : 'data-[state=checked]:bg-purple-600'
                              }`}
                            />
                         </div>
@@ -1004,25 +1166,104 @@ export default function WebsiteAdministration() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
-                          Primary Banner Heading
-                          <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'business-launch-manager', role: 'admin' }}))} />
-                        </Label>
-                        <Input 
-                          className="bg-zinc-900 border-zinc-800 text-white font-bold h-12 text-lg" 
-                          value={businessStatus.bannerText} 
-                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerText: e.target.value })} 
-                        />
+                    <div className="space-y-6">
+                      {/* Section 1: Top Announcement Bar (Site-wide) */}
+                      <div className="space-y-4 p-5 bg-zinc-900/10 border border-zinc-900 rounded-2xl">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-xs font-black uppercase tracking-wider text-red-500 flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                            Top Announcement Bar (Header Banner)
+                          </h5>
+                          {!businessStatus.isTopBannerActive && (
+                            <Badge variant="outline" className="text-[8px] border-zinc-800 text-zinc-500 uppercase px-2">Inactive</Badge>
+                          )}
+                        </div>
+                        
+                        {businessStatus.mode === 'marketing' && (
+                          <div className="space-y-2 p-3 bg-purple-950/20 border border-purple-900/30 rounded-xl mb-2">
+                            <Label className="text-[10px] uppercase font-black tracking-widest text-purple-400">🏷️ Quick Sale Presets & Ideas</Label>
+                            <div className="flex gap-2">
+                              <Select onValueChange={(val) => handleSelectPromo(val)}>
+                                <SelectTrigger className="w-full bg-zinc-950 border-zinc-800 text-xs text-white">
+                                  <SelectValue placeholder="Select a sale or promotion idea..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800 text-white max-w-sm">
+                                  {promoOptions.map((opt) => (
+                                    <SelectItem key={opt.id} value={opt.id} className="text-xs focus:bg-zinc-800">
+                                      {opt.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={handleSaveCustomPromo}
+                                className="text-[10px] uppercase font-black tracking-wider border-purple-800 hover:bg-purple-900/20 text-purple-300 h-9 px-3 shrink-0"
+                                title="Save current announcement text as a new reusable preset"
+                              >
+                                Save Custom
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest flex items-center gap-2">
+                            Announcement Title Text
+                            <HelpCircle className="h-3 w-3 text-zinc-800 hover:text-white cursor-help" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'business-launch-manager', role: 'admin' }}))} />
+                          </Label>
+                          <Input 
+                            className="bg-zinc-900 border-zinc-800 text-white font-bold h-10 text-sm" 
+                            placeholder="e.g. ✨ NOW LIVE: PREMIUM MOBILE DETAILING"
+                            value={businessStatus.topBannerText || ''} 
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, topBannerText: e.target.value })} 
+                            disabled={!businessStatus.isTopBannerActive}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Announcement Sub-Description</Label>
+                          <textarea 
+                            className="w-full bg-zinc-900 border-zinc-800 text-zinc-400 rounded-lg p-3 text-xs min-h-[80px]" 
+                            placeholder="e.g. Fully operational! Book your elite detailing experience online today..."
+                            value={businessStatus.topBannerDescription || ''} 
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, topBannerDescription: e.target.value })} 
+                            disabled={!businessStatus.isTopBannerActive}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase font-black text-zinc-500 tracking-widest">Banner Sub-Description</Label>
-                        <textarea 
-                          className="w-full bg-zinc-900 border-zinc-800 text-zinc-400 rounded-lg p-3 text-sm min-h-[100px]" 
-                          value={businessStatus.bannerDescription} 
-                          onChange={(e) => setBusinessStatus({ ...businessStatus, bannerDescription: e.target.value })} 
-                        />
+
+                      {/* Section 2: Contact Page Notice Banner */}
+                      <div className="space-y-4 p-5 bg-zinc-900/10 border border-zinc-900 rounded-2xl">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-xs font-black uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                            Contact Page Notice Banner
+                          </h5>
+                          {!businessStatus.isContactBannerActive && (
+                            <Badge variant="outline" className="text-[8px] border-zinc-800 text-zinc-500 uppercase px-2">Inactive</Badge>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Contact Notice Heading</Label>
+                          <Input 
+                            className="bg-zinc-900 border-zinc-800 text-white font-bold h-10 text-sm" 
+                            placeholder="e.g. Important Status Update"
+                            value={businessStatus.bannerText || ''} 
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, bannerText: e.target.value })} 
+                            disabled={!businessStatus.isContactBannerActive}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase font-black text-zinc-500 tracking-widest">Contact Notice Sub-Description</Label>
+                          <textarea 
+                            className="w-full bg-zinc-900 border-zinc-800 text-zinc-400 rounded-lg p-3 text-xs min-h-[80px]" 
+                            placeholder="e.g. Enter the detailed status update for your Contact page here..."
+                            value={businessStatus.bannerDescription || ''} 
+                            onChange={(e) => setBusinessStatus({ ...businessStatus, bannerDescription: e.target.value })} 
+                            disabled={!businessStatus.isContactBannerActive}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -1114,6 +1355,8 @@ export default function WebsiteAdministration() {
                                     ...businessStatus, 
                                     bannerText: p.title, 
                                     bannerDescription: p.desc, 
+                                    topBannerText: p.title,
+                                    topBannerDescription: p.desc,
                                     blockedReason: p.reason,
                                     isTopBannerActive: true,
                                     isContactBannerActive: true,

@@ -330,7 +330,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
         <AppSidebar key={effectiveUser?.id || 'sidebar-authenticated'} user={effectiveUser} businessStatus={businessStatus} />
       </div>
-      <div className={`flex-1 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
+      <div className={`flex-1 min-w-0 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
           <Route path="/dashboard/admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

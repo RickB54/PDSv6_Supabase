@@ -18,6 +18,30 @@ import { LayoutDashboard, LogOut, Phone } from "lucide-react";
 
 import { contentService } from "@/lib/content";
 
+const sanitizeShopOnlyText = (text: string, isShopOnly: boolean) => {
+  if (!text || !isShopOnly) return text;
+  return text
+    .replace(/PREMIUM MOBILE DETAILING/g, 'PREMIUM SHOP-ONLY DETAILING')
+    .replace(/premium mobile detailing/gi, 'premium shop detailing')
+    .replace(/at your driveway/gi, 'at our shop facility')
+    .replace(/to your driveway/gi, 'at our Methuen facility')
+    .replace(/mobile units are active/gi, 'shop facility is fully active')
+    .replace(/mobile units are/gi, 'shop facility is')
+    .replace(/mobile detailing/gi, 'shop detailing')
+    .replace(/mobile/gi, 'shop-only');
+};
+
+const stripAddressForTopBanner = (text: string) => {
+  if (!text) return text;
+  return text
+    .replace(/at 54 Boston Street, Methuen, MA/gi, '')
+    .replace(/located at 54 Boston Street, Methuen, MA/gi, '')
+    .replace(/located at 54 Boston Street/gi, '')
+    .replace(/at 54 Boston Street/gi, '')
+    .replace(/54 Boston Street, Methuen, MA/gi, 'Methuen, MA')
+    .replace(/54 Boston Street/gi, '');
+};
+
 export const Navbar = () => {
     const { isDemoMode } = useDemoMode();
     const { toggleSidebar, isMobile } = useSidebar();
@@ -105,13 +129,14 @@ export const Navbar = () => {
           style={{ top: isDemoMode ? '40px' : '0' }}
           className={`fixed left-0 right-0 z-[60] py-2.5 px-4 text-center text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] shadow-lg border-b border-white/10 ${
           businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
-          businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 'bg-primary'
+          businessStatus.mode === 'pre-launch' ? 'bg-red-600' : 
+          businessStatus.mode === 'marketing' ? 'bg-purple-600' : 'bg-primary'
         }`}>
           <div className="container mx-auto flex items-center justify-center gap-4">
             <span className="hidden sm:inline opacity-70">///</span>
-            <span>{businessStatus.bannerText}</span>
+            <span>{stripAddressForTopBanner(sanitizeShopOnlyText(businessStatus.topBannerText || businessStatus.bannerText, !!businessStatus.shopOnly))}</span>
             <span className="hidden sm:inline opacity-70">///</span>
-            <span className="hidden lg:inline text-[9px] lowercase tracking-normal font-medium opacity-80">{businessStatus.bannerDescription}</span>
+            <span className="hidden lg:inline text-[9px] lowercase tracking-normal font-medium opacity-80">{stripAddressForTopBanner(sanitizeShopOnlyText(businessStatus.topBannerDescription || businessStatus.bannerDescription, !!businessStatus.shopOnly))}</span>
           </div>
         </div>
       )}

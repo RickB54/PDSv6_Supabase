@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import SuccessMessage from "@/components/SuccessMessage";
-import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake, Image as ImageIcon, X, HelpCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, ArrowLeft, Info, Star, CarFront, Check, Snowflake, Image as ImageIcon, X, HelpCircle, Tag } from "lucide-react";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import jsPDF from "jspdf";
 import api from "@/lib/api";
@@ -26,6 +26,19 @@ import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/ser
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import logo from "@/assets/logo-primary.png";
+
+export const sanitizeShopOnlyText = (text: string, isShopOnly: boolean) => {
+  if (!text || !isShopOnly) return text;
+  return text
+    .replace(/PREMIUM MOBILE DETAILING/g, 'PREMIUM SHOP-ONLY DETAILING')
+    .replace(/premium mobile detailing/gi, 'premium shop detailing')
+    .replace(/at your driveway/gi, 'at our shop facility')
+    .replace(/to your driveway/gi, 'at our Methuen facility')
+    .replace(/mobile units are active/gi, 'shop facility is fully active')
+    .replace(/mobile units are/gi, 'shop facility is')
+    .replace(/mobile detailing/gi, 'shop detailing')
+    .replace(/mobile/gi, 'shop-only');
+};
 
 const Contact = () => {
   const { isDemoMode } = useDemoMode();
@@ -507,14 +520,19 @@ const Contact = () => {
         {/* Dynamic Business Status Banner */}
         {businessStatus && !!businessStatus.isContactBannerActive && (
           <Card className={`mb-12 border-2 overflow-hidden shadow-2xl animate-fade-in ${
-            businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 'border-blue-500/50 bg-blue-50/30'
+            businessStatus.mode === 'winter-closed' ? 'border-blue-500/50 bg-blue-500/5' : 
+            businessStatus.mode === 'marketing' ? 'border-purple-500/50 bg-purple-500/5 shadow-[0_0_25px_rgba(168,85,247,0.15)]' : 'border-blue-500/50 bg-blue-50/30'
           }`}>
-             <div className={`${businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 'bg-blue-600'} px-6 py-5 flex items-center gap-4`}>
+             <div className={`${
+               businessStatus.mode === 'winter-closed' ? 'bg-blue-600' : 
+               businessStatus.mode === 'marketing' ? 'bg-purple-600' : 'bg-blue-600'
+             } px-6 py-5 flex items-center gap-4`}>
                 <div className="p-2 bg-white/20 rounded-lg">
-                  {businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 text-white" /> : <Info className="h-6 w-6 text-white" />}
+                  {businessStatus.mode === 'winter-closed' ? <Snowflake className="h-6 w-6 text-white" /> : 
+                   businessStatus.mode === 'marketing' ? <Tag className="h-6 w-6 text-white animate-pulse" /> : <Info className="h-6 w-6 text-white" />}
                 </div>
                 <h2 className="text-2xl font-black text-white uppercase tracking-wider">
-                  {businessStatus.mode === 'pre-launch' ? 'PRE-LAUNCH CONTACT NOTICE' : businessStatus.bannerText}
+                  {businessStatus.mode === 'pre-launch' ? 'PRE-LAUNCH CONTACT NOTICE' : sanitizeShopOnlyText(businessStatus.bannerText, !!businessStatus.shopOnly)}
                 </h2>
              </div>
              <div className="p-8 space-y-6">
@@ -540,7 +558,7 @@ const Contact = () => {
                   <>
                     <h3 className="text-xl font-bold text-foreground">Important Status Update</h3>
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                      {businessStatus.bannerDescription}
+                      {sanitizeShopOnlyText(businessStatus.bannerDescription, !!businessStatus.shopOnly)}
                     </p>
                     {businessStatus.showContact ? (
                        <p className="text-lg text-muted-foreground leading-relaxed italic">
