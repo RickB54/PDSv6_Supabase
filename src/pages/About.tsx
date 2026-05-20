@@ -406,38 +406,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {aboutData.showTestimonials !== false && (
-        <section className="py-24 bg-zinc-50">
-          <div className="container mx-auto px-4 max-w-7xl">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter">What Our Customers Say</h2>
-              <p className="text-zinc-500 mt-4 text-lg">Real feedback from satisfied clients.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {displayTestimonials.map((t, i) => (
-                <Card key={i} className="p-8 bg-white border-blue-50 shadow-sm flex flex-col justify-between">
-                  <div className="space-y-4 text-left">
-                    <div className="flex text-yellow-400 gap-1">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
-                    </div>
-                    <p className="text-zinc-600 italic leading-relaxed">"{t.quote}"</p>
-                  </div>
-                  <div className="mt-8 flex items-center gap-4 border-t border-zinc-100 pt-6">
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                      {t.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-blue-900 text-sm uppercase">{t.name}</h4>
-                      <p className="text-xs text-zinc-400 uppercase tracking-widest font-black">Verified Customer</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+
 
       {/* CTA Section */}
       <section className="py-24 bg-blue-900 text-white text-center flex flex-col items-center">

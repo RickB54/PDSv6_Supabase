@@ -690,13 +690,17 @@ export default function WebsiteAdministration() {
       // Home Data
       const h = allMeta.find(m => m.key === 'home_content');
       if (h && h.meta) {
-        setHomeData((prev: any) => ({ ...prev, ...h.meta }));
+        setHomeData((prev: any) => ({ ...prev, ...h.meta, showTestimonials: false }));
+      } else {
+        setHomeData((prev: any) => ({ ...prev, showTestimonials: false }));
       }
 
       // About Data
       const a = allMeta.find(m => m.key === 'about_content');
       if (a && a.meta) {
-        setAboutData((prev: any) => ({ ...prev, ...a.meta }));
+        setAboutData((prev: any) => ({ ...prev, ...a.meta, showTestimonials: false }));
+      } else {
+        setAboutData((prev: any) => ({ ...prev, showTestimonials: false }));
       }
 
       // Footer Data
@@ -1932,49 +1936,7 @@ export default function WebsiteAdministration() {
                   </div>
                 </div>
 
-                <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400">1b. Customer Testimonials</h4>
-                    <div className="flex items-center gap-3 bg-zinc-950 px-4 py-2 rounded-full border border-zinc-800">
-                      <Label className="text-zinc-400 text-xs uppercase font-bold">{aboutData.showTestimonials ? 'Visible' : 'Hidden'}</Label>
-                      <Switch
-                        checked={aboutData.showTestimonials}
-                        onCheckedChange={(checked) => setAboutData({ ...aboutData, showTestimonials: checked })}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-zinc-500 text-xs italic">Toggle whether the "What Our Customers Say" section appears on the About page.</p>
-                  
-                  {/* Embedded Testimonial Management for visibility */}
-                  <div className="mt-4 p-4 bg-zinc-950/50 rounded-lg border border-zinc-800">
-                    <div className="flex items-center justify-between mb-3">
-                      <h5 className="font-bold text-[10px] uppercase text-zinc-500 tracking-widest">Manage Reviews Below</h5>
-                      <Button className="bg-red-700 hover:bg-red-800 h-6 text-[10px] uppercase font-black" onClick={() => setNewTestimonialOpen(true)}>Add New Review</Button>
-                    </div>
-                    {testimonials.length === 0 ? (
-                      <p className="text-[10px] text-zinc-500 italic">No custom reviews added yet. Showing defaults on website.</p>
-                    ) : (
-                      <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        {testimonials.map(t => (
-                          <div key={t.id} className="flex items-center justify-between p-2 bg-zinc-900 rounded border border-zinc-800">
-                            <span className="text-[10px] text-white font-bold truncate max-w-[100px]">{t.name}</span>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white" onClick={() => setEditTestimonial(t)}><Pencil className="h-3 w-3" /></Button>
-                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-red-500" onClick={async () => {
-                                if (!ensureNotDemo("deletion")) return;
-                                if(!confirm('Delete?')) return;
-                                await contentService.deleteTestimonial(t.id);
-                                const updated = await contentService.getTestimonials();
-                                setTestimonials(updated);
-                                notifyChange('testimonials');
-                              }}><Trash2 className="h-3 w-3" /></Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
                 <div className="space-y-4 border-l-4 border-blue-600 pl-4 bg-zinc-900/40 p-4 rounded-r-lg">
                   <h4 className="font-black text-xl text-white uppercase italic tracking-tighter text-blue-400 font-bold">2. More Than a Car Wash Sections</h4>
