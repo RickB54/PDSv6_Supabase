@@ -264,6 +264,9 @@ export default function WebsiteAdministration() {
     blockedStartDate?: string;
     blockedEndDate?: string;
     blockedReason?: string;
+    topBannerText?: string;
+    topBannerDescription?: string;
+    shopOnly?: boolean;
   }>({
     mode: 'live',
     bannerText: 'We are currently LIVE and accepting bookings!',
