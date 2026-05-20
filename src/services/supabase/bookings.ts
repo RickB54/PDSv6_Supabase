@@ -14,6 +14,8 @@ export interface BookingInput {
   make?: string;   // Added
   model?: string;  // Added
   year?: string;   // Added
+  color?: string;  // Added
+  condition?: string; // Added
   package: string;
   add_ons: string[];
   date: string; // ISO
@@ -103,7 +105,9 @@ export async function create(input: BookingInput) {
         make: input.make || 'Unknown',
         model: input.model || 'Unknown',
         year: parseInt(input.year || '0') || null,
-        type: input.vehicle_type
+        type: input.vehicle_type,
+        color: input.color || null,
+        condition_outside: input.condition || null
       }).select('id').single();
       if (!vErr && newVeh) vehicleId = newVeh.id;
       // Ignore vehicle error if duplicates? or simplistic insert. Ideally we check if it exists but for now we just insert a new vehicle record for the booking as "the vehicle being serviced"
@@ -135,7 +139,9 @@ export async function create(input: BookingInput) {
         year: input.year || '',
         make: input.make || '',
         model: input.model || '',
-        type: input.vehicle_type || ''
+        type: input.vehicle_type || '',
+        color: input.color || '',
+        condition: input.condition || ''
       }
     };
 

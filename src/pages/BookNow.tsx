@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight, TestTube2 } from "lucide-react"; // Merged icons
+import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight, TestTube2, CarFront } from "lucide-react"; // Merged icons
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
@@ -62,10 +63,23 @@ const BookNow = () => {
   const [formData, setFormData] = useState({
     name: "", email: "", phone: "", address: "",
     make: urlParams.get('make') || "", model: urlParams.get('model') || "", year: urlParams.get('year') || "",
+    color: urlParams.get('color') || "", condition: urlParams.get('condition') || "",
     datetime: "", package: urlPackage || "", message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
     conditionInside: "", conditionOutside: ""
   });
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
+
+  // Automatically classify the vehicle class based on selected Make & Model
+  useEffect(() => {
+    if (formData.make || formData.model) {
+      const query = `${formData.make} ${formData.model}`.trim();
+      const detected = normalizeVehicleType(query);
+      if (detected) {
+        setVehicleType(detected);
+      }
+    }
+  }, [formData.make, formData.model]);
+
   const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,14 +121,14 @@ const BookNow = () => {
   // 2. Specialized Logic Functions
   const fillTestData = () => {
     const mockProfiles = [
-      { name: "James Wilson", email: "james.w@example.com", phone: "(555) 234-5678", address: "742 Evergreen Terrace, Springfield", make: "Tesla", model: "Model 3", year: "2023", vType: "sedan", package: "prime-essential-exterior", addons: ["premium-wax"], time: "09:00:00" },
-      { name: "Sarah Miller", email: "sarah.m@example.com", phone: "(555) 987-6543", address: "1001 Mountain View Rd, Boulder, CO", make: "Ford", model: "F-150", year: "2021", vType: "truck", package: "prime-essential-full", addons: ["clay-bar-treatment"], time: "13:30:00" },
-      { name: "Robert Chen", email: "r.chen@tech.io", phone: "(555) 456-7890", address: "50 California St, San Francisco, CA", make: "BMW", model: "X5", year: "2024", vType: "midsize", package: "prime-essential-interior", addons: ["engine-bay-cleaning"], time: "10:00:00" },
-      { name: "Elena Rodriguez", email: "elena.rod@lifestyle.com", phone: "(555) 321-0987", address: "12 Biscayne Blvd, Miami, FL", make: "Porsche", model: "Cayenne", year: "2022", vType: "midsize", package: "prime-elite-exterior", addons: ["odor-elimination"], time: "15:00:00" },
-      { name: "Marcus Thorne", email: "m.thorne@heavy.net", phone: "(555) 888-9999", address: "99 Industrial Way, Detroit, MI", make: "Chevrolet", model: "Suburban", year: "2020", vType: "truck", package: "prime-elite-full", addons: ["headlight-restoration"], time: "11:00:00" },
-      { name: "Sophia Lee", email: "sophia.lee@design.com", phone: "(555) 111-2222", address: "888 Art District, Austin, TX", make: "Rivian", model: "R1S", year: "2024", vType: "midsize", package: "prime-elite-interior", addons: ["ceramic-coating"], time: "08:30:00" },
-      { name: "David Miller", email: "david.m@builder.org", phone: "(555) 333-4444", address: "456 Construction Way, Seattle, WA", make: "Ram", model: "1500", year: "2019", vType: "truck", package: "prime-essential-exterior", addons: ["undercarriage-wash"], time: "14:00:00" },
-      { name: "Linda Thompson", email: "linda.t@traveler.com", phone: "(555) 555-6666", address: "123 Coastal Hwy, Malibu, CA", make: "Mercedes", model: "GLE", year: "2021", vType: "luxury", package: "prime-essential-full", addons: ["leather-treatment"], time: "12:00:00" }
+      { name: "James Wilson", email: "james.w@example.com", phone: "(555) 234-5678", address: "742 Evergreen Terrace, Springfield", make: "Tesla", model: "Model 3", year: "2023", vType: "sedan", package: "prime-essential-exterior", addons: ["premium-wax"], time: "09:00:00", color: "Blue", condition: "Good" },
+      { name: "Sarah Miller", email: "sarah.m@example.com", phone: "(555) 987-6543", address: "1001 Mountain View Rd, Boulder, CO", make: "Ford", model: "F-150", year: "2021", vType: "truck", package: "prime-essential-full", addons: ["clay-bar-treatment"], time: "13:30:00", color: "Black", condition: "Excellent" },
+      { name: "Robert Chen", email: "r.chen@tech.io", phone: "(555) 456-7890", address: "50 California St, San Francisco, CA", make: "BMW", model: "X5", year: "2024", vType: "midsize", package: "prime-essential-interior", addons: ["engine-bay-cleaning"], time: "10:00:00", color: "Gray", condition: "Good" },
+      { name: "Elena Rodriguez", email: "elena.rod@lifestyle.com", phone: "(555) 321-0987", address: "12 Biscayne Blvd, Miami, FL", make: "Porsche", model: "Cayenne", year: "2022", vType: "midsize", package: "prime-elite-exterior", addons: ["odor-elimination"], time: "15:00:00", color: "White", condition: "Excellent" },
+      { name: "Marcus Thorne", email: "m.thorne@heavy.net", phone: "(555) 888-9999", address: "99 Industrial Way, Detroit, MI", make: "Chevrolet", model: "Suburban", year: "2020", vType: "truck", package: "prime-elite-full", addons: ["headlight-restoration"], time: "11:00:00", color: "Silver", condition: "Fair" },
+      { name: "Sophia Lee", email: "sophia.lee@design.com", phone: "(555) 111-2222", address: "888 Art District, Austin, TX", make: "Rivian", model: "R1S", year: "2024", vType: "midsize", package: "prime-elite-interior", addons: ["ceramic-coating"], time: "08:30:00", color: "Green", condition: "Excellent" },
+      { name: "David Miller", email: "david.m@builder.org", phone: "(555) 333-4444", address: "456 Construction Way, Seattle, WA", make: "Ram", model: "1500", year: "2019", vType: "truck", package: "prime-essential-exterior", addons: ["undercarriage-wash"], time: "14:00:00", color: "Red", condition: "Good" },
+      { name: "Linda Thompson", email: "linda.t@traveler.com", phone: "(555) 555-6666", address: "123 Coastal Hwy, Malibu, CA", make: "Mercedes", model: "GLE", year: "2021", vType: "luxury", package: "prime-essential-full", addons: ["leather-treatment"], time: "12:00:00", color: "Black", condition: "Good" }
     ];
 
     const randomIndex = Math.floor(Math.random() * mockProfiles.length);
@@ -129,6 +143,8 @@ const BookNow = () => {
       make: profile.make,
       model: profile.model,
       year: profile.year,
+      color: profile.color,
+      condition: profile.condition,
       package: profile.package,
       message: `[MOCK_DATA] Test booking for ${profile.name} - can be deleted`,
       conditionInside: "Good",
@@ -164,6 +180,8 @@ const BookNow = () => {
       year: "2018",
       make: "Ford",
       model: "F-150",
+      color: "Black",
+      condition: "Excellent",
       package: matchedService,
       message: "This is a pre-filled test booking request submitted by Rick Berube (Admin) to verify availability booking slots, pricing calculations, notification emails, and PDF archiving workflows.",
       conditionInside: "Excellent",
@@ -570,6 +588,7 @@ const BookNow = () => {
       if (!formData.make.trim()) newErrors.make = "Vehicle make is required";
       if (!formData.model.trim()) newErrors.model = "Vehicle model is required";
       if (!formData.year.trim()) newErrors.year = "Year is required";
+      if (!formData.color.trim()) newErrors.color = "Color is required";
       if (!date) {
         newErrors.date = "Please select a preferred date";
       } else if (!selectedTime) {
@@ -635,7 +654,7 @@ const BookNow = () => {
 
       const bookingPayload = {
         customer: { name: formData.name, email: formData.email, phone: formData.phone },
-        vehicle: { year: formData.year, make: formData.make, model: formData.model, type: vehicleType },
+        vehicle: { year: formData.year, make: formData.make, model: formData.model, color: formData.color, condition: formData.condition, type: vehicleType },
         service: selectedService ? selectedService.name : formData.package,
         addOns: addOns.map(id => {
           const a = addOnDefs.find(x => x.id === id);
@@ -662,6 +681,8 @@ const BookNow = () => {
             year: formData.year,
             make: formData.make,
             model: formData.model,
+            color: formData.color,
+            condition: formData.condition,
             package: bookingPayload.service || formData.package,
             add_ons: addOns.map(id => getCanonicalAddonName(id)),
             date: dateIso,
@@ -763,11 +784,12 @@ const BookNow = () => {
             vehicleYear: formData.year,
             vehicleMake: formData.make,
             vehicleModel: formData.model,
+            vehicleColor: formData.color,
             vehicleType: vehicleType,
             notes: finalNotes,
             addons: addOns.map(id => getCanonicalAddonName(id)).join(', ') || 'None',
             conditionInside: formData.conditionInside || 'Not specified',
-            conditionOutside: formData.conditionOutside || 'Not specified',
+            conditionOutside: formData.condition || 'Not specified',
             couponCode: couponCode.toUpperCase() || 'None'
           }
         });
@@ -789,11 +811,12 @@ const BookNow = () => {
             vehicleYear: formData.year,
             vehicleMake: formData.make,
             vehicleModel: formData.model,
+            vehicleColor: formData.color,
             vehicleType: vehicleType,
             notes: finalNotes,
             addons: addOns.map(id => getCanonicalAddonName(id)).join(', ') || 'None',
             conditionInside: formData.conditionInside || 'Not specified',
-            conditionOutside: formData.conditionOutside || 'Not specified',
+            conditionOutside: formData.condition || 'Not specified',
             couponCode: couponCode.toUpperCase() || 'None'
           }
         }) : Promise.resolve({ error: null });
@@ -1136,70 +1159,141 @@ const BookNow = () => {
               </div>
 
 
-              <div className="bg-primary/5 p-4 rounded-lg border border-primary/10 mb-2">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-bold text-foreground uppercase tracking-tight flex items-center gap-2">
-                    <HelpCircle className="h-5 w-5 text-primary" />
-                    Vehicle Details
+              {/* Vehicle Information Section */}
+              <div className="border-2 border-emerald-500/20 bg-emerald-950/5 rounded-2xl p-6 md:p-8 mt-6 space-y-6 shadow-md transition-all duration-300 hover:border-emerald-500/30">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-black text-emerald-400 uppercase tracking-tight flex items-center gap-2">
+                    <CarFront className="h-5 w-5 text-emerald-400 animate-pulse" />
+                    Vehicle Evaluation Details
                   </h3>
                   <Button
                     type="button"
                     variant="link"
                     size="sm"
                     onClick={() => setShowClassification(true)}
-                    className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-full text-[10px] h-auto font-black uppercase tracking-widest shadow-lg shadow-blue-500/20"
+                    className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-full text-[10px] h-auto font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 animate-pulse"
                     title="Our Vehicle Classifier helps you determine exactly which size category (Compact, Mid-Size, Truck) your specific vehicle belongs to, ensuring accurate pricing."
                   >
                     Vehicle Classifier
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="make">Vehicle Make *</Label>
-                    <Input
-                      id="make"
-                      placeholder="e.g., Toyota"
-                      value={formData.make}
-                      onChange={(e) => {
-                        setFormData({ ...formData, make: e.target.value });
-                        if (errors.make) setErrors(prev => { const n = { ...prev }; delete n.make; return n; });
-                      }}
-                      required
-                      className={errors.make ? "border-destructive h-11" : "h-11"}
-                    />
-                    {errors.make && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.make}</p>}
+                    <Label htmlFor="year" className="font-bold">Vehicle Year *</Label>
+                    <Select value={formData.year} onValueChange={(v) => {
+                      setFormData({ ...formData, year: v });
+                      if (errors.year) setErrors(prev => { const n = { ...prev }; delete n.year; return n; });
+                    }}>
+                      <SelectTrigger className={`h-12 bg-background border-input ${errors.year ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 27 }, (_, i) => String(2026 - i)).concat("Older than 2000").map(y => (
+                          <SelectItem key={y} value={y}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.year && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.year}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="model">Vehicle Model *</Label>
+                    <Label htmlFor="make" className="font-bold">Vehicle Make *</Label>
+                    <Select value={formData.make} onValueChange={(v) => {
+                      setFormData({ ...formData, make: v });
+                      if (errors.make) setErrors(prev => { const n = { ...prev }; delete n.make; return n; });
+                    }}>
+                      <SelectTrigger className={`h-12 bg-background border-input ${errors.make ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Manufacturer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "Acura", "Audi", "BMW", "Cadillac", "Chevrolet", "Chrysler", "Dodge", "Ford", "GMC", "Honda",
+                          "Hyundai", "Infiniti", "Jeep", "Kia", "Lexus", "Lincoln", "Mazda", "Mercedes-Benz", "Nissan",
+                          "Porsche", "Ram", "Subaru", "Tesla", "Toyota", "Volkswagen", "Volvo", "Other"
+                        ].map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.make && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.make}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="model" className="font-bold">Vehicle Model *</Label>
                     <Input
                       id="model"
-                      placeholder="e.g., Camry"
                       value={formData.model}
                       onChange={(e) => {
                         setFormData({ ...formData, model: e.target.value });
                         if (errors.model) setErrors(prev => { const n = { ...prev }; delete n.model; return n; });
                       }}
+                      placeholder="e.g. Civic, F-150, RAV4"
                       required
-                      className={errors.model ? "border-destructive h-11" : "h-11"}
+                      className={errors.model ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.model && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.model}</p>}
+                    {errors.model && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.model}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="year">Year *</Label>
-                    <Input
-                      id="year"
-                      placeholder="e.g., 2020"
-                      value={formData.year}
-                      onChange={(e) => {
-                        setFormData({ ...formData, year: e.target.value });
-                        if (errors.year) setErrors(prev => { const n = { ...prev }; delete n.year; return n; });
-                      }}
-                      required
-                      className={errors.year ? "border-destructive h-11" : "h-11"}
-                    />
-                    {errors.year && <p className="text-[12px] text-white bg-red-600 py-1 px-2 rounded-md font-black animate-pulse-grow uppercase tracking-tight ml-1 mt-1 inline-block shadow-lg ring-2 ring-red-400">⚠️ {errors.year}</p>}
+                    <Label htmlFor="condition" className="font-bold">Vehicle Condition (Optional)</Label>
+                    <Select value={formData.condition} onValueChange={(v) => setFormData({ ...formData, condition: v })}>
+                      <SelectTrigger className="h-12 bg-background border-input">
+                        <SelectValue placeholder="Select General Condition" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Excellent">Excellent (Fairly Clean, Daily Driver)</SelectItem>
+                        <SelectItem value="Good">Good (Light Dust/Debris, No Heavy Stains)</SelectItem>
+                        <SelectItem value="Fair">Fair (Pet Hair, Light Stains, Spills)</SelectItem>
+                        <SelectItem value="Poor">Poor (Heavy Stains, Odors, Mold/Mildew)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="color" className="font-bold">Vehicle Color *</Label>
+                    <Select value={formData.color} onValueChange={(v) => {
+                      setFormData({ ...formData, color: v });
+                      if (errors.color) setErrors(prev => { const n = { ...prev }; delete n.color; return n; });
+                    }}>
+                      <SelectTrigger className={`h-12 bg-background border-input ${errors.color ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Select Exterior Color" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["Black", "White", "Silver", "Gray", "Red", "Blue", "Green", "Brown", "Gold", "Yellow", "Orange", "Other"].map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.color && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.color}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="vehicleType" className="font-bold">Vehicle Class / Size *</Label>
+                    </div>
+                    <Select value={vehicleType} onValueChange={(v) => {
+                      setVehicleType(v);
+                      if (errors.vehicleType) setErrors(prev => { const n = { ...prev }; delete n.vehicleType; return n; });
+                    }}>
+                      <SelectTrigger className={`h-12 bg-background border-input ${errors.vehicleType ? 'border-destructive' : ''}`}>
+                        <SelectValue placeholder="Autodetected size (or choose manually)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="compact">Compact / Sedan</SelectItem>
+                        <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
+                        <SelectItem value="truck">Truck / Van / Large SUV</SelectItem>
+                        <SelectItem value="luxury">Luxury / Specialty</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.vehicleType && <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.vehicleType}</p>}
+                    <p className="text-[11px] text-zinc-500 italic mt-1 font-medium">
+                      ⚡ Auto-classified: Our intelligent system auto-selects this based on your make and model. Feel free to override it.
+                    </p>
                   </div>
                 </div>
               </div>
