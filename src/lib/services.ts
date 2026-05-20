@@ -36,7 +36,7 @@ export function getServiceInstructions(name: string, id?: string): string {
   if (n.includes('drying')) return "Chemical: Formula 4 20:1 sprayed on wet paint. Application Tip: Use a clean microfiber drying towel or air blower.";
 
   // 6. Paint Protection
-  if (n.includes('paint protection')) return "Chemical: Spray Wax RTU or Formula 4 20:1. Application Tip: Apply thin, even layer using a soft foam applicator and buff off.";
+  if (n.includes('paint protection')) return "Chemical: Formula 4 20:1. Application Tip: Formula 4 is used as a drying aid AND minimal protection (lasts 2 - 5 or 6 weeks).";
 
   // 7. Interior Plastics / Trim
   if (n.includes('plastics / vinyl / trim')) return "Chemical: Pink Perfection 10:1, final pass with P&S Xpress 3:1 or Cover All 4:1. Application Tip: Use a soft brush for crevices and wipe with clean microfiber.";
@@ -115,7 +115,7 @@ export const servicePackages: ServicePackage[] = [
       { id: 'ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
       { id: 'ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'ext-drying', name: 'Drying', category: 'exterior' },
-      { id: 'ext-protection', name: 'Paint Protection', category: 'final' }
+      { id: 'ext-protection', name: 'Paint Protection', category: 'exterior' }
     ]
   },
   {
@@ -130,9 +130,9 @@ export const servicePackages: ServicePackage[] = [
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
-      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
-      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
-      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }
+      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'interior' },
+      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
+      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'interior' }
     ]
   },
   {
@@ -155,9 +155,9 @@ export const servicePackages: ServicePackage[] = [
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
-      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'final' },
-      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
-      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'final' }
+      { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'interior' },
+      { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
+      { id: 'int-inspection', name: 'Final Interior Inspection', category: 'interior' }
     ]
   },
   // --- PRIME ELITE ---
@@ -179,9 +179,9 @@ export const servicePackages: ServicePackage[] = [
       { id: 'elite-ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'elite-ext-drying', name: 'Drying', category: 'exterior' },
       { id: 'elite-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
-      { id: 'elite-ext-protection', name: 'Paint Protection', category: 'final' },
-      { id: 'elite-ext-win', name: 'Windows & Glass (streak-free)', category: 'final' },
-      { id: 'elite-ext-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' }
+      { id: 'elite-ext-protection', name: 'Paint Protection', category: 'exterior' },
+      { id: 'elite-ext-win', name: 'Windows & Glass (streak-free)', category: 'exterior' },
+      { id: 'elite-ext-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'exterior' }
     ]
   },
   {
@@ -203,10 +203,10 @@ export const servicePackages: ServicePackage[] = [
       { id: 'elite-int-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
       { id: 'elite-int-seat-steam', name: 'Steam Clean & Extraction on Seats', category: 'interior' },
       { id: 'elite-int-upholstery-steam', name: 'Steam Clean & Extraction on Upholstery', category: 'interior' },
-      { id: 'elite-int-cond', name: 'Condition & Protect Leather Seats', category: 'final' },
-      { id: 'elite-int-win', name: 'Windows & Glass (streak-free)', category: 'final' },
-      { id: 'elite-int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
-      { id: 'elite-int-inspection', name: 'Final Interior Inspection', category: 'final' }
+      { id: 'elite-int-cond', name: 'Condition & Protect Leather Seats', category: 'interior' },
+      { id: 'elite-int-win', name: 'Windows & Glass (streak-free)', category: 'interior' },
+      { id: 'elite-int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
+      { id: 'elite-int-inspection', name: 'Final Interior Inspection', category: 'interior' }
     ]
   },
   {
@@ -241,10 +241,10 @@ export const servicePackages: ServicePackage[] = [
       { id: 'elite-full-carpet', name: 'Steam Clean & Extraction on Carpets', category: 'interior' },
       { id: 'elite-full-seats', name: 'Steam Clean & Extraction on Seats', category: 'interior' },
       { id: 'elite-full-upholstery', name: 'Steam Clean & Extraction on Upholstery', category: 'interior' },
-      { id: 'elite-full-leather', name: 'Condition & Protect Leather Seats', category: 'final' },
-      { id: 'elite-full-win', name: 'Windows & Glass (streak-free)', category: 'final' },
-      { id: 'elite-full-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'final' },
-      { id: 'elite-full-inspection', name: 'Final Interior Inspection', category: 'final' }
+      { id: 'elite-full-leather', name: 'Condition & Protect Leather Seats', category: 'interior' },
+      { id: 'elite-full-win', name: 'Windows & Glass (streak-free)', category: 'interior' },
+      { id: 'elite-full-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
+      { id: 'elite-full-inspection', name: 'Final Interior Inspection', category: 'interior' }
     ]
   },
 ];
