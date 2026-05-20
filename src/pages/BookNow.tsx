@@ -1168,7 +1168,7 @@ const BookNow = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="placeOfService" className="font-bold">Place of Service *</Label>
+                    <Label htmlFor="placeOfService" className="font-bold">Place of Service{!businessStatus?.shopOnly && " *"}</Label>
                     <Select 
                       value={formData.placeOfService || "Customer's address"} 
                       onValueChange={(val) => {
@@ -1217,7 +1217,7 @@ const BookNow = () => {
                       <div>
                         <p className="text-xs font-black text-purple-800 dark:text-purple-300 uppercase tracking-wider mb-1">📢 Shop-Only Operations Active</p>
                         <p className="text-[11px] text-purple-700 dark:text-purple-200 leading-relaxed font-medium">
-                          Currently, all professional detailing services are performed exclusively at our climate-controlled, state-of-the-art facility located at <strong>54 Boston Street, Methuen, MA</strong>. This setup ensures maximum quality control, pristine environmental conditions for premium products/ceramic coatings, and superior durability. We are temporarily pausing mobile detailing services, and appreciate your understanding!
+                          Currently, all professional detailing services are performed exclusively at our facility located at <strong>54 Boston Street, Methuen, MA</strong> (directly adjacent to our shop). This setup ensures complete access to our specialized detailing equipment, professional-grade utilities, and premium products to deliver the highest quality finish. We are temporarily pausing mobile detailing services, and appreciate your understanding!
                         </p>
                       </div>
                     </div>
