@@ -384,6 +384,14 @@ export default function BusinessDrive() {
         }
     };
 
+    const folderHasFiles = (folder: DriveFolder) => {
+        const targetPath = [...folder.path, folder.name];
+        return files.some(f => {
+            if (f.path.length < targetPath.length) return false;
+            return targetPath.every((segment, idx) => f.path[idx] === segment);
+        });
+    };
+
     return (
         <div className="space-y-6 animate-fade-in p-1">
             {/* Header / Breadcrumbs */}
@@ -574,18 +582,32 @@ export default function BusinessDrive() {
                 ) : (
                     <>
                         {/* Render Folders First */}
-                        {currentItems.folders.map(folder => (
-                            viewMode === 'grid' ? (
+                        {currentItems.folders.map(folder => {
+                            const containsFiles = folderHasFiles(folder);
+                            return viewMode === 'grid' ? (
                                 <Card 
                                     key={folder.id}
-                                    className="bg-[#0d1117] border-zinc-800 p-5 hover:border-blue-500/50 hover:bg-[#161b22] transition-all cursor-pointer group relative shadow-md"
+                                    className={cn(
+                                        "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
+                                        containsFiles 
+                                            ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
+                                            : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
+                                    )}
                                     onClick={() => setCurrentPath([...currentPath, folder.name])}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-zinc-800/50 rounded-xl group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all duration-300">
+                                        <div className={cn(
+                                            "p-3 rounded-xl transition-all duration-300",
+                                            containsFiles
+                                                ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
+                                                : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
+                                        )}>
                                             <Folder className="w-7 h-7" />
                                         </div>
-                                        <span className="font-bold text-white truncate text-sm sm:text-base">{folder.name}</span>
+                                        <span className={cn(
+                                            "font-bold truncate text-sm sm:text-base transition-colors",
+                                            containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                        )}>{folder.name}</span>
                                     </div>
                                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                         <DropdownMenu>
@@ -608,14 +630,27 @@ export default function BusinessDrive() {
                             ) : (
                                 <div 
                                     key={folder.id} 
-                                    className="flex items-center justify-between p-4 bg-[#0d1117] border border-zinc-800 rounded-xl hover:bg-[#161b22] transition-all group shadow-sm cursor-pointer"
+                                    className={cn(
+                                        "flex items-center justify-between p-4 bg-[#0d1117] rounded-xl transition-all group shadow-sm cursor-pointer border",
+                                        containsFiles
+                                            ? "border-emerald-500/50 bg-emerald-950/5 hover:bg-emerald-950/15"
+                                            : "border-zinc-800 hover:bg-[#161b22]"
+                                    )}
                                     onClick={() => setCurrentPath([...currentPath, folder.name])}
                                 >
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className="p-2 bg-zinc-800/50 rounded-lg">
-                                            <Folder className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                                        <div className={cn(
+                                            "p-2 rounded-lg transition-all",
+                                            containsFiles
+                                                ? "bg-emerald-500/20 text-emerald-400 group-hover:text-emerald-300"
+                                                : "bg-zinc-800/50 text-zinc-400 group-hover:text-blue-400"
+                                        )}>
+                                            <Folder className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-bold text-white truncate">{folder.name}</span>
+                                        <span className={cn(
+                                            "text-sm font-bold truncate transition-colors",
+                                            containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                        )}>{folder.name}</span>
                                     </div>
                                     <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
                                         <div className="w-40 text-right uppercase tracking-widest font-black text-zinc-600">Folder</div>
@@ -636,8 +671,8 @@ export default function BusinessDrive() {
                                         </DropdownMenu>
                                     </div>
                                 </div>
-                            )
-                        ))}
+                            );
+                        })}
 
                         {/* Render Files */}
                         {currentItems.files.map(file => (
