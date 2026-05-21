@@ -541,11 +541,11 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     };
 
     const calculateTotal = (packageId: string, addOnIds: string[], vehicleType: VehicleType) => {
-        const pkgObj = livePackages.find(p => p.id === packageId);
+        const pkgObj = livePackages.find(p => p.id === packageId) || servicePackages.find(p => p.id === packageId);
         const pkgPrice = pkgObj ? (parseFloat(savedPrices[`package:${pkgObj.id}:${vehicleType}`]) || pkgObj.pricing?.[vehicleType] || 0) : 0;
 
         const addonsPrice = addOnIds.reduce((sum, aid) => {
-            const ao = liveAddOns.find(a => a.id === aid);
+            const ao = liveAddOns.find(a => a.id === aid) || addOns.find(a => a.id === aid);
             const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
             return sum + price;
         }, 0);
@@ -555,7 +555,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
     const getPackagePitchInfo = (pkgId: string) => {
         const branded = BRANDED_PACKAGES.find(bp => bp.id === pkgId || bp.actualId === pkgId);
-        const livePkg = livePackages.find(lp => lp.id === pkgId);
+        const livePkg = livePackages.find(lp => lp.id === pkgId) || servicePackages.find(lp => lp.id === pkgId);
         
         if (branded) {
             return {
@@ -584,8 +584,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         const reasons: string[] = [];
         
         if (scenario.packageId !== scenarioA.packageId) {
-            const pkgS = livePackages.find(p => p.id === scenario.packageId);
-            const pkgA = livePackages.find(p => p.id === scenarioA.packageId);
+            const pkgS = livePackages.find(p => p.id === scenario.packageId) || servicePackages.find(p => p.id === scenario.packageId);
+            const pkgA = livePackages.find(p => p.id === scenarioA.packageId) || servicePackages.find(p => p.id === scenarioA.packageId);
             const priceS = pkgS ? (parseFloat(savedPrices[`package:${pkgS.id}:${vehicleType}`]) || pkgS.pricing?.[vehicleType] || 0) : 0;
             const priceA = pkgA ? (parseFloat(savedPrices[`package:${pkgA.id}:${vehicleType}`]) || pkgA.pricing?.[vehicleType] || 0) : 0;
             const pkgDiff = priceS - priceA;
@@ -600,7 +600,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         const addedAddons = scenario.addOnIds.filter(id => !scenarioA.addOnIds.includes(id));
         if (addedAddons.length > 0) {
             const names = addedAddons.map(id => {
-                const ao = liveAddOns.find(a => a.id === id);
+                const ao = liveAddOns.find(a => a.id === id) || addOns.find(a => a.id === id);
                 const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
                 return `${ao?.name || id} (+$${price.toFixed(2)})`;
             });
@@ -611,7 +611,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         const removedAddons = scenarioA.addOnIds.filter(id => !scenario.addOnIds.includes(id));
         if (removedAddons.length > 0) {
             const names = removedAddons.map(id => {
-                const ao = liveAddOns.find(a => a.id === id);
+                const ao = liveAddOns.find(a => a.id === id) || addOns.find(a => a.id === id);
                 const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
                 return `${ao?.name || id} (-$${price.toFixed(2)})`;
             });
@@ -637,7 +637,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         // Build services array for Estimate
         const services: { name: string; price: number }[] = [];
         
-        const pkgObj = livePackages.find(p => p.id === selectedScenario.packageId);
+        const pkgObj = livePackages.find(p => p.id === selectedScenario.packageId) || servicePackages.find(p => p.id === selectedScenario.packageId);
         const pkgPrice = pkgObj ? (parseFloat(savedPrices[`package:${pkgObj.id}:${firstVehicle.type}`]) || pkgObj.pricing?.[firstVehicle.type] || 0) : 0;
         
         if (pkgObj) {
@@ -645,7 +645,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         }
 
         selectedScenario.addOnIds.forEach(aid => {
-            const ao = liveAddOns.find(a => a.id === aid);
+            const ao = liveAddOns.find(a => a.id === aid) || addOns.find(a => a.id === aid);
             const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${firstVehicle.type}`]) || ao.pricing?.[firstVehicle.type] || 0) : 0;
             if (ao) {
                 services.push({ name: ao.name, price });
@@ -657,7 +657,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         // Build detailed notes comparing scenarios
         const scenarioA = firstVehicle.scenarios[0];
         const scenarioNotes = firstVehicle.scenarios.map(s => {
-            const sPkg = livePackages.find(p => p.id === s.packageId);
+            const sPkg = livePackages.find(p => p.id === s.packageId) || servicePackages.find(p => p.id === s.packageId);
             const sTotal = calculateTotal(s.packageId, s.addOnIds, firstVehicle.type);
             const comparisonLabel = getComparisonLabel(s, scenarioA, firstVehicle.type);
             
@@ -749,7 +749,7 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
                 };
 
                 const actualServiceId = selectedScenario?.packageId || firstVehicle.selectedServiceId;
-                const selectedServicePkg = livePackages.find(p => p.id === actualServiceId);
+                const selectedServicePkg = livePackages.find(p => p.id === actualServiceId) || servicePackages.find(p => p.id === actualServiceId);
                 const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
 
                 const customerData = {
@@ -831,7 +831,7 @@ ${firstVehicle.notes || ''}`.trim(),
 
             const selectedScenario = firstVehicle.scenarios.find(s => s.id === firstVehicle.selectedScenarioId);
             const actualServiceId = selectedScenario?.packageId || firstVehicle.selectedServiceId;
-            const selectedServicePkg = livePackages.find(p => p.id === actualServiceId);
+            const selectedServicePkg = livePackages.find(p => p.id === actualServiceId) || servicePackages.find(p => p.id === actualServiceId);
             const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
 
             const customerData = {
