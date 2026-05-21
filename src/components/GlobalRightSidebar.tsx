@@ -25,6 +25,7 @@ import {
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { contentService } from "@/lib/content";
 
 const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean) => (
     <>
@@ -130,6 +131,21 @@ export function GlobalRightSidebar() {
     const [collapsed, setCollapsed] = useState(true);
     const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
+    const [businessStatus, setBusinessStatus] = useState<any>(() => {
+        const cached = contentService.getServiceMetaSync("global_settings");
+        return cached?.meta?.businessStatus || null;
+    });
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const meta = await contentService.getServiceMeta("global_settings");
+                if (meta?.meta?.businessStatus) {
+                    setBusinessStatus(meta.meta.businessStatus);
+                }
+            } catch {}
+        })();
+    }, []);
 
     // Swipe Gesture Logic for Mobile
     useEffect(() => {
@@ -200,7 +216,7 @@ export function GlobalRightSidebar() {
     }, [location.pathname]);
 
     // Hide completely on login/auth pages
-    const publicPaths = ['/login', '/signup', '/'];
+    const publicPaths = ['/login', '/signup'];
     if (publicPaths.includes(location.pathname)) return null;
 
     // Mobile style logic
@@ -247,10 +263,11 @@ export function GlobalRightSidebar() {
         location.pathname.startsWith('/dashboard/employee')
     );
 
-    // Header (64) + Demo Banner (40) + Perspective Banner (40)
+    // Header (64) + Demo Banner (40) + Perspective Banner (40) + Business Banner (40)
     let dynamicTop = 64;
     if (isDemoMode) dynamicTop += 40;
     if (isPerspectiveMode) dynamicTop += 40;
+    if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
     return (
         <div 

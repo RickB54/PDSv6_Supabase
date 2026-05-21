@@ -276,6 +276,11 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
             </Routes>
             <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
           </div>
+          {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
+            <div className="dark-theme min-h-screen">
+              <GlobalRightSidebar />
+            </div>
+          )}
         </div>
       </SidebarProvider>
     );
