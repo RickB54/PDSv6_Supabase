@@ -1495,30 +1495,55 @@ ${firstVehicle.notes || ''}`.trim(),
                                                     })}
                                                 </div>
 
-                                                {(() => {
-                                                    const extPkg = livePackages.find(p => p.id.toLowerCase().includes('exterior'));
-                                                    const intPkg = livePackages.find(p => p.id.toLowerCase().includes('interior'));
-                                                    const fullPkg = livePackages.find(p => p.id.toLowerCase().includes('full'));
-
-                                                    if (!extPkg || !intPkg || !fullPkg) return null;
-
-                                                    const extPrice = parseFloat(savedPrices[`package:${extPkg.id}:${activeVehicle.type}`]) || extPkg.pricing?.[activeVehicle.type] || 0;
-                                                    const intPrice = parseFloat(savedPrices[`package:${intPkg.id}:${activeVehicle.type}`]) || intPkg.pricing?.[activeVehicle.type] || 0;
-                                                    const fullPrice = parseFloat(savedPrices[`package:${fullPkg.id}:${activeVehicle.type}`]) || fullPkg.pricing?.[activeVehicle.type] || 0;
-
-                                                    const individualSum = extPrice + intPrice;
-                                                    const savings = individualSum - fullPrice;
-
-                                                    if (savings <= 0) return null;
-
-                                                    return (
-                                                         <div className="mt-4 pt-4 border-t border-zinc-850">
-                                                             <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-300 font-medium text-xs sm:text-sm text-center shadow-inner">
-                                                                 💡 "Choosing the <span className="text-emerald-400 font-black uppercase">{fullPkg.name.replace('Prime ', '')} (${fullPrice})</span> instead of individual <span className="text-zinc-100 font-black uppercase">Interior (${intPrice})</span> & <span className="text-zinc-100 font-black uppercase">Exterior (${extPrice})</span> will save the customer <span className="text-emerald-400 text-base font-black underline underline-offset-4 decoration-2">${savings}</span>!"
-                                                             </div>
-                                                         </div>
-                                                    );
-                                                })()}
+                                                {/* Custom Sales pitch & caller tip box */}
+                                                <div className="mt-5 pt-4 border-t border-zinc-800/80">
+                                                    <div className="p-4 bg-zinc-950/60 border border-emerald-500/20 rounded-xl space-y-3">
+                                                        <div className="flex items-center gap-2 text-emerald-400 font-black uppercase text-xs tracking-wider">
+                                                            <span className="text-sm">🗣️</span> Professional Phone Pitch & Value Checklist
+                                                        </div>
+                                                        
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] text-zinc-300 leading-relaxed">
+                                                            <div className="space-y-2">
+                                                                <div className="font-bold text-zinc-100 uppercase tracking-widest text-[9px] border-b border-zinc-800 pb-1 flex items-center gap-1.5 text-emerald-400">
+                                                                    <span>✨</span> PDS Value Props to Mention:
+                                                                </div>
+                                                                <ul className="space-y-1.5 list-none pl-0">
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">🚚</span>
+                                                                        <span><strong className="text-zinc-100">100% Mobile Detail Rig:</strong> We bring our own water, power, and premium tools directly to their door.</span>
+                                                                    </li>
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">🛡️</span>
+                                                                        <span><strong className="text-zinc-100">Licensed & Fully Insured:</strong> Full peace of mind with our certified professional detailers.</span>
+                                                                    </li>
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">✨</span>
+                                                                        <span><strong className="text-zinc-100">Premium Paint Sealant:</strong> Included in all exterior packages for a 3-6 month durable protective gloss.</span>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <div className="font-bold text-zinc-100 uppercase tracking-widest text-[9px] border-b border-zinc-800 pb-1 flex items-center gap-1.5 text-emerald-400">
+                                                                    <span>🎯</span> Handling Objections & Closing:
+                                                                </div>
+                                                                <ul className="space-y-1.5 list-none pl-0">
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">🧴</span>
+                                                                        <span><strong className="text-zinc-100">Safe Products:</strong> We use high-end, pH-neutral chemicals safe for pets, kids, and exotic finishes.</span>
+                                                                    </li>
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">🎯</span>
+                                                                        <span><strong className="text-zinc-100">Scenario Upsell:</strong> "Selecting scenario A gets your engine completely detailed, preventing dirt and salt buildup."</span>
+                                                                    </li>
+                                                                    <li className="flex items-start gap-1.5">
+                                                                        <span className="text-emerald-500">📅</span>
+                                                                        <span><strong className="text-zinc-100">Booking Prompt:</strong> "Should we get your vehicle scheduled for our next open mobile detail slot this week?"</span>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
