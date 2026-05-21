@@ -670,6 +670,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
         const estimateNotes = `Estimate generated automatically by Phone Assistant.
 
+=== INTERNAL HISTORY LOG ===
 [VEHICLE INFO]
 • Classification size/type: ${firstVehicle.type.toUpperCase()}
 • Condition: ${firstVehicle.condition.toUpperCase()}
