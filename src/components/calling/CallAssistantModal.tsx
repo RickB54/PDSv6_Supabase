@@ -187,7 +187,7 @@ export function createEmptyVehicle(livePackages?: any[]): Vehicle {
         reasonForDetail: "",
         detailHistory: "",
         interiorCondition: "normal",
-        seatMaterial: "leather",
+        seatMaterial: "cloth",
         paintCondition: "good",
         mainGoal: "full",
         scenarios: defaultScenarios,
@@ -446,17 +446,16 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
         setVehicles(prev => prev.map((v, idx) => {
             if (idx === 0) {
-                // Ensure Scenario A uses "prime-essential-full"
+                // Ensure scenarios match their labels exactly and contain no addons
                 const updatedScenarios = v.scenarios.map((s, sIdx) => {
-                    if (sIdx === 0) {
-                        return {
-                            ...s,
-                            packageId: "prime-essential-full",
-                            addOnIds: []
-                        };
-                    }
+                    let targetPackageId = s.packageId;
+                    if (sIdx === 0) targetPackageId = "prime-essential-exterior";
+                    else if (sIdx === 1) targetPackageId = "prime-essential-interior";
+                    else if (sIdx === 2) targetPackageId = "prime-essential-full";
+
                     return {
                         ...s,
+                        packageId: targetPackageId,
                         addOnIds: []
                     };
                 });
@@ -471,10 +470,11 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     dailyDriver: true,
                     paintCondition: "good",
                     interiorCondition: "normal",
+                    seatMaterial: "cloth",
                     reasonForDetail: "protection",
                     mainGoal: "full",
                     scenarios: updatedScenarios,
-                    selectedScenarioId: updatedScenarios[0]?.id || null,
+                    selectedScenarioId: updatedScenarios[2]?.id || null, // Default active scenario is Scenario C (Full Detail)
                     selectedServiceId: "prime-essential-full",
                     notes: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify call pricing calculations, notification emails, and CRM auto-generation."
                 };
