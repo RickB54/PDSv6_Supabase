@@ -128,6 +128,26 @@ const Estimates = () => {
     const [estimateDate, setEstimateDate] = useState(getLocalDateString());
     const [notes, setNotes] = useState("");
     const [isRefiningNotes, setIsRefiningNotes] = useState(false);
+    
+    // Full screen notes editor states
+    const [isNotesFullScreen, setIsNotesFullScreen] = useState(false);
+    const [fullScreenNotesText, setFullScreenNotesText] = useState("");
+    const [notesSource, setNotesSource] = useState<"form" | "detail">("form");
+
+    const handleSaveDetailNotes = async (updatedNotes: string) => {
+        if (!selectedEstimate) return;
+        const updated = { ...selectedEstimate, notes: updatedNotes };
+        try {
+            if (!isDemoMode) {
+                await upsertSupabaseEstimate(updated as any);
+            }
+            setSelectedEstimate(updated);
+            setEstimates(prev => prev.map(e => e.id === selectedEstimate.id ? updated : e));
+            toast({ title: "Notes Saved", description: "Estimate notes updated successfully." });
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to update notes", variant: "destructive" });
+        }
+    };
 
     const handleAIEnhance = async () => {
         if (!notes.trim()) {
@@ -819,12 +839,17 @@ const Estimates = () => {
                                          {isRefiningNotes ? 'Enhancing...' : 'Enhance with AI'}
                                      </Button>
                                  </div>
-                                 <textarea 
-                                     value={notes}
-                                     onChange={(e) => setNotes(e.target.value)}
-                                     placeholder="Enter specific details from your conversation..."
-                                     className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                                 />
+                                 <textarea
+                                      value={notes}
+                                      onClick={() => {
+                                          setFullScreenNotesText(notes);
+                                          setNotesSource("form");
+                                          setIsNotesFullScreen(true);
+                                      }}
+                                      readOnly
+                                      placeholder="Click to view full page & edit notes..."
+                                      className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-2 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer hover:border-zinc-700 transition-colors"
+                                  />
                              </div>
 
                             {/* Services List */}
@@ -994,6 +1019,82 @@ const Estimates = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Full Page Notes Editor Overlay */}
+            {isNotesFullScreen && (
+                <div className="fixed inset-0 bg-black/90 z-[100] flex flex-col p-6 md:p-10 backdrop-blur-md animate-in fade-in duration-250">
+                    <div className="max-w-4xl w-full mx-auto flex-1 flex flex-col">
+                        <div className="flex items-center justify-between pb-6 border-b border-zinc-800">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2">
+                                    📝 Notes & Conversation Details
+                                </h3>
+                                <p className="text-zinc-400 text-xs mt-1">
+                                    Full page focus view. Type or polish your notes below.
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button 
+                                    onClick={async () => {
+                                        setIsRefiningNotes(true);
+                                        try {
+                                            const refined = await refineTextWithAI(fullScreenNotesText);
+                                            setFullScreenNotesText(refined);
+                                            toast({ title: "Notes Enhanced", description: "Your notes have been professionally polished." });
+                                        } catch (error) {
+                                            toast({ title: "Error", description: "Failed to enhance notes.", variant: "destructive" });
+                                        } finally {
+                                            setIsRefiningNotes(false);
+                                        }
+                                    }}
+                                    disabled={isRefiningNotes || !fullScreenNotesText.trim()}
+                                    className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 hover:text-amber-400 border border-amber-500/20 font-bold"
+                                >
+                                    {isRefiningNotes ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                    Enhance with AI
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    className="text-zinc-400 hover:text-white"
+                                    onClick={() => setIsNotesFullScreen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 py-6 flex flex-col">
+                            <textarea 
+                                value={fullScreenNotesText}
+                                onChange={(e) => setFullScreenNotesText(e.target.value)}
+                                placeholder="Start typing the customer details, scenario selections, or custom requests here..."
+                                autoFocus
+                                className="w-full flex-1 bg-zinc-950/80 border border-zinc-800 rounded-2xl p-6 text-zinc-100 text-lg focus:outline-none focus:ring-2 focus:ring-amber-500/40 resize-none font-sans leading-relaxed shadow-inner"
+                            />
+                        </div>
+
+                        <div className="pt-6 border-t border-zinc-800 flex items-center justify-between">
+                            <div className="text-zinc-500 text-xs">
+                                Click Save to keep changes, or click Cancel to discard.
+                            </div>
+                            <Button 
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-8 h-12 rounded-xl text-base shadow-lg shadow-amber-600/15"
+                                onClick={() => {
+                                    if (notesSource === "form") {
+                                        setNotes(fullScreenNotesText);
+                                        toast({ title: "Notes Updated", description: "Draft notes updated in the form." });
+                                    } else {
+                                        handleSaveDetailNotes(fullScreenNotesText);
+                                    }
+                                    setIsNotesFullScreen(false);
+                                }}
+                            >
+                                Save Changes
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Estimate Detail Modal */}
             {selectedEstimate && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedEstimate(null)}>
@@ -1057,6 +1158,26 @@ const Estimates = () => {
                                 <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
                                     <span className="text-lg font-bold text-white">Total</span>
                                     <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
+                                </div>
+                            </div>
+
+                            {/* Notes & Conversation Details display in Detail modal */}
+                            <div className="py-4 border-b border-zinc-800">
+                                <div 
+                                    className="p-3.5 bg-zinc-900/50 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-colors"
+                                    onClick={() => {
+                                        setFullScreenNotesText(selectedEstimate.notes || "");
+                                        setNotesSource("detail");
+                                        setIsNotesFullScreen(true);
+                                    }}
+                                >
+                                    <div className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-1.5 flex items-center justify-between">
+                                        <span>Notes & Conversation Details</span>
+                                        <span className="text-[8px] text-amber-500 font-bold uppercase tracking-wider bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">Click to View Full & Edit</span>
+                                    </div>
+                                    <div className="text-zinc-200 text-xs whitespace-pre-wrap leading-relaxed">
+                                        {selectedEstimate.notes || <span className="text-zinc-500 italic">No notes added. Click here to add notes in full screen...</span>}
+                                    </div>
                                 </div>
                             </div>
 
