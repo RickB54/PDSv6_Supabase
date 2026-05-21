@@ -187,7 +187,7 @@ export function createEmptyVehicle(livePackages?: any[]): Vehicle {
         mainGoal: "full",
         scenarios: defaultScenarios,
         selectedScenarioId: `s1-${vid}`,
-        selectedServiceId: firstPkg?.id || "prime-essential-exterior"
+        selectedServiceId: null
     };
 }
 
@@ -1426,7 +1426,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                         </Button>
 
                                         {/* Auto Comparison Tool */}
-                                        {activeVehicle.scenarios.length >= 2 && (
+                                        {activeVehicle.scenarios.length >= 1 && (
                                             <div className="mt-8 p-6 bg-zinc-900 border border-emerald-500/30 rounded-2xl shadow-xl relative overflow-hidden">
                                                 <Calculator className="absolute top-4 right-4 w-12 h-12 text-emerald-500/10" />
                                                 <h4 className="text-emerald-500 font-black uppercase tracking-tighter text-base mb-4 flex items-center gap-2">
@@ -1436,11 +1436,59 @@ ${firstVehicle.notes || ''}`.trim(),
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                                     {activeVehicle.scenarios.map((s, idx) => {
                                                         const total = calculateTotal(s.packageId, s.addOnIds, activeVehicle.type);
+                                                        const isSelected = activeVehicle.selectedScenarioId === s.id;
+                                                        
+                                                        const pkgObj = livePackages.find(p => p.id === s.packageId) || servicePackages.find(p => p.id === s.packageId);
+                                                        const pkgPrice = pkgObj ? (parseFloat(savedPrices[`package:${pkgObj.id}:${activeVehicle.type}`]) || pkgObj.pricing?.[activeVehicle.type] || 0) : 0;
+                                                        
+                                                        const itemizedAddOns = s.addOnIds.map(aid => {
+                                                            const ao = liveAddOns.find(a => a.id === aid) || addOns.find(a => a.id === aid);
+                                                            const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${activeVehicle.type}`]) || ao.pricing?.[activeVehicle.type] || 0) : 0;
+                                                            return { name: ao?.name || aid, price };
+                                                        });
+
                                                         return (
-                                                            <div key={s.id} className="p-3 rounded-lg bg-black/40 border border-zinc-800 flex flex-col justify-between">
+                                                            <div 
+                                                                key={s.id} 
+                                                                onClick={() => updateVehicle(activeVehicleId, { selectedScenarioId: s.id })}
+                                                                className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between group
+                                                                    ${isSelected ? 'bg-primary/10 border-primary shadow-[0_0_15px_rgba(59,130,246,0.15)] ring-1 ring-primary' : 'bg-black/40 border-zinc-800 hover:border-zinc-700'}
+                                                                `}
+                                                            >
                                                                 <div>
-                                                                    <div className="text-[9px] font-black uppercase text-zinc-500 tracking-widest leading-none">{s.label}</div>
-                                                                    <div className="text-xl font-black text-white mt-1.5 leading-none">${total}</div>
+                                                                    <div className="flex items-center justify-between gap-1.5 mb-2 border-b border-zinc-800/40 pb-1.5">
+                                                                        <span className="text-[9px] font-black uppercase text-zinc-400 tracking-wider truncate">
+                                                                            {s.label}
+                                                                        </span>
+                                                                        {isSelected && (
+                                                                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                                                                Active
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    
+                                                                    {/* Total Price */}
+                                                                    <div className="text-2xl font-black text-white font-mono tracking-tight flex items-baseline gap-1">
+                                                                        ${total}
+                                                                    </div>
+
+                                                                    {/* Itemized package & addons */}
+                                                                    <div className="mt-3.5 pt-3.5 border-t border-zinc-800/80 space-y-1.5 text-[10px] text-zinc-300">
+                                                                        <div className="flex items-center justify-between font-bold text-zinc-200">
+                                                                            <span className="truncate">📦 {pkgObj ? pkgObj.name.replace('Prime ', '') : 'No Package Selected'}</span>
+                                                                            <span className="font-mono text-zinc-400">${pkgPrice}</span>
+                                                                        </div>
+                                                                        {itemizedAddOns.length > 0 && (
+                                                                            <div className="space-y-1 pt-1.5 border-t border-zinc-900/60">
+                                                                                {itemizedAddOns.map((ao, aIdx) => (
+                                                                                    <div key={aIdx} className="flex items-center justify-between text-zinc-400">
+                                                                                        <span className="truncate">➕ {ao.name}</span>
+                                                                                        <span className="font-mono text-zinc-500">${ao.price}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         );
@@ -1489,16 +1537,26 @@ ${firstVehicle.notes || ''}`.trim(),
 
                     {/* Responsive Footer Controls */}
                     <div className="flex items-center justify-between gap-2 w-full">
-                        {/* Left Side: Select Scenario Dropdown */}
+                        {/* Left Side: Package Base Prices Cheat Sheet Dropdown */}
                         <div className="flex-1 min-w-[120px] max-w-[280px]">
-                            <Select value={activeVehicle.selectedScenarioId || ""} onValueChange={(s) => updateVehicle(activeVehicleId, { selectedScenarioId: s })}>
+                            <Select value="none" onValueChange={() => {}}>
                                 <SelectTrigger className="w-full h-10 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800 text-zinc-100">
-                                    <SelectValue placeholder="CONFIRM SELECTION" />
+                                    <span className="flex items-center gap-1.5 truncate">
+                                        💰 Package Cheat Sheet
+                                    </span>
                                 </SelectTrigger>
-                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
-                                    {activeVehicle.scenarios.map(s => (
-                                        <SelectItem key={s.id} value={s.id}>{s.label} (${calculateTotal(s.packageId, s.addOnIds, activeVehicle.type)})</SelectItem>
-                                    ))}
+                                <SelectContent className="bg-zinc-950 border-zinc-850 text-zinc-200">
+                                    <SelectItem value="none" disabled className="text-zinc-500 font-black text-[9px] uppercase tracking-wider">
+                                        Live Package Base Prices ({activeVehicle.type.toUpperCase()})
+                                    </SelectItem>
+                                    {livePackages.map(pkg => {
+                                        const basePrice = parseFloat(savedPrices[`package:${pkg.id}:${activeVehicle.type}`]) || pkg.pricing?.[activeVehicle.type] || 0;
+                                        return (
+                                            <SelectItem key={pkg.id} value={pkg.id} className="text-zinc-200 font-bold text-xs">
+                                                {pkg.name.replace('Prime ', '').toUpperCase()}: ${basePrice}
+                                            </SelectItem>
+                                        );
+                                    })}
                                 </SelectContent>
                             </Select>
                         </div>
