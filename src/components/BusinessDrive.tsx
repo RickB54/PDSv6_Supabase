@@ -6,7 +6,7 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw, Camera
+    RefreshCw, Camera, ArrowUpDown
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -64,9 +64,48 @@ const DEFAULT_FOLDERS: DriveFolder[] = [
     { id: '8', name: "My Logos", path: [] }
 ];
 
+const getFileCategory = (file: DriveFile): string => {
+    const name = file.name.toLowerCase();
+    const type = file.type.toLowerCase();
+    
+    if (type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/i.test(name)) {
+        return 'Pictures';
+    }
+    if (type === 'application/pdf' || name.endsWith('.pdf')) {
+        return 'PDFs';
+    }
+    if (type.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm|flv|wmv|3gp)$/i.test(name)) {
+        return 'Videos';
+    }
+    if (type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac|wma)$/i.test(name)) {
+        return 'Audio';
+    }
+    if (
+        type.includes('excel') || 
+        type.includes('spreadsheet') || 
+        type.includes('csv') ||
+        /\.(xls|xlsx|csv|numbers|ods)$/i.test(name)
+    ) {
+        return 'Spreadsheets';
+    }
+    if (
+        type.startsWith('text/') || 
+        type.includes('word') || 
+        type.includes('document') ||
+        /\.(doc|docx|txt|rtf|pages|odt|md)$/i.test(name)
+    ) {
+        return 'Documents';
+    }
+    return 'Other';
+};
+
 export default function BusinessDrive() {
     const { toast } = useToast();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [sortType, setSortType] = useState<'upload' | 'modified' | 'name'>('upload');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(null);
+    const [filterHistory, setFilterHistory] = useState<string[]>([]);
     const [currentPath, setCurrentPath] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem('business_drive_current_path');
@@ -209,20 +248,63 @@ export default function BusinessDrive() {
     }, [files, folders, isLoaded]);
 
     const currentItems = useMemo(() => {
-        const filteredFiles = files.filter(f => {
-            const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
-            return matchesSearch && matchesPath;
+        let filteredFiles = files;
+        let filteredFolders = folders;
+
+        if (selectedTypeFilter) {
+            // Pull out files of matching type from ANY path/folder (top level display)
+            filteredFiles = files.filter(f => {
+                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesType = getFileCategory(f) === selectedTypeFilter;
+                return matchesSearch && matchesType;
+            });
+            // Folders are not shown in the type filter top-level view
+            filteredFolders = [];
+        } else {
+            // Normal view restricted to currentPath
+            filteredFiles = files.filter(f => {
+                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
+                return matchesSearch && matchesPath;
+            });
+
+            filteredFolders = folders.filter(f => {
+                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
+                return matchesSearch && matchesPath;
+            });
+        }
+
+        // Apply Sorting to Files
+        filteredFiles = [...filteredFiles].sort((a, b) => {
+            let valA: any = '';
+            let valB: any = '';
+
+            if (sortType === 'name') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+            } else {
+                // Parse modified/upload date. Fallback to 0 if invalid
+                valA = a.modified ? new Date(a.modified).getTime() : 0;
+                valB = b.modified ? new Date(b.modified).getTime() : 0;
+            }
+
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
         });
 
-        const filteredFolders = folders.filter(f => {
-            const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
-            return matchesSearch && matchesPath;
+        // Apply Sorting to Folders (always sort folders by name in normal view)
+        filteredFolders = [...filteredFolders].sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
+            if (nameA > nameB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
         });
 
         return { files: filteredFiles, folders: filteredFolders };
-    }, [files, folders, currentPath, searchTerm]);
+    }, [files, folders, currentPath, searchTerm, selectedTypeFilter, sortType, sortDirection]);
 
     const openViewer = (file: DriveFile) => {
         setSelectedFile(file);
@@ -358,6 +440,21 @@ export default function BusinessDrive() {
         }
     };
 
+    const handleBack = () => {
+        if (selectedTypeFilter) {
+            const nextHistory = [...filterHistory];
+            nextHistory.pop(); // Remove current one
+            setFilterHistory(nextHistory);
+            if (nextHistory.length > 0) {
+                setSelectedTypeFilter(nextHistory[nextHistory.length - 1]);
+            } else {
+                setSelectedTypeFilter(null);
+            }
+        } else if (currentPath.length > 0) {
+            handleUpOneLevel();
+        }
+    };
+
     const [zoom, setZoom] = useState(100);
 
     const handleNext = () => {
@@ -397,13 +494,13 @@ export default function BusinessDrive() {
             {/* Header / Breadcrumbs */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#0d1117] p-4 rounded-xl border border-zinc-800 shadow-xl">
                 <div className="flex items-center gap-3 text-sm text-zinc-400 overflow-hidden">
-                    {currentPath.length > 0 && (
+                    {(currentPath.length > 0 || selectedTypeFilter !== null) && (
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 hover:bg-zinc-800 text-white" 
-                            onClick={handleUpOneLevel}
-                            title="Up One Level"
+                            onClick={handleBack}
+                            title="Go Back"
                         >
                             <ArrowLeft className="w-4 h-4" />
                         </Button>
@@ -449,6 +546,53 @@ export default function BusinessDrive() {
                     >
                         <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
                     </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
+                                <ArrowUpDown className="w-5 h-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
+                            <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 mb-1">Sort by</div>
+                            <DropdownMenuItem 
+                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'upload' && "text-blue-400 font-bold")}
+                                onClick={() => setSortType('upload')}
+                            >
+                                Upload Time
+                                {sortType === 'upload' && <span className="text-xs">✓</span>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'modified' && "text-blue-400 font-bold")}
+                                onClick={() => setSortType('modified')}
+                            >
+                                Modified Time
+                                {sortType === 'modified' && <span className="text-xs">✓</span>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'name' && "text-blue-400 font-bold")}
+                                onClick={() => setSortType('name')}
+                            >
+                                Name
+                                {sortType === 'name' && <span className="text-xs">✓</span>}
+                            </DropdownMenuItem>
+                            
+                            <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-800 mt-2 mb-1">Direction</div>
+                            <DropdownMenuItem 
+                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
+                                onClick={() => setSortDirection('desc')}
+                            >
+                                Newest / Z-A
+                                {sortDirection === 'desc' && <span className="text-xs">✓</span>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
+                                onClick={() => setSortDirection('asc')}
+                            >
+                                Oldest / A-Z
+                                {sortDirection === 'asc' && <span className="text-xs">✓</span>}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800">
                         <Button 
                             variant="ghost" 
@@ -553,6 +697,73 @@ export default function BusinessDrive() {
                 </DialogContent>
             </Dialog>
 
+            {/* Sort options by Type */}
+            <div className="flex flex-col gap-4 bg-[#0d1117]/50 border border-zinc-800/80 p-4 rounded-2xl shadow-md">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 shrink-0">Sort by Type:</span>
+                    {['Documents', 'Spreadsheets', 'Videos', 'Pictures', 'PDFs', 'Audio'].map(type => {
+                        const isActive = selectedTypeFilter === type;
+                        return (
+                            <Button
+                                key={type}
+                                variant="ghost"
+                                onClick={() => {
+                                    const nextHistory = [...filterHistory, type];
+                                    setFilterHistory(nextHistory);
+                                    setSelectedTypeFilter(type);
+                                }}
+                                className={cn(
+                                    "h-8 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border shrink-0",
+                                    isActive 
+                                        ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                                        : "bg-[#161b22] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                                )}
+                            >
+                                {type}
+                            </Button>
+                        );
+                    })}
+                    {selectedTypeFilter && (
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setSelectedTypeFilter(null);
+                                setFilterHistory([]);
+                            }}
+                            className="h-8 w-8 rounded-full p-0 bg-red-950/20 border border-red-900/30 text-red-400 hover:bg-red-900/40 hover:text-white shrink-0"
+                            title="Clear Type Filter"
+                        >
+                            <X className="w-4 h-4" />
+                        </Button>
+                    )}
+                </div>
+
+                {selectedTypeFilter && (
+                    <div className="flex items-center justify-between p-3 bg-blue-950/20 border border-blue-900/30 rounded-xl animate-fade-in shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-bold">
+                                i
+                            </div>
+                            <div>
+                                <p className="text-xs font-black text-white">Viewing {selectedTypeFilter} only</p>
+                                <p className="text-[10px] text-zinc-400">Showing all {selectedTypeFilter.toLowerCase()} in your Business Drive on the top level.</p>
+                            </div>
+                        </div>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                                setSelectedTypeFilter(null);
+                                setFilterHistory([]);
+                            }}
+                            className="text-[10px] font-black uppercase tracking-wider text-zinc-400 hover:text-white"
+                        >
+                            Cancel View [x]
+                        </Button>
+                    </div>
+                )}
+            </div>
+
             {/* Content Section */}
             <div className={cn(
                 viewMode === 'grid' 
@@ -595,17 +806,17 @@ export default function BusinessDrive() {
                                     )}
                                     onClick={() => setCurrentPath([...currentPath, folder.name])}
                                 >
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
                                         <div className={cn(
-                                            "p-3 rounded-xl transition-all duration-300",
+                                            "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
                                             containsFiles
                                                 ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
                                                 : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
                                         )}>
-                                            <Folder className="w-7 h-7" />
+                                            <Folder className="w-10 h-10" />
                                         </div>
                                         <span className={cn(
-                                            "font-bold truncate text-sm sm:text-base transition-colors",
+                                            "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
                                             containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
                                         )}>{folder.name}</span>
                                     </div>
