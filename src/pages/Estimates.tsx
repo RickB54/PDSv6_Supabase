@@ -215,7 +215,8 @@ const Estimates = () => {
             const found = customers.find(c => c.name.toLowerCase().includes(customerName.toLowerCase()));
             if (found) {
                 setSelectedCustomer(found.id!);
-                setShowCreateForm(true);
+                const hasExisting = estimates.some(e => e.customerId === found.id);
+                setShowCreateForm(!hasExisting);
             }
         }
         setDiscount(0);
@@ -226,7 +227,8 @@ const Estimates = () => {
             if (customer) {
                 setSelectedCustomer(customer.id || "");
                 setFilterCustomerId(customer.id || "");
-                setShowCreateForm(true);
+                const hasExisting = estimates.some(e => e.customerId === customerId);
+                setShowCreateForm(!hasExisting);
                 if (discountParam) setDiscount(parseFloat(discountParam));
                 
                 // Auto-apply logic removed as requested
@@ -255,7 +257,7 @@ const Estimates = () => {
                 }
             }
         }
-    }, [searchParams, customers]);
+    }, [searchParams, customers, estimates]);
 
     const calculateTotal = () => {
         const subtotal = services.reduce((sum, s) => sum + s.price, 0);
