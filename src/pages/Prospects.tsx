@@ -30,6 +30,7 @@ import {
   Zap, Check, Bell, Package, Play, Send
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
+import { savePDFToArchive } from "@/lib/pdfArchive";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
