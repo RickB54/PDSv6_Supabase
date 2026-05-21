@@ -54,9 +54,10 @@ import { servicePackages, addOns, type VehicleType } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
-import { upsertSupabaseCustomer } from "@/lib/supa-data";
+import { upsertSupabaseCustomer, upsertSupabaseEstimate } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 import localforage from "localforage";
+import { generateInvoiceNumber } from "@/lib/utils";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { isSupabaseEnabled } from "@/lib/auth";
@@ -522,6 +523,146 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
     const activeVehicle = vehicles.find(v => v.id === activeVehicleId)!;
 
+    const getComparisonLabel = (scenario: Scenario, scenarioA: Scenario, vehicleType: VehicleType) => {
+        if (scenario.id === scenarioA.id) return "This is the base scenario (Scenario A).";
+        
+        const totalS = calculateTotal(scenario.packageId, scenario.addOnIds, vehicleType);
+        const totalA = calculateTotal(scenarioA.packageId, scenarioA.addOnIds, vehicleType);
+        const diff = totalS - totalA;
+        
+        const reasons: string[] = [];
+        
+        if (scenario.packageId !== scenarioA.packageId) {
+            const pkgS = livePackages.find(p => p.id === scenario.packageId);
+            const pkgA = livePackages.find(p => p.id === scenarioA.packageId);
+            const priceS = pkgS ? (parseFloat(savedPrices[`package:${pkgS.id}:${vehicleType}`]) || pkgS.pricing?.[vehicleType] || 0) : 0;
+            const priceA = pkgA ? (parseFloat(savedPrices[`package:${pkgA.id}:${vehicleType}`]) || pkgA.pricing?.[vehicleType] || 0) : 0;
+            const pkgDiff = priceS - priceA;
+            if (pkgDiff > 0) {
+                reasons.push(`upgrading package to ${pkgS?.name || scenario.packageId} (+$${pkgDiff.toFixed(2)})`);
+            } else if (pkgDiff < 0) {
+                reasons.push(`switching package to ${pkgS?.name || scenario.packageId} (-$${Math.abs(pkgDiff).toFixed(2)})`);
+            }
+        }
+        
+        // Add-ons added
+        const addedAddons = scenario.addOnIds.filter(id => !scenarioA.addOnIds.includes(id));
+        if (addedAddons.length > 0) {
+            const names = addedAddons.map(id => {
+                const ao = liveAddOns.find(a => a.id === id);
+                const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
+                return `${ao?.name || id} (+$${price.toFixed(2)})`;
+            });
+            reasons.push(`adding ${names.join(', ')}`);
+        }
+        
+        // Add-ons removed
+        const removedAddons = scenarioA.addOnIds.filter(id => !scenario.addOnIds.includes(id));
+        if (removedAddons.length > 0) {
+            const names = removedAddons.map(id => {
+                const ao = liveAddOns.find(a => a.id === id);
+                const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${vehicleType}`]) || ao.pricing?.[vehicleType] || 0) : 0;
+                return `${ao?.name || id} (-$${price.toFixed(2)})`;
+            });
+            reasons.push(`removing ${names.join(', ')}`);
+        }
+        
+        const labelPrefix = scenario.label.includes(':') ? scenario.label.split(':')[0] : 'Scenario';
+        if (diff > 0) {
+            return `${labelPrefix} is $${diff.toFixed(2)} more than Scenario A due to ${reasons.join(' and ')}.`;
+        } else if (diff < 0) {
+            return `${labelPrefix} is $${Math.abs(diff).toFixed(2)} less than Scenario A due to ${reasons.join(' and ')}.`;
+        } else {
+            return `${labelPrefix} has the same total price as Scenario A.`;
+        }
+    };
+
+    const autoGenerateEstimate = async (savedCustomer: any, firstVehicle: Vehicle) => {
+        // Find selected scenario. If none, default to the first scenario (Scenario A)
+        const selectedScenario = firstVehicle.scenarios.find(s => s.id === firstVehicle.selectedScenarioId) || firstVehicle.scenarios[0];
+        
+        if (!selectedScenario) return;
+
+        // Build services array for Estimate
+        const services: { name: string; price: number }[] = [];
+        
+        const pkgObj = livePackages.find(p => p.id === selectedScenario.packageId);
+        const pkgPrice = pkgObj ? (parseFloat(savedPrices[`package:${pkgObj.id}:${firstVehicle.type}`]) || pkgObj.pricing?.[firstVehicle.type] || 0) : 0;
+        
+        if (pkgObj) {
+            services.push({ name: pkgObj.name, price: pkgPrice });
+        }
+
+        selectedScenario.addOnIds.forEach(aid => {
+            const ao = liveAddOns.find(a => a.id === aid);
+            const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${firstVehicle.type}`]) || ao.pricing?.[firstVehicle.type] || 0) : 0;
+            if (ao) {
+                services.push({ name: ao.name, price });
+            }
+        });
+
+        const selectedTotal = calculateTotal(selectedScenario.packageId, selectedScenario.addOnIds, firstVehicle.type);
+
+        // Build detailed notes comparing scenarios
+        const scenarioA = firstVehicle.scenarios[0];
+        const scenarioNotes = firstVehicle.scenarios.map(s => {
+            const sPkg = livePackages.find(p => p.id === s.packageId);
+            const sTotal = calculateTotal(s.packageId, s.addOnIds, firstVehicle.type);
+            const comparisonLabel = getComparisonLabel(s, scenarioA, firstVehicle.type);
+            
+            const sAddons = s.addOnIds.map(aid => {
+                const ao = liveAddOns.find(a => a.id === aid);
+                const price = ao ? (parseFloat(savedPrices[`addon:${ao.id}:${firstVehicle.type}`]) || ao.pricing?.[firstVehicle.type] || 0) : 0;
+                return `  - ${ao?.name || aid}: $${price.toFixed(2)}`;
+            });
+
+            return `[${s.label}]
+• Package: ${sPkg?.name || s.packageId} ($${(parseFloat(savedPrices[`package:${s.packageId}:${firstVehicle.type}`]) || sPkg?.pricing?.[firstVehicle.type] || 0).toFixed(2)})
+• Add-ons Selected:${sAddons.length > 0 ? `\n${sAddons.join('\n')}` : ' None'}
+• Total: $${sTotal.toFixed(2)}
+• Comparison: ${comparisonLabel}`;
+        }).join('\n\n');
+
+        const vehicleStr = `${firstVehicle.year || ''} ${firstVehicle.make || ''} ${firstVehicle.model || ''}`.replace(/\s+/g, ' ').trim() || "Vehicle Context";
+
+        const estimateNotes = `Estimate generated automatically by Phone Assistant.
+
+[VEHICLE INFO]
+• Classification size/type: ${firstVehicle.type.toUpperCase()}
+• Condition: ${firstVehicle.condition.toUpperCase()}
+• Inside Condition Details: ${firstVehicle.interiorCondition || 'N/A'}
+• Outside Paint Details: ${firstVehicle.paintCondition || 'N/A'}
+• General notes: ${firstVehicle.notes || 'None'}
+
+[PRICING SCENARIOS COMPARISON]
+${scenarioNotes}
+
+[SELECTED SCENARIO FOR THIS ESTIMATE]
+This estimate is based on the caller's selection: ${selectedScenario.label} with a total of $${selectedTotal.toFixed(2)}.`.trim();
+
+        const estimatePayload: any = {
+            estimateNumber: generateInvoiceNumber(),
+            customerId: savedCustomer.id,
+            customerName: savedCustomer.name,
+            vehicle: vehicleStr,
+            services,
+            total: selectedTotal,
+            date: new Date().toLocaleDateString(),
+            estimateDate: new Date().toISOString().split('T')[0],
+            status: "open",
+            packageId: selectedScenario.packageId,
+            addonIds: selectedScenario.addOnIds,
+            vehicleId: savedCustomer.vehicles?.[0]?.id || undefined,
+            vehicleType: firstVehicle.type,
+            discount: 0,
+            discountType: "percent",
+            notes: estimateNotes,
+            isSent: false
+        };
+
+        await upsertSupabaseEstimate(estimatePayload);
+    };
+
     const handleHandoff = () => {
         // Prepare data for Evaluation
         const data = vehicles.map(v => {
@@ -584,11 +725,18 @@ ${firstVehicle.notes || ''}`.trim(),
                     vehicles: [mappedVehicle]
                 };
 
-                upsertSupabaseCustomer(customerData).then(() => {
+                upsertSupabaseCustomer(customerData).then(async (savedCustomer) => {
                     toast({
                         title: accountType === 'customer' ? "Customer Created" : "Prospect Created",
                         description: `${callerName} recorded. View in ${accountType === 'customer' ? 'Customers' : 'Prospects'}.`,
                     });
+
+                    // Auto-Generate Estimate simultaneously!
+                    try {
+                        await autoGenerateEstimate(savedCustomer, firstVehicle);
+                    } catch (estErr) {
+                        console.error("Failed to auto-generate estimate on handoff:", estErr);
+                    }
                 });
             } catch (err) {
                 console.error("Failed to persist caller info:", err);
@@ -659,10 +807,18 @@ ${firstVehicle.notes || ''}`.trim(),
                 vehicles: [mappedVehicle]
             };
 
-            await upsertSupabaseCustomer(customerData);
+            const savedCustomer = await upsertSupabaseCustomer(customerData);
+            
+            // Auto-Generate Estimate simultaneously!
+            try {
+                await autoGenerateEstimate(savedCustomer, firstVehicle);
+            } catch (estErr) {
+                console.error("Failed to auto-generate estimate on save prospect:", estErr);
+            }
+
             toast({
                 title: "Prospect Saved",
-                description: `${callerName} recorded successfully under Prospects list.`,
+                description: `${callerName} recorded successfully under Prospects list with auto-generated estimate.`,
             });
             clearDraft();
             onOpenChange(false);

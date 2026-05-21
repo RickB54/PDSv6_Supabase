@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { Badge } from "@/components/ui/badge";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
-import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, Customer, supabase } from "@/lib/supa-data";
+import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, getSupabaseEstimates, Customer, supabase } from "@/lib/supa-data";
 import { format } from "date-fns";
 
 import { ActivityLog } from "@/components/customers/ActivityLog";
@@ -27,11 +27,11 @@ import {
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
   Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench,
-  Zap, Check, Bell, Package, Play
+  Zap, Check, Bell, Package, Play, Send
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
-import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
 import {
   AlertDialog,
@@ -78,6 +78,7 @@ export default function Prospects() {
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [engagements, setEngagements] = useState<any[]>([]);
+  const [estimates, setEstimates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchEngagements = useCallback(async () => {
@@ -93,8 +94,12 @@ export default function Prospects() {
     setLoading(true);
     try {
       fetchEngagements(); // Refresh engagements
-      const data = await getSupabaseCustomers();
+      const [data, ests] = await Promise.all([
+        getSupabaseCustomers(),
+        getSupabaseEstimates()
+      ]);
       setCustomers(data);
+      setEstimates(ests);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -284,8 +289,12 @@ export default function Prospects() {
 
       // PERMANENT FIX: Use the same data source as Users & Roles page
       // This ensures Jen and all other prospects are always visible
-      const list = await getSupabaseCustomers();
+      const [list, ests] = await Promise.all([
+        getSupabaseCustomers(),
+        getSupabaseEstimates()
+      ]);
       console.log('🔍 All Supabase customers:', list);
+      setEstimates(ests);
 
       // Filter for prospects only (same logic as Users & Roles)
       const prospects = list.filter(c => {
@@ -992,6 +1001,109 @@ export default function Prospects() {
                               })()}
                             </div>
                           </section>
+
+                          {/* NEW: Attached Estimates Section */}
+                          <section className="mt-6 pt-6 border-t border-zinc-800/60">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                <FileBarChart className="h-3.5 w-3.5 text-emerald-400" /> Attached Estimates ({(estimates || []).filter(e => e.customerId === customer.id).length})
+                              </h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] font-black text-purple-400 hover:text-purple-300 gap-1"
+                                asChild
+                              >
+                                <Link to={`/estimates?customerId=${customer.id}&customerName=${encodeURIComponent(customer.name || '')}`}>
+                                  <Plus className="w-2.5 h-2.5" /> ADD ESTIMATE
+                                </Link>
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3">
+                              {(() => {
+                                const customerEsts = (estimates || []).filter(e => e.customerId === customer.id);
+                                if (customerEsts.length === 0) {
+                                  return (
+                                    <div className="py-6 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
+                                      <div className="text-[10px] font-black uppercase tracking-widest">No attached estimates.</div>
+                                    </div>
+                                  );
+                                }
+
+                                return customerEsts.map((est: any) => (
+                                  <div key={est.id} className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 hover:border-emerald-500/30 transition-all flex flex-col gap-2 relative overflow-hidden group">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">ESTIMATE #${est.estimateNumber || est.id.slice(-6).toUpperCase()}</span>
+                                        <div className="text-zinc-300 text-xs font-bold mt-0.5">{est.date || new Date(est.createdAt).toLocaleDateString()}</div>
+                                      </div>
+                                      <Badge variant="outline" className={cn(
+                                        "text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-md",
+                                        est.status === 'approved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                        est.status === 'open' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                        "bg-zinc-800 text-zinc-400 border-zinc-700"
+                                      )}>
+                                        {est.status}
+                                      </Badge>
+                                    </div>
+                                    
+                                    <div className="text-[11px] text-zinc-400 line-clamp-2 mt-1">
+                                      {est.services?.map((s: any) => s.name).join(', ') || 'No services added'}
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-900">
+                                      <div className="text-sm font-black text-emerald-500">${(est.total || 0).toFixed(2)}</div>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 text-[10px] font-black text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!customer.email) {
+                                              toast({
+                                                title: "No Email Provided",
+                                                description: "This prospect does not have an email address on file.",
+                                                variant: "destructive"
+                                              });
+                                              return;
+                                            }
+                                            toast({ title: "Sending Estimate", description: `Outreach to ${customer.email} in progress...` });
+                                            try {
+                                              await onSendProspectEstimateEmail(customer, est);
+                                              toast({
+                                                title: "Estimate Sent",
+                                                description: `Successfully emailed Estimate #${est.estimateNumber} to ${customer.name}.`,
+                                              });
+                                              refresh();
+                                            } catch (err: any) {
+                                              toast({
+                                                title: "Send Failed",
+                                                description: err.message || "An error occurred while sending.",
+                                                variant: "destructive"
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          <Send className="w-3 h-3" /> SEND
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 text-[10px] text-zinc-400 hover:text-white"
+                                          asChild
+                                        >
+                                          <Link to={`/estimates?id=${est.id}`}>
+                                            INSPECT
+                                          </Link>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ));
+                              })()}
+                            </div>
+                          </section>
                         </div>
 
                         {/* RIGHT COLUMN: CONTACT & NOTES */}
@@ -1591,6 +1703,74 @@ export default function Prospects() {
                   {/* Expanded Content */}
                   {isExpanded && (
                     <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+
+                      {/* Attached Estimates inside mobile view */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                            <FileBarChart className="h-3 w-3 text-emerald-400" /> Attached Estimates ({(estimates || []).filter(e => e.customerId === c.id).length})
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {(() => {
+                            const customerEsts = (estimates || []).filter(e => e.customerId === c.id);
+                            if (customerEsts.length === 0) {
+                              return (
+                                <div className="text-[10px] text-zinc-600 uppercase font-black text-center py-3 border border-dashed border-zinc-800 rounded-lg">
+                                  No estimates on file.
+                                </div>
+                              );
+                            }
+                            return customerEsts.map((est: any) => (
+                              <div key={est.id} className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 flex flex-col gap-1.5">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[9px] font-black text-zinc-500">ESTIMATE #${est.estimateNumber || est.id.slice(-6).toUpperCase()}</span>
+                                  <Badge variant="outline" className="text-[8px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20">{est.status}</Badge>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 truncate">{est.services?.map((s: any) => s.name).join(', ')}</div>
+                                <div className="flex justify-between items-center mt-1">
+                                  <span className="text-xs font-black text-emerald-500">${(est.total || 0).toFixed(2)}</span>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-[9px] font-black text-emerald-400 gap-1"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!c.email) {
+                                          toast({ title: "No Email", description: "Email is required.", variant: "destructive" });
+                                          return;
+                                        }
+                                        toast({ title: "Sending Estimate", description: "Outreach in progress..." });
+                                        try {
+                                          await onSendProspectEstimateEmail(c, est);
+                                          toast({ title: "Estimate Sent", description: "Emailed successfully." });
+                                          refresh();
+                                        } catch (err: any) {
+                                          toast({ title: "Failed to Send", description: err.message, variant: "destructive" });
+                                        }
+                                      }}
+                                    >
+                                      <Send className="w-2.5 h-2.5" /> SEND
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-[9px] text-zinc-400"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/estimates?id=${est.id}`);
+                                      }}
+                                    >
+                                      INSPECT
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      </div>
 
                       <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-zinc-800">
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">

@@ -736,6 +736,111 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
   }
 }
 
+export async function onSendProspectEstimateEmail(prospect: any, estimate: any) {
+  try {
+    const year = new Date().getFullYear();
+
+    if (prospect.email) {
+      console.log(`🚀 Sending detailing estimate email to prospect: ${prospect.email}`);
+
+      // Parse estimate notes to extract scenarios or show them beautifully
+      const formattedNotes = (estimate.notes || "")
+        .replace(/\n/g, "<br/>")
+        .replace(/\[(Scenario [A-Z].*?)\]/g, '<strong style="color: #6366f1; font-size: 16px; display: block; margin-top: 15px;">$1</strong>')
+        .replace(/• (.*?):/g, '• <strong>$1</strong>:');
+
+      const estimateHtml = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 45px 20px; text-align: center; color: #ffffff;">
+          <div style="font-size: 48px; margin-bottom: 20px;">📄</div>
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Your Custom Estimate</h1>
+          <p style="margin: 10px 0 0; font-size: 15px; opacity: 0.9;">Professional Detailing Solutions — Estimate #${estimate.estimateNumber || 'N/A'}</p>
+        </div>
+        
+        <div style="padding: 35px 30px;">
+          <p style="font-size: 19px; color: #111827; margin-top: 0;">Hi <strong>${prospect.name}</strong>,</p>
+          
+          <p style="color: #4b5563; line-height: 1.7; font-size: 15px;">Thank you for discussing your premium car care needs with us. Based on your vehicle and pricing preferences from our Call Assistant session, we've prepared a comprehensive custom quote.</p>
+
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 16px; padding: 25px; margin: 30px 0;">
+             <h3 style="margin-top: 0; font-size: 14px; color: #065f46; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #10b981; display: inline-block; padding-bottom: 4px;">Chosen Scenario Overview</h3>
+             <div style="margin-top: 15px; color: #047857;">
+                <div style="margin-bottom: 10px;"><strong>Vehicle:</strong> ${estimate.vehicle || 'Your Vehicle'}</div>
+                <div style="margin-bottom: 10px;"><strong>Classification size/type:</strong> ${estimate.vehicleType?.toUpperCase() || 'MIDSIZE'}</div>
+                <div style="border-top: 1px dashed #a7f3d0; margin: 15px 0; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 600; font-size: 16px;">Estimated Total:</span>
+                  <span style="font-size: 24px; font-weight: 900; color: #065f46;">$${(estimate.total || 0).toFixed(2)}</span>
+                </div>
+             </div>
+          </div>
+
+          <div style="background-color: #fafafa; border: 1px solid #f3f4f6; border-radius: 16px; padding: 25px; margin: 30px 0;">
+             <h3 style="margin-top: 0; font-size: 14px; color: #1f2937; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #6366f1; display: inline-block; padding-bottom: 4px;">Proposed Services & Scenarios</h3>
+             <div style="margin-top: 15px; color: #4b5563; font-size: 14px; line-height: 1.6;">
+                ${formattedNotes}
+             </div>
+          </div>
+
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${window.location.origin}/book?estimateId=${estimate.id}&customerId=${prospect.id}&customerName=${encodeURIComponent(prospect.name)}" 
+               style="display: inline-block; background: #10b981; color: #ffffff; padding: 18px 45px; border-radius: 12px; text-decoration: none; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; font-size: 14px; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);">
+               Approve & Book Appointment
+            </a>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center; margin-top: 40px;">If you have any questions about these options or would like to customize your services further, simply reply to this email or call Rick directly at 978-566-1008.</p>
+
+          <div style="text-align: center; border-top: 1px solid #f3f4f6; padding-top: 35px; margin-top: 45px;">
+            <p style="margin: 0; color: #111827; font-weight: 800; font-size: 17px;">Prime Auto Detail Team</p>
+            <p style="margin: 5px 0 0; color: #9ca3af; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Showroom Perfection, Delivered</p>
+          </div>
+        </div>
+        
+        <div style="background-color: #111827; padding: 30px; text-align: center; color: #6b7280;">
+          <p style="margin: 0; font-size: 11px; line-height: 1.5;">This estimate is a professional price proposal for automotive detailing services. Final pricing may be refined based on actual vehicle inspection upon arrival.</p>
+          <p style="margin: 10px 0 0; color: #4b5563; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
+        </div>
+      </div>
+      `;
+
+      // Log engagement
+      try {
+        await supabase.from('engagements').insert({
+          customer_name: prospect.name,
+          customer_email: prospect.email,
+          customer_id: prospect.id,
+          type: 'email',
+          note: `Estimate #${estimate.estimateNumber} detailing scenario options sent to ${prospect.name}`
+        });
+      } catch (logErr) {
+        console.error('Engagement logging failed for estimate send:', logErr);
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-booking-email', {
+        body: {
+          to: prospect.email,
+          bcc: "rick.primeautodetail@gmail.com",
+          subject: `✨ Custom Detailing Estimate #${estimate.estimateNumber} for ${prospect.name}`,
+          customerName: prospect.name,
+          service: "Estimate Quote",
+          html: estimateHtml,
+          type: 'initial'
+        }
+      });
+      
+      if (!error) {
+        await supabase.from('customers').update({ last_email_sent_at: new Date().toISOString() }).eq('id', prospect.id);
+      }
+ 
+      if (error) throw error;
+      return data;
+    }
+  } catch (e) {
+    console.error('Failed to send prospect estimate', e);
+  }
+}
+
+
 export interface EmailCampaign {
   id: string;
   name: string;
