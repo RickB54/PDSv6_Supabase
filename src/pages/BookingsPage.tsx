@@ -2020,7 +2020,7 @@ export default function BookingsPage() {
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 auto-rows-fr gap-px bg-zinc-800">
+            <div className="grid grid-cols-7 auto-rows-fr bg-zinc-950 border-t border-l border-zinc-800/80">
               {calendarDays.map((day, dayIdx) => {
                 const bookings = getBookingsForDay(day);
                 const isSelectedMonth = isSameMonth(day, currentDate);
@@ -2033,7 +2033,7 @@ export default function BookingsPage() {
                     key={day.toString()}
                     onClick={() => handleDayClick(day)}
                     className={cn(
-                      "min-h-[140px] bg-zinc-950 p-2 relative group transition-colors hover:bg-zinc-900/80 cursor-pointer flex flex-col gap-1",
+                      "min-h-[140px] bg-zinc-950 p-2 relative group transition-colors hover:bg-zinc-900/80 cursor-pointer flex flex-col gap-1 border-r border-b border-zinc-800/80",
                       !isSelectedMonth && "bg-zinc-950/30 text-muted-foreground/40"
                     )}
                   >

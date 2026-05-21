@@ -156,21 +156,16 @@ const BRANDED_PACKAGES = [
 
 export function createEmptyVehicle(livePackages?: any[]): Vehicle {
     const vid = Date.now().toString();
-    const essentialPkgs = livePackages 
-        ? livePackages.filter(p => p.id.startsWith('prime-essential'))
-        : [];
-    
-    // Map live packages to scenarios
-    const defaultScenarios = (essentialPkgs.length > 0 ? essentialPkgs : [
-        { id: "prime-essential-full", name: "Prime Essential Full" },
-        { id: "prime-essential-interior", name: "Prime Essential Interior" },
-        { id: "prime-essential-exterior", name: "Prime Essential Exterior" }
-    ]).slice(0, 3).map((pkg, idx) => ({
-        id: `s${idx + 1}-${vid}`,
-        label: `Scenario ${String.fromCharCode(65 + idx)}: ${pkg.name.replace('Prime ', '')}`,
-        packageId: pkg.id,
-        addOnIds: []
-    }));
+    const firstPkg = livePackages?.find(p => p.id === "prime-essential-exterior") || livePackages?.[0];
+
+    const defaultScenarios = [
+        {
+            id: `s1-${vid}`,
+            label: `Scenario A: ${firstPkg ? firstPkg.name.replace('Prime ', '') : 'Essential Exterior'}`,
+            packageId: firstPkg?.id || "prime-essential-exterior",
+            addOnIds: []
+        }
+    ];
 
     return {
         id: vid,
@@ -191,8 +186,8 @@ export function createEmptyVehicle(livePackages?: any[]): Vehicle {
         paintCondition: "good",
         mainGoal: "full",
         scenarios: defaultScenarios,
-        selectedScenarioId: null,
-        selectedServiceId: null
+        selectedScenarioId: `s1-${vid}`,
+        selectedServiceId: firstPkg?.id || "prime-essential-exterior"
     };
 }
 
@@ -378,7 +373,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                 const updated = prevVehicles.map(v => {
                     // Check if scenarios contain stale mock packages that are not live
                     const hasStaleScenarios = v.scenarios.some(s => 
-                        !livePackages.some(lp => lp.id === s.packageId)
+                        s.packageId && !livePackages.some(lp => lp.id === s.packageId)
                     );
                     // Also check if we just have exactly the mock default scenarios (Scenario A: Full Detail, etc.)
                     const isMockDefault = v.scenarios.length === 3 && 
@@ -388,16 +383,18 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
                     if (hasStaleScenarios || isMockDefault) {
                         changed = true;
-                        const essentialPkgs = livePackages.filter(p => p.id.startsWith('prime-essential'));
-                        const targetPkgs = essentialPkgs.length > 0 ? essentialPkgs : livePackages;
+                        const firstPkg = livePackages.find(p => p.id === "prime-essential-exterior") || livePackages[0];
                         return {
                             ...v,
-                            scenarios: targetPkgs.slice(0, 3).map((pkg, idx) => ({
-                                id: `s${idx + 1}-${v.id}`,
-                                label: `Scenario ${String.fromCharCode(65 + idx)}: ${pkg.name.replace('Prime ', '')}`,
-                                packageId: pkg.id,
-                                addOnIds: []
-                            }))
+                            scenarios: [
+                                {
+                                    id: `s1-${v.id}`,
+                                    label: `Scenario A: ${firstPkg ? firstPkg.name.replace('Prime ', '') : 'Essential Exterior'}`,
+                                    packageId: firstPkg?.id || "",
+                                    addOnIds: []
+                                }
+                            ],
+                            selectedScenarioId: `s1-${v.id}`
                         };
                     }
                     return v;
@@ -446,19 +443,14 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
         setVehicles(prev => prev.map((v, idx) => {
             if (idx === 0) {
-                // Ensure scenarios match their labels exactly and contain no addons
-                const updatedScenarios = v.scenarios.map((s, sIdx) => {
-                    let targetPackageId = s.packageId;
-                    if (sIdx === 0) targetPackageId = "prime-essential-exterior";
-                    else if (sIdx === 1) targetPackageId = "prime-essential-interior";
-                    else if (sIdx === 2) targetPackageId = "prime-essential-full";
-
-                    return {
-                        ...s,
-                        packageId: targetPackageId,
+                const updatedScenarios = [
+                    {
+                        id: `s1-${v.id}`,
+                        label: "Scenario A: Essential Exterior",
+                        packageId: "prime-essential-exterior",
                         addOnIds: []
-                    };
-                });
+                    }
+                ];
 
                 return {
                     ...v,
@@ -474,8 +466,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                     reasonForDetail: "protection",
                     mainGoal: "full",
                     scenarios: updatedScenarios,
-                    selectedScenarioId: updatedScenarios[2]?.id || null, // Default active scenario is Scenario C (Full Detail)
-                    selectedServiceId: "prime-essential-full",
+                    selectedScenarioId: updatedScenarios[0].id,
+                    selectedServiceId: "prime-essential-exterior",
                     notes: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify call pricing calculations, notification emails, and CRM auto-generation."
                 };
             }
@@ -532,10 +524,9 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         setVehicles(prev => prev.map(v => {
             if (v.id !== vid) return v;
             const newSid = `s${v.scenarios.length + 1}-${vid}`;
-            const fallbackPkg = livePackages[0]?.id || "prime-essential-full";
             return {
                 ...v,
-                scenarios: [...v.scenarios, { id: newSid, label: `Scenario ${String.fromCharCode(65 + v.scenarios.length)}`, packageId: fallbackPkg, addOnIds: [] }]
+                scenarios: [...v.scenarios, { id: newSid, label: `Scenario ${String.fromCharCode(65 + v.scenarios.length)}`, packageId: "", addOnIds: [] }]
             };
         }));
     };
@@ -554,6 +545,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     };
 
     const getPackagePitchInfo = (pkgId: string) => {
+        if (!pkgId) return null;
         const branded = BRANDED_PACKAGES.find(bp => bp.id === pkgId || bp.actualId === pkgId);
         const livePkg = livePackages.find(lp => lp.id === pkgId) || servicePackages.find(lp => lp.id === pkgId);
         
@@ -1282,10 +1274,45 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                 {activeVehicle.type || 'select type'}
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-3 shrink-0">
+                                                                                                                <div className="flex items-center gap-2 shrink-0">
                                                             <div className="text-2xl sm:text-3xl font-black text-zinc-100 font-mono tracking-tighter bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
                                                                 ${total}
                                                             </div>
+                                                            {sIdx > 0 && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => {
+                                                                        setVehicles(prev => prev.map(v => {
+                                                                            if (v.id !== activeVehicleId) return v;
+                                                                            const filtered = v.scenarios.filter(s => s.id !== scenario.id);
+                                                                            const reindexed = filtered.map((s, idx) => {
+                                                                                const prefix = `Scenario ${String.fromCharCode(65 + idx)}`;
+                                                                                const suffix = s.label.includes(':') ? s.label.split(':')[1] : '';
+                                                                                return {
+                                                                                    ...s,
+                                                                                    label: suffix ? `${prefix}:${suffix}` : prefix
+                                                                                };
+                                                                            });
+                                                                            return {
+                                                                                ...v,
+                                                                                scenarios: reindexed,
+                                                                                selectedScenarioId: v.selectedScenarioId === scenario.id 
+                                                                                    ? (reindexed[0]?.id || null) 
+                                                                                    : v.selectedScenarioId
+                                                                            };
+                                                                        }));
+                                                                        toast({
+                                                                            title: "Scenario Removed",
+                                                                            description: `Successfully removed Scenario ${String.fromCharCode(65 + sIdx)}.`
+                                                                        });
+                                                                    }}
+                                                                    className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-full"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            )}
                                                         </div>
                                                     </div>
 
@@ -1296,7 +1323,14 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                 {livePackages.map(pkg => (
                                                                     <div
                                                                         key={pkg.id}
-                                                                        onClick={() => updateScenario(activeVehicleId, scenario.id, { packageId: pkg.id })}
+                                                                        onClick={() => {
+                                                                             const cleanName = pkg.name.replace('Prime ', '');
+                                                                             const prefix = `Scenario ${String.fromCharCode(65 + sIdx)}`;
+                                                                             updateScenario(activeVehicleId, scenario.id, { 
+                                                                                 packageId: pkg.id,
+                                                                                 label: `${prefix}: ${cleanName}`
+                                                                             });
+                                                                         }}
                                                                         className={`p-2.5 rounded-lg border cursor-pointer transition-all flex items-center justify-between
                                                                             ${scenario.packageId === pkg.id ? "border-primary bg-primary/10" : "border-zinc-800 hover:border-zinc-700 bg-zinc-950/20"}
                                                                         `}
