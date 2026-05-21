@@ -60,7 +60,7 @@ import localforage from "localforage";
 import { generateInvoiceNumber } from "@/lib/utils";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
-import { isSupabaseEnabled } from "@/lib/auth";
+import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
 
 interface Scenario {
     id: string;
@@ -200,6 +200,8 @@ export function createEmptyVehicle(livePackages?: any[]): Vehicle {
 export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
     const { toast } = useToast();
     const navigate = useNavigate();
+    const user = getCurrentUser();
+    const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
 
     // Caller Identity State
     const [callerName, setCallerName] = useState(() => localStorage.getItem("phone_assistant_draft_name") || "");
@@ -435,6 +437,55 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         setCallerEmail("");
         setVehicles([v]);
         setActiveVehicleId(v.id);
+    };
+
+    const handleFillRickBerubeTest = () => {
+        setCallerName("Rick Berube");
+        setCallerPhone("978-764-5047");
+        setCallerEmail("rberube54@gmail.com");
+
+        setVehicles(prev => prev.map((v, idx) => {
+            if (idx === 0) {
+                // Ensure Scenario A uses "prime-essential-full"
+                const updatedScenarios = v.scenarios.map((s, sIdx) => {
+                    if (sIdx === 0) {
+                        return {
+                            ...s,
+                            packageId: "prime-essential-full",
+                            addOnIds: []
+                        };
+                    }
+                    return {
+                        ...s,
+                        addOnIds: []
+                    };
+                });
+
+                return {
+                    ...v,
+                    year: "2018",
+                    make: "Ford",
+                    model: "F-150",
+                    type: "truck",
+                    condition: "moderate",
+                    dailyDriver: true,
+                    paintCondition: "good",
+                    interiorCondition: "normal",
+                    reasonForDetail: "protection",
+                    mainGoal: "full",
+                    scenarios: updatedScenarios,
+                    selectedScenarioId: updatedScenarios[0]?.id || null,
+                    selectedServiceId: "prime-essential-full",
+                    notes: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify call pricing calculations, notification emails, and CRM auto-generation."
+                };
+            }
+            return v;
+        }));
+
+        toast({
+            title: "🧪 Sandbox Mode Active",
+            description: "Pre-filled Rick Berube's test details (2018 Ford F-150 Truck)!",
+        });
     };
 
     const handleCloseAttempt = (openState: boolean) => {
@@ -880,6 +931,19 @@ ${firstVehicle.notes || ''}`.trim(),
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-5 pt-2">
                                 <div className="space-y-4 pt-2">
+                                    {isRickAdmin && (
+                                        <div className="flex justify-end mb-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="text-[10px] uppercase font-black text-emerald-400 hover:bg-emerald-500 hover:text-black transition-all border border-emerald-500/20 hover:border-emerald-500 px-4 h-9 animate-pulse"
+                                                onClick={handleFillRickBerubeTest}
+                                                type="button"
+                                            >
+                                                🧪 Auto-Fill Rick Berube Test
+                                            </Button>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="space-y-1.5">
                                             <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
