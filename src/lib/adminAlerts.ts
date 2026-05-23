@@ -90,11 +90,16 @@ export async function fetchAlertsFromDB(): Promise<AdminAlert[]> {
 export async function performGlobalSync(): Promise<AdminAlert[]> {
   const local = getAdminAlerts();
   const remote = await fetchAlertsFromDB();
+  const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
 
   // Merge logic: Map by ID, Remote wins if exists, otherwise keep local
   const mergedMap = new Map<string, AdminAlert>();
-  local.forEach(a => mergedMap.set(a.id, a));
-  remote.forEach(a => mergedMap.set(a.id, a));
+  local.forEach(a => {
+    if (!dismissedIds.includes(a.id)) mergedMap.set(a.id, a);
+  });
+  remote.forEach(a => {
+    if (!dismissedIds.includes(a.id)) mergedMap.set(a.id, a);
+  });
 
   const merged = Array.from(mergedMap.values())
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

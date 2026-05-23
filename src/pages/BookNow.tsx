@@ -170,7 +170,21 @@ const BookNow = () => {
     });
   };
 
-  const handleFillRickBerubeTest = () => {
+  const handleFillRickBerubeTest = async () => {
+    if (window.confirm("Would you like to PURGE all previous 'Rick Berube' test history (bookings, prospects, CRM cards) before auto-filling?")) {
+      try {
+        if (isSupabaseEnabled()) {
+           await supabase.from('bookings').delete().ilike('notes', '%pre-filled test%');
+           await supabase.from('customers').delete().ilike('notes', '%pre-filled test%');
+           await supabase.from('engagements').delete().ilike('message', '%pre-filled test%');
+           toast({ title: "Test History Purged", description: "Previous test records have been permanently removed." });
+           refreshBookings();
+        }
+      } catch (err) {
+        console.error("Purge failed:", err);
+      }
+    }
+
     const matchedService = formData.package || filteredPackages[0]?.id || "prime-essential-full";
 
     setFormData(prev => ({
@@ -192,10 +206,25 @@ const BookNow = () => {
     setVehicleType("truck");
     setAddOns(["clay-bar", "wheel-cleaning"]);
 
-    // Default future date/time for test booking if not set
+    // Find a completely empty date
     if (!date && !selectedTime) {
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + 3); // 3 days in the future
+      let offset = 1;
+      let targetDate = new Date();
+      let found = false;
+      const allDatesWithBookings = new Set(allBookings.map((b: any) => b.date ? format(b.date instanceof Date ? b.date : new Date(b.date), 'yyyy-MM-dd') : ''));
+      
+      while (!found && offset <= 60) {
+        targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + offset);
+        const dStr = format(targetDate, 'yyyy-MM-dd');
+        // Check if there's any booking on this date, skip Sundays
+        if (!allDatesWithBookings.has(dStr) && targetDate.getDay() !== 0) { 
+          found = true;
+        } else {
+          offset++;
+        }
+      }
+
       setDate(targetDate);
       setSelectedTime("09:00:00");
       setIsEditingDate(false);
@@ -203,7 +232,7 @@ const BookNow = () => {
 
     toast({
       title: "🧪 Sandbox Mode Active",
-      description: "Pre-filled Rick Berube's real test details (2018 Black Ford F-150)!",
+      description: "Pre-filled Rick Berube's real test details on a completely clear schedule day!",
     });
   };
 

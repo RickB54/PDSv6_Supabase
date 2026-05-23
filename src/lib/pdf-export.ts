@@ -406,6 +406,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   
   // Aggregate all possible photo sources
   const photoGroups: { label: string; vehicles: any[] }[] = [];
+  const renderedPhotos = new Set<string>();
   
   // A. Vehicle-specific photos
   const vehiclesWithPhotos = (customer.vehicles || []).filter((v: any) => 
@@ -455,11 +456,16 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
         doc.text(cat.label.toUpperCase(), 14, currentY);
         currentY += 5;
 
-        const imgSize = 40;
-        const gap = 4;
+        const imgSize = 25;
+        const gap = 3;
         let x = 14;
+        let rowHasImages = false;
         
         for (const photoUrl of cat.photos) {
+          if (!photoUrl || renderedPhotos.has(photoUrl)) continue;
+          renderedPhotos.add(photoUrl);
+          rowHasImages = true;
+
           if (x + imgSize > pageWidth - 14) {
             x = 14;
             currentY += imgSize + gap;
@@ -486,7 +492,11 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
           }
           x += imgSize + gap;
         }
-        currentY += imgSize + 12;
+        if (rowHasImages) {
+          currentY += imgSize + 12;
+        } else {
+          currentY -= 5; // Reset heading gap if no new images were printed
+        }
       }
     }
 
@@ -516,11 +526,16 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
         doc.text(cat.label.toUpperCase(), 14, currentY);
         currentY += 5;
 
-        const imgSize = 40;
-        const gap = 4;
+        const imgSize = 25;
+        const gap = 3;
         let x = 14;
+        let rowHasImages = false;
         
         for (const photoUrl of cat.photos) {
+          if (!photoUrl || renderedPhotos.has(photoUrl)) continue;
+          renderedPhotos.add(photoUrl);
+          rowHasImages = true;
+
           if (x + imgSize > pageWidth - 14) {
             x = 14;
             currentY += imgSize + gap;
@@ -543,7 +558,11 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
           }
           x += imgSize + gap;
         }
-        currentY += imgSize + 12;
+        if (rowHasImages) {
+          currentY += imgSize + 12;
+        } else {
+          currentY -= 5; // Reset heading gap if no new images were printed
+        }
       }
     }
   }

@@ -88,7 +88,20 @@ const Contact = () => {
     }
   }, [formData.vehicleMake, formData.vehicleModel]);
 
-  const handleFillTestData = () => {
+  const handleFillTestData = async () => {
+    if (window.confirm("Would you like to PURGE all previous 'Rick Berube' test history (bookings, prospects, CRM cards) before auto-filling?")) {
+      try {
+        if (isSupabaseEnabled()) {
+           await supabase.from('bookings').delete().ilike('notes', '%pre-filled test%');
+           await supabase.from('customers').delete().ilike('notes', '%pre-filled test%');
+           await supabase.from('engagements').delete().ilike('message', '%pre-filled test%');
+           toast({ title: "Test History Purged", description: "Previous test records have been permanently removed." });
+        }
+      } catch (err) {
+        console.error("Purge failed:", err);
+      }
+    }
+
     const matchedService = liveServices.find(s => s.name.toLowerCase().includes("essential full"))?.name || "Prime Essential Full Detail";
 
     setFormData({
