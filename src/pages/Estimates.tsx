@@ -426,25 +426,26 @@ const Estimates = () => {
             doc.setFontSize(13);
             doc.setTextColor(16, 185, 129); // Emerald color
             doc.setFont("helvetica", "bold");
-            doc.text("Rick Berube", 52, 18);
+            doc.text("Rick Berube", 52, 14);
             
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
             doc.setFont("helvetica", "normal");
-                        doc.text("54 Boston Street, Methuen MA 01844", 52, 24);
-            doc.text("Rick.PrimeAutoDetail@gmail.com", 52, 29);
+            doc.text("54 Boston Street, Methuen MA 01844", 52, 19);
+            doc.text("Rick.PrimeAutoDetail@gmail.com", 52, 24);
+            doc.text("https://PrimeAutoDetail.net", 52, 29);
             doc.text("978-566-1008", 52, 34);
             
             // Company Name on the Right
             doc.setFontSize(14);
             doc.setTextColor(16, 185, 129);
             doc.setFont("helvetica", "bold");
-            doc.text("Prime Auto Detail", 190, 18, { align: "right" });
+            doc.text("Prime Auto Detail", 190, 14, { align: "right" });
             
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(11);
-            doc.text("ESTIMATE / QUOTE", 190, 24, { align: "right" });
-            doc.text(`Estimate #${estimate.estimateNumber || 'N/A'}`, 190, 29, { align: "right" });
+            doc.text("ESTIMATE / QUOTE", 190, 20, { align: "right" });
+            doc.text(`Estimate #${estimate.estimateNumber || 'N/A'}`, 190, 25, { align: "right" });
         } catch (e) {
             console.warn("Professional header failed", e);
             doc.setFontSize(16);

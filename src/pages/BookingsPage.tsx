@@ -3099,25 +3099,25 @@ export default function BookingsPage() {
                         className="border border-zinc-800 rounded-lg overflow-hidden transition-all"
                       >
                           <CollapsibleTrigger className="w-full">
-                            <div className="flex items-center justify-between p-2.5 sm:p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer">
-                              <div className="flex items-center gap-4">
-                                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", customer.isSystem ? "bg-blue-500/20" : "bg-primary/20")}>
+                            <div className="flex items-center justify-between p-2.5 sm:p-4 hover:bg-zinc-900/50 transition-colors cursor-pointer min-w-0">
+                              <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center shrink-0", customer.isSystem ? "bg-blue-500/20" : "bg-primary/20")}>
                                   {customer.isSystem ? (
                                     <Shield className="h-5 w-5 text-blue-400" />
                                   ) : (
                                     <User className="h-5 w-5 text-primary" />
                                   )}
                                 </div>
-                                  <div className="text-left">
-                                    <div className="font-semibold">{customer.name}</div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <div className="text-sm text-muted-foreground">
+                                  <div className="text-left min-w-0">
+                                    <div className="font-semibold truncate">{customer.name}</div>
+                                    <div className="flex items-center flex-wrap gap-2 mt-0.5">
+                                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
                                         {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
                                       </div>
                                       <Badge 
                                         variant="outline" 
                                         className={cn(
-                                          "text-[9px] h-4 px-1.5 uppercase font-black tracking-tight", 
+                                          "text-[9px] h-4 px-1.5 uppercase font-black tracking-tight shrink-0", 
                                           customer.mostRecentStatus === 'booking' 
                                             ? getStatusColor(customer.mostRecentStatusValue.toLowerCase() as any) 
                                             : "text-blue-400 border-blue-900/50 bg-blue-950/20"
@@ -3356,7 +3356,7 @@ export default function BookingsPage() {
                                 {/* Booking History for this customer */}
                                 <div className="space-y-3">
                                   <h3 className="font-semibold text-sm text-muted-foreground uppercase">Activity Logs</h3>
-                                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2 scrollbar-thin">
+                                  <div className="space-y-2 max-h-64 overflow-y-auto overflow-x-auto pr-2 scrollbar-thin">
                                     {customer.events.map((event: any) => (
                                       <div
                                         key={event.id}

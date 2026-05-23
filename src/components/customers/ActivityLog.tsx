@@ -74,6 +74,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
     setIsAdding(true);
     try {
       const payload = {
+        customer_id: customer.id,
         customer_name: customer.name,
         customer_email: customer.email,
         note: note.trim(),

@@ -794,6 +794,26 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
     const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
 
+    const estimatesPieData = useMemo(() => {
+        let accepted = 0;
+        let denied = 0;
+        let notReceived = 0;
+        
+        filteredQuotes.forEach((q: any) => {
+            const s = (q.status || '').toLowerCase();
+            if (s === 'accepted') accepted++;
+            else if (s === 'denied' || s === 'declined') denied++;
+            else notReceived++;
+        });
+
+        const data = [
+            { name: 'Accepted', value: accepted, color: '#10b981' },
+            { name: 'Not Received', value: notReceived, color: '#f59e0b' },
+            { name: 'Denied', value: denied, color: '#ef4444' }
+        ].filter(d => d.value > 0);
+        return data.length > 0 ? data : [{ name: 'No Data', value: 1, color: '#3f3f46' }];
+    }, [filteredQuotes]);
+
     // Stats based on Performance Filter (Primary view)
     const stats = useMemo(() => {
         const totalBookings = filteredPerfBookings.length;
@@ -1615,63 +1635,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardContent>
             </Card>
 
-            {/* Add-on Performance Section */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-emerald-400" />
-                        <div>
-                            <CardTitle>Add-on Performance</CardTitle>
-                            <CardDescription>Revenue tracking for specialized service add-ons</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-zinc-950">
-                                <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Add-on Item</TableHead>
-                                    <TableHead className="text-right">Revenue</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {addonsData.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-zinc-500 py-10 italic">
-                                            No add-on revenue recorded yet.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    addonsData.map((addon) => (
-                                        <TableRow key={addon.id} className="hover:bg-zinc-950/50">
-                                            <TableCell className="text-zinc-400 text-xs">
-                                                {addon.date ? format(parseISO(addon.date), "MMM d, yyyy") : "N/A"}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-zinc-300">{addon.customer}</TableCell>
-                                            <TableCell className="text-emerald-400/80">{addon.name}</TableCell>
-                                            <TableCell className="text-right text-emerald-400 font-mono">
-                                                ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Customer Quotes Section */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-blue-500/30">
+            {/* Estimates Tracker */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <FileBarChart className="w-5 h-5 text-blue-400" />
+                        <FileBarChart className="w-5 h-5 text-emerald-400" />
                         <div>
-                            <CardTitle>Customer Quotes</CardTitle>
-                            <CardDescription>Quotes and estimates given to customers or prospects</CardDescription>
+                            <CardTitle>Estimates</CardTitle>
+                            <CardDescription>Track estimates statuses (Not Received, Accepted, Denied)</CardDescription>
                         </div>
                     </div>
                     <Popover>
@@ -1690,7 +1661,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-medium text-zinc-200">Show Archived</span>
-                                    <Switch checked={quotesShowArchived} onCheckedChange={setQuotesShowArchived} className="border border-zinc-700 data-[state=checked]:bg-blue-500" />
+                                    <Switch checked={quotesShowArchived} onCheckedChange={setQuotesShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
@@ -1762,42 +1733,129 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                            <Table>
+                                <TableHeader className="bg-zinc-950/50">
+                                    <TableRow className="hover:bg-transparent border-zinc-800">
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead className="text-right">Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredQuotes.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                                No estimates found for the selected period.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredQuotes.map((q) => {
+                                            let s = (q.status || '').toLowerCase();
+                                            let displayStatus = 'Not Received';
+                                            let colorClass = "bg-amber-500/10 text-amber-500 border-amber-500/20";
+                                            if (s === 'accepted') {
+                                                displayStatus = 'Accepted';
+                                                colorClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                            } else if (s === 'denied' || s === 'declined') {
+                                                displayStatus = 'Denied';
+                                                colorClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                            }
+
+                                            return (
+                                                <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                                    <TableCell className="text-zinc-400 text-xs font-mono">
+                                                        {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
+                                                    </TableCell>
+                                                    <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
+                                                    <TableCell className="text-zinc-300">{Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}</TableCell>
+                                                    <TableCell className="text-emerald-400 font-mono font-bold">${(q.total || 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", colorClass)}>
+                                                            {displayStatus}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-center">
+                            <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Estimate Outcomes</h4>
+                            <div className="h-[200px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={estimatesPieData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={40}
+                                            outerRadius={65}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {estimatesPieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip 
+                                            contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Add-on Performance Section */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-emerald-400" />
+                        <div>
+                            <CardTitle>Add-on Performance</CardTitle>
+                            <CardDescription>Revenue tracking for specialized service add-ons</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
                         <Table>
-                            <TableHeader className="bg-zinc-950/50">
-                                <TableRow className="hover:bg-transparent border-zinc-800">
+                            <TableHeader className="bg-zinc-950">
+                                <TableRow>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Customer</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead className="text-right">Status</TableHead>
+                                    <TableHead>Add-on Item</TableHead>
+                                    <TableHead className="text-right">Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredQuotes.length === 0 ? (
+                                {addonsData.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
-                                            No quotes found for the selected period.
+                                        <TableCell colSpan={4} className="text-center text-zinc-500 py-10 italic">
+                                            No add-on revenue recorded yet.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredQuotes.map((q) => (
-                                        <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
-                                            <TableCell className="text-zinc-400 text-xs font-mono">
-                                                {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
+                                    addonsData.map((addon) => (
+                                        <TableRow key={addon.id} className="hover:bg-zinc-950/50">
+                                            <TableCell className="text-zinc-400 text-xs">
+                                                {addon.date ? format(parseISO(addon.date), "MMM d, yyyy") : "N/A"}
                                             </TableCell>
-                                            <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
-                                            <TableCell className="text-zinc-300">{Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}</TableCell>
-                                            <TableCell className="text-emerald-400 font-mono font-bold">${(q.total || 0).toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
-                                                    q.status === 'Accepted' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                                    q.status === 'Sent' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                                    "bg-zinc-800 text-zinc-400 border-zinc-700"
-                                                )}>
-                                                    {q.status || 'Draft'}
-                                                </Badge>
+                                            <TableCell className="font-medium text-zinc-300">{addon.customer}</TableCell>
+                                            <TableCell className="text-emerald-400/80">{addon.name}</TableCell>
+                                            <TableCell className="text-right text-emerald-400 font-mono">
+                                                ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -1807,6 +1865,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardContent>
             </Card>
+
+
 
             {/* CRM Customer List */}
             <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
