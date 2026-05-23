@@ -177,9 +177,27 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("brand");
-  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("name");
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">("name");
+  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+    return localStorage.getItem('prime_inv_chem_sort') || "brand";
+  });
+  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+    return (localStorage.getItem('prime_inv_sup_sort') as any) || "name";
+  });
+  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+    return (localStorage.getItem('prime_inv_eq_sort') as any) || "name";
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prime_inv_chem_sort', chemicalSort);
+  }, [chemicalSort]);
+
+  useEffect(() => {
+    localStorage.setItem('prime_inv_sup_sort', supplySort);
+  }, [supplySort]);
+
+  useEffect(() => {
+    localStorage.setItem('prime_inv_eq_sort', equipmentSort);
+  }, [equipmentSort]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
   const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
