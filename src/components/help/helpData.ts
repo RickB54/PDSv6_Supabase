@@ -231,6 +231,29 @@ export const chemicalDocsV3Topic: HelpTopic = {
   section: 'chemicals',
 };
 
+export const unifiedInventoryModalHelpTopic: HelpTopic = {
+  id: 'chemical-inventory-modal',
+  title: 'Chemical Inventory Modal',
+  summary: 'Learn how to manage multiple bottle sizes, costs, and details for a single chemical.',
+  content: [
+    '**The Unified Inventory Modal**: A centralized place to manage all properties of a single detailing chemical, including varying bottle sizes and costs.',
+    '',
+    '➕ **1. Adding a New Bottle Size**',
+    'Scroll down to the **Stock & Pricing** section and click the dashed "Add Another Bottle Size" button. Enter the specific size (e.g., 1 Gallon), cost, stock, and threshold.',
+    '',
+    '✏️ **2. Modifying an Existing Record**',
+    'Open the chemical card by clicking the **Edit (pencil)** icon. Change details in the **Basic Information** grid or update your **Current Stock** directly in the variant row.',
+    '',
+    '🗑️ **3. Deleting a Bottle Size vs. Entire Chemical**',
+    '• **Delete a Size**: Click the red "X" next to a specific size row to remove just that variant. This leaves the main chemical intact.',
+    '• **Delete Entire Chemical**: Click the main **Delete** button at the bottom right of the modal to completely erase the product and all its sizes.',
+    '',
+    '🧪 **4. AI Templates & Dilution Ratios**',
+    'Select a template from the top dropdown to automatically populate safety warnings, descriptions, and recommended dilution ratios from the Library.',
+  ],
+  section: 'chemicals',
+};
+
 export const inventoryChemicalsTopic: HelpTopic = {
   id: 'inventory-chemicals',
   title: 'Checklist Chemical Management',
@@ -507,6 +530,7 @@ export const adminMenuTopics: HelpTopic[] = [
   mobileSetupTopic,
   chemicalAiTopic,
   inventoryChemicalsTopic,
+  unifiedInventoryModalHelpTopic,
   multiVehicleBookingHelpTopic,
   prospectVsCustomerTopic,
   deletingRecordsTopic,
@@ -3015,6 +3039,7 @@ export const employeeMenuTopics: HelpTopic[] = [
   inventoryCleanupTopic,
   checklistToolsGuide,
   inventoryChemicalsTopic,
+  unifiedInventoryModalHelpTopic,
   {
     id: 'website',
     title: 'Website',

@@ -94,7 +94,6 @@ import ChemicalTraining from "./pages/ChemicalTraining";
 import AdminChemicals from "@/pages/AdminChemicals";
 import DilutionCalculator from "./pages/DilutionCalculator";
 import DilutionCalculatorHelp from "./pages/DilutionCalculatorHelp";
-import ChemicalInventoryHelp from "./pages/ChemicalInventoryHelp";
 import VehicleGallery from "./pages/VehicleGallery";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { initTaskWorkflowListeners } from "./store/tasks";
@@ -382,7 +381,6 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/chemical-training" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
           <Route path="/learning-library" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
           <Route path="/chemicals" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
-          <Route path="/chemical-inventory-help" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalInventoryHelp /></ProtectedRoute>} />
           <Route path="/dilution-calculator" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><DilutionCalculator /></ProtectedRoute>} />
           <Route path="/dilution-calculator/help" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><DilutionCalculatorHelp /></ProtectedRoute>} />
           <Route path="/admin/chemicals" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />

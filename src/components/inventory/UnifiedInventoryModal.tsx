@@ -780,7 +780,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             {mode === 'chemical' && (
               <button
                 type="button"
-                onClick={() => window.open('/chemical-inventory-help', '_blank')}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-help', {
+                    detail: { topicId: 'chemical-inventory-modal' }
+                  }));
+                }}
                 className="text-zinc-400 hover:text-emerald-400 transition-colors ml-2 flex items-center justify-center"
                 title="Chemical Inventory Help"
               >

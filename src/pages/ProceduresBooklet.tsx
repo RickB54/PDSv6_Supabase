@@ -224,6 +224,11 @@ const procedures: ProcedurePage[] = [
             title: "Smart Sync Engine",
             content: "Audits your entire shop for unlinked items and links them to the Chemical Knowledge Base.",
             icon: Zap
+          },
+          {
+            title: "Unified Chemical Modal",
+            content: "Centralized interface for managing a chemical's basic information alongside its varying bottle sizes, custom costs, and stock levels. Use this to prevent redundant entries and harness AI generated templates.",
+            icon: Layers
           }
         ]
       }
