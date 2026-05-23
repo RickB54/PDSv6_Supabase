@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import localforage from "localforage";
-import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles } from "lucide-react";
+import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle } from "lucide-react";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
@@ -772,10 +772,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
-          <DialogTitle className="text-white">
+          <DialogTitle className="text-white flex items-center">
             {mode === 'chemical' ? (form.id ? 'Edit Chemical' : 'Add Chemical') :
               (mode === 'equipment' || mode === 'tool') ? (form.id ? 'Edit Equipment' : 'Add Equipment') :
                 (form.id ? 'Edit Supply' : 'Add Supply')}
+            
+            {mode === 'chemical' && (
+              <button
+                type="button"
+                onClick={() => window.open('/chemical-inventory-help', '_blank')}
+                className="text-zinc-400 hover:text-emerald-400 transition-colors ml-2 flex items-center justify-center"
+                title="Chemical Inventory Help"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            )}
           </DialogTitle>
           {(form.updatedAt || form.createdAt) && (
             <div className="absolute top-6 right-10 text-[10px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-800/50 px-2 py-1 rounded border border-zinc-700/50">
