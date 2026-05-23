@@ -397,6 +397,11 @@ export default function AppManual() {
                                 description="Visual cloud-integrated digital storage system inside the File Manager. Organize media, PDFs, and invoices into unified operational folders. Features Gemini AI for instant folder summaries."
                                 features={["Gemini Folder Summaries", "Automatic Estimates/Invoices Folders", "Supabase Cloud Sync"]}
                             />
+                            <ManualEntry 
+                                title="Unified Chemical Modal" 
+                                description="Centralized interface for managing a chemical's basic information alongside its varying bottle sizes, custom costs, and stock levels. Use this to prevent redundant entries and harness AI generated templates."
+                                features={["Multi-Bottle Management", "AI Knowledge Sync", "Cost Calculations"]}
+                            />
                         </div>
                     </section>
 

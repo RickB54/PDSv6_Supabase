@@ -1834,8 +1834,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        const template = generateTemplate(form.name, 'Exterior');
+                      onClick={async () => {
+                        const template = await generateTemplate(form.name, 'Exterior');
                         if (template.dilution_ratios) {
                           setForm(f => ({ ...f, dilutionRatios: [...template.dilution_ratios!] }));
                           toast.success("AI suggested ratios for this product type.");
