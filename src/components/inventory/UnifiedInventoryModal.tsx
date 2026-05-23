@@ -87,7 +87,7 @@ type Props = {
   mode: Mode;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  initial?: Partial<ChemicalForm & SupplyForm & EquipmentForm> | null;
+  initial?: any;
   onSaved?: () => Promise<void> | void;
 };
 
@@ -106,6 +106,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   useEffect(() => {
     setMode(normalizeMode(modeProp));
   }, [modeProp, open]);
+
+  const [chemicalSizes, setChemicalSizes] = useState<any[]>([
+    { bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1" }
+  ]);
 
   const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
     id: undefined,
@@ -343,9 +347,30 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     }
 
     if (initial) {
-      const initialSubtype = (initial as any).subtype || "";
-      const initialUnit = (initial as any).unitOfMeasure || "";
-      const initialCat = (initial as any).category || "";
+      const isGroup = Array.isArray(initial);
+      const firstItem = isGroup ? initial[0] : initial;
+
+      if (modeProp === 'chemical' && isGroup) {
+        setChemicalSizes(initial.map(c => ({
+          id: c.id,
+          bottleSize: c.bottleSize || "",
+          costPerBottle: String(c.costPerBottle || ""),
+          currentStock: String(c.currentStock || "1"),
+          threshold: String(c.threshold || "1"),
+        })));
+      } else if (modeProp === 'chemical') {
+        setChemicalSizes([{
+          id: firstItem.id,
+          bottleSize: (firstItem as any).bottleSize || "",
+          costPerBottle: firstItem?.costPerBottle ? String(firstItem.costPerBottle) : ((firstItem as any).costPerBottle || ""),
+          currentStock: firstItem?.currentStock ? String(firstItem.currentStock) : ((firstItem as any).currentStock || form.currentStock),
+          threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
+        }]);
+      }
+
+      const initialSubtype = (firstItem as any).subtype || "";
+      const initialUnit = (firstItem as any).unitOfMeasure || "";
+      const initialCat = (firstItem as any).category || "";
       setCustomCategory(initialCat && 
         (mode === 'equipment' || mode === 'tool' ? 
           !availableCategories.equipment.includes(initialCat) : 
@@ -353,38 +378,38 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       setCustomSubtype(initialSubtype && !availableSubtypes.includes(initialSubtype));
       setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
       
-      const initialPurchased = (initial as any).wherePurchased || "";
+      const initialPurchased = (firstItem as any).wherePurchased || "";
       setCustomPurchased(initialPurchased && !availablePurchased.includes(initialPurchased));
 
       setForm((f) => ({
         ...f,
-        id: initial.id || f.id,
-        name: initial.name || "",
-        brand: (initial as any).brand || "",
-        bottleSize: (initial as any).bottleSize || "",
-        costPerBottle: initial?.costPerBottle ? String(initial.costPerBottle) : ((initial as any).costPerBottle || ""),
-        currentStock: initial?.currentStock ? String(initial.currentStock) : ((initial as any).currentStock || f.currentStock),
-        threshold: (initial as any).threshold ? String((initial as any).threshold) : ((initial as any).lowThreshold ? String((initial as any).lowThreshold) : f.threshold),
-        category: (initial as any).category || f.category,
+        id: firstItem.id || f.id,
+        name: firstItem.name || "",
+        brand: (firstItem as any).brand || "",
+        bottleSize: (firstItem as any).bottleSize || "",
+        costPerBottle: firstItem?.costPerBottle ? String(firstItem.costPerBottle) : ((firstItem as any).costPerBottle || ""),
+        currentStock: firstItem?.currentStock ? String(firstItem.currentStock) : ((firstItem as any).currentStock || f.currentStock),
+        threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : f.threshold),
+        category: (firstItem as any).category || f.category,
         subtype: initialSubtype,
-        quantity: initial?.quantity ? String(initial.quantity) : ((initial as any).quantity || f.quantity),
-        costPerItem: initial?.costPerItem ? String(initial.costPerItem) : ((initial as any).costPerItem || ""),
-        notes: (initial as any).notes || "",
-        warranty: (initial as any).warranty || "",
-        purchaseDate: (initial as any).purchaseDate || "",
-        price: (initial as any).price ? String((initial as any).price) : "",
-        lifeExpectancy: (initial as any).lifeExpectancy || "",
+        quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || f.quantity),
+        costPerItem: firstItem?.costPerItem ? String(firstItem.costPerItem) : ((firstItem as any).costPerItem || ""),
+        notes: (firstItem as any).notes || "",
+        warranty: (firstItem as any).warranty || "",
+        purchaseDate: (firstItem as any).purchaseDate || "",
+        price: (firstItem as any).price ? String((firstItem as any).price) : "",
+        lifeExpectancy: (firstItem as any).lifeExpectancy || "",
         unitOfMeasure: initialUnit,
-        imageUrl: (initial as any).imageUrl || f.imageUrl,
-        chemicalLibraryId: (initial as any).chemicalLibraryId || "",
-        dilutionRatios: (initial as any).dilutionRatios || [],
+        imageUrl: (firstItem as any).imageUrl || f.imageUrl,
+        chemicalLibraryId: (firstItem as any).chemicalLibraryId || "",
+        dilutionRatios: (firstItem as any).dilutionRatios || [],
         wherePurchased: initialPurchased,
-        updatedAt: (initial as any).updated_at || (initial as any).updatedAt || "",
-        createdAt: (initial as any).createdAt || (initial as any).created_at || "",
+        updatedAt: (firstItem as any).updated_at || (firstItem as any).updatedAt || "",
+        createdAt: (firstItem as any).createdAt || (firstItem as any).created_at || "",
         isTaxDeductible: true, // Default to true as per user request
         // Safety: Ensure all properties from initial are preserved even if not explicitly mapped
-        ...((initial as any).purchase_date ? { purchaseDate: (initial as any).purchase_date } : {}),
-        ...((initial as any).where_purchased ? { wherePurchased: (initial as any).where_purchased } : {}),
+        ...((firstItem as any).purchase_date ? { purchaseDate: (firstItem as any).purchase_date } : {}),
+        ...((firstItem as any).where_purchased ? { wherePurchased: (firstItem as any).where_purchased } : {}),
       }));
     } else {
       setCustomCategory(false);
@@ -418,6 +443,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         wherePurchased: "",
         isTaxDeductible: true, // Default to checked for new items
       });
+      setChemicalSizes([{ bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1" }]);
     }
   }, [initial, open, modeProp]); // Use modeProp for initial load stabilization
 
@@ -547,26 +573,45 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
       console.log(`[UnifiedInventoryModal] Saving ${mode}:`, { id, isNew, name: form.name, isModeChanging, from: originalMode });
 
+      let chemicalTotalCost = 0;
+
       if (mode === 'chemical') {
-        const payload = {
-          id,
-          name: form.name.trim(),
-          brand: form.brand?.trim() || undefined, // NEW: Include brand
-          bottleSize: form.bottleSize.trim(),
-          costPerBottle: numeric(form.costPerBottle),
-          currentStock: Math.round(numeric(form.currentStock)),
-          threshold: Math.round(numeric(form.threshold)),
-          imageUrl: form.imageUrl,
-          chemicalLibraryId: form.chemicalLibraryId || undefined,
-          notes: form.notes || undefined,
-          dilutionRatios: form.dilutionRatios,
-          wherePurchased: form.wherePurchased?.trim() || undefined,
-        };
-
-        // Import inventory-data at top of file
-        const { saveChemical } = await import("@/lib/inventory-data");
-        await saveChemical(payload, isNew);
-
+        const { saveChemical, deleteChemical } = await import("@/lib/inventory-data");
+        
+        // Handle deletions: if initial was an array, check if any ids were removed
+        if (initial && Array.isArray(initial)) {
+          const currentIds = chemicalSizes.map(s => s.id).filter(Boolean);
+          const removedSizes = initial.filter(initSize => !currentIds.includes(initSize.id));
+          for (const removed of removedSizes) {
+            if (removed.id) {
+              await deleteChemical(removed.id);
+            }
+          }
+        }
+        
+        for (const size of chemicalSizes) {
+          chemicalTotalCost += numeric(size.costPerBottle) * numeric(size.currentStock);
+          const sizeId = size.id || crypto.randomUUID();
+          
+          const payload = {
+            id: sizeId,
+            name: form.name.trim(),
+            brand: form.brand?.trim() || undefined,
+            bottleSize: size.bottleSize.trim(),
+            costPerBottle: numeric(size.costPerBottle),
+            currentStock: Math.round(numeric(size.currentStock)),
+            threshold: Math.round(numeric(size.threshold)),
+            imageUrl: form.imageUrl,
+            chemicalLibraryId: form.chemicalLibraryId || undefined,
+            notes: form.notes || undefined,
+            dilutionRatios: form.dilutionRatios,
+            wherePurchased: form.wherePurchased?.trim() || undefined,
+            purchaseDate: form.purchaseDate || undefined,
+            unitOfMeasure: form.unitOfMeasure,
+          };
+          
+          await saveChemical(payload, !size.id);
+        }
       } else if (mode === 'equipment' || mode === 'tool') {
         const payload = {
           id,
@@ -638,11 +683,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           const existingExpenses = await getSupabaseTaxExpenses();
           const existingRecord = existingExpenses.find(exp => exp.asset_id === id);
 
+          const finalTotalCost = mode === 'chemical' ? chemicalTotalCost : totalCost;
+
           // Only create if it doesn't exist yet
           if (!existingRecord) {
             await upsertSupabaseTaxExpense({
               date: form.purchaseDate || new Date().toISOString().split('T')[0],
-              amount: totalCost,
+              amount: finalTotalCost,
               vendor: "Inventory Purchase",
               category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
               notes: `Purchased ${form.name}`,
@@ -816,19 +863,19 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               <Info className="h-4 w-4" />
               Basic Information
             </h3>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs text-zinc-400">Item Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                />
-              </div>
-              {mode === 'chemical' && (
-                <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-zinc-400">Item Name</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  />
+                </div>
+                {mode === 'chemical' && (
                   <div>
-                    <Label className="text-xs text-zinc-400">Brand (Optional)</Label>
+                    <Label className="text-xs text-zinc-400">Brand</Label>
                     {!customBrand ? (
                       <Popover>
                         <PopoverTrigger asChild>
@@ -851,7 +898,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   {brand}
                                 </span>
                                 {form.brand === brand && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                {/* Deleting brands doesn't make sense if they come from DB, but we'll allow it from UI state if needed */}
                               </div>
                             ))}
                             <div className="h-px bg-zinc-800 my-1" />
@@ -897,277 +943,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
                     )}
                   </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Bottle Size</Label>
-                    {!customSize ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                          >
-                            <span className="truncate">{form.bottleSize || "Select Size..."}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                            {availableSizes.map(size => (
-                              <div key={size} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                <span 
-                                  className="flex-1 text-sm text-zinc-200" 
-                                  onClick={() => setForm({...form, bottleSize: size})}
-                                >
-                                  {size}
-                                </span>
-                                {form.bottleSize === size && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateSizes(availableSizes.filter(s => s !== size));
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                  title="Remove from presets"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                            <div className="h-px bg-zinc-800 my-1" />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setCustomSize(true);
-                                setForm({...form, bottleSize: ""});
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add New Size
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.bottleSize}
-                          autoFocus
-                          onChange={(e) => setForm({ ...form, bottleSize: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (form.bottleSize && !availableSizes.includes(form.bottleSize)) {
-                                updateSizes([...availableSizes, form.bottleSize]);
-                              }
-                              setCustomSize(false);
-                            }
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="e.g., 32 oz"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (form.bottleSize && !availableSizes.includes(form.bottleSize)) {
-                              updateSizes([...availableSizes, form.bottleSize]);
-                            }
-                            setCustomSize(false);
-                          }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                          title="Save and Return"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {(mode === 'supply' || mode === 'material') && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-zinc-400">Category</Label>
-                    {!customCategory ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                          >
-                            <span className="truncate">{form.category || "Select category..."}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                            {availableCategories.supply.map(cat => (
-                              <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                <span 
-                                  className="flex-1 text-sm text-zinc-200" 
-                                  onClick={() => setForm({...form, category: cat})}
-                                >
-                                  {cat}
-                                </span>
-                                {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) });
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                  title="Remove from presets"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                            <div className="h-px bg-zinc-800 my-1" />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setCustomCategory(true);
-                                setForm({...form, category: ""});
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Custom Category
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.category}
-                          autoFocus
-                          onChange={(e) => setForm({ ...form, category: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (form.category && !availableCategories.supply.includes(form.category)) {
-                                updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
-                              }
-                              setCustomCategory(false);
-                            }
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom category..."
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (form.category && !availableCategories.supply.includes(form.category)) {
-                              updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
-                            }
-                            setCustomCategory(false);
-                          }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                          title="Save and Return"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Subtype / Size</Label>
-                    {!customSubtype ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                          >
-                            <span className="truncate">{form.subtype || "Select size..."}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                            {availableSubtypes.map(sub => (
-                              <div key={sub} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                <span 
-                                  className="flex-1 text-sm text-zinc-200" 
-                                  onClick={() => setForm({...form, subtype: sub})}
-                                >
-                                  {sub}
-                                </span>
-                                {form.subtype === sub && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateSubtypes(availableSubtypes.filter(s => s !== sub));
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                  title="Remove from presets"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                            <div className="h-px bg-zinc-800 my-1" />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setCustomSubtype(true);
-                                setForm({...form, subtype: ""});
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Custom Size
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.subtype}
-                          autoFocus
-                          onChange={(e) => setForm({ ...form, subtype: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (form.subtype && !availableSubtypes.includes(form.subtype)) {
-                                updateSubtypes([...availableSubtypes, form.subtype].sort());
-                              }
-                              setCustomSubtype(false);
-                            }
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom size..."
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (form.subtype && !availableSubtypes.includes(form.subtype)) {
-                              updateSubtypes([...availableSubtypes, form.subtype].sort());
-                            }
-                            setCustomSubtype(false);
-                          }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                          title="Save and Return"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {(mode === 'supply' || mode === 'material' || mode === 'equipment' || mode === 'tool' || mode === 'chemical') && (
+                )}
+              </div>
+              <div className="space-y-3">
                 <div>
                   <Label className="text-xs text-zinc-400">Where Purchased</Label>
                   {!customPurchased ? (
@@ -1256,8 +1034,20 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     </div>
                   )}
                 </div>
-              )}
-              {(mode === 'equipment' || mode === 'tool') && (
+                <div>
+                  <Label className="text-xs text-zinc-400">When Purchased</Label>
+                  <Input
+                    type="date"
+                    value={form.purchaseDate}
+                    onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {(mode === 'supply' || mode === 'material') && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
                 <div>
                   <Label className="text-xs text-zinc-400">Category</Label>
                   {!customCategory ? (
@@ -1273,7 +1063,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
                         <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                          {availableCategories.equipment.map(cat => (
+                          {availableCategories.supply.map(cat => (
                             <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                               <span 
                                 className="flex-1 text-sm text-zinc-200" 
@@ -1286,7 +1076,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) });
+                                  updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) });
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                 title="Remove from presets"
@@ -1319,8 +1109,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (form.category && !availableCategories.equipment.includes(form.category)) {
-                              updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                            if (form.category && !availableCategories.supply.includes(form.category)) {
+                              updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
                             }
                             setCustomCategory(false);
                           }
@@ -1333,8 +1123,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          if (form.category && !availableCategories.equipment.includes(form.category)) {
-                            updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                          if (form.category && !availableCategories.supply.includes(form.category)) {
+                            updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
                           }
                           setCustomCategory(false);
                         }}
@@ -1346,8 +1136,187 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+                <div>
+                  <Label className="text-xs text-zinc-400">Subtype / Size</Label>
+                  {!customSubtype ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                        >
+                          <span className="truncate">{form.subtype || "Select size..."}</span>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                        <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                          {availableSubtypes.map(sub => (
+                            <div key={sub} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                              <span 
+                                className="flex-1 text-sm text-zinc-200" 
+                                onClick={() => setForm({...form, subtype: sub})}
+                              >
+                                {sub}
+                              </span>
+                              {form.subtype === sub && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateSubtypes(availableSubtypes.filter(s => s !== sub));
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                title="Remove from presets"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <div className="h-px bg-zinc-800 my-1" />
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setCustomSubtype(true);
+                              setForm({...form, subtype: ""});
+                            }}
+                            className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Custom Size
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.subtype}
+                        autoFocus
+                        onChange={(e) => setForm({ ...form, subtype: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (form.subtype && !availableSubtypes.includes(form.subtype)) {
+                              updateSubtypes([...availableSubtypes, form.subtype].sort());
+                            }
+                            setCustomSubtype(false);
+                          }
+                        }}
+                        className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                        placeholder="Enter custom size..."
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (form.subtype && !availableSubtypes.includes(form.subtype)) {
+                            updateSubtypes([...availableSubtypes, form.subtype].sort());
+                          }
+                          setCustomSubtype(false);
+                        }}
+                        className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        title="Save and Return"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(mode === 'equipment' || mode === 'tool') && (
+              <div className="mt-4">
+                <Label className="text-xs text-zinc-400">Category</Label>
+                {!customCategory ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                      >
+                        <span className="truncate">{form.category || "Select category..."}</span>
+                        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                      <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                        {availableCategories.equipment.map(cat => (
+                          <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                            <span 
+                              className="flex-1 text-sm text-zinc-200" 
+                              onClick={() => setForm({...form, category: cat})}
+                            >
+                              {cat}
+                            </span>
+                            {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) });
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                              title="Remove from presets"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="h-px bg-zinc-800 my-1" />
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setCustomCategory(true);
+                            setForm({...form, category: ""});
+                          }}
+                          className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Custom Category
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={form.category}
+                      autoFocus
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (form.category && !availableCategories.equipment.includes(form.category)) {
+                            updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                          }
+                          setCustomCategory(false);
+                        }
+                      }}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      placeholder="Enter custom category..."
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (form.category && !availableCategories.equipment.includes(form.category)) {
+                          updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                        }
+                        setCustomCategory(false);
+                      }}
+                      className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                      title="Save and Return"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Stock & Pricing Section */}
@@ -1355,42 +1324,87 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             <h3 className="text-sm font-semibold text-emerald-300 mb-3">Stock & Pricing</h3>
             <div className="grid grid-cols-2 gap-3">
               {mode === 'chemical' ? (
-                <>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Current Stock</Label>
-                    <Input
-                      type="number"
-                      value={form.currentStock}
-                      onChange={(e) => setForm({ ...form, currentStock: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
-                    <Input
-                      type="number"
-                      value={form.threshold}
-                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={form.costPerBottle}
-                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                      onChange={(e) => setForm({ ...form, costPerBottle: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
-                      <span>Total Value:</span>
-                      <span className="text-emerald-400 font-black">
-                        ${(numeric(form.costPerBottle) * numeric(form.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
+                <div className="space-y-4 col-span-2">
+                  {chemicalSizes.map((size, index) => (
+                    <div key={index} className="grid grid-cols-2 gap-3 pb-4 border-b border-emerald-800/30 last:border-0 last:pb-0 relative group">
+                      {chemicalSizes.length > 1 && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to remove this bottle size? This cannot be undone once saved.")) {
+                              setChemicalSizes(chemicalSizes.filter((_, i) => i !== index));
+                            }
+                          }}
+                          className="absolute -top-2 -right-2 bg-red-900/50 hover:bg-red-900 text-red-200 rounded-full p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                      
+                      <div className="col-span-2">
+                        <Label className="text-xs text-zinc-400">Bottle Size</Label>
+                        <Input
+                          value={size.bottleSize}
+                          onChange={(e) => {
+                            const newSizes = [...chemicalSizes];
+                            newSizes[index].bottleSize = e.target.value;
+                            setChemicalSizes(newSizes);
+                          }}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          placeholder="e.g., 32 oz"
+                        />
+                      </div>
+                      
+                      <div className="col-span-2 grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Current Stock</Label>
+                          <Input
+                            type="number"
+                            value={size.currentStock}
+                            onChange={(e) => {
+                              const newSizes = [...chemicalSizes];
+                              newSizes[index].currentStock = e.target.value;
+                              setChemicalSizes(newSizes);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Low Threshold</Label>
+                          <Input
+                            type="number"
+                            value={size.threshold}
+                            onChange={(e) => {
+                              const newSizes = [...chemicalSizes];
+                              newSizes[index].threshold = e.target.value;
+                              setChemicalSizes(newSizes);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
+                        <Input
+                          type="number"
+                          step="1"
+                          value={size.costPerBottle}
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          onChange={(e) => {
+                            const newSizes = [...chemicalSizes];
+                            newSizes[index].costPerBottle = e.target.value;
+                            setChemicalSizes(newSizes);
+                          }}
+                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                        />
+                        <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
+                          <span>Total Value:</span>
+                          <span className="text-emerald-400 font-black">
+                            ${(numeric(size.costPerBottle) * numeric(size.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Unit of Measure</Label>
                     {!customUnit ? (
@@ -1481,7 +1495,19 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
                     )}
                   </div>
-                </>
+                </div>
+              ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-dashed border-emerald-700 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 text-sm mt-2"
+                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1" }])}
+                  >
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Another Bottle Size
+                  </Button>
+                </div>
               ) : (mode === 'equipment' || mode === 'tool') ? (
                 <>
                   <div>
@@ -1905,15 +1931,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-zinc-400">Date Purchased</Label>
-                  <Input
-                    type="date"
-                    value={form.purchaseDate}
-                    onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
-                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
                   <Label className="text-xs text-zinc-400">Life Expectancy</Label>
                   <Input
                     value={form.lifeExpectancy}

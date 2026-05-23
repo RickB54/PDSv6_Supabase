@@ -675,13 +675,21 @@ const InventoryControl = () => {
   const filteredSupplies = getSortedSupplies();
   const filteredEquipment = getSortedEquipment();
 
-  // Helper for brand grouping
-  const groupedChemicals = filteredChemicals.reduce((acc, chem) => {
-    const brand = chem.brand || "Other / No Brand";
-    if (!acc[brand]) acc[brand] = [];
-    acc[brand].push(chem);
+  // Group by Product (Name + Brand)
+  const productGroups = Object.values(filteredChemicals.reduce((acc, chem) => {
+    const key = `${(chem.brand || "Other / No Brand").trim().toLowerCase()}||${chem.name.trim().toLowerCase()}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(chem);
     return acc;
-  }, {} as Record<string, Chemical[]>);
+  }, {} as Record<string, Chemical[]>));
+
+  // Helper for brand grouping
+  const groupedChemicals = productGroups.reduce((acc, group) => {
+    const brand = group[0].brand || "Other / No Brand";
+    if (!acc[brand]) acc[brand] = [];
+    acc[brand].push(group);
+    return acc;
+  }, {} as Record<string, Chemical[][]>);
 
   const sortedBrands = Object.keys(groupedChemicals).sort((a, b) => {
     if (a === "Other / No Brand") return 1;
@@ -796,7 +804,7 @@ const InventoryControl = () => {
           ? libCard.dilution_ratios
           : (item.dilutionRatios && item.dilutionRatios.length > 0) 
             ? item.dilutionRatios 
-            : (generateTemplate(item.name, 'Exterior').dilution_ratios || []);
+            : [];
 
         pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
@@ -1024,7 +1032,7 @@ const InventoryControl = () => {
                   ? libCard.dilution_ratios
                   : (c.dilutionRatios && c.dilutionRatios.length > 0) 
                     ? c.dilutionRatios 
-                    : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+                    : [];
                   
                 if (ratios.length === 0) return '';
                 
@@ -1165,8 +1173,7 @@ const InventoryControl = () => {
     }
     
     // 3. Last resort AI Template
-    const template = generateTemplate(c.name, (c as any).category || 'Exterior');
-    return (template.dilution_ratios || (template as any).dilutionRatios || []) as DilutionRatio[];
+    return [];
   };
 
   const handleChartCellEdit = async (chemicalId: string, soilLevel: string, field: 'ratio' | 'chem' | 'water', newValue: string, ozSize?: number) => {
@@ -1247,7 +1254,7 @@ const InventoryControl = () => {
     pdf.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth / 2, 32, { align: 'center' });
 
     const rows = filteredChemicals.map(c => {
-      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : (generateTemplate(c.name, 'Exterior').dilution_ratios || []);
+      let ratios = (c.dilutionRatios && c.dilutionRatios.length > 0) ? c.dilutionRatios : [];
       const sorted = [...(ratios || [])].sort((a,b) => {
           if (!a?.ratio || !b?.ratio) return 0;
           const pA = (a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((a.ratio.match(/(\d+)[:\/]1/) || a.ratio.match(/1[:\/](\d+)/))![1]) : 0;
@@ -1541,12 +1548,31 @@ const InventoryControl = () => {
     return '-';
   };
 
-  const renderChemicalRow = (c: Chemical) => (
+  const renderChemicalRow = (group: Chemical[]) => {
+    const c = group[0];
+    const isRTU = group.some(x => x.name.toLowerCase().includes('rtu') || x.brand?.toLowerCase().includes('rtu') || x.bottleSize.toLowerCase().includes('rtu'));
+    
+    // Combine bottle sizes
+    const sizesStr = Array.from(new Set(group.map(x => x.bottleSize || 'N/A'))).join(', ');
+    
+    // Combine pricing
+    const pricesStr = group.map(x => !x.costPerBottle ? '⚠ $0.00' : `$${(x.costPerBottle).toFixed(2)}`).join(' / ');
+    const totalGroupValue = group.reduce((sum, x) => sum + ((x.costPerBottle || 0) * (x.currentStock || 0)), 0);
+
+    // Combine stock info
+    const totalStock = group.reduce((sum, x) => sum + (x.currentStock || 0), 0);
+    const anyStockLeft = group.some(x => x.currentStock > 0);
+    const isLowStock = !anyStockLeft; // "If there is at least one size of the same product... it should not be counted as Low Threshold"
+
+    // Combine wherePurchased
+    const vendors = Array.from(new Set(group.map(x => x.wherePurchased).filter(Boolean))).join(', ');
+
+    return (
     <TableRow
       key={c.id}
       ref={registerRow(c.id)}
       className="border-yellow-500/10 hover:bg-yellow-500/5 cursor-pointer group transition-colors"
-      onClick={() => openEdit(c, 'chemical')}
+      onClick={() => openEdit(group, 'chemical')}
     >
       <TableCell className="font-medium flex items-center gap-2 text-white py-3">
         {c.imageUrl && (
@@ -1559,28 +1585,31 @@ const InventoryControl = () => {
           />
         )}
         <div className="flex flex-col">
-          <span>{c.brand ? `${c.brand} / ${c.name}` : c.name}</span>
+          <span>
+            {c.brand ? `${c.brand} / ${c.name}` : c.name}
+            {isRTU && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">RTU</span>}
+          </span>
           {(() => {
             const ratios = getMasterRatios(c);
-            if (!ratios || ratios.length === 0) return null;
+            if (!ratios || ratios.length === 0 || isRTU) return null;
             return (
               <div className="flex flex-wrap gap-1 mt-1">
-                {ratios.map((r, i) => (
+                {ratios.map((r, i) => r.ratio && r.ratio.trim() !== '' ? (
                   <span key={i} className="text-[9px] px-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded truncate max-w-[100px]" title={`${r.method}: ${transformRatio(r.ratio)}`}>
                     {r.method}: {transformRatio(r.ratio)}
                   </span>
-                ))}
+                ) : null)}
               </div>
             );
           })()}
         </div>
       </TableCell>
-      <TableCell className="text-zinc-300">{c.bottleSize}</TableCell>
-      <TableCell className={`font-medium ${!c.costPerBottle || c.costPerBottle === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+      <TableCell className="text-zinc-300">{sizesStr}</TableCell>
+      <TableCell className={`font-medium ${group.some(x => !x.costPerBottle || x.costPerBottle === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
         <div className="flex flex-col">
-          <span>{!c.costPerBottle || c.costPerBottle === 0 ? '⚠ $0.00' : `$${(c.costPerBottle).toFixed(2)}`}</span>
-          {c.costPerBottle > 0 && c.currentStock > 0 && (
-            <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(c.costPerBottle * c.currentStock).toFixed(2)}</span>
+          <span>{pricesStr}</span>
+          {totalGroupValue > 0 && (
+            <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(totalGroupValue).toFixed(2)}</span>
           )}
         </div>
       </TableCell>
@@ -1590,14 +1619,14 @@ const InventoryControl = () => {
             {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Never'}
           </span>
         ) : (
-          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
-            {c.currentStock < c.threshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-            {c.currentStock} remaining
+          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${isLowStock ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+            {isLowStock && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+            {totalStock} remaining
           </span>
         )}
       </TableCell>
       <TableCell className="py-1">
-        <span className="text-[11px] text-zinc-400 font-bold italic">{c.wherePurchased || '-'}</span>
+        <span className="text-[11px] text-zinc-400 font-bold italic">{vendors || '-'}</span>
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
@@ -1635,7 +1664,7 @@ const InventoryControl = () => {
           )}
           {isAdmin && (
             <>
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'chemical'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
               <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400" title="Duplicate"><Copy className="h-4 w-4" /></Button>
               <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(c.id, 'chemical', c.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete">
                 <Trash2 className="h-4 w-4" />
@@ -1645,14 +1674,26 @@ const InventoryControl = () => {
         </div>
       </TableCell>
     </TableRow>
-  );
+    );
+  };;
 
-  const renderChemicalCard = (c: Chemical) => (
+  const renderChemicalCard = (group: Chemical[]) => {
+    const c = group[0];
+    const isRTU = group.some(x => x.name.toLowerCase().includes('rtu') || x.brand?.toLowerCase().includes('rtu') || x.bottleSize.toLowerCase().includes('rtu'));
+    
+    const sizesStr = Array.from(new Set(group.map(x => x.bottleSize || 'N/A'))).join(', ');
+    const pricesStr = group.map(x => !x.costPerBottle ? '⚠ $0.00' : `$${(x.costPerBottle).toFixed(2)}`).join(' / ');
+    const totalGroupValue = group.reduce((sum, x) => sum + ((x.costPerBottle || 0) * (x.currentStock || 0)), 0);
+    const totalStock = group.reduce((sum, x) => sum + (x.currentStock || 0), 0);
+    const isLowStock = !group.some(x => x.currentStock > 0);
+    const vendors = Array.from(new Set(group.map(x => x.wherePurchased).filter(Boolean))).join(', ');
+
+    return (
     <div
       key={c.id}
       ref={registerRow(c.id)}
       className="bg-zinc-900 border border-yellow-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-yellow-500/5 transition-colors group"
-      onClick={() => openEdit(c, 'chemical')}
+      onClick={() => openEdit(group, 'chemical')}
     >
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
@@ -1667,36 +1708,37 @@ const InventoryControl = () => {
               />
             )}
             {c.brand ? `${c.brand} / ${c.name}` : c.name}
+            {isRTU && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">RTU</span>}
           </div>
-          <div className="text-sm text-zinc-300">
+          <div className="text-sm text-zinc-300 mt-1">
             {chemicalSort === 'updated_at' ? (
               <span className="text-xs text-yellow-400 font-bold italic">
                 Last Updated: {c.updatedAt ? new Date(c.updatedAt).toLocaleDateString() : 'Never'}
               </span>
             ) : (
               <>
-                {c.bottleSize} • ${(c.costPerBottle || 0).toFixed(2)} 
-                <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)})</span>
+                {sizesStr} • {pricesStr} 
+                <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${totalGroupValue.toFixed(2)})</span>
               </>
             )}
           </div>
-          {c.wherePurchased && <div className="text-[10px] text-zinc-400 mt-1 italic">Purchased at: {c.wherePurchased}</div>}
+          {vendors && <div className="text-[10px] text-zinc-400 mt-1 italic">Purchased at: {vendors}</div>}
           {(() => {
             const ratios = getMasterRatios(c);
-            if (ratios.length === 0) return null;
+            if (ratios.length === 0 || isRTU) return null;
             return (
               <div className="flex flex-wrap gap-1.5 mt-2">
-                {ratios.map((r, i) => (
+                {ratios.map((r, i) => r.ratio && r.ratio.trim() !== '' ? (
                   <span key={i} className="text-[10px] px-1.5 py-0.5 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded">
                     {r.method}: {transformRatio(r.ratio)}
                   </span>
-                ))}
+                ) : null)}
               </div>
             );
           })()}
         </div>
-        <span className={`px-2 py-1 rounded text-xs font-bold ${c.currentStock < c.threshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
-          {c.currentStock} left
+        <span className={`px-2 py-1 rounded text-xs font-bold ${isLowStock ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/10 text-emerald-400'}`}>
+          {totalStock} left
         </span>
       </div>
       <div className="flex justify-between items-center pt-2 border-t border-yellow-500/10 gap-2 flex-wrap">
@@ -1727,7 +1769,7 @@ const InventoryControl = () => {
         </div>
         {isAdmin && (
           <div className="flex gap-1">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c, 'chemical'); }} className="h-8 px-2" title="Edit Item">
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'chemical'); }} className="h-8 px-2" title="Edit Item">
               <Pencil className="h-4 w-4 mr-2" /> Edit
             </Button>
             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(c, 'chemical'); }} className="h-8 px-2 text-amber-500 hover:text-amber-400" title="Duplicate">
@@ -1740,7 +1782,8 @@ const InventoryControl = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <ThumbnailZoomContext.Provider value={{ activeId: activeThumbnailId }}>
@@ -1951,12 +1994,12 @@ const InventoryControl = () => {
                       <div className="overflow-x-auto hidden md:block">
                         <Table>
                           <TableBody>
-                            {groupedChemicals[brand].map(c => renderChemicalRow(c))}
+                            {groupedChemicals[brand].map(group => renderChemicalRow(group))}
                           </TableBody>
                         </Table>
                       </div>
                       <div className="md:hidden space-y-3">
-                        {groupedChemicals[brand].map(c => renderChemicalCard(c))}
+                        {groupedChemicals[brand].map(group => renderChemicalCard(group))}
                       </div>
                     </div>
                   ))
@@ -1975,12 +2018,12 @@ const InventoryControl = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredChemicals.map(c => renderChemicalRow(c))}
+                          {productGroups.map(group => renderChemicalRow(group))}
                         </TableBody>
                       </Table>
                     </div>
                     <div className="md:hidden space-y-3">
-                      {filteredChemicals.map(c => renderChemicalCard(c))}
+                      {productGroups.map(group => renderChemicalCard(group))}
                     </div>
                   </>
                 )}
