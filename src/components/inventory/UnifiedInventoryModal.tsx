@@ -207,6 +207,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [customCategory, setCustomCategory] = useState(false);
   const [customSubtype, setCustomSubtype] = useState(false);
   const [customUnit, setCustomUnit] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [customPurchased, setCustomPurchased] = useState(false);
   const [customBrand, setCustomBrand] = useState(false);
   const [customSize, setCustomSize] = useState(false);
@@ -1834,16 +1836,36 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       type="button"
                       variant="outline"
                       size="sm"
+                      disabled={isAiLoading}
                       onClick={async () => {
-                        const template = await generateTemplate(form.name, 'Exterior');
-                        if (template.dilution_ratios) {
-                          setForm(f => ({ ...f, dilutionRatios: [...template.dilution_ratios!] }));
-                          toast.success("AI suggested ratios for this product type.");
+                        if (!form.name) {
+                          toast.error("Please enter a chemical name first.");
+                          return;
+                        }
+                        setIsAiLoading(true);
+                        const toastId = toast.loading("Consulting AI Knowledge Base...");
+                        try {
+                          const template = await generateTemplate(form.name, 'Exterior');
+                          if (template.dilution_ratios && template.dilution_ratios.length > 0) {
+                            setForm(f => ({ ...f, dilutionRatios: [...template.dilution_ratios!] }));
+                            toast.success("AI suggested ratios for this product.", { id: toastId });
+                          } else {
+                            toast.error(`AI couldn't find specific ratios for ${form.name}.`, { id: toastId });
+                          }
+                        } catch (error) {
+                          toast.error("Failed to connect to AI.", { id: toastId });
+                        } finally {
+                          setIsAiLoading(false);
                         }
                       }}
                       className="h-8 text-[10px] bg-blue-900/20 border-blue-800/50 text-blue-300 hover:bg-blue-900/40"
                     >
-                      <Sparkles className="h-3 w-3 mr-1" /> AI Lookup
+                      {isAiLoading ? (
+                        <div className="h-3 w-3 mr-1 animate-spin rounded-full border-b-2 border-blue-400" />
+                      ) : (
+                        <Sparkles className="h-3 w-3 mr-1" />
+                      )}
+                      {isAiLoading ? "Analyzing..." : "AI Lookup"}
                     </Button>
                   )}
                 </div>
