@@ -1573,8 +1573,6 @@ const InventoryControl = () => {
     // Combine bottle sizes
     const sizesStr = Array.from(new Set(group.map(x => x.bottleSize || 'N/A'))).join(', ');
     
-    // Combine pricing
-    const pricesStr = group.map(x => !x.costPerBottle ? '⚠ $0.00' : `$${(x.costPerBottle).toFixed(2)}`).join(' / ');
     const totalGroupValue = group.reduce((sum, x) => sum + ((x.costPerBottle || 0) * (x.currentStock || 0)), 0);
 
     // Combine stock info
@@ -1624,10 +1622,24 @@ const InventoryControl = () => {
       </TableCell>
       <TableCell className="text-zinc-300">{sizesStr}</TableCell>
       <TableCell className={`font-medium ${group.some(x => !x.costPerBottle || x.costPerBottle === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-        <div className="flex flex-col">
-          <span>{pricesStr}</span>
+        <div className="flex flex-col gap-2">
+          {group.map((x, idx) => (
+            <div key={idx} className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span>{!x.costPerBottle ? '⚠ $0.00' : `$${(x.costPerBottle).toFixed(2)}`}</span>
+                {x.actualPrice && x.actualPrice > x.costPerBottle && (
+                  <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice).toFixed(2)}</span>
+                )}
+              </div>
+              {x.actualPrice && x.actualPrice > x.costPerBottle && (
+                <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                  Save ${(x.actualPrice - x.costPerBottle).toFixed(2)}
+                </span>
+              )}
+            </div>
+          ))}
           {totalGroupValue > 0 && (
-            <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(totalGroupValue).toFixed(2)}</span>
+            <span className="text-[10px] text-zinc-500 font-bold italic pt-1 border-t border-zinc-800">Total: ${(totalGroupValue).toFixed(2)}</span>
           )}
         </div>
       </TableCell>
@@ -2194,8 +2206,18 @@ const InventoryControl = () => {
                           {m.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {m.wherePurchased}</div>}
                         </TableCell>
                         <TableCell className={`font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          <div className="flex flex-col">
-                            <span>{!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span>{!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}</span>
+                              {m.actualPrice && m.actualPrice > m.costPerItem && (
+                                <span className="text-[10px] text-zinc-500 line-through mr-1">${(m.actualPrice).toFixed(2)}</span>
+                              )}
+                            </div>
+                            {m.actualPrice && m.actualPrice > m.costPerItem && (
+                              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                                Save ${(m.actualPrice - m.costPerItem).toFixed(2)}
+                              </span>
+                            )}
                             {m.costPerItem > 0 && m.quantity > 0 && (
                               <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(m.costPerItem * m.quantity).toFixed(2)}</span>
                             )}
@@ -2445,8 +2467,18 @@ const InventoryControl = () => {
                           {t.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {t.wherePurchased}</div>}
                         </TableCell>
                         <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          <div className="flex flex-col">
-                            <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
+                              {t.actualPrice && t.actualPrice > t.price && (
+                                <span className="text-[10px] text-zinc-500 line-through mr-1">${(t.actualPrice).toFixed(2)}</span>
+                              )}
+                            </div>
+                            {t.actualPrice && t.actualPrice > t.price && (
+                              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                                Save ${(t.actualPrice - t.price).toFixed(2)}
+                              </span>
+                            )}
                             {t.price > 0 && t.quantity > 1 && (
                               <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(t.price * (t.quantity || 1)).toFixed(2)}</span>
                             )}

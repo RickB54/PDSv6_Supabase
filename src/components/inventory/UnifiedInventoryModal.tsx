@@ -9,7 +9,7 @@ import api from "@/lib/api";
 import localforage from "localforage";
 import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle } from "lucide-react";
 import { compressImageForUpload } from "@/lib/image-compression";
-import { supabase, upsertSupabaseTaxExpense, getSupabaseTaxExpenses } from "@/lib/supa-data";
+import { supabase } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
 import { DilutionRatio } from "@/types/chemicals";
 import { generateTemplate } from "@/lib/chemical-ai";
@@ -34,7 +34,7 @@ interface ChemicalForm {
   consumptionRatePerJob: string;
   imageUrl?: string;
   chemicalLibraryId?: string;
-  isTaxDeductible?: boolean;
+
   notes?: string;
   dilutionRatios: DilutionRatio[];
   wherePurchased?: string;
@@ -55,7 +55,7 @@ interface SupplyForm {
   unitOfMeasure: string; // e.g., "pads", "units"
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
-  isTaxDeductible?: boolean;
+
   wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
@@ -77,7 +77,7 @@ interface EquipmentForm {
   unitOfMeasure: string; // e.g., "units"
   consumptionRatePerJob: string; // numeric string - consumption per job
   imageUrl?: string;
-  isTaxDeductible?: boolean;
+
   wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
@@ -108,7 +108,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   }, [modeProp, open]);
 
   const [chemicalSizes, setChemicalSizes] = useState<any[]>([
-    { bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1" }
+    { bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "" }
+  ]);
+  const [supplyPurchases, setSupplyPurchases] = useState<any[]>([
+    { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }
+  ]);
+  const [equipmentPurchases, setEquipmentPurchases] = useState<any[]>([
+    { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }
   ]);
 
   const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
@@ -133,7 +139,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     consumptionRatePerJob: "0",
     imageUrl: "",
     chemicalLibraryId: "",
-    isTaxDeductible: true,
+
     dilutionRatios: [],
     wherePurchased: "",
     updatedAt: "",
@@ -356,17 +362,43 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         setChemicalSizes(initial.map(c => ({
           id: c.id,
           bottleSize: c.bottleSize || "",
-          costPerBottle: String(c.costPerBottle || ""),
+          costPerBottle: String(c.costPerBottle || c.salePrice || ""),
+          actualPrice: String(c.actualPrice || ""),
           currentStock: String(c.currentStock || "1"),
           threshold: String(c.threshold || "1"),
+          purchaseDate: c.purchaseDate || "",
+          wherePurchased: c.wherePurchased || ""
         })));
       } else if (modeProp === 'chemical') {
         setChemicalSizes([{
           id: firstItem.id,
           bottleSize: (firstItem as any).bottleSize || "",
-          costPerBottle: firstItem?.costPerBottle ? String(firstItem.costPerBottle) : ((firstItem as any).costPerBottle || ""),
+          costPerBottle: firstItem?.costPerBottle ? String(firstItem.costPerBottle) : ((firstItem as any).costPerBottle || (firstItem as any).salePrice || ""),
+          actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
           currentStock: firstItem?.currentStock ? String(firstItem.currentStock) : ((firstItem as any).currentStock || form.currentStock),
           threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
+          purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
+          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
+        }]);
+      } else if (modeProp === 'supply') {
+        setSupplyPurchases([{
+          id: firstItem.id,
+          quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || form.quantity),
+          costPerItem: firstItem?.costPerItem ? String(firstItem.costPerItem) : ((firstItem as any).costPerItem || (firstItem as any).salePrice || ""),
+          actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
+          threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
+          purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
+          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
+        }]);
+      } else if (modeProp === 'equipment' || modeProp === 'tool') {
+        setEquipmentPurchases([{
+          id: firstItem.id,
+          quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || form.quantity),
+          price: (firstItem as any).price ? String((firstItem as any).price) : ((firstItem as any).salePrice || ""),
+          actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
+          threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
+          purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
+          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
         }]);
       }
 
@@ -408,7 +440,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         wherePurchased: initialPurchased,
         updatedAt: (firstItem as any).updated_at || (firstItem as any).updatedAt || "",
         createdAt: (firstItem as any).createdAt || (firstItem as any).created_at || "",
-        isTaxDeductible: true, // Default to true as per user request
+
         // Safety: Ensure all properties from initial are preserved even if not explicitly mapped
         ...((firstItem as any).purchase_date ? { purchaseDate: (firstItem as any).purchase_date } : {}),
         ...((firstItem as any).where_purchased ? { wherePurchased: (firstItem as any).where_purchased } : {}),
@@ -443,9 +475,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         chemicalLibraryId: "",
         dilutionRatios: [],
         wherePurchased: "",
-        isTaxDeductible: true, // Default to checked for new items
+
       });
-      setChemicalSizes([{ bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1" }]);
+      setChemicalSizes([{ bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
+      setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
+      setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
     }
   }, [initial, open, modeProp]); // Use modeProp for initial load stabilization
 
@@ -558,13 +592,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         return;
       }
 
-      // Calculate total cost for tax tracking/payload use
+      // Calculate total cost
       const unitCost = mode === 'chemical' ? numeric(form.costPerBottle) :
         (mode === 'equipment' || mode === 'tool') ? numeric(form.price || form.cost) :
           numeric(form.costPerItem);
       
       const qty = mode === 'chemical' ? numeric(form.currentStock) : numeric(form.quantity);
-      const totalCost = unitCost * qty;
+      let totalCost = unitCost * qty;
 
       const isNew = !form.id; // Track if this is a new purchase
       const id = form.id || crypto.randomUUID();
@@ -607,52 +641,85 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             chemicalLibraryId: form.chemicalLibraryId || undefined,
             notes: form.notes || undefined,
             dilutionRatios: form.dilutionRatios,
-            wherePurchased: form.wherePurchased?.trim() || undefined,
-            purchaseDate: form.purchaseDate || undefined,
+            wherePurchased: size.wherePurchased?.trim() || undefined,
+            purchaseDate: size.purchaseDate || undefined,
+            actualPrice: numeric(size.actualPrice) || undefined,
+            salePrice: numeric(size.costPerBottle) || undefined,
             unitOfMeasure: form.unitOfMeasure,
           };
           
           await saveChemical(payload, !size.id);
         }
       } else if (mode === 'equipment' || mode === 'tool') {
-        const payload = {
-          id,
-          name: form.name.trim(),
-          category: form.category || 'General', // FIXED: include category
-          warranty: form.warranty || "",
-          purchaseDate: form.purchaseDate || "",
-          price: numeric(form.price),
-          quantity: Math.round(numeric(form.quantity)),
-          threshold: Math.round(numeric(form.threshold)),
-          lifeExpectancy: form.lifeExpectancy || "",
-          notes: form.notes || "",
-          imageUrl: form.imageUrl,
-          wherePurchased: form.wherePurchased?.trim() || undefined,
-        };
-
-        const { saveTool } = await import("@/lib/inventory-data");
-        await saveTool(payload, isNew);
-
+        const { saveTool, deleteTool } = await import("@/lib/inventory-data");
+        
+        // Handle deletions for equipment
+        if (initial && Array.isArray(initial)) {
+          const currentIds = equipmentPurchases.map(s => s.id).filter(Boolean);
+          const removedPurchases = initial.filter(initSize => !currentIds.includes(initSize.id));
+          for (const removed of removedPurchases) {
+            if (removed.id) await deleteTool(removed.id);
+          }
+        }
+        
+        for (const purchase of equipmentPurchases) {
+          totalCost += numeric(purchase.price) * numeric(purchase.quantity);
+          const pId = purchase.id || crypto.randomUUID();
+          
+          const payload = {
+            id: pId,
+            name: form.name.trim(),
+            category: form.category || 'General',
+            warranty: form.warranty || "",
+            purchaseDate: purchase.purchaseDate || "",
+            price: numeric(purchase.price),
+            actualPrice: numeric(purchase.actualPrice) || undefined,
+            salePrice: numeric(purchase.price) || undefined,
+            quantity: Math.round(numeric(purchase.quantity)),
+            threshold: Math.round(numeric(purchase.threshold)),
+            lifeExpectancy: form.lifeExpectancy || "",
+            notes: form.notes || "",
+            imageUrl: form.imageUrl,
+            wherePurchased: purchase.wherePurchased?.trim() || undefined,
+          };
+          
+          await saveTool(payload, !purchase.id);
+        }
       } else { // supply or material
-        const payload = {
-          id,
-          name: form.name.trim(),
-          category: form.category || 'Other',
-          subtype: form.subtype || "",
-          quantity: Math.round(numeric(form.quantity)),
-          costPerItem: numeric(form.costPerItem),
-          notes: form.notes || undefined,
-          lowThreshold: Math.round(numeric(form.threshold)),
-          createdAt: new Date().toISOString(),
-          imageUrl: form.imageUrl,
-          wherePurchased: form.wherePurchased?.trim() || undefined,
-        };
-
-        console.log('[UnifiedInventoryModal] Supplies/Material Payload:', payload);
-
-        const { saveMaterial } = await import("@/lib/inventory-data");
-        const result = await saveMaterial(payload, isNew);
-        console.log('[UnifiedInventoryModal] saveMaterial database response:', result);
+        const { saveMaterial, deleteMaterial } = await import("@/lib/inventory-data");
+        
+        // Handle deletions for supplies
+        if (initial && Array.isArray(initial)) {
+          const currentIds = supplyPurchases.map(s => s.id).filter(Boolean);
+          const removedPurchases = initial.filter(initSize => !currentIds.includes(initSize.id));
+          for (const removed of removedPurchases) {
+            if (removed.id) await deleteMaterial(removed.id);
+          }
+        }
+        
+        for (const purchase of supplyPurchases) {
+          totalCost += numeric(purchase.costPerItem) * numeric(purchase.quantity);
+          const pId = purchase.id || crypto.randomUUID();
+          
+          const payload = {
+            id: pId,
+            name: form.name.trim(),
+            category: form.category || 'Other',
+            subtype: form.subtype || "",
+            quantity: Math.round(numeric(purchase.quantity)),
+            costPerItem: numeric(purchase.costPerItem),
+            actualPrice: numeric(purchase.actualPrice) || undefined,
+            salePrice: numeric(purchase.costPerItem) || undefined,
+            notes: form.notes || undefined,
+            lowThreshold: Math.round(numeric(purchase.threshold)),
+            createdAt: new Date().toISOString(),
+            imageUrl: form.imageUrl,
+            wherePurchased: purchase.wherePurchased?.trim() || undefined,
+            purchaseDate: purchase.purchaseDate || undefined,
+          };
+          
+          await saveMaterial(payload, !purchase.id);
+        }
       }
 
       // If mode changed, delete the record from the old table
@@ -678,39 +745,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       // (prevents stale localforage from overwriting the new imageUrl on the cards)
       sessionStorage.removeItem('inventory-loaded');
 
-      // INTEGRATION: AUTO-Track as Tax Expense (Always enabled as requested)
-      if (true) {
-        try {
-          // Check if a tax expense record already exists for this asset
-          const existingExpenses = await getSupabaseTaxExpenses();
-          const existingRecord = existingExpenses.find(exp => exp.asset_id === id);
-
-          const finalTotalCost = mode === 'chemical' ? chemicalTotalCost : totalCost;
-
-          // Only create if it doesn't exist yet
-          if (!existingRecord) {
-            await upsertSupabaseTaxExpense({
-              date: form.purchaseDate || new Date().toISOString().split('T')[0],
-              amount: finalTotalCost,
-              vendor: "Inventory Purchase",
-              category: (mode === 'equipment' || mode === 'tool') ? "Equipment" : "Supplies",
-              notes: `Purchased ${form.name}`,
-              is_deductible: true,
-              is_recurring: false,
-              asset_id: id
-            });
-            toast.success("Item saved and added to tax deductions");
-          } else {
-            toast.success("Item saved (already in tax deductions)");
-          }
-        } catch (taxErr) {
-          console.error("Failed to create tax expense record:", taxErr);
-          // Don't fail the whole save if tax record fails, but warn.
-          toast.warning("Inventory saved, but failed to create tax record.");
-        }
-      } else {
-        toast.success("Item saved");
-      }
+      toast.success("Item saved");
 
       onOpenChange(false);
       
@@ -1526,257 +1561,243 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   </Button>
                 </div>
               ) : (mode === 'equipment' || mode === 'tool') ? (
-                <>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Quantity</Label>
-                    <Input
-                      type="number"
-                      value={form.quantity}
-                      onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
-                    <Input
-                      type="number"
-                      value={form.threshold}
-                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Price / Cost</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={form.price}
-                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                      onChange={(e) => setForm({ ...form, price: e.target.value, cost: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
-                      <span>Total Worth:</span>
-                      <span className="text-emerald-400 font-black">
-                        ${(numeric(form.price) * numeric(form.quantity)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Unit of Measure</Label>
-                    {!customUnit ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                          >
-                            <span className="truncate">{form.unitOfMeasure || "Select Unit..."}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                            {getUnitOptions().map(unit => (
-                              <div key={unit} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                <span 
-                                  className="flex-1 text-sm text-zinc-200" 
-                                  onClick={() => setForm({...form, unitOfMeasure: unit})}
-                                >
-                                  {unit}
-                                </span>
-                                {form.unitOfMeasure === unit && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateEquipmentUnits(availableEquipmentUnits.filter(u => u !== unit));
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                  title="Remove from presets"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                            <div className="h-px bg-zinc-800 my-1" />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setCustomUnit(true);
-                                setForm({...form, unitOfMeasure: ""});
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Custom Unit
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.unitOfMeasure}
-                          autoFocus
-                          onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (form.unitOfMeasure && !availableEquipmentUnits.includes(form.unitOfMeasure)) {
-                                updateEquipmentUnits([...availableEquipmentUnits, form.unitOfMeasure].sort());
-                              }
-                              setCustomUnit(false);
-                            }
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter unit..."
-                        />
-                        <Button
+                <div className="space-y-4">
+                  {equipmentPurchases.map((purchase, index) => (
+                    <div key={index} className="relative bg-zinc-800/30 border border-zinc-700/50 p-3 rounded space-y-3 pt-6">
+                      {equipmentPurchases.length > 1 && (
+                        <button
                           type="button"
-                          variant="outline"
-                          size="sm"
                           onClick={() => {
-                            if (form.unitOfMeasure && !availableEquipmentUnits.includes(form.unitOfMeasure)) {
-                              updateEquipmentUnits([...availableEquipmentUnits, form.unitOfMeasure].sort());
-                            }
-                            setCustomUnit(false);
+                            const newP = [...equipmentPurchases];
+                            newP.splice(index, 1);
+                            setEquipmentPurchases(newP);
                           }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                          title="Save and Return"
+                          className="absolute top-2 right-2 text-zinc-500 hover:text-red-400 transition-colors"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={purchase.quantity}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].quantity = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Low Threshold</Label>
+                          <Input
+                            type="number"
+                            value={purchase.threshold}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].threshold = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Price / Cost (Sale)</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={purchase.price}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].price = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Actual Price (MSRP)</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={purchase.actualPrice || ""}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].actualPrice = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Where Purchased</Label>
+                          <Input
+                            value={purchase.wherePurchased || ""}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].wherePurchased = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Purchase Date</Label>
+                          <Input
+                            type="date"
+                            value={purchase.purchaseDate || ""}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].purchaseDate = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </>
+                      {numeric(purchase.actualPrice) > numeric(purchase.price) && (
+                        <div className="mt-1 text-[10px] text-green-400 flex justify-between font-bold uppercase tracking-tight bg-green-500/10 p-1.5 rounded border border-green-500/20">
+                          <span>Savings on this purchase:</span>
+                          <span className="font-black">
+                            +${(numeric(purchase.actualPrice) - numeric(purchase.price)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-sm mt-2"
+                    onClick={() => setEquipmentPurchases([...equipmentPurchases, { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }])}
+                  >
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Another Purchase
+                  </Button>
+                </div>
               ) : (
-                <>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Quantity</Label>
-                    <Input
-                      type="number"
-                      value={form.quantity}
-                      onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Low Threshold</Label>
-                    <Input
-                      type="number"
-                      value={form.threshold}
-                      onChange={(e) => setForm({ ...form, threshold: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Cost per Item</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={form.costPerItem}
-                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                      onChange={(e) => setForm({ ...form, costPerItem: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    />
-                    <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
-                      <span>Total Cost:</span>
-                      <span className="text-emerald-400 font-black">
-                        ${(numeric(form.costPerItem) * numeric(form.quantity)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-zinc-400">Unit of Measure</Label>
-                    {!customUnit ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                          >
-                            <span className="truncate">{form.unitOfMeasure || "Select Unit..."}</span>
-                            <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                            {getUnitOptions().map(unit => (
-                              <div key={unit} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                <span 
-                                  className="flex-1 text-sm text-zinc-200" 
-                                  onClick={() => setForm({...form, unitOfMeasure: unit})}
-                                >
-                                  {unit}
-                                </span>
-                                {form.unitOfMeasure === unit && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updateSupplyUnits(availableSupplyUnits.filter(u => u !== unit));
-                                  }}
-                                  className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                  title="Remove from presets"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            ))}
-                            <div className="h-px bg-zinc-800 my-1" />
-                            <button 
-                              type="button"
-                              onClick={() => {
-                                setCustomUnit(true);
-                                setForm({...form, unitOfMeasure: ""});
-                              }}
-                              className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Add Custom Unit
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          value={form.unitOfMeasure}
-                          autoFocus
-                          onChange={(e) => setForm({ ...form, unitOfMeasure: e.target.value })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (form.unitOfMeasure && !availableSupplyUnits.includes(form.unitOfMeasure)) {
-                                updateSupplyUnits([...availableSupplyUnits, form.unitOfMeasure].sort());
-                              }
-                              setCustomUnit(false);
-                            }
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="Enter custom unit..."
-                        />
-                        <Button
+                <div className="space-y-4">
+                  {supplyPurchases.map((purchase, index) => (
+                    <div key={index} className="relative bg-zinc-800/30 border border-zinc-700/50 p-3 rounded space-y-3 pt-6">
+                      {supplyPurchases.length > 1 && (
+                        <button
                           type="button"
-                          variant="outline"
-                          size="sm"
                           onClick={() => {
-                            if (form.unitOfMeasure && !availableSupplyUnits.includes(form.unitOfMeasure)) {
-                              updateSupplyUnits([...availableSupplyUnits, form.unitOfMeasure].sort());
-                            }
-                            setCustomUnit(false);
+                            const newP = [...supplyPurchases];
+                            newP.splice(index, 1);
+                            setSupplyPurchases(newP);
                           }}
-                          className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                          title="Save and Return"
+                          className="absolute top-2 right-2 text-zinc-500 hover:text-red-400 transition-colors"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={purchase.quantity}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].quantity = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Low Threshold</Label>
+                          <Input
+                            type="number"
+                            value={purchase.threshold}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].threshold = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Cost per Item (Sale)</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={purchase.costPerItem}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].costPerItem = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Actual Price (MSRP)</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={purchase.actualPrice || ""}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].actualPrice = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Where Purchased</Label>
+                          <Input
+                            value={purchase.wherePurchased || ""}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].wherePurchased = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Purchase Date</Label>
+                          <Input
+                            type="date"
+                            value={purchase.purchaseDate || ""}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].purchaseDate = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </>
+                      {numeric(purchase.actualPrice) > numeric(purchase.costPerItem) && (
+                        <div className="mt-1 text-[10px] text-green-400 flex justify-between font-bold uppercase tracking-tight bg-green-500/10 p-1.5 rounded border border-green-500/20">
+                          <span>Savings on this purchase:</span>
+                          <span className="font-black">
+                            +${(numeric(purchase.actualPrice) - numeric(purchase.costPerItem)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-sm mt-2"
+                    onClick={() => setSupplyPurchases([...supplyPurchases, { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }])}
+                  >
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Another Purchase
+                  </Button>
+                </div>
               )}
             </div>
           </div>

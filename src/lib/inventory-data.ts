@@ -65,6 +65,9 @@ export interface Chemical {
     updatedAt?: string;
     dilutionRatios?: DilutionRatio[];
     wherePurchased?: string;
+    purchaseDate?: string;
+    actualPrice?: number;
+    salePrice?: number;
     notes?: string;
 }
 
@@ -81,6 +84,9 @@ export interface Material {
     updatedAt?: string;
     imageUrl?: string;
     wherePurchased?: string;
+    purchaseDate?: string;
+    actualPrice?: number;
+    salePrice?: number;
 }
 
 export interface Tool {
@@ -98,6 +104,8 @@ export interface Tool {
     createdAt?: string;
     updatedAt?: string;
     wherePurchased?: string;
+    actualPrice?: number;
+    salePrice?: number;
 }
 
 export interface SetupMedia {
@@ -160,6 +168,9 @@ export async function getChemicals(): Promise<Chemical[]> {
         updatedAt: item.updated_at,
         dilutionRatios: item.dilution_ratios || [],
         wherePurchased: item.where_purchased,
+        purchaseDate: item.purchase_date,
+        actualPrice: item.actual_price,
+        salePrice: item.sale_price,
         notes: item.notes
     }));
 }
@@ -182,6 +193,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         chemical_library_id: chemical.chemicalLibraryId,
         dilution_ratios: chemical.dilutionRatios || [],
         where_purchased: chemical.wherePurchased || null,
+        purchase_date: chemical.purchaseDate || null,
+        actual_price: chemical.actualPrice || null,
+        sale_price: chemical.salePrice || null,
         notes: chemical.notes || null,
         updated_at: new Date().toISOString()
     };
@@ -199,6 +213,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             const sanitized = { ...dbData };
             delete sanitized.where_purchased;
             delete sanitized.brand;
+            delete sanitized.purchase_date;
+            delete sanitized.actual_price;
+            delete sanitized.sale_price;
             const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
             if (retryErr) throw retryErr;
             
@@ -214,6 +231,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 threshold: dbData.threshold,
                 costPerBottle: dbData.cost_per_bottle,
                 wherePurchased: dbData.where_purchased,
+                purchaseDate: dbData.purchase_date,
+                actualPrice: dbData.actual_price,
+                salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
                 updatedAt: dbData.updated_at
@@ -427,7 +447,10 @@ export async function getMaterials(): Promise<Material[]> {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         imageUrl: item.image_url,
-        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon"
+        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+        purchaseDate: item.purchase_date,
+        actualPrice: item.actual_price,
+        salePrice: item.sale_price
     }));
 }
 
@@ -457,6 +480,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         low_threshold: material.lowThreshold,
         image_url: material.imageUrl,
         where_purchased: material.wherePurchased || null,
+        purchase_date: material.purchaseDate || null,
+        actual_price: material.actualPrice || null,
+        sale_price: material.salePrice || null,
         updated_at: new Date().toISOString()
     };
 
@@ -474,6 +500,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
             console.warn('Handling schema mismatch in materials table, retrying with sanitized payload...', error.message);
             const sanitized = { ...dbData };
             delete sanitized.where_purchased;
+            delete sanitized.purchase_date;
+            delete sanitized.actual_price;
+            delete sanitized.sale_price;
             const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
             if (retryErr) throw retryErr;
             
@@ -486,6 +515,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                 costPerItem: dbData.cost_per_item,
                 lowThreshold: dbData.low_threshold,
                 wherePurchased: dbData.where_purchased,
+                purchaseDate: dbData.purchase_date,
+                actualPrice: dbData.actual_price,
+                salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
                 updatedAt: dbData.updated_at
@@ -508,6 +540,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         costPerItem: savedItem.cost_per_item,
         lowThreshold: savedItem.low_threshold,
         wherePurchased: savedItem.where_purchased,
+        purchaseDate: savedItem.purchase_date,
+        actualPrice: savedItem.actual_price,
+        salePrice: savedItem.sale_price,
         notes: savedItem.notes,
         imageUrl: savedItem.image_url,
         updatedAt: savedItem.updated_at
@@ -600,6 +635,8 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         notes: tool.notes,
         image_url: tool.imageUrl,
         where_purchased: tool.wherePurchased || null,
+        actual_price: tool.actualPrice || null,
+        sale_price: tool.salePrice || null,
         updated_at: new Date().toISOString()
     };
 
@@ -618,6 +655,8 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
             delete sanitizedData.low_threshold;
             delete sanitizedData.category; // Original tools schema doesn't have category
             delete sanitizedData.where_purchased;
+            delete sanitizedData.actual_price;
+            delete sanitizedData.sale_price;
             const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
             
@@ -630,6 +669,8 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                 price: dbData.price,
                 purchaseDate: dbData.purchase_date,
                 wherePurchased: dbData.where_purchased,
+                actualPrice: dbData.actual_price,
+                salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
                 updatedAt: dbData.updated_at

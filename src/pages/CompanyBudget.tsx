@@ -93,6 +93,8 @@ const DEFAULT_CATEGORIES = {
     expense: [
         "Payroll",
         "Supplies",
+        "Chemicals",
+        "Equipment",
         "Marketing",
         "Utilities",
         "Rent",
@@ -145,6 +147,7 @@ const CompanyBudget = () => {
     const [editingCategory, setEditingCategory] = useState<{ name: string; type: 'income' | 'expense'; isDefault: boolean } | null>(null);
     const [ledgerSortBy, setLedgerSortBy] = useState<"date" | "amount" | "category" | "updated">("date");
     const [ledgerSearch, setLedgerSearch] = useState("");
+    const [inventoryTotalsData, setInventoryTotalsData] = useState<any>(null);
 
     // Use local date for default values to prevent "tomorrow" bug
     const getLocalDateStr = () => {
@@ -224,6 +227,7 @@ const CompanyBudget = () => {
         setIncomeList(incomes as Receivable[]);
         setExpenseList(expenses); // Keep full list for visibility if needed
         setInvoiceList(invoices);
+        setInventoryTotalsData(invTotals);
         processCategoryData(incomes as Receivable[], manualExpenses, invoices, invTotals);
     };
 
@@ -691,11 +695,17 @@ const CompanyBudget = () => {
         // Expense Targets
         const uniqueExpenseCats = [...DEFAULT_CATEGORIES.expense, ...customExpenseCategories];
         uniqueExpenseCats.forEach(cat => {
-            const actual = expenseList.filter(e => {
+            let actual = expenseList.filter(e => {
                 const d = new Date(e.createdAt);
                 const now = new Date();
                 return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
             }).reduce((sum, e) => sum + (e.amount || 0), 0);
+
+            if (inventoryTotalsData) {
+                if (cat === 'Chemicals') actual += inventoryTotalsData.chemicals;
+                if (cat === 'Supplies') actual += inventoryTotalsData.materials;
+                if (cat === 'Equipment') actual += inventoryTotalsData.tools;
+            }
 
             const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'expense');
             const target = targetObj?.target || 0;
@@ -952,44 +962,7 @@ const CompanyBudget = () => {
                     </div>
 
 
-                    {/* Tax-Deductible Inventory Section */}
-                    {(() => {
-                        const taxInventoryExpenses = expenseList.filter(e =>
-                            e.description?.startsWith('[TAX]') && e.category && ['Equipment', 'Supplies', 'Chemicals', 'Tools', 'Materials'].includes(e.category)
-                        );
-                        const totalTaxInventory = taxInventoryExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-                        if (taxInventoryExpenses.length === 0) return null;
-
-                        return (
-                            <Accordion type="single" collapsible className="w-full">
-                                <AccordionItem value="tax-inventory" className="border rounded-lg bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
-                                    <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                                        <div className="flex justify-between items-center w-full pr-4">
-                                            <div className="text-left">
-                                                <Label className="text-sm text-muted-foreground">Tax-Deductible Inventory</Label>
-                                                <p className="text-2xl font-bold text-purple-600 mt-1">${totalTaxInventory.toFixed(2)}</p>
-                                                <p className="text-xs text-muted-foreground mt-1">{taxInventoryExpenses.length} items marked for tax deduction</p>
-                                            </div>
-                                        </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-6 pb-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
-                                            {taxInventoryExpenses.map((exp, idx) => (
-                                                <div key={`tax-inv-${idx}`} className="flex justify-between items-center p-2 bg-background/50 rounded border border-purple-200/30">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-medium truncate">{exp.description?.replace('[TAX]', '').trim() || 'Inventory Item'}</p>
-                                                        <p className="text-xs text-muted-foreground">{exp.category} • {(exp.createdAt || '').slice(0, 10)}</p>
-                                                    </div>
-                                                    <span className="text-sm font-semibold text-purple-600 ml-2">${exp.amount.toFixed(2)}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            </Accordion>
-                        );
-                    })()}
 
                     {/* Main Content */}
                     <Tabs defaultValue="overview" className="space-y-4">
@@ -1931,11 +1904,17 @@ const CompanyBudget = () => {
 
                                             {/* Expense Categories */}
                                             {[...DEFAULT_CATEGORIES.expense, ...customExpenseCategories].map(cat => {
-                                                const actual = expenseList.filter(e => {
+                                                let actual = expenseList.filter(e => {
                                                     const d = new Date(e.createdAt);
                                                     const now = new Date();
                                                     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
                                                 }).reduce((sum, e) => sum + (e.amount || 0), 0);
+
+                                                if (inventoryTotalsData) {
+                                                    if (cat === 'Chemicals') actual += inventoryTotalsData.chemicals;
+                                                    if (cat === 'Supplies') actual += inventoryTotalsData.materials;
+                                                    if (cat === 'Equipment') actual += inventoryTotalsData.tools;
+                                                }
 
                                                 const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'expense');
                                                 const target = targetObj?.target || 0;

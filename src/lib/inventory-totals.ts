@@ -12,6 +12,7 @@ export interface InventoryTotals {
         tools: number;
         total: number;
     };
+    totalSavings: number;
 }
 
 export async function getInventoryTotals(): Promise<InventoryTotals> {
@@ -37,6 +38,27 @@ export async function getInventoryTotals(): Promise<InventoryTotals> {
         0
     );
 
+    const chemicalsSavings = chemicals.reduce((sum, item) => {
+        if (item.actualPrice && item.actualPrice > (item.costPerBottle || 0)) {
+            return sum + (item.actualPrice - (item.costPerBottle || 0));
+        }
+        return sum;
+    }, 0);
+
+    const materialsSavings = materials.reduce((sum, item) => {
+        if (item.actualPrice && item.actualPrice > (item.costPerItem || 0)) {
+            return sum + (item.actualPrice - (item.costPerItem || 0));
+        }
+        return sum;
+    }, 0);
+
+    const toolsSavings = tools.reduce((sum, item) => {
+        if (item.actualPrice && item.actualPrice > (item.price || 0)) {
+            return sum + (item.actualPrice - (item.price || 0));
+        }
+        return sum;
+    }, 0);
+
         return {
             chemicals: chemicalsTotal,
             materials: materialsTotal,
@@ -47,7 +69,8 @@ export async function getInventoryTotals(): Promise<InventoryTotals> {
                 materials: materials.length,
                 tools: tools.length,
                 total: chemicals.length + materials.length + tools.length
-            }
+            },
+            totalSavings: chemicalsSavings + materialsSavings + toolsSavings
         };
     } catch (error) {
         console.error('Error calculating inventory totals:', error);
@@ -61,7 +84,8 @@ export async function getInventoryTotals(): Promise<InventoryTotals> {
                 materials: 0,
                 tools: 0,
                 total: 0
-            }
+            },
+            totalSavings: 0
         };
     }
 }
