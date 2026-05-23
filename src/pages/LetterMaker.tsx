@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,11 +17,17 @@ import { cn } from "@/lib/utils";
 
 const LetterMaker = () => {
     const { toast } = useToast();
+    const [searchParams] = useSearchParams();
+    
+    const initialCustomerId = searchParams.get('customerId') || "";
+    const initialSubject = searchParams.get('subject') || "";
+    const initialBody = searchParams.get('body') || "";
+
     const [customers, setCustomers] = useState<Customer[]>([]);
-    const [selectedCustomer, setSelectedCustomer] = useState("");
+    const [selectedCustomer, setSelectedCustomer] = useState(initialCustomerId);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [subject, setSubject] = useState("");
-    const [body, setBody] = useState("");
+    const [subject, setSubject] = useState(initialSubject);
+    const [body, setBody] = useState(initialBody);
     const [isRefining, setIsRefining] = useState(false);
 
     useEffect(() => {

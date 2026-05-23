@@ -3171,7 +3171,25 @@ export default function BookingsPage() {
                                   <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                       <h3 className="font-semibold text-sm text-zinc-500 uppercase tracking-widest">Profile Identity</h3>
-                                      <Button
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => {
+                                            const firstBooking = customer.events?.find((e: any) => e.type === 'booking');
+                                            const vehicleStr = firstBooking 
+                                              ? `${firstBooking.vehicleYear && firstBooking.vehicleYear !== '-' ? firstBooking.vehicleYear : ''} ${firstBooking.vehicleMake || ''} ${firstBooking.vehicleModel || ''}`.trim()
+                                              : '';
+                                            const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
+                                            const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
+                                            window.open(url, '_blank');
+                                          }}
+                                          className="h-8 text-[11px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-900/20 hover:text-purple-300"
+                                        >
+                                          <Mail className="w-3.5 h-3.5 mr-2" />
+                                          Write Letter
+                                        </Button>
+                                        <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => {
@@ -3187,13 +3205,14 @@ export default function BookingsPage() {
                                           "h-8 text-[11px] font-black border-zinc-800",
                                           customer.id ? "text-zinc-400 hover:bg-zinc-800 hover:text-white" : "text-zinc-600 opacity-50 cursor-not-allowed"
                                         )}
-                                      >
-                                        <User className="w-3.5 h-3.5 mr-2" />
-                                        View in Database
-                                      </Button>
+                                        >
+                                          <User className="w-3.5 h-3.5 mr-2" />
+                                          View in Database
+                                        </Button>
+                                      </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                       <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
                                         <div className="text-[10px] text-zinc-500 uppercase font-black mb-1">Email Connection</div>
                                         <div className="text-sm truncate text-zinc-300 font-bold">{customer.email || '—'}</div>
@@ -3475,7 +3494,7 @@ export default function BookingsPage() {
                                             )}
                                         </div>
 
-                                        <div className="flex justify-end mt-2">
+                                        <div className="flex flex-wrap justify-end gap-1 mt-2">
                                           {event.type === 'booking' ? (
                                             <>
                                               <Button

@@ -107,8 +107,7 @@ export const getMenuGroups = (counts: {
                 { title: "Quick Pay", url: "#quick-pay", key: "quick-pay", icon: DollarSign, highlight: "green", iconColor: "text-emerald-500", helpTopicId: "quick-pay" },
                 { title: "Estimates", url: "/estimates", role: "admin", key: "estimates", highlight: "green", icon: FileText, helpTopicId: 'estimates' },
                 { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText, helpTopicId: 'invoicing' },
-                                { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator, helpTopicId: 'accounting' },
-                { title: "Letter Maker", url: "/letter-maker", role: "admin", key: "letter-maker", icon: Mail, helpTopicId: 'letter-maker' },
+                { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator, helpTopicId: 'accounting' },
                 { title: "Mileage", url: "/mileage", key: "mileage", icon: Truck, helpTopicId: 'mileage' },
                 { title: "Payroll", url: "/payroll", role: "admin", key: "payroll", badge: counts.payrollDueCount > 0 ? counts.payrollDueCount : undefined, icon: DollarSign, helpTopicId: 'payroll' },
                 { title: "Company Budget", url: "/company-budget", role: "admin", key: "company-budget", icon: DollarSign, helpTopicId: 'company-budget' },
@@ -179,6 +178,7 @@ export const getMenuGroups = (counts: {
             title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400",
             items: [
                 { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
+                { title: "Free-Form Letter", url: "/letter-maker", role: "admin", key: "letter-maker", icon: Mail, helpTopicId: 'letter-maker' },
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
                 { title: "Business Card Stickers", url: `/sticker-maker`, role: "admin", key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper, helpTopicId: 'blog' },

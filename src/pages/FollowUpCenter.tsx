@@ -354,6 +354,15 @@ export default function FollowUpCenter() {
                  <RotateCcw className={cn("mr-2 h-4 w-4", loadingProspects && "animate-spin")} />
                  Sync All
                </Button>
+               
+               <Button 
+                 variant="outline" 
+                 onClick={() => window.location.href = '/letter-maker'}
+                 className="bg-purple-900/20 hover:bg-purple-900/40 text-purple-400 border-purple-500/30 font-bold uppercase tracking-tight h-10 rounded-xl text-xs flex-1 sm:flex-none"
+               >
+                 <Mail className="mr-2 h-4 w-4" />
+                 Free-Form Letter
+               </Button>
 
                <div className="hidden lg:block h-8 w-[1px] bg-zinc-800 mx-2" />
 

@@ -1120,14 +1120,31 @@ export default function Prospects() {
                                   <HelpCircle className="h-3 w-3" />
                                 </button>
                               </div>
-                              <Button 
-                                variant="outline" 
-                                className="w-full bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group"
-                                onClick={() => navigate(`/follow-up-center?search=${encodeURIComponent(customer.name)}`)}
-                              >
-                                <Zap className="w-4 h-4 text-amber-500 group-hover:animate-pulse" />
-                                Launch Engagement Hub
-                              </Button>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group px-2"
+                                  onClick={() => navigate(`/follow-up-center?search=${encodeURIComponent(customer.name)}`)}
+                                >
+                                  <Zap className="w-4 h-4 text-amber-500 group-hover:animate-pulse shrink-0" />
+                                  <span className="truncate">Engagement Hub</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="w-full bg-purple-900/20 border-purple-500/30 text-purple-400 hover:text-purple-300 hover:bg-purple-900/40 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group px-2"
+                                  onClick={() => {
+                                    const vehicleStr = customer.vehicle 
+                                      ? `${customer.year && customer.year !== '-' ? customer.year : ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim()
+                                      : '';
+                                    const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
+                                    const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
+                                    window.open(url, '_blank');
+                                  }}
+                                >
+                                  <Mail className="w-4 h-4 text-purple-400 shrink-0" />
+                                  <span className="truncate">Write Letter</span>
+                                </Button>
+                              </div>
                               <div className="space-y-3">
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-purple-400" onClick={(e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
