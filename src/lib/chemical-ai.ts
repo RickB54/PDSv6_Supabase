@@ -27,6 +27,7 @@ export async function generateTemplate(name: string, category: 'Interior' | 'Ext
     // 1. Try REAL AI first
     const prompt = `Act as a professional automotive detailing chemical expert. 
     Provide structured data for a chemical named "${name}" in the category "${category}".
+    IMPORTANT: If the chemical is typically "Ready To Use" (like Bead Maker, quick detailers, etc.) or if you are unsure of the dilution, you MUST still provide an entry in dilution_ratios where ratio is "RTU". Never return an empty dilution_ratios array.
     Respond ONLY with a JSON object following this interface:
     {
         description: string (marketing-style),
@@ -81,7 +82,8 @@ export async function generateTemplate(name: string, category: 'Interior' | 'Ext
         category: safeCategory as any,
         description,
         used_for: usedFor,
-        ai_generated: false
+        ai_generated: false,
+        dilution_ratios: [{ method: "Spray Bottle", ratio: "RTU", soil_level: "Any", notes: "Ready To Use" }]
     };
 }
 

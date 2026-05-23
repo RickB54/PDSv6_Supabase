@@ -1846,12 +1846,16 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         const toastId = toast.loading("Consulting AI Knowledge Base...");
                         try {
                           const template = await generateTemplate(form.name, 'Exterior');
-                          if (template.dilution_ratios && template.dilution_ratios.length > 0) {
-                            setForm(f => ({ ...f, dilutionRatios: [...template.dilution_ratios!] }));
-                            toast.success("AI suggested ratios for this product.", { id: toastId });
+                          let finalRatios = template.dilution_ratios || [];
+                          
+                          if (finalRatios.length === 0) {
+                            finalRatios = [{ method: "Spray Bottle", ratio: "RTU", soil_level: "Any", notes: "Ready To Use" }];
+                            toast.success(`AI determined ${form.name} is Ready-To-Use.`, { id: toastId });
                           } else {
-                            toast.error(`AI couldn't find specific ratios for ${form.name}.`, { id: toastId });
+                            toast.success("AI suggested ratios for this product.", { id: toastId });
                           }
+                          
+                          setForm(f => ({ ...f, dilutionRatios: finalRatios }));
                         } catch (error) {
                           toast.error("Failed to connect to AI.", { id: toastId });
                         } finally {
