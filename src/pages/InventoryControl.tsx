@@ -171,6 +171,15 @@ const InventoryControl = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [importWizardOpen, setImportWizardOpen] = useState(false);
   const [importWizardTab, setImportWizardTab] = useState<"chemicals" | "tools" | "materials">("chemicals");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  const toggleRowExpanded = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newSet = new Set(expandedRows);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setExpandedRows(newSet);
+  };
 
   // Usage Edit State
   const [usageEditOpen, setUsageEditOpen] = useState(false);
@@ -2219,7 +2228,7 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell className={`font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           <div className="flex flex-col gap-1">
-                            {group.map((x: any, idx: number) => (
+                            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
                               <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
                                 <div className="flex items-center gap-2">
                                   <span>{!x.costPerItem || x.costPerItem === 0 ? '⚠ $0.00' : `$${(x.costPerItem).toFixed(2)}`}</span>
@@ -2256,7 +2265,7 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell className="py-1 align-top">
                           <div className="flex flex-col gap-1">
-                            {group.map((x: any, idx: number) => (
+                            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
                               <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[11px] text-zinc-400 font-bold italic">{x.wherePurchased || '-'}</span>
@@ -2274,10 +2283,28 @@ const InventoryControl = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                        <TableCell className="text-right align-top pt-3">
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center">
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                            {group.length > 1 && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={(e) => toggleRowExpanded(m.id, e)} 
+                                className="h-6 px-2 text-zinc-400 hover:text-white border border-zinc-700/50 bg-zinc-800/30"
+                              >
+                                {expandedRows.has(m.id) ? (
+                                  <><ChevronUp className="h-3 w-3 mr-1" /> Hide {group.length - 1}</>
+                                ) : (
+                                  <><ChevronDown className="h-3 w-3 mr-1" /> Show {group.length - 1}</>
+                                )}
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );})}
