@@ -208,6 +208,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand');
         
+        if (isColumnError) {
+            console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
+        
             let sanitized = { ...dbData };
             let currentErr = error;
             let retries = 0;
@@ -510,6 +513,9 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
         
+        if (isColumnError) {
+            console.warn('Handling schema mismatch in materials table, retrying with sanitized payload...', error.message);
+        
             let sanitized = { ...dbData };
             let currentErr = error;
             let retries = 0;
@@ -675,6 +681,8 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
         
+        if (isColumnError) {
+            console.warn('Handling schema mismatch in tools table, retrying with sanitized payload...', error.message);
             let sanitizedData = { ...dbData };
             let currentErr = error;
             let retries = 0;
