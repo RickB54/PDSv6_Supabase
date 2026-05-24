@@ -2254,8 +2254,25 @@ const InventoryControl = () => {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="py-1">
-                          <span className="text-[11px] text-zinc-400 font-bold italic">{group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</span>
+                        <TableCell className="py-1 align-top">
+                          <div className="flex flex-col gap-1">
+                            {group.map((x: any, idx: number) => (
+                              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-zinc-400 font-bold italic">{x.wherePurchased || '-'}</span>
+                                </div>
+                                {x.actualPrice && x.actualPrice > x.costPerItem && (
+                                  <span className="text-[10px] invisible px-1 py-0.5">Spacer</span>
+                                )}
+                                {x.costPerItem > 0 && x.quantity > 0 && (
+                                  <span className="text-[10px] invisible">Spacer</span>
+                                )}
+                              </div>
+                            ))}
+                            {group.length > 1 && totalGroupValue > 0 && (
+                              <div className="text-[10px] invisible mt-1 pt-1 border-t border-transparent">Spacer</div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
