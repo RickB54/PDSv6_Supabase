@@ -2215,23 +2215,30 @@ const InventoryControl = () => {
                         </TableCell>
                         <TableCell className="text-zinc-300">
                           {m.category}
-                          {m.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {m.wherePurchased}</div>}
+                          {group.some((x: any) => x.wherePurchased) && <div className="text-[10px] text-zinc-500 italic mt-0.5">At: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ')}</div>}
                         </TableCell>
-                        <TableCell className={`font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
-                              <span>{!m.costPerItem || m.costPerItem === 0 ? '⚠ $0.00' : `$${(m.costPerItem).toFixed(2)}`}</span>
-                              {m.actualPrice && m.actualPrice > m.costPerItem && (
-                                <span className="text-[10px] text-zinc-500 line-through mr-1">${(m.actualPrice).toFixed(2)}</span>
-                              )}
-                            </div>
-                            {m.actualPrice && m.actualPrice > m.costPerItem && (
-                              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
-                                Save ${(m.actualPrice - m.costPerItem).toFixed(2)}
-                              </span>
-                            )}
-                            {m.costPerItem > 0 && m.quantity > 0 && (
-                              <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(m.costPerItem * m.quantity).toFixed(2)}</span>
+                        <TableCell className={`font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                          <div className="flex flex-col gap-1">
+                            {group.map((x: any, idx: number) => (
+                              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
+                                <div className="flex items-center gap-2">
+                                  <span>{!x.costPerItem || x.costPerItem === 0 ? '⚠ $0.00' : `$${(x.costPerItem).toFixed(2)}`}</span>
+                                  {x.actualPrice && x.actualPrice > x.costPerItem && (
+                                    <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice).toFixed(2)}</span>
+                                  )}
+                                </div>
+                                {x.actualPrice && x.actualPrice > x.costPerItem && (
+                                  <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                                    Save ${(x.actualPrice - x.costPerItem).toFixed(2)}
+                                  </span>
+                                )}
+                                {x.costPerItem > 0 && x.quantity > 0 && (
+                                  <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(x.costPerItem * x.quantity).toFixed(2)}</span>
+                                )}
+                              </div>
+                            ))}
+                            {group.length > 1 && totalGroupValue > 0 && (
+                              <div className="text-[10px] text-zinc-500 font-bold italic mt-1 pt-1 border-t border-zinc-800">Combined Value: ${totalGroupValue.toFixed(2)}</div>
                             )}
                           </div>
                         </TableCell>
@@ -2241,14 +2248,14 @@ const InventoryControl = () => {
                               {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
                             </span>
                           ) : (
-                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                              {typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-                              {m.quantity} units
+                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                              {group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+                              {totalQty} units
                             </span>
                           )}
                         </TableCell>
                         <TableCell className="py-1">
-                          <span className="text-[11px] text-zinc-400 font-bold italic">{m.wherePurchased || '-'}</span>
+                          <span className="text-[11px] text-zinc-400 font-bold italic">{group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</span>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
