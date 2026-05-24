@@ -2256,7 +2256,7 @@ const InventoryControl = () => {
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );})}
                     {filteredSupplies.length === 0 && materials.length > 0 && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-10 text-zinc-500 bg-zinc-950/20">
