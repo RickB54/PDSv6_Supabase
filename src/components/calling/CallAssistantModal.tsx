@@ -1189,7 +1189,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
                                                         <SelectItem value="none">-- NO SERVICE SELECTED --</SelectItem>
-                                                        {servicePackages.map(pkg => (
+                                                        {livePackages.map(pkg => (
                                                             <SelectItem key={pkg.id} value={pkg.id}>{pkg.name.toUpperCase()}</SelectItem>
                                                         ))}
                                                     </SelectContent>
