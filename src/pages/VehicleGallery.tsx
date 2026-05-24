@@ -70,14 +70,15 @@ function buildMediaForCustomer(customer: Customer): MediaItem[] {
         items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'afterPhotos', arrayIndex: idx } })
     );
     if ((customer as any).videoUrl) {
+        const parts = ((customer as any).videoUrl).split(':::');
         items.push({ 
-            url: (customer as any).videoUrl, 
+            url: parts[0], 
             type: "video", 
             category: "video", 
             customerName, 
             vehicleLabel: "Profile", 
             customerId,
-            description: (customer as any).videoNote,
+            description: parts[1] || (customer as any).videoNote,
             source: { type: 'customer', field: 'videoUrl', arrayIndex: 0 }
         });
     }

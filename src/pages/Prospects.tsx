@@ -552,8 +552,7 @@ export default function Prospects() {
     const seenUrls = new Set<string>();
 
     const addPhoto = (url: string, label: string, m: any) => {
-      if (!url || seenUrls.has(url)) return;
-      seenUrls.add(url);
+      if (!url) return;
 
       let finalUrl = url;
       let description = undefined;
@@ -564,6 +563,9 @@ export default function Prospects() {
         finalUrl = parts[0];
         description = parts[1];
       }
+
+      if (seenUrls.has(finalUrl)) return;
+      seenUrls.add(finalUrl);
 
       photos.push({ 
         url: finalUrl, 

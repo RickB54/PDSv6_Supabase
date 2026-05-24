@@ -1355,9 +1355,16 @@ const SearchCustomer = () => {
                         const seenUrls = new Set<string>();
 
                         const addMedia = (url: string, label: string, type: 'before'|'after'|'general'|'video', m: any, isVideo = false) => {
-                          if (!url || seenUrls.has(url)) return;
-                          seenUrls.add(url);
-                          allMedia.push({ url, label, type, metadata: m, isVideo });
+                          if (!url) return;
+                          
+                          let finalUrl = url;
+                          if (isVideo) {
+                            finalUrl = url.split(':::')[0];
+                          }
+                          
+                          if (seenUrls.has(finalUrl)) return;
+                          seenUrls.add(finalUrl);
+                          allMedia.push({ url: finalUrl, label, type, metadata: m, isVideo });
                         };
 
                         customer.generalPhotos?.forEach((url, idx) => addMedia(url, 'General', 'general', { type: 'customer', field: 'generalPhotos', arrayIndex: idx, customerId: customer.id }));
