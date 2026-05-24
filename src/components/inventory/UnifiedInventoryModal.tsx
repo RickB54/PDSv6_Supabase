@@ -381,15 +381,27 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
         }]);
       } else if (modeProp === 'supply') {
-        setSupplyPurchases([{
-          id: firstItem.id,
-          quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || form.quantity),
-          costPerItem: firstItem?.costPerItem ? String(firstItem.costPerItem) : ((firstItem as any).costPerItem || (firstItem as any).salePrice || ""),
-          actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
-          threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
-          purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
-          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
-        }]);
+        if (isGroup) {
+          setSupplyPurchases(initial.map((m: any) => ({
+            id: m.id,
+            quantity: String(m.quantity || "1"),
+            costPerItem: String(m.costPerItem || m.salePrice || ""),
+            actualPrice: String(m.actualPrice || ""),
+            threshold: String(m.threshold || m.lowThreshold || "1"),
+            purchaseDate: m.purchaseDate || m.purchase_date || "",
+            wherePurchased: m.wherePurchased || m.where_purchased || ""
+          })));
+        } else {
+          setSupplyPurchases([{
+            id: firstItem.id,
+            quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || form.quantity),
+            costPerItem: firstItem?.costPerItem ? String(firstItem.costPerItem) : ((firstItem as any).costPerItem || (firstItem as any).salePrice || ""),
+            actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
+            threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
+            purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
+            wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
+          }]);
+        }
       } else if (modeProp === 'equipment' || modeProp === 'tool') {
         setEquipmentPurchases([{
           id: firstItem.id,
@@ -1561,7 +1573,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   </Button>
                 </div>
               ) : (mode === 'equipment' || mode === 'tool') ? (
-                <div className="space-y-4">
+                <div className="space-y-4 col-span-2">
                   {equipmentPurchases.map((purchase, index) => (
                     <div key={index} className="relative bg-zinc-800/30 border border-zinc-700/50 p-3 rounded space-y-3 pt-6">
                       {equipmentPurchases.length > 1 && (
@@ -1680,7 +1692,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 col-span-2">
                   {supplyPurchases.map((purchase, index) => (
                     <div key={index} className="relative bg-zinc-800/30 border border-zinc-700/50 p-3 rounded space-y-3 pt-6">
                       {supplyPurchases.length > 1 && (

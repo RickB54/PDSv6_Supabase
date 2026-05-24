@@ -695,15 +695,23 @@ const InventoryControl = () => {
 
   // Group by Product (Name + Brand)
   const productGroups = Object.values(filteredChemicals.reduce((acc, chem) => {
-    const key = `${(chem.brand || "Other / No Brand").trim().toLowerCase()}||${chem.name.trim().toLowerCase()}`;
+    const key = chem.name.trim().toLowerCase();
     if (!acc[key]) acc[key] = [];
     acc[key].push(chem);
     return acc;
   }, {} as Record<string, Chemical[]>));
 
+  // Group supplies by name so multiple purchases of the same item show on one card
+  const supplyGroups = Object.values(filteredSupplies.reduce((acc, m) => {
+    const key = m.name.trim().toLowerCase();
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(m);
+    return acc;
+  }, {} as Record<string, any[]>));
+
   // Helper for brand grouping
   const groupedChemicals = productGroups.reduce((acc, group) => {
-    const brand = group[0].brand || "Other / No Brand";
+    const brand = group.find((g: any) => g.brand)?.brand || "Other / No Brand";
     if (!acc[brand]) acc[brand] = [];
     acc[brand].push(group);
     return acc;
@@ -1711,8 +1719,8 @@ const InventoryControl = () => {
     const c = group[0];
     const isRTU = group.some(x => x.name.toLowerCase().includes('rtu') || x.brand?.toLowerCase().includes('rtu') || x.bottleSize.toLowerCase().includes('rtu'));
     
-    const sizesStr = Array.from(new Set(group.map(x => x.bottleSize || 'N/A'))).join(', ');
-    const pricesStr = group.map(x => !x.costPerBottle ? '⚠ $0.00' : `$${(x.costPerBottle).toFixed(2)}`).join(' / ');
+    const sizesStr = group.map(x => `${x.bottleSize || 'N/A'}`).join(' / ');
+    const itemizedPricesStr = group.map(x => `${x.bottleSize || 'N/A'}: $${(x.costPerBottle || 0).toFixed(2)}`).join(' • ');
     const totalGroupValue = group.reduce((sum, x) => sum + ((x.costPerBottle || 0) * (x.currentStock || 0)), 0);
     const totalStock = group.reduce((sum, x) => sum + (x.currentStock || 0), 0);
     const isLowStock = !group.some(x => x.currentStock > 0);
@@ -1747,8 +1755,8 @@ const InventoryControl = () => {
               </span>
             ) : (
               <>
-                {sizesStr} • {pricesStr} 
-                <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total: ${totalGroupValue.toFixed(2)})</span>
+                {itemizedPricesStr}
+                <span className="ml-1 text-[10px] text-zinc-500 font-bold italic">(Total Value: ${totalGroupValue.toFixed(2)})</span>
               </>
             )}
           </div>
@@ -2182,12 +2190,16 @@ const InventoryControl = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSupplies.map(m => (
+                    {supplyGroups.map(group => {
+                      const m = group[0];
+                      const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
+                      const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
+                      return (
                       <TableRow
                         key={m.id}
                         ref={registerRow(m.id)}
                         className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
-                        onClick={() => openEdit(m, 'material')}
+                        onClick={() => openEdit(group.length > 1 ? group : m, 'material')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
                           {m.imageUrl && (
