@@ -2250,7 +2250,9 @@ const InventoryControl = () => {
                         <TableCell className="py-1">
                           <span className="text-[11px] text-zinc-400 font-bold italic">{m.wherePurchased || '-'}</span>
                         </TableCell>
+                        <TableCell className="text-right">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
