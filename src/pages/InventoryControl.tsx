@@ -2199,7 +2199,7 @@ const InventoryControl = () => {
                         key={m.id}
                         ref={registerRow(m.id)}
                         className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
-                        onClick={() => openEdit(group.length > 1 ? group : m, 'material')}
+                        onClick={() => openEdit(group, 'material')}
                       >
                         <TableCell className="font-medium flex items-center gap-2 text-white">
                           {m.imageUrl && (
@@ -2250,9 +2250,7 @@ const InventoryControl = () => {
                         <TableCell className="py-1">
                           <span className="text-[11px] text-zinc-400 font-bold italic">{m.wherePurchased || '-'}</span>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       </TableRow>
@@ -2275,12 +2273,16 @@ const InventoryControl = () => {
 
               {/* Mobile Card View (Supplies) */}
               <div className="md:hidden space-y-3 mt-4">
-                {filteredSupplies.map(m => (
+                {supplyGroups.map(group => {
+                  const m = group[0];
+                  const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
+                  const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
+                  return (
                   <div
                     key={m.id}
                     ref={registerRow(m.id)}
                     className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors group"
-                    onClick={() => openEdit(m, 'material')}
+                    onClick={() => openEdit(group, 'material')}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -2296,23 +2298,38 @@ const InventoryControl = () => {
                           )}
                           {m.name}
                         </div>
-                        <div className={`text-sm font-medium ${!m.costPerItem || m.costPerItem === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+                        <div className={`text-sm font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
                           {supplySort === 'updated_at' ? (
                             <span className="text-xs text-blue-400 font-bold italic">
                               Last Updated: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
                             </span>
                           ) : (
-                            <>{m.category} • {!m.costPerItem || m.costPerItem === 0 ? '⚠ No cost entered' : `$${(m.costPerItem).toFixed(2)} (Total: $${(m.costPerItem * m.quantity).toFixed(2)})`}</>
+                            <>
+                              <div className="text-zinc-400 mb-1">{m.category}</div>
+                              {group.map((x: any, idx: number) => (
+                                <div key={idx} className="flex flex-col gap-0.5 mt-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold">{!x.costPerItem ? '⚠ $0.00' : `$${(x.costPerItem * (x.quantity || 1)).toFixed(2)}`}</span>
+                                    {x.actualPrice && x.actualPrice > x.costPerItem && (
+                                      <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice * (x.quantity || 1)).toFixed(2)}</span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-zinc-500 italic">(${(x.costPerItem || 0).toFixed(2)}/ea · qty {x.quantity || 1})</div>
+                                </div>
+                              ))}
+                              {group.length > 1 && totalGroupValue > 0 && <div className="text-[10px] text-zinc-500 font-bold italic mt-2 pt-1 border-t border-zinc-800">Total Value: ${totalGroupValue.toFixed(2)}</div>}
+                            </>
                           )}
                         </div>
-                        {m.wherePurchased && <div className="text-[10px] text-zinc-400 italic">Purchased at: {m.wherePurchased}</div>}
+                        <div className="text-[10px] text-zinc-400 italic mt-1">Purchased at: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold ${typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                        {m.quantity} units
+                      <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit h-fit ${group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                        {group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+                        {totalQty} units
                       </span>
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(m, 'material'); }} className="h-8" title="Edit Item">
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8" title="Edit Item">
                         <Pencil className="h-4 w-4 mr-2" /> Edit
                       </Button>
                       <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 text-blue-400 hover:text-blue-300" title="Duplicate">
@@ -2323,7 +2340,7 @@ const InventoryControl = () => {
                       </Button>
                     </div>
                   </div>
-                ))}
+                );})}
                 {filteredSupplies.length === 0 && materials.length > 0 && (
                   <div className="text-center py-10 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
                     <p>No matches for "{supplySearch}"</p>

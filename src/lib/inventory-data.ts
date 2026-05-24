@@ -211,11 +211,11 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         if (isColumnError) {
             console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
             const sanitized = { ...dbData };
-            delete sanitized.where_purchased;
-            delete sanitized.brand;
-            delete sanitized.purchase_date;
-            delete sanitized.actual_price;
-            delete sanitized.sale_price;
+            if (msg.includes('where_purchased')) delete sanitized.where_purchased;
+            if (msg.includes('brand')) delete sanitized.brand;
+            if (msg.includes('purchase_date')) delete sanitized.purchase_date;
+            if (msg.includes('actual_price')) delete sanitized.actual_price;
+            if (msg.includes('sale_price')) delete sanitized.sale_price;
             const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
             if (retryErr) throw retryErr;
             
@@ -499,10 +499,10 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         if (isColumnError) {
             console.warn('Handling schema mismatch in materials table, retrying with sanitized payload...', error.message);
             const sanitized = { ...dbData };
-            delete sanitized.where_purchased;
-            delete sanitized.purchase_date;
-            delete sanitized.actual_price;
-            delete sanitized.sale_price;
+            if (msg.includes('where_purchased')) delete sanitized.where_purchased;
+            if (msg.includes('purchase_date')) delete sanitized.purchase_date;
+            if (msg.includes('actual_price')) delete sanitized.actual_price;
+            if (msg.includes('sale_price')) delete sanitized.sale_price;
             const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
             if (retryErr) throw retryErr;
             
@@ -651,12 +651,12 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         if (isColumnError) {
             console.warn('Handling schema mismatch in tools table, retrying with sanitized payload...', error.message);
             const sanitizedData = { ...dbData };
-            delete sanitizedData.quantity;
-            delete sanitizedData.low_threshold;
-            delete sanitizedData.category; // Original tools schema doesn't have category
-            delete sanitizedData.where_purchased;
-            delete sanitizedData.actual_price;
-            delete sanitizedData.sale_price;
+            if (msg.includes('quantity')) delete sanitizedData.quantity;
+            if (msg.includes('low_threshold')) delete sanitizedData.low_threshold;
+            if (msg.includes('category')) delete sanitizedData.category;
+            if (msg.includes('where_purchased')) delete sanitizedData.where_purchased;
+            if (msg.includes('actual_price')) delete sanitizedData.actual_price;
+            if (msg.includes('sale_price')) delete sanitizedData.sale_price;
             const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
             if (retryErr) throw retryErr;
             
