@@ -1923,7 +1923,7 @@ const InventoryControl = () => {
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('chemicals')}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className={`h-2 w-2 rounded-full ${chemicals.some(c => c.currentStock < c.threshold) ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
               <h3 className="text-lg font-semibold text-yellow-100">Chemicals</h3>
               <Popover>
@@ -1956,7 +1956,11 @@ const InventoryControl = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemicals.length} items</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{chemicals.length} items</span>
+              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('chemical').toFixed(2)}</span>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
@@ -2088,7 +2092,7 @@ const InventoryControl = () => {
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('materials')}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className={`h-2 w-2 rounded-full ${materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
               <h3 className="text-lg font-semibold text-blue-100">Supplies</h3>
               <Popover>
@@ -2118,7 +2122,11 @@ const InventoryControl = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{materials.length} items</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{materials.length} items</span>
+              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('material').toFixed(2)}</span>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
@@ -2414,7 +2422,7 @@ const InventoryControl = () => {
             style={{ top: isDemoMode ? '112px' : '72px' }}
             onClick={() => toggleSection('tools')}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="h-2 w-2 rounded-full bg-purple-500" />
               <h3 className="text-lg font-semibold text-purple-100">Equipment</h3>
               <Popover>
@@ -2445,7 +2453,11 @@ const InventoryControl = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{tools.length} items</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{tools.length} items</span>
+              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
+                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
+                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('tool').toFixed(2)}</span>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
               <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
