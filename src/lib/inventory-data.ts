@@ -208,16 +208,30 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand');
         
-        if (isColumnError) {
-            console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
-            const sanitized = { ...dbData };
-            if (msg.includes('where_purchased')) delete sanitized.where_purchased;
-            if (msg.includes('brand')) delete sanitized.brand;
-            if (msg.includes('purchase_date')) delete sanitized.purchase_date;
-            if (msg.includes('actual_price')) delete sanitized.actual_price;
-            if (msg.includes('sale_price')) delete sanitized.sale_price;
-            const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
-            if (retryErr) throw retryErr;
+            let sanitized = { ...dbData };
+            let currentErr = error;
+            let retries = 0;
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+                const errMsg = (currentErr.message || '').toLowerCase();
+                let dropped = false;
+                if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
+                else if (errMsg.includes('brand') && 'brand' in sanitized) { delete sanitized.brand; dropped = true; }
+                else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
+                else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
+                else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
+                
+                if (!dropped) {
+                    delete sanitized.where_purchased;
+                    delete sanitized.brand;
+                    delete sanitized.purchase_date;
+                    delete sanitized.actual_price;
+                    delete sanitized.sale_price;
+                }
+                const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
+                currentErr = retryErr;
+                retries++;
+            }
+            if (currentErr) throw currentErr;
             
             // Return correctly mapped object to keep UI consistent
             return {
@@ -496,15 +510,28 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
         
-        if (isColumnError) {
-            console.warn('Handling schema mismatch in materials table, retrying with sanitized payload...', error.message);
-            const sanitized = { ...dbData };
-            if (msg.includes('where_purchased')) delete sanitized.where_purchased;
-            if (msg.includes('purchase_date')) delete sanitized.purchase_date;
-            if (msg.includes('actual_price')) delete sanitized.actual_price;
-            if (msg.includes('sale_price')) delete sanitized.sale_price;
-            const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
-            if (retryErr) throw retryErr;
+            let sanitized = { ...dbData };
+            let currentErr = error;
+            let retries = 0;
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+                const errMsg = (currentErr.message || '').toLowerCase();
+                let dropped = false;
+                if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
+                else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
+                else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
+                else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
+                
+                if (!dropped) {
+                    delete sanitized.where_purchased;
+                    delete sanitized.purchase_date;
+                    delete sanitized.actual_price;
+                    delete sanitized.sale_price;
+                }
+                const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
+                currentErr = retryErr;
+                retries++;
+            }
+            if (currentErr) throw currentErr;
             
             // Return mapped object
             return {
@@ -648,17 +675,34 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         const msg = (error.message || '').toLowerCase();
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased');
         
-        if (isColumnError) {
-            console.warn('Handling schema mismatch in tools table, retrying with sanitized payload...', error.message);
-            const sanitizedData = { ...dbData };
-            if (msg.includes('quantity')) delete sanitizedData.quantity;
-            if (msg.includes('low_threshold')) delete sanitizedData.low_threshold;
-            if (msg.includes('category')) delete sanitizedData.category;
-            if (msg.includes('where_purchased')) delete sanitizedData.where_purchased;
-            if (msg.includes('actual_price')) delete sanitizedData.actual_price;
-            if (msg.includes('sale_price')) delete sanitizedData.sale_price;
-            const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
-            if (retryErr) throw retryErr;
+            let sanitizedData = { ...dbData };
+            let currentErr = error;
+            let retries = 0;
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+                const errMsg = (currentErr.message || '').toLowerCase();
+                let dropped = false;
+                if (errMsg.includes('quantity') && 'quantity' in sanitizedData) { delete sanitizedData.quantity; dropped = true; }
+                else if (errMsg.includes('low_threshold') && 'low_threshold' in sanitizedData) { delete sanitizedData.low_threshold; dropped = true; }
+                else if (errMsg.includes('category') && 'category' in sanitizedData) { delete sanitizedData.category; dropped = true; }
+                else if (errMsg.includes('where_purchased') && 'where_purchased' in sanitizedData) { delete sanitizedData.where_purchased; dropped = true; }
+                else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitizedData) { delete sanitizedData.purchase_date; dropped = true; }
+                else if (errMsg.includes('actual_price') && 'actual_price' in sanitizedData) { delete sanitizedData.actual_price; dropped = true; }
+                else if (errMsg.includes('sale_price') && 'sale_price' in sanitizedData) { delete sanitizedData.sale_price; dropped = true; }
+                
+                if (!dropped) {
+                    delete sanitizedData.quantity;
+                    delete sanitizedData.low_threshold;
+                    delete sanitizedData.category;
+                    delete sanitizedData.where_purchased;
+                    delete sanitizedData.purchase_date;
+                    delete sanitizedData.actual_price;
+                    delete sanitizedData.sale_price;
+                }
+                const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
+                currentErr = retryErr;
+                retries++;
+            }
+            if (currentErr) throw currentErr;
             
             // Return mapped object
             return {
