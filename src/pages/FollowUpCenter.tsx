@@ -64,6 +64,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS, EmailCampaign } from "@/lib/bookingsSync";
 import { toast } from "sonner";
+import supabase from "@/lib/supabase";
 
 export default function FollowUpCenter() {
   const { items: allBookings, update: updateBooking } = useBookingsStore();
@@ -74,6 +75,8 @@ export default function FollowUpCenter() {
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [prospects, setProspects] = useState<Customer[]>([]);
   const [loadingProspects, setLoadingProspects] = useState(false);
+  const [dbLogs, setDbLogs] = useState<FollowUpLog[]>([]);
+  const [loadingDbLogs, setLoadingDbLogs] = useState(false);
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,6 +93,7 @@ export default function FollowUpCenter() {
   useEffect(() => {
     refreshCoupons();
     loadProspects();
+    loadDbLogs();
   }, []);
 
   const loadProspects = async () => {
@@ -105,7 +109,47 @@ export default function FollowUpCenter() {
     }
   };
 
+  const loadDbLogs = async () => {
+    setLoadingDbLogs(true);
+    try {
+      const { data, error } = await supabase
+        .from('engagements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        const mapped: FollowUpLog[] = data.map((r: any) => ({
+          id: r.id || `db_${r.created_at}_${Math.random()}`,
+          customerEmail: r.customer_email || "",
+          customerName: r.customer_name || "",
+          dateSent: r.created_at,
+          frequency: r.type === 'initial' ? 'Lead Outreach' : 'Client Retention',
+          emailType: r.type === 'initial' ? 'prospect_intro' : 'maintenance_reminder',
+          customNote: r.note || undefined,
+          couponCode: r.coupon_code || undefined
+        }));
+        setDbLogs(mapped);
+      }
+    } catch (e) {
+      console.warn("Could not fetch database engagements:", e);
+    } finally {
+      setLoadingDbLogs(false);
+    }
+  };
+
   const activeCoupons = useMemo(() => allCoupons.filter(c => c.active), [allCoupons]);
+
+  const combinedLogs = useMemo(() => {
+    const all = [...logs, ...dbLogs];
+    const unique = new Map<string, FollowUpLog>();
+    all.forEach(log => {
+      const date = new Date(log.dateSent);
+      const roundedTime = Math.round(date.getTime() / 10000) * 10000;
+      const key = `${(log.customerName || '').trim().toLowerCase()}_${(log.customerEmail || '').trim().toLowerCase()}_${roundedTime}`;
+      unique.set(key, log);
+    });
+    return Array.from(unique.values()).sort((a, b) => new Date(b.dateSent).getTime() - new Date(a.dateSent).getTime());
+  }, [logs, dbLogs]);
 
   // Group bookings by customer to find the LATEST service for each
   const customerFollowUps = useMemo(() => {
@@ -262,6 +306,7 @@ export default function FollowUpCenter() {
 
       toast.success(`Professional follow-up sent to ${selectedCustomer.customer}!`);
       setIsDialogOpen(false);
+      await loadDbLogs();
     } catch (e) {
       toast.error("Failed to send follow-up.");
     } finally {
@@ -296,6 +341,7 @@ export default function FollowUpCenter() {
 
       toast.success(`Welcome intro sent to ${selectedProspect.name}!`);
       setIsProspectDialogOpen(false);
+      await loadDbLogs();
     } catch (e) {
       toast.error("Failed to send prospect outreach.");
     } finally {
@@ -317,7 +363,7 @@ export default function FollowUpCenter() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-      <main className="container mx-auto px-4 pr-[70px] lg:pr-4 pt-32 pb-12">
+      <main className="container mx-auto px-4 md:pr-[70px] lg:pr-4 pt-32 pb-12">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div className="space-y-2">
@@ -380,7 +426,7 @@ export default function FollowUpCenter() {
 
       <Tabs defaultValue="opportunities" className="space-y-12">
         <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-1.5 rounded-3xl h-auto flex flex-nowrap w-max min-w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 overflow-hidden mb-8">
+          <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-1.5 rounded-3xl h-auto flex flex-nowrap w-max min-w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 overflow-x-auto no-scrollbar mb-8">
             <TabsTrigger value="opportunities" className="rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all flex items-center gap-3 whitespace-nowrap">
                <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                Client Retention
@@ -694,76 +740,82 @@ export default function FollowUpCenter() {
                            <th className="px-10 py-6 text-right">Verification</th>
                         </tr>
                      </thead>
-                     <tbody className="divide-y divide-zinc-900/60">
-                        {logs.length > 0 ? logs.map(log => (
-                           <tr key={log.id} className="group hover:bg-zinc-800/30 transition-all duration-300">
-                              <td className="px-10 py-7">
-                                 <p className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{log.customerName}</p>
-                                 <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mt-1 opacity-70">{log.customerEmail}</p>
-                              </td>
-                              <td className="px-10 py-7 text-center">
-                                 <Badge variant="outline" className="bg-zinc-950 border-zinc-800 text-zinc-400 font-black text-[9px] px-3 py-1">
-                                    {format(new Date(log.dateSent), 'MMM dd, h:mm a')}
-                                 </Badge>
-                              </td>
-                              <td className="px-10 py-7 text-center">
-                                 <span className={cn(
-                                     "text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border",
-                                     log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
-                                 )}>
-                                     {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
-                                 </span>
-                              </td>
-                              <td className="px-10 py-7 text-center">
-                                 {log.couponCode ? (
-                                    <span className="font-mono text-[11px] font-black text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-lg border border-emerald-500/20 uppercase tracking-tighter">
-                                       {log.couponCode}
-                                    </span>
-                                 ) : <span className="text-zinc-800 font-black">STANDARD_DISPATCH</span>}
-                              </td>
-                              <td className="px-10 py-7 text-center">
-                                 <Button 
-                                   size="sm" 
-                                   variant="ghost" 
-                                   onClick={() => {
-                                     const search = encodeURIComponent(log.customerName);
-                                     window.location.href = `/file-manager?search=${search}`;
-                                   }}
-                                   className="h-9 w-9 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
-                                   title="View Archived Record"
-                                 >
-                                   <Eye className="h-4 w-4" />
-                                 </Button>
-                              </td>
-                              <td className="px-10 py-7 text-right">
-                                 {log.customNote ? (
-                                    <Dialog>
-                                       <DialogTrigger asChild>
-                                          <Button variant="ghost" size="sm" className="h-10 border border-zinc-800 hover:scale-105 active:scale-95 text-blue-500 hover:text-blue-400 text-[10px] font-black tracking-widest uppercase rounded-xl">
-                                             View Message
-                                          </Button>
-                                       </DialogTrigger>
-                                       <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[3rem] p-10">
-                                          <DialogHeader>
-                                             <DialogTitle className="text-xs uppercase font-black tracking-[0.2em] text-zinc-500 mb-6 underline decoration-blue-500 decoration-4 underline-offset-8">Dispatched Note</DialogTitle>
-                                          </DialogHeader>
-                                          <div className="bg-zinc-900/50 p-8 rounded-[2rem] font-bold italic text-xl border-2 border-zinc-800 text-blue-200/90 leading-relaxed">
-                                             "{log.customNote}"
-                                          </div>
-                                       </DialogContent>
-                                    </Dialog>
-                                 ) : <span className="text-zinc-700 text-[10px] font-black uppercase italic tracking-widest opacity-30">PRO_TEMPLATE_V1</span>}
-                              </td>
-                           </tr>
-                        )) : (
-                           <tr>
-                              <td colSpan={5} className="px-10 py-24 text-center">
-                                 <History className="h-16 w-16 text-zinc-900 mx-auto mb-4 opacity-20" />
-                                 <p className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[11px]">Audit Cache Depleted</p>
-                              </td>
-                           </tr>
-                        )}
-                     </tbody>
+                      <tbody className="divide-y divide-zinc-900/60">
+                         {combinedLogs.length > 0 ? combinedLogs.map(log => (
+                            <tr key={log.id} className="group hover:bg-zinc-800/30 transition-all duration-300">
+                               <td className="px-10 py-7">
+                                  <p className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{log.customerName}</p>
+                                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mt-1 opacity-70">{log.customerEmail}</p>
+                                  {log.id.startsWith("db_") && (
+                                     <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest">
+                                        Cloud Synced
+                                     </span>
+                                  )}
+                               </td>
+                               <td className="px-10 py-7 text-center">
+                                  <Badge variant="outline" className="bg-zinc-950 border-zinc-800 text-zinc-400 font-black text-[9px] px-3 py-1">
+                                     {format(new Date(log.dateSent), 'MMM dd, h:mm a')}
+                                  </Badge>
+                               </td>
+                               <td className="px-10 py-7 text-center">
+                                  <span className={cn(
+                                      "text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border",
+                                      log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                                  )}>
+                                      {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
+                                  </span>
+                               </td>
+                               <td className="px-10 py-7 text-center">
+                                  {log.couponCode ? (
+                                     <span className="font-mono text-[11px] font-black text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-lg border border-emerald-500/20 uppercase tracking-tighter">
+                                        {log.couponCode}
+                                     </span>
+                                  ) : <span className="text-zinc-800 font-black">STANDARD_DISPATCH</span>}
+                               </td>
+                               <td className="px-10 py-7 text-center">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    onClick={() => {
+                                      const search = encodeURIComponent(log.customerName);
+                                      window.location.href = `/file-manager?search=${search}`;
+                                    }}
+                                    className="h-9 w-9 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
+                                    title="View Archived Record"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                               </td>
+                               <td className="px-10 py-7 text-right">
+                                  {log.customNote ? (
+                                     <Dialog>
+                                        <DialogTrigger asChild>
+                                           <Button variant="ghost" size="sm" className="h-10 border border-zinc-800 hover:scale-105 active:scale-95 text-blue-500 hover:text-blue-400 text-[10px] font-black tracking-widest uppercase rounded-xl">
+                                              View Message
+                                           </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[3rem] p-10">
+                                           <DialogHeader>
+                                              <DialogTitle className="text-xs uppercase font-black tracking-[0.2em] text-zinc-500 mb-6 underline decoration-blue-500 decoration-4 underline-offset-8">Dispatched Note</DialogTitle>
+                                           </DialogHeader>
+                                           <div className="bg-zinc-900/50 p-8 rounded-[2rem] font-bold italic text-xl border-2 border-zinc-800 text-blue-200/90 leading-relaxed">
+                                              "{log.customNote}"
+                                           </div>
+                                        </DialogContent>
+                                     </Dialog>
+                                  ) : <span className="text-zinc-700 text-[10px] font-black uppercase italic tracking-widest opacity-30">PRO_TEMPLATE_V1</span>}
+                               </td>
+                            </tr>
+                         )) : (
+                            <tr>
+                               <td colSpan={6} className="px-10 py-24 text-center">
+                                  <History className="h-16 w-16 text-zinc-900 mx-auto mb-4 opacity-20" />
+                                  <p className="text-zinc-600 font-black uppercase tracking-[0.3em] text-[11px]">Audit Cache Depleted</p>
+                                  {loadingDbLogs && <p className="text-zinc-500 text-xs mt-2 uppercase font-black animate-pulse">Syncing Cloud Ledger...</p>}
+                               </td>
+                            </tr>
+                         )}
+                      </tbody>
                   </table>
                 </div>
              </CardContent>
