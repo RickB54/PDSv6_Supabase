@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 
 /**
  * Professional Detailing Communication Engine
@@ -35,12 +36,38 @@ const DETIALING_VOCABULARY: Record<string, string> = {
 
 /**
  * Refines a piece of text to be more professional and clear.
- * Uses a combination of vocabulary replacement and structural smoothing.
+ * Uses a combination of real AI generation via Gemini Proxy and local vocabulary fallback.
  */
 export async function refineTextWithAI(text: string): Promise<string> {
     if (!text) return "";
 
-    // Simulate AI thinking time
+    try {
+        const prompt = `Act as an elite, ultra-professional customer relationships manager and copywriter for "Prime Auto Detail", a luxury automotive detailing business.
+Your goal is to rewrite the draft below into a highly polished, elegant, and corporate-standard correspondence/letter.
+It should be welcoming, professional, clear, and possess an excellent tone that leaves a stunning impression on a client.
+Fix any spelling or grammar mistakes. Maintain a highly professional service tone.
+
+Draft text to refine:
+"${text}"
+
+Provide ONLY the refined letter body. Do not include subject lines, header details, addresses, placeholders (like [Date], [Company Name]), or greetings like "Dear Customer" or sign-offs like "Sincerely, Rick Berube" in the output since those are added automatically. Just output the refined paragraph(s) of the body text.`;
+
+        const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+            body: { prompt }
+        });
+        
+        if (error) throw error;
+        
+        const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (aiText) {
+            // Clean up any markdown code block wrappers or extra surrounding quotes
+            return aiText.replace(/```[a-z]*|```/gi, '').trim().replace(/^"(.*)"$/, '$1');
+        }
+    } catch (e) {
+        console.warn("[refineTextWithAI] Real AI invocation failed, falling back to heuristics:", e);
+    }
+
+    // Simulate AI thinking time if falling back
     await new Promise(resolve => setTimeout(resolve, 800));
 
     let refined = text;

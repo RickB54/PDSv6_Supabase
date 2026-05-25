@@ -88,6 +88,7 @@ export default function FollowUpCenter() {
   const [includeDiscount, setIncludeDiscount] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
+  const [selectedAuditLog, setSelectedAuditLog] = useState<FollowUpLog | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -776,12 +777,9 @@ export default function FollowUpCenter() {
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    onClick={() => {
-                                      const search = encodeURIComponent(log.customerName);
-                                      window.location.href = `/file-manager?search=${search}`;
-                                    }}
+                                    onClick={() => setSelectedAuditLog(log)}
                                     className="h-9 w-9 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
-                                    title="View Archived Record"
+                                    title="View Detailed Preview Card"
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
@@ -1044,6 +1042,111 @@ export default function FollowUpCenter() {
                   <ChevronRight className="ml-3 h-6 w-6" />
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DETAILED AUDIT PREVIEW CARD DIALOG */}
+      <Dialog open={selectedAuditLog !== null} onOpenChange={(open) => { if(!open) setSelectedAuditLog(null); }}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-2xl rounded-[3rem] p-10 overflow-hidden relative shadow-2xl">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-600/5 blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/5 blur-[120px] pointer-events-none" />
+          
+          <DialogHeader className="mb-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3.5 bg-emerald-600/10 rounded-2xl border border-emerald-600/20">
+                <Eye className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-3xl font-black uppercase tracking-tighter italic">Engagement Audit Card</DialogTitle>
+                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Chronological System Registry Log</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedAuditLog && (
+            <div className="space-y-6 relative z-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Customer / Recipient</span>
+                  <span className="text-base font-black text-white uppercase tracking-tight block truncate">{selectedAuditLog.customerName}</span>
+                  <span className="text-[11px] text-zinc-400 font-medium block truncate mt-0.5">{selectedAuditLog.customerEmail}</span>
+                </div>
+                
+                <div className="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Dispatch Timestamp</span>
+                  <span className="text-base font-black text-white uppercase tracking-tight block">
+                    {format(new Date(selectedAuditLog.dateSent), 'MMM dd, yyyy')}
+                  </span>
+                  <span className="text-[11px] text-zinc-400 font-medium block mt-0.5">
+                    {format(new Date(selectedAuditLog.dateSent), 'h:mm a · OOOO')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Engagement Strategy</span>
+                  <span className={cn(
+                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border inline-block mt-1",
+                    selectedAuditLog.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                  )}>
+                    {selectedAuditLog.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
+                  </span>
+                </div>
+
+                <div className="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
+                  <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Voucher Incentive</span>
+                  {selectedAuditLog.couponCode ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/20 uppercase tracking-tighter">
+                        {selectedAuditLog.couponCode}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-zinc-600 text-xs font-black uppercase tracking-widest italic block mt-1">Standard dispatch</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800/80 space-y-2">
+                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block">Dispatched Message Body</span>
+                <div className="bg-zinc-950/80 border border-zinc-800 p-5 rounded-xl text-zinc-200 text-sm font-semibold italic leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap">
+                  {selectedAuditLog.customNote ? `"${selectedAuditLog.customNote}"` : `No custom note. Dispatched using professional standard ${selectedAuditLog.emailType === 'prospect_intro' ? 'lead follow-up' : 'maintenance reminder'} template (V1).`}
+                </div>
+              </div>
+
+              <div className="bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/80 flex items-center justify-between text-[10px] uppercase font-black">
+                <div className="flex items-center gap-2 text-zinc-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Audit Status: Verified Secure
+                </div>
+                <div className="text-zinc-600">
+                  ID: {selectedAuditLog.id}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-8 border-t border-zinc-800/50 pt-6 flex justify-between items-center w-full">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (selectedAuditLog) {
+                  const search = encodeURIComponent(selectedAuditLog.customerName);
+                  window.open(`/file-manager?search=${search}`, '_blank');
+                }
+              }}
+              className="border-zinc-800 hover:bg-zinc-900 text-zinc-400 text-[10px] font-black uppercase tracking-widest rounded-xl"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" /> View Archived File
+            </Button>
+            <Button 
+              onClick={() => setSelectedAuditLog(null)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl px-6 h-10"
+            >
+              Close Preview
             </Button>
           </DialogFooter>
         </DialogContent>
