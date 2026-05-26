@@ -133,6 +133,7 @@ const Estimates = () => {
     }, [showCreateForm, editingEstimateId, estimates]);
         const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
     const [editIsSent, setEditIsSent] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const formatPart = (val: any) => (val && val !== 'null' && val !== 'undefined') ? val : '';
     const formatDisplayDate = (dStr: string) => {
@@ -302,6 +303,9 @@ const Estimates = () => {
             return;
         }
 
+        if (isSubmitting) return; // Prevent double-click
+        setIsSubmitting(true);
+
         try {
             if (isDemoMode) {
                 toast({ title: "Simulation Mode", description: "Estimate simulated locally. No real data was created." });
@@ -322,9 +326,10 @@ const Estimates = () => {
             }
             if (!vehicleStr) vehicleStr = "Unknown Vehicle";
 
+            const isEditing = !!editingEstimateId;
             const estimateData: any = {
                 id: editingEstimateId || undefined,
-                estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
+                estimateNumber: isEditing ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
                 customerId: selectedCustomer,
                 customerName: customer.name,
                 vehicle: vehicleStr,
@@ -341,12 +346,30 @@ const Estimates = () => {
                 discountType,
                 notes: notes,
                 isSent: editIsSent,
-                sentDate: editIsSent ? (editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
-                created_at: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
+                sentDate: editIsSent ? (isEditing ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
+                created_at: isEditing ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
             };
 
-            await upsertSupabaseEstimate(estimateData);
-            toast({ title: "Success", description: editingEstimateId ? "Estimate updated successfully!" : "Estimate created successfully!" });
+            // Save to Supabase
+            const saved = await upsertSupabaseEstimate(estimateData);
+
+            // OPTIMISTIC UPDATE: merge the returned record into local state immediately
+            // so the list appears without waiting for a full network reload
+            const savedEstimate: Estimate = {
+                ...estimateData,
+                id: saved?.id || estimateData.id || `est_${Date.now()}`,
+            };
+            setEstimates(prev => {
+                if (isEditing) {
+                    return prev.map(e => e.id === editingEstimateId ? savedEstimate : e);
+                } else {
+                    return [savedEstimate, ...prev];
+                }
+            });
+
+            toast({ title: "Success", description: isEditing ? "Estimate updated successfully!" : "Estimate created successfully!" });
+
+            // Reset form
             setShowCreateForm(false);
             setEditingEstimateId(null);
             setSelectedCustomer("");
@@ -356,13 +379,17 @@ const Estimates = () => {
             setSelectedStatus("open");
             setSelectedVehicleId("");
             setDiscount(0);
-                        setNotes("");
+            setNotes("");
             setEditIsSent(false);
             setEstimateDate(getLocalDateString());
+
+            // Background sync to reconcile with server (no await — UI already updated)
             loadData();
         } catch (error: any) {
             console.error('Error saving estimate:', error);
             toast({ title: "Error", description: `Failed to save estimate: ${error.message || 'Unknown error'}`, variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1090,8 +1117,12 @@ const Estimates = () => {
                             </div>
 
                             <div className="flex gap-2">
-                                <Button onClick={createEstimate} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white">
-                                    {editingEstimateId ? "Save Changes" : "Create Estimate"}
+                                <Button onClick={createEstimate} disabled={isSubmitting} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60">
+                                    {isSubmitting ? (
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{editingEstimateId ? "Saving..." : "Creating..."}</>
+                                    ) : (
+                                        editingEstimateId ? "Save Changes" : "Create Estimate"
+                                    )}
                                 </Button>
                                 <Button 
                                     variant="outline" 
