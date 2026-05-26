@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Printer, Save, Sparkles, Loader2, Users, Mail, Calendar } from "lucide-react";
+import { FileText, Printer, Save, Sparkles, Loader2, Users, Mail, Calendar, Copy } from "lucide-react";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
@@ -57,7 +57,7 @@ const DETAILING_TEMPLATES: LetterTemplate[] = [
         name: "Post-Detail Thank You & Review Request",
         category: "Reputation & Feedback",
         subject: "Thank You for Choosing Prime Auto Detail!",
-        body: `Dear {Customer Name},\n\nThank you so much for trusting Prime Auto Detail with your vehicle's recent service! Our ultimate goal is to deliver a showroom-quality finish and absolute surface protection on every detail.\n\nWe hope you are completely thrilled with the final results. As a small, local business dedicated to premium craftsmanship, our reputation relies heavily on word-of-mouth recommendations. If you have a moment, we would be incredibly grateful if you could share your experience by leaving us a brief review.\n\nYour feedback helps other luxury car owners discover the difference our meticulous detailing makes.\n\nThank you again for your support, and we look forward to caring for your vehicle in the future!\n\nSincerely,\n\nRick Berube\nPrime Auto Detail`
+        body: `Dear {Customer Name},\n\nThank you so much for trusting Prime Auto Detail with your vehicle's recent service! Our ultimate goal is to deliver a showroom-quality finish and absolute surface protection on every detail.\n\nWe hope you are completely thrilled with the final results. As a small, local business dedicated to premium craftsmanship, our reputation relies heavily on word-of-mouth recommendations. If you have a moment, we would be incredibly grateful if you could share your experience by leaving us a brief review.\n\n[Google Review QR Code]\n\nYour feedback helps other luxury car owners discover the difference our meticulous detailing makes.\n\nThank you again for your support, and we look forward to caring for your vehicle in the future!\n\nSincerely,\n\nRick Berube\nPrime Auto Detail`
     },
     {
         id: "lost_client_winback",
@@ -151,6 +151,20 @@ const LetterMaker = () => {
         }
     };
 
+    const handleCopyToClipboard = () => {
+        if (!body.trim()) {
+            toast({ title: "No text found", description: "There is no letter body to copy.", variant: "destructive" });
+            return;
+        }
+        
+        const fullText = `Subject: ${subject}\n\n${body}`;
+        navigator.clipboard.writeText(fullText);
+        toast({
+            title: "Copied to Clipboard!",
+            description: "Subject and Letter Body copied to clipboard."
+        });
+    };
+
     const handleAIEnhance = async () => {
         if (!body.trim()) {
             toast({ title: "No text found", description: "Please enter some text to enhance.", variant: "destructive" });
@@ -237,8 +251,41 @@ const LetterMaker = () => {
 
         // Body
         doc.setFont("helvetica", "normal");
-        const splitText = doc.splitTextToSize(body, 170);
-        doc.text(splitText, 20, startY + 40);
+        if (body.includes("[Google Review QR Code]")) {
+            const parts = body.split("[Google Review QR Code]");
+            const beforeText = parts[0];
+            const afterText = parts[1];
+            
+            // Print the first half
+            const splitBefore = doc.splitTextToSize(beforeText, 170);
+            doc.text(splitBefore, 20, startY + 40);
+            
+            // Calculate height of beforeText
+            const beforeLines = splitBefore.length;
+            const scaleFactor = doc.internal.scaleFactor;
+            const lineHeightMm = doc.getLineHeight() / scaleFactor;
+            const beforeHeight = beforeLines * lineHeightMm;
+            
+            const qrY = startY + 40 + beforeHeight + 5;
+            const qrSize = 45; // 45x45 mm QR Code
+            
+            try {
+                // Add the Google Review QR Code image
+                doc.addImage("/Google Review QR Code.png", "PNG", 82, qrY, qrSize, qrSize);
+            } catch (e) {
+                console.error("Failed to add QR code image to PDF:", e);
+                doc.setFont("helvetica", "italic");
+                doc.text("[Google Review QR Code Image]", 105, qrY + (qrSize / 2), { align: "center" });
+                doc.setFont("helvetica", "normal");
+            }
+            
+            // Print the second half below the QR Code
+            const splitAfter = doc.splitTextToSize(afterText, 170);
+            doc.text(splitAfter, 20, qrY + qrSize + 8);
+        } else {
+            const splitText = doc.splitTextToSize(body, 170);
+            doc.text(splitText, 20, startY + 40);
+        }
 
         // Footer
         const pageHeight = doc.internal.pageSize.height;
@@ -339,14 +386,34 @@ const LetterMaker = () => {
 
                         <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-800">
                             <Button 
-                                onClick={() => generatePDF('print')}
-                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700"
+                                type="button"
+                                variant="outline"
+                                onClick={() => window.history.back()}
+                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 px-6 font-bold"
                             >
-                                <Printer className="h-4 w-4 mr-2" /> Preview & Print
+                                Cancel
                             </Button>
+                            
                             <Button 
+                                type="button"
+                                onClick={handleCopyToClipboard}
+                                className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-bold"
+                            >
+                                <Copy className="h-4 w-4 mr-2 text-indigo-400" /> Copy Letter
+                            </Button>
+
+                            <Button 
+                                type="button"
+                                onClick={() => generatePDF('print')}
+                                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-bold"
+                            >
+                                <Printer className="h-4 w-4 mr-2 text-emerald-400" /> Preview & Print
+                            </Button>
+                            
+                            <Button 
+                                type="button"
                                 onClick={() => generatePDF('download')}
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 font-bold"
                             >
                                 <Save className="h-4 w-4 mr-2" /> Download PDF
                             </Button>
