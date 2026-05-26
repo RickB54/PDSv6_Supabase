@@ -29,35 +29,32 @@ export async function getInventoryTotals(): Promise<InventoryTotals> {
         );
 
         const materialsTotal = materials.reduce(
-            (sum, item) => sum + (item.costPerItem || 0) * (item.quantity || 0),
+            (sum, item) => sum + (item.costPerItem || item.price || 0) * (item.quantity || 0),
             0
         );
 
-    const toolsTotal = tools.reduce(
-        (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
-        0
-    );
+        const toolsTotal = tools.reduce(
+            (sum, item) => sum + (item.price || item.cost || 0) * (item.quantity || 1),
+            0
+        );
 
-    const chemicalsSavings = chemicals.reduce((sum, item) => {
-        if (item.actualPrice && item.actualPrice > (item.costPerBottle || 0)) {
-            return sum + (item.actualPrice - (item.costPerBottle || 0));
-        }
-        return sum;
-    }, 0);
+        const chemicalsSavings = chemicals.reduce((sum, item) => {
+            const cost = item.costPerBottle || 0;
+            const actual = item.actualPrice || cost;
+            return sum + Math.max(0, (actual - cost) * (item.currentStock || 0));
+        }, 0);
 
-    const materialsSavings = materials.reduce((sum, item) => {
-        if (item.actualPrice && item.actualPrice > (item.costPerItem || 0)) {
-            return sum + (item.actualPrice - (item.costPerItem || 0));
-        }
-        return sum;
-    }, 0);
+        const materialsSavings = materials.reduce((sum, item) => {
+            const cost = item.costPerItem || item.price || 0;
+            const actual = item.actualPrice || cost;
+            return sum + Math.max(0, (actual - cost) * (item.quantity || 0));
+        }, 0);
 
-    const toolsSavings = tools.reduce((sum, item) => {
-        if (item.actualPrice && item.actualPrice > (item.price || 0)) {
-            return sum + (item.actualPrice - (item.price || 0));
-        }
-        return sum;
-    }, 0);
+        const toolsSavings = tools.reduce((sum, item) => {
+            const cost = item.price || item.cost || 0;
+            const actual = item.actualPrice || cost;
+            return sum + Math.max(0, (actual - cost) * (item.quantity || 1));
+        }, 0);
 
         return {
             chemicals: chemicalsTotal,

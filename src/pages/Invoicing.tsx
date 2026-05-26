@@ -1623,7 +1623,33 @@ Precision. Protection. Perfection.`;
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-white text-lg">#{invoice.invoiceNumber}</span>
-                        <span className="text-zinc-500 text-sm">• {invoice.date}</span>
+                        {(() => {
+                          const displayService = invoice.serviceDate || invoice.date;
+                          const formattedService = displayService && displayService.includes('-') 
+                            ? (() => {
+                                const parts = displayService.split('-');
+                                return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}` : displayService;
+                              })()
+                            : displayService;
+
+                          const displayInvoice = invoice.date;
+                          const formattedInvoice = displayInvoice && displayInvoice.includes('-')
+                            ? (() => {
+                                const parts = displayInvoice.split('-');
+                                return parts.length === 3 ? `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}` : displayInvoice;
+                              })()
+                            : displayInvoice;
+
+                          return (
+                            <span className="text-zinc-500 text-xs flex flex-wrap items-center gap-1.5 ml-2 border-l border-zinc-800 pl-2 font-semibold">
+                              <span>Inv Date:</span>
+                              <span className="text-zinc-300 font-medium">{formattedInvoice}</span>
+                              <span className="text-zinc-700 font-normal ml-0.5">•</span>
+                              <span>Serv Date:</span>
+                              <span className="text-emerald-400 font-medium">{formattedService}</span>
+                            </span>
+                          );
+                        })()}
                         {invoice.isSent && (
                           <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px] h-4 px-1 py-0 uppercase font-black tracking-widest ml-1">
                             SENT

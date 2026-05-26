@@ -113,6 +113,87 @@ const InventoryControl = () => {
     }
   };
 
+  const getCategoryStats = (type: 'chemical' | 'material' | 'tool') => {
+    let totalCost = 0;
+    let totalActualPrice = 0;
+
+    if (type === 'chemical') {
+      (chemicals || []).forEach(c => {
+        const qty = c.currentStock || 0;
+        const cost = c.costPerBottle || 0;
+        const actual = c.actualPrice || cost;
+        totalCost += cost * qty;
+        totalActualPrice += actual * qty;
+      });
+    } else if (type === 'material') {
+      (materials || []).forEach(m => {
+        const qty = m.quantity || 0;
+        const cost = (m as any).costPerItem || (m as any).price || 0;
+        const actual = (m as any).actualPrice || cost;
+        totalCost += cost * qty;
+        totalActualPrice += actual * qty;
+      });
+    } else {
+      (tools || []).forEach(t => {
+        const qty = t.quantity || 1;
+        const cost = (t as any).price || (t as any).cost || 0;
+        const actual = (t as any).actualPrice || cost;
+        totalCost += cost * qty;
+        totalActualPrice += actual * qty;
+      });
+    }
+
+    const savings = Math.max(0, totalActualPrice - totalCost);
+    return {
+      totalCost,
+      totalActualPrice,
+      savings
+    };
+  };
+
+  const renderHeaderStats = (type: 'chemical' | 'material' | 'tool', isMobile: boolean) => {
+    const stats = getCategoryStats(type);
+    if (isMobile) {
+      return (
+        <div className="flex flex-col gap-1 bg-zinc-900/60 p-2 rounded border border-zinc-800/80 text-[10px] whitespace-nowrap leading-tight mt-1">
+          <div className="flex justify-between gap-4">
+            <span className="text-zinc-500 font-bold uppercase tracking-tight">Cost vs Price:</span>
+            <span className="text-zinc-300 font-mono">${stats.totalCost.toFixed(2)} vs ${stats.totalActualPrice.toFixed(2)}</span>
+          </div>
+          {stats.savings > 0 && (
+            <div className="flex justify-between gap-4 border-t border-zinc-800/50 pt-1">
+              <span className="text-green-500 font-bold uppercase tracking-tight">Savings:</span>
+              <span className="text-green-400 font-mono font-bold">${stats.savings.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-3 bg-zinc-900/60 px-3 py-1.5 rounded-lg border border-zinc-800/80">
+        <div className="flex items-center gap-1.5">
+          <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px]">Cost:</span>
+          <span className="text-zinc-300 font-mono text-[10px] font-semibold">${stats.totalCost.toFixed(2)}</span>
+        </div>
+        <span className="text-zinc-700 font-normal">|</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-zinc-500 font-bold uppercase tracking-wider text-[9px]">Price:</span>
+          <span className="text-zinc-300 font-mono text-[10px] font-semibold">${stats.totalActualPrice.toFixed(2)}</span>
+        </div>
+        {stats.savings > 0 && (
+          <>
+            <span className="text-zinc-700 font-normal">|</span>
+            <div className="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+              <span className="text-green-500 font-extrabold uppercase tracking-wider text-[9px]">Savings:</span>
+              <span className="text-green-400 font-mono text-[10px] font-bold">${stats.savings.toFixed(2)}</span>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   // --- Thumbnail Auto-Zoom Logic (Mobile) ---
   const [activeThumbnailId, setActiveThumbnailId] = useState<string | null>(null);
   const rowObserver = useRef<IntersectionObserver | null>(null);
@@ -1957,9 +2038,8 @@ const InventoryControl = () => {
                 </PopoverContent>
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{chemicals.length} items</span>
-              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('chemical').toFixed(2)}</span>
+              <div className="sm:hidden">
+                {renderHeaderStats('chemical', true)}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
@@ -1984,9 +2064,8 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('chemical').toFixed(2)}</span>
+              <div className="hidden sm:inline">
+                {renderHeaderStats('chemical', false)}
               </div>
               {chemicals.some(c => c.currentStock < c.threshold) && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
@@ -2123,9 +2202,8 @@ const InventoryControl = () => {
                 </PopoverContent>
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{materials.length} items</span>
-              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('material').toFixed(2)}</span>
+              <div className="sm:hidden">
+                {renderHeaderStats('material', true)}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
@@ -2151,9 +2229,8 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('material').toFixed(2)}</span>
+              <div className="hidden sm:inline">
+                {renderHeaderStats('material', false)}
               </div>
               {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
@@ -2454,9 +2531,8 @@ const InventoryControl = () => {
                 </PopoverContent>
               </Popover>
               <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{tools.length} items</span>
-              <div className="sm:hidden bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50 whitespace-nowrap">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('tool').toFixed(2)}</span>
+              <div className="sm:hidden">
+                {renderHeaderStats('tool', true)}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
@@ -2482,9 +2558,8 @@ const InventoryControl = () => {
                   )}
                 </select>
               </div>
-              <div className="hidden sm:inline bg-zinc-800/50 px-2 py-0.5 rounded border border-zinc-700/50">
-                <span className="text-zinc-500 mr-1 italic uppercase text-[9px] tracking-tight">Value:</span>
-                <span className="text-green-400 font-mono text-[10px] font-bold">${calculateCategoryTotal('tool').toFixed(2)}</span>
+              <div className="hidden sm:inline">
+                {renderHeaderStats('tool', false)}
               </div>
               {expandedSections.tools ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </div>

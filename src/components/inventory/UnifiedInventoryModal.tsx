@@ -1455,26 +1455,50 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           />
                         </div>
                       </div>
-                      
-                      <div>
-                        <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
-                        <Input
-                          type="number"
-                          step="1"
-                          value={size.costPerBottle}
-                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                          onChange={(e) => {
-                            const newSizes = [...chemicalSizes];
-                            newSizes[index].costPerBottle = e.target.value;
-                            setChemicalSizes(newSizes);
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                        />
-                        <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
-                          <span>Total Value:</span>
-                          <span className="text-emerald-400 font-black">
-                            ${(numeric(size.costPerBottle) * numeric(size.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </span>
+                      <div className="col-span-2 grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Cost per Bottle</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={size.costPerBottle}
+                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                            onChange={(e) => {
+                              const newSizes = [...chemicalSizes];
+                              newSizes[index].costPerBottle = e.target.value;
+                              setChemicalSizes(newSizes);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                          <div className="mt-1 text-[10px] text-zinc-500 flex justify-between font-bold uppercase tracking-tight">
+                            <span>Total Value:</span>
+                            <span className="text-emerald-400 font-black">
+                              ${(numeric(size.costPerBottle) * numeric(size.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Actual Price (MSRP)</Label>
+                          <Input
+                            type="number"
+                            step="1"
+                            value={size.actualPrice || ""}
+                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                            onChange={(e) => {
+                              const newSizes = [...chemicalSizes];
+                              newSizes[index].actualPrice = e.target.value;
+                              setChemicalSizes(newSizes);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                          {numeric(size.actualPrice) > numeric(size.costPerBottle) && (
+                            <div className="mt-1 text-[10px] text-green-400 flex justify-between font-bold uppercase tracking-tight">
+                              <span>Saved:</span>
+                              <span className="font-black">
+                                +${((numeric(size.actualPrice) - numeric(size.costPerBottle)) * numeric(size.currentStock)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                   <div>

@@ -215,12 +215,12 @@ const CompanyBudget = () => {
         const invTotals = await getInventoryTotals();
 
         // Filter out [TAX] items and inventory-category items because we are adding the live inventory total separately
-        const inventoryCategories = ["Supplies", "Equipment", "Chemicals", "Inventory"];
+        const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory", "materials", "tools"];
         const manualExpenses = (expenses as Expense[]).filter(e => {
             const desc = (e.description || '').toUpperCase();
             const cat = (e.category || '').toLowerCase();
             const isTaxPrefix = desc.startsWith('[TAX]');
-            const isInventoryCategory = inventoryCategories.some(ic => cat === ic.toLowerCase());
+            const isInventoryCategory = inventoryCategories.includes(cat);
             return !isTaxPrefix && !isInventoryCategory;
         });
 
@@ -355,6 +355,7 @@ const CompanyBudget = () => {
             if (!filterByDate(expense.createdAt)) return;
             const cat = (expense.category || "Other Expenses");
             const displayCat = cat === 'Materials' ? 'Supplies' : (cat === 'Tools' ? 'Equipment' : cat);
+            if (['chemicals', 'supplies', 'equipment', 'inventory', 'materials', 'tools'].includes(displayCat.toLowerCase())) return;
             const current = categoryMap.get(displayCat) || { amount: 0, type: 'expense' as const };
             categoryMap.set(displayCat, { amount: current.amount + (expense.amount || 0), type: 'expense' });
         });
@@ -695,16 +696,19 @@ const CompanyBudget = () => {
         // Expense Targets
         const uniqueExpenseCats = [...DEFAULT_CATEGORIES.expense, ...customExpenseCategories];
         uniqueExpenseCats.forEach(cat => {
-            let actual = expenseList.filter(e => {
-                const d = new Date(e.createdAt);
-                const now = new Date();
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
-            }).reduce((sum, e) => sum + (e.amount || 0), 0);
-
-            if (inventoryTotalsData) {
-                if (cat === 'Chemicals') actual += inventoryTotalsData.chemicals;
-                if (cat === 'Supplies') actual += inventoryTotalsData.materials;
-                if (cat === 'Equipment') actual += inventoryTotalsData.tools;
+            let actual = 0;
+            if (cat === 'Chemicals') {
+                actual = inventoryTotalsData?.chemicals || 0;
+            } else if (cat === 'Supplies') {
+                actual = inventoryTotalsData?.materials || 0;
+            } else if (cat === 'Equipment') {
+                actual = inventoryTotalsData?.tools || 0;
+            } else {
+                actual = expenseList.filter(e => {
+                    const d = new Date(e.createdAt);
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
+                }).reduce((sum, e) => sum + (e.amount || 0), 0);
             }
 
             const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'expense');
@@ -1904,16 +1908,19 @@ const CompanyBudget = () => {
 
                                             {/* Expense Categories */}
                                             {[...DEFAULT_CATEGORIES.expense, ...customExpenseCategories].map(cat => {
-                                                let actual = expenseList.filter(e => {
-                                                    const d = new Date(e.createdAt);
-                                                    const now = new Date();
-                                                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
-                                                }).reduce((sum, e) => sum + (e.amount || 0), 0);
-
-                                                if (inventoryTotalsData) {
-                                                    if (cat === 'Chemicals') actual += inventoryTotalsData.chemicals;
-                                                    if (cat === 'Supplies') actual += inventoryTotalsData.materials;
-                                                    if (cat === 'Equipment') actual += inventoryTotalsData.tools;
+                                                let actual = 0;
+                                                if (cat === 'Chemicals') {
+                                                    actual = inventoryTotalsData?.chemicals || 0;
+                                                } else if (cat === 'Supplies') {
+                                                     actual = inventoryTotalsData?.materials || 0;
+                                                } else if (cat === 'Equipment') {
+                                                     actual = inventoryTotalsData?.tools || 0;
+                                                } else {
+                                                     actual = expenseList.filter(e => {
+                                                         const d = new Date(e.createdAt);
+                                                         const now = new Date();
+                                                         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && (e.category === cat);
+                                                     }).reduce((sum, e) => sum + (e.amount || 0), 0);
                                                 }
 
                                                 const targetObj = budgetTargets.find(t => t.category === cat && t.type === 'expense');
