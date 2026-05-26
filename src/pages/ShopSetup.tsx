@@ -471,7 +471,7 @@ const ShopSetup = () => {
 
         {/* Hero Header */}
         <div className="relative mb-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl overflow-hidden p-6 md:p-10">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1549890762-0a3f8933ad76?auto=format&fit=crop&q=80')] opacity-50 bg-cover bg-center" />
+          <div className="absolute inset-0 bg-[url('/shop.jpg')] opacity-50 bg-cover bg-[position:center_20%]" />
           
           <div className="relative z-10 flex flex-col items-center text-center lg:text-left lg:items-start lg:flex-row gap-6 md:gap-8">
             <div className="relative h-16 w-16 md:h-20 md:w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
