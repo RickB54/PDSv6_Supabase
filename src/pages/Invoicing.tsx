@@ -1415,7 +1415,7 @@ Precision. Protection. Perfection.`;
                                     <SelectValue placeholder="Select Coupon..." />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="">Select Coupon...</SelectItem>
+                                    
                                     {coupons.filter(c => c.active).map(c => (
                                       <SelectItem key={c.code} value={c.code}>
                                         {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
