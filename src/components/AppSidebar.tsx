@@ -433,8 +433,17 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
       return status === 'confirmed' || status === 'tentative' || status === 'pending' || status === 'in_progress' || status === 'in-progress';
     });
 
-    // Determine the badge simply from active bookings
-    let badgeCount = isDemoMode ? 3 : (activeBookings || []).length;
+    // Group active bookings by unique customer name and date (day part only) to prevent double badging
+    const uniqueActiveKeys = new Set(
+      activeBookings.map(b => {
+        const customerName = (b.customer || '').trim().toLowerCase();
+        const datePart = (b.date || '').split('T')[0];
+        return `${customerName}_${datePart}`;
+      }).filter(Boolean)
+    );
+
+    // Determine the badge simply from active unique customer days
+    let badgeCount = isDemoMode ? 3 : uniqueActiveKeys.size;
     let badgeColor: 'red' | 'blue' = (isDemoMode) ? 'red' : 'blue';
 
     return getMenuGroups({

@@ -211,16 +211,40 @@ export function dismissAlert(id: string): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   const next = list.filter(a => a.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+  try {
+    const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+    if (!dismissedIds.includes(id)) {
+      dismissedIds.push(id);
+      localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissedIds));
+    }
+  } catch (e) {
+    console.error("Failed to update dismissed_alert_ids:", e);
+  }
+
   syncToDB(next);
 }
 
 export function clearAllAlerts(): void {
+  const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  try {
+    const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+    list.forEach(a => {
+      if (!dismissedIds.includes(a.id)) {
+        dismissedIds.push(a.id);
+      }
+    });
+    localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissedIds));
+  } catch (e) {
+    console.error("Failed to update dismissed_alert_ids on clearAll:", e);
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
   syncToDB([]);
 }
 
 export function dismissAlertsForRecord(recordType: string, recordId: string): void {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  const dismissed: string[] = [];
   const next = list.filter(a => {
     const payload = a.payload || {};
     if (typeof payload !== 'object') return true;
@@ -228,8 +252,27 @@ export function dismissAlertsForRecord(recordType: string, recordId: string): vo
     const matchesBookingId = String(payload.bookingId || '') === String(recordId);
     const matchesArchiveId = String(payload.id || '') === String(recordId);
     const matchesType = !recordType || String(payload.recordType || '') === String(recordType);
-    return !(matchesType && (matchesRecordId || matchesBookingId || matchesArchiveId));
+    const shouldDismiss = matchesType && (matchesRecordId || matchesBookingId || matchesArchiveId);
+    if (shouldDismiss) {
+      dismissed.push(a.id);
+    }
+    return !shouldDismiss;
   });
+
+  if (dismissed.length > 0) {
+    try {
+      const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+      dismissed.forEach(id => {
+        if (!dismissedIds.includes(id)) {
+          dismissedIds.push(id);
+        }
+      });
+      localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissedIds));
+    } catch (e) {
+      console.error("Failed to update dismissed_alert_ids in dismissAlertsForRecord:", e);
+    }
+  }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   syncToDB(next);
 }
