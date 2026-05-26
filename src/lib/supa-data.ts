@@ -1175,7 +1175,9 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
             vehicleType: e.vehicle_type,
             packageId: e.package_id,
             addonIds: e.addon_ids || [],
-            discount: e.discount
+            discount: e.discount,
+            discountType: e.discount_type as ('percent' | 'amount' | undefined),
+            estimateDate: e.estimate_date
         }));
 
         // Merge Local Estimates (Offline or Legacy)

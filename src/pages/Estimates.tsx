@@ -536,13 +536,29 @@ const Estimates = () => {
             doc.setFontSize(10);
             doc.setTextColor(150, 150, 150);
             const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
-            const discountAmount = estimate.discountType === 'percent' 
+
+            // Self-healing: if discountType is missing (old records), back-calculate from saved total
+            let resolvedType = estimate.discountType;
+            if (!resolvedType && estimate.total != null && subtotal > 0) {
+                const asPercent = Math.round(subtotal * (1 - estimate.discount / 100) * 100) / 100;
+                const asAmount  = Math.round((subtotal - estimate.discount) * 100) / 100;
+                const savedTotal = Math.round(estimate.total * 100) / 100;
+                if (Math.abs(asPercent - savedTotal) < 0.02) {
+                    resolvedType = 'percent';
+                } else if (Math.abs(asAmount - savedTotal) < 0.02) {
+                    resolvedType = 'amount';
+                } else {
+                    resolvedType = 'percent'; // safest fallback for coupon discounts
+                }
+            }
+
+            const discountAmount = resolvedType === 'percent'
                 ? subtotal * (estimate.discount / 100)
                 : estimate.discount;
-            const discountLabel = estimate.discountType === 'percent'
+            const discountLabel = resolvedType === 'percent'
                 ? `Discount (${estimate.discount}%):`
                 : `Discount:`;
-            
+
             doc.text(discountLabel, 140, y);
             doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
             y += 12;
@@ -550,7 +566,7 @@ const Estimates = () => {
             doc.setTextColor(0, 0, 0);
         } else {
             // NO DISCOUNT: Remove the extra gap
-            y += 2; 
+            y += 2;
         }
 
         doc.setFont("helvetica", "bold");
