@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCouponsStore } from "@/store/coupons";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import {
   AlertDialog,
@@ -115,6 +116,13 @@ const Invoicing = () => {
   const [invoiceDiscount, setInvoiceDiscount] = useState<number>(0);
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<"percent" | "fixed">("percent");
   const [invoiceDiscountCode, setInvoiceDiscountCode] = useState<string>("");
+  const [invoiceDiscountMethod, setInvoiceDiscountMethod] = useState<"coupon" | "manual">("manual");
+  
+  const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
+  
+  useEffect(() => {
+    refreshCoupons();
+  }, [refreshCoupons]);
   const [editVehicle, setEditVehicle] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -289,9 +297,24 @@ const Invoicing = () => {
 
           // Auto-fill discount
           if (latestBooking.discountAmount > 0) {
-            setInvoiceDiscountType('fixed');
-            setInvoiceDiscount(latestBooking.discountAmount);
-            setInvoiceDiscountCode(latestBooking.discountCode || 'DISCOUNT');
+            const hasCoupon = latestBooking.discountCode && latestBooking.discountCode !== 'CUSTOM';
+            if (hasCoupon) {
+              setInvoiceDiscountMethod('coupon');
+              setInvoiceDiscountCode(latestBooking.discountCode);
+              const matched = coupons.find(c => c.code === latestBooking.discountCode.toUpperCase());
+              if (matched) {
+                setInvoiceDiscountType(matched.percent ? 'percent' : 'fixed');
+                setInvoiceDiscount(matched.percent || matched.amount || 0);
+              } else {
+                setInvoiceDiscountType('fixed');
+                setInvoiceDiscount(latestBooking.discountAmount);
+              }
+            } else {
+              setInvoiceDiscountMethod('manual');
+              setInvoiceDiscountType('fixed');
+              setInvoiceDiscount(latestBooking.discountAmount);
+              setInvoiceDiscountCode('CUSTOM');
+            }
             
             toast({
               title: "Discount Carried Over!",
@@ -1337,35 +1360,125 @@ Precision. Protection. Perfection.`;
                             )}
                           </div>
                           
-                          <div className="flex gap-2">
+                          <div className="grid grid-cols-3 gap-2">
                             <Select 
-                              value={invoiceDiscountType} 
-                              onValueChange={(val: 'percent' | 'fixed') => setInvoiceDiscountType(val)}
+                              value={invoiceDiscountMethod} 
+                              onValueChange={(val: 'coupon' | 'manual') => {
+                                setInvoiceDiscountMethod(val);
+                                if (val === 'coupon') {
+                                  const first = coupons.find(c => c.active)?.code || '';
+                                  setInvoiceDiscountCode(first);
+                                  const matched = coupons.find(c => c.code === first);
+                                  if (matched) {
+                                    setInvoiceDiscountType(matched.percent ? 'percent' : 'fixed');
+                                    setInvoiceDiscount(matched.percent || matched.amount || 0);
+                                  } else {
+                                    setInvoiceDiscountType('fixed');
+                                    setInvoiceDiscount(0);
+                                  }
+                                } else {
+                                  setInvoiceDiscountCode('CUSTOM');
+                                  setInvoiceDiscountType('fixed');
+                                  setInvoiceDiscount(0);
+                                }
+                              }}
                             >
-                              <SelectTrigger className="w-[110px] bg-zinc-900 border-zinc-800 text-xs">
+                              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-xs">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="percent">Percent (%)</SelectItem>
-                                <SelectItem value="fixed">Fixed ($)</SelectItem>
+                                <SelectItem value="coupon">Coupon Code</SelectItem>
+                                <SelectItem value="manual">Manual Amount</SelectItem>
                               </SelectContent>
                             </Select>
-                            
-                            <div className="relative flex-1">
-                              {invoiceDiscountType === 'fixed' && <span className="absolute left-3 top-2 text-zinc-500 text-sm">$</span>}
-                              <Input
-                                type="number"
-                                placeholder={invoiceDiscountType === 'percent' ? "e.g. 10" : "e.g. 25"}
-                                className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-sm ${invoiceDiscountType === 'fixed' ? 'pl-7' : ''}`}
-                                value={invoiceDiscount || ''}
-                                onChange={e => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  setInvoiceDiscount(val);
-                                  if (!invoiceDiscountCode) setInvoiceDiscountCode('MANUAL');
-                                }}
-                              />
-                              {invoiceDiscountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-sm">%</span>}
-                            </div>
+
+                            {invoiceDiscountMethod === 'coupon' ? (
+                              <div className="col-span-2 flex flex-col gap-2">
+                                <Select
+                                  value={(invoiceDiscountCode && coupons.some(c => c.code === invoiceDiscountCode)) ? invoiceDiscountCode : (invoiceDiscountCode ? 'CUSTOM_CODE' : '')}
+                                  onValueChange={(val) => {
+                                    if (val === 'CUSTOM_CODE') {
+                                      setInvoiceDiscountCode('CUSTOM');
+                                      setInvoiceDiscount(0);
+                                      setInvoiceDiscountType('fixed');
+                                    } else {
+                                      setInvoiceDiscountCode(val);
+                                      const matched = coupons.find(c => c.code === val);
+                                      if (matched) {
+                                        setInvoiceDiscountType(matched.percent ? 'percent' : 'fixed');
+                                        setInvoiceDiscount(matched.percent || matched.amount || 0);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-zinc-900 border-zinc-800 text-xs">
+                                    <SelectValue placeholder="Select Coupon..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="">Select Coupon...</SelectItem>
+                                    {coupons.filter(c => c.active).map(c => (
+                                      <SelectItem key={c.code} value={c.code}>
+                                        {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="CUSTOM_CODE">-- Enter Custom Code --</SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                {((invoiceDiscountCode && !coupons.some(c => c.code === invoiceDiscountCode)) || invoiceDiscountCode === 'CUSTOM') && (
+                                  <Input
+                                    type="text"
+                                    placeholder="Enter Custom Code..."
+                                    className="h-9 bg-zinc-900 border-zinc-800 text-zinc-200 uppercase text-xs"
+                                    value={invoiceDiscountCode === 'CUSTOM' ? '' : invoiceDiscountCode}
+                                    onChange={(e) => {
+                                      const codeVal = e.target.value.toUpperCase();
+                                      setInvoiceDiscountCode(codeVal);
+                                      const matched = coupons.find(c => c.code === codeVal);
+                                      if (matched) {
+                                        setInvoiceDiscountType(matched.percent ? 'percent' : 'fixed');
+                                        setInvoiceDiscount(matched.percent || matched.amount || 0);
+                                      } else {
+                                        setInvoiceDiscountType('fixed');
+                                        setInvoiceDiscount(0);
+                                      }
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="col-span-2 flex gap-2">
+                                <Select 
+                                  value={invoiceDiscountType} 
+                                  onValueChange={(val: 'percent' | 'fixed') => {
+                                    setInvoiceDiscountType(val);
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[100px] bg-zinc-900 border-zinc-800 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="percent">Percent (%)</SelectItem>
+                                    <SelectItem value="fixed">Fixed ($)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+
+                                <div className="relative flex-1">
+                                  {invoiceDiscountType === 'fixed' && <span className="absolute left-3 top-2 text-zinc-500 text-xs">$</span>}
+                                  <Input
+                                    type="number"
+                                    placeholder={invoiceDiscountType === 'percent' ? "e.g. 10" : "e.g. 25"}
+                                    className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-xs ${invoiceDiscountType === 'fixed' ? 'pl-7' : ''}`}
+                                    value={invoiceDiscount || ''}
+                                    onChange={e => {
+                                      const val = parseFloat(e.target.value) || 0;
+                                      setInvoiceDiscount(val);
+                                    }}
+                                  />
+                                  {invoiceDiscountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-xs">%</span>}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
 

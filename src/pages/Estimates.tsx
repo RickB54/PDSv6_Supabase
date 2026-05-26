@@ -40,6 +40,7 @@ import logo from "@/assets/pds-final-logo.png";
 import qrCode from "@/assets/review-qr.png";
 import { getCustomPackages } from "@/lib/servicesMeta";
 import { generateInvoiceNumber } from "@/lib/utils";
+import { useCouponsStore } from "@/store/coupons";
 
 interface Estimate {
     id?: string;
@@ -110,6 +111,13 @@ const Estimates = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [discount, setDiscount] = useState(0);
+    const [discountMethod, setDiscountMethod] = useState<"coupon" | "manual">("manual");
+    const [discountCode, setDiscountCode] = useState("");
+    const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
+    
+    useEffect(() => {
+        refreshCoupons();
+    }, [refreshCoupons]);
         const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
     const [editIsSent, setEditIsSent] = useState(false);
     const navigate = useNavigate();
@@ -736,8 +744,24 @@ const Estimates = () => {
 
                                           // Auto-fill discount
                                           if (latestBooking.discountAmount > 0) {
-                                            setDiscountType('amount');
-                                            setDiscount(latestBooking.discountAmount);
+                                            const hasCoupon = latestBooking.discountCode && latestBooking.discountCode !== 'CUSTOM';
+                                            if (hasCoupon) {
+                                              setDiscountMethod('coupon');
+                                              setDiscountCode(latestBooking.discountCode);
+                                              const matched = coupons.find(c => c.code === latestBooking.discountCode.toUpperCase());
+                                              if (matched) {
+                                                setDiscountType(matched.percent ? 'percent' : 'amount');
+                                                setDiscount(matched.percent || matched.amount || 0);
+                                              } else {
+                                                setDiscountType('amount');
+                                                setDiscount(latestBooking.discountAmount);
+                                              }
+                                            } else {
+                                              setDiscountMethod('manual');
+                                              setDiscountType('amount');
+                                              setDiscount(latestBooking.discountAmount);
+                                              setDiscountCode('CUSTOM');
+                                            }
                                             
                                             toast({
                                               title: "Discount Carried Over!",
@@ -830,24 +854,121 @@ const Estimates = () => {
                              <div className="grid grid-cols-2 gap-4">
                                  <div>
                                      <Label className="text-zinc-400">Discount</Label>
-                                     <div className="flex items-center gap-2 mt-1">
-                                         <Select value={discountType} onValueChange={(val: any) => setDiscountType(val)}>
-                                             <SelectTrigger className="w-24 bg-zinc-950 border-zinc-800">
-                                                 <SelectValue />
-                                             </SelectTrigger>
-                                             <SelectContent>
-                                                 <SelectItem value="percent">%</SelectItem>
-                                                 <SelectItem value="amount">$</SelectItem>
-                                             </SelectContent>
-                                         </Select>
-                                         <Input 
-                                             type="number" 
-                                             value={discount} 
-                                             onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
-                                             className="bg-zinc-950 border-zinc-800" 
-                                             placeholder="0"
-                                         />
-                                     </div>
+                                      <div className="flex flex-col gap-2 mt-1">
+                                          <div className="flex gap-2">
+                                              <Select 
+                                                  value={discountMethod} 
+                                                  onValueChange={(val) => {
+                                                      setDiscountMethod(val);
+                                                      if (val === 'coupon') {
+                                                          const first = coupons.find(c => c.active)?.code || '';
+                                                          setDiscountCode(first);
+                                                          const matched = coupons.find(c => c.code === first);
+                                                          if (matched) {
+                                                              setDiscountType(matched.percent ? 'percent' : 'amount');
+                                                              setDiscount(matched.percent || matched.amount || 0);
+                                                          } else {
+                                                              setDiscountType('amount');
+                                                              setDiscount(0);
+                                                          }
+                                                      } else {
+                                                          setDiscountCode('CUSTOM');
+                                                          setDiscountType('amount');
+                                                          setDiscount(0);
+                                                      }
+                                                  }}
+                                              >
+                                                  <SelectTrigger className="w-[120px] bg-zinc-950 border-zinc-800 text-xs">
+                                                      <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      <SelectItem value="coupon">Coupon Code</SelectItem>
+                                                      <SelectItem value="manual">Manual Amount</SelectItem>
+                                                  </SelectContent>
+                                              </Select>
+
+                                              {discountMethod === 'coupon' ? (
+                                                  <div className="flex-1 flex flex-col gap-2">
+                                                      <Select
+                                                          value={(discountCode && coupons.some(c => c.code === discountCode)) ? discountCode : (discountCode ? 'CUSTOM_CODE' : '')}
+                                                          onValueChange={(val) => {
+                                                              if (val === 'CUSTOM_CODE') {
+                                                                  setDiscountCode('CUSTOM');
+                                                                  setDiscount(0);
+                                                                  setDiscountType('amount');
+                                                              } else {
+                                                                  setDiscountCode(val);
+                                                                  const matched = coupons.find(c => c.code === val);
+                                                                  if (matched) {
+                                                                      setDiscountType(matched.percent ? 'percent' : 'amount');
+                                                                      setDiscount(matched.percent || matched.amount || 0);
+                                                                  }
+                                                              }
+                                                          }}
+                                                      >
+                                                          <SelectTrigger className="bg-zinc-950 border-zinc-800 text-xs">
+                                                              <SelectValue placeholder="Select Coupon..." />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                              <SelectItem value="">Select Coupon...</SelectItem>
+                                                              {coupons.filter(c => c.active).map(c => (
+                                                                  <SelectItem key={c.code} value={c.code}>
+                                                                      {c.code} ({c.percent ? `${c.percent}% Off` : `${c.amount} Off`})
+                                                                  </SelectItem>
+                                                              ))}
+                                                              <SelectItem value="CUSTOM_CODE">-- Enter Custom Code --</SelectItem>
+                                                          </SelectContent>
+                                                      </Select>
+
+                                                      {((discountCode && !coupons.some(c => c.code === discountCode)) || discountCode === 'CUSTOM') && (
+                                                          <Input
+                                                              type="text"
+                                                              placeholder="Enter Custom Code..."
+                                                              className="h-9 bg-zinc-950 border-zinc-800 text-zinc-200 uppercase text-xs"
+                                                              value={discountCode === 'CUSTOM' ? '' : discountCode}
+                                                              onChange={(e) => {
+                                                                  const codeVal = e.target.value.toUpperCase();
+                                                                  setDiscountCode(codeVal);
+                                                                  const matched = coupons.find(c => c.code === codeVal);
+                                                                  if (matched) {
+                                                                      setDiscountType(matched.percent ? 'percent' : 'amount');
+                                                                      setDiscount(matched.percent || matched.amount || 0);
+                                                                  } else {
+                                                                      setDiscountType('amount');
+                                                                      setDiscount(0);
+                                                                  }
+                                                              }}
+                                                          />
+                                                      )}
+                                                  </div>
+                                              ) : (
+                                                  <div className="flex-1 flex gap-2">
+                                                      <Select 
+                                                          value={discountType} 
+                                                          onValueChange={(val) => {
+                                                              setDiscountType(val);
+                                                          }}
+                                                      >
+                                                          <SelectTrigger className="w-16 bg-zinc-950 border-zinc-800 text-xs">
+                                                              <SelectValue />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                              <SelectItem value="percent">%</SelectItem>
+                                                              <SelectItem value="amount">$</SelectItem>
+                                                          </SelectContent>
+                                                      </Select>
+
+                                                      <Input 
+                                                          type="number" 
+                                                          value={discount} 
+                                                          onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} 
+                                                          className="bg-zinc-950 border-zinc-800 text-xs flex-1" 
+                                                          placeholder="0"
+                                                      />
+                                                  </div>
+                                              )}
+                                          </div>
+                                      </div>
                                  </div>
                                  <div>
                                      <Label className="text-zinc-400">Estimate Date</Label>
