@@ -38,6 +38,8 @@ export interface CalendarEvent {
     reminderFrequency?: number;
     vehicleId?: string;
     customerId?: string;
+    discountCode?: string;
+    discountAmount?: number;
 }
 
 /**
@@ -81,7 +83,9 @@ export async function getUnifiedCalendarEvents(
                 hasReminder: booking.hasReminder,
                 reminderFrequency: booking.reminderFrequency,
                 vehicleId: booking.vehicleId,
-                customerId: booking.customerId
+                customerId: booking.customerId,
+                discountCode: booking.discountCode,
+                discountAmount: booking.discountAmount
             });
         }
     });
