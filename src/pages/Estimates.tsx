@@ -118,6 +118,19 @@ const Estimates = () => {
     useEffect(() => {
         refreshCoupons();
     }, [refreshCoupons]);
+
+    const [currentEstimateNumber, setCurrentEstimateNumber] = useState<number>(0);
+
+    useEffect(() => {
+        if (showCreateForm) {
+            if (editingEstimateId) {
+                const est = estimates.find(e => e.id === editingEstimateId);
+                setCurrentEstimateNumber(est?.estimateNumber || generateInvoiceNumber());
+            } else {
+                setCurrentEstimateNumber(generateInvoiceNumber());
+            }
+        }
+    }, [showCreateForm, editingEstimateId, estimates]);
         const [discountType, setDiscountType] = useState<"percent" | "amount">("percent");
     const [editIsSent, setEditIsSent] = useState(false);
     const navigate = useNavigate();
@@ -311,7 +324,7 @@ const Estimates = () => {
 
             const estimateData: any = {
                 id: editingEstimateId || undefined,
-                estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : generateInvoiceNumber(),
+                estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
                 customerId: selectedCustomer,
                 customerName: customer.name,
                 vehicle: vehicleStr,
@@ -1093,7 +1106,7 @@ const Estimates = () => {
                                                 : "Current Vehicle";
 
                                         const tempEst: Estimate = {
-                                            estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : 9999,
+                                            estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
                                             customerId: selectedCustomer,
                                                                                         customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Customer",
                                             vehicle: vehicleStr,

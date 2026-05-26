@@ -1448,6 +1448,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             let discount = i.discount || null;
             let isSent = false;
             let sentDate = "";
+            let serviceDate = "";
             
             const filteredServices = (i.services || []).filter((s: any) => {
               if (!s || !s.name) return true;
@@ -1473,6 +1474,10 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
                 sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
                 return false;
               }
+              if (s.name.startsWith("VIRTUAL_SERVICE_DATE:")) {
+                serviceDate = s.name.replace("VIRTUAL_SERVICE_DATE:", "").trim();
+                return false;
+              }
               return true;
             });
 
@@ -1483,6 +1488,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
               customerName: i.customers?.full_name || i.customerName || "Unknown",
               vehicle: vehicle || "Unknown Vehicle",
               date: i.date || i.created_at?.split('T')[0],
+              serviceDate: serviceDate || i.date || i.created_at?.split('T')[0],
               total: i.total || 0,
               services: filteredServices,
               paymentStatus: i.status || "unpaid",
@@ -1531,6 +1537,7 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     if (invoice.discount) virtualServices.push({ name: `VIRTUAL_DISCOUNT:${JSON.stringify(invoice.discount)}`, price: 0 });
     if (invoice.isSent !== undefined) virtualServices.push({ name: `VIRTUAL_SENT:${invoice.isSent}`, price: 0 });
     if (invoice.sentDate) virtualServices.push({ name: `VIRTUAL_SENT_DATE:${invoice.sentDate}`, price: 0 });
+    if (invoice.serviceDate) virtualServices.push({ name: `VIRTUAL_SERVICE_DATE:${invoice.serviceDate}`, price: 0 });
 
     const payload = {
         total: invoice.total,

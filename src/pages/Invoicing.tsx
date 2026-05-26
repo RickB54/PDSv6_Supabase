@@ -65,6 +65,7 @@ interface Invoice {
   services: { name: string; price: number }[];
   total: number;
   date: string;
+  serviceDate?: string;
   createdAt?: string;
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
   paidAmount?: number;
@@ -117,12 +118,27 @@ const Invoicing = () => {
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<"percent" | "fixed">("percent");
   const [invoiceDiscountCode, setInvoiceDiscountCode] = useState<string>("");
   const [invoiceDiscountMethod, setInvoiceDiscountMethod] = useState<"coupon" | "manual">("manual");
+  const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<number>(0);
+  const [serviceDate, setServiceDate] = useState<string>("");
   
   const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
   
   useEffect(() => {
     refreshCoupons();
   }, [refreshCoupons]);
+
+  useEffect(() => {
+    if (showCreateForm) {
+      if (isEditingInvoice && selectedInvoice) {
+        setCurrentInvoiceNumber(selectedInvoice.invoiceNumber || generateInvoiceNumber());
+        setServiceDate(selectedInvoice.serviceDate || selectedInvoice.date || new Date().toISOString().split('T')[0]);
+      } else {
+        setCurrentInvoiceNumber(generateInvoiceNumber());
+        setServiceDate(new Date().toISOString().split('T')[0]);
+      }
+    }
+  }, [showCreateForm, isEditingInvoice, selectedInvoice]);
+
   const [editVehicle, setEditVehicle] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -392,13 +408,14 @@ const Invoicing = () => {
         : invoiceDiscount;
 
       const invoice: Invoice = {
-        invoiceNumber: generateInvoiceNumber(),
+        invoiceNumber: currentInvoiceNumber || generateInvoiceNumber(),
         customerId: crmCustomer.id!,
         customerName: crmCustomer.full_name || customer.name,
         vehicle: vehicleDesc.trim() || "Unknown Vehicle",
         services,
         total: calculateTotal(),
         date: new Date().toLocaleDateString(),
+        serviceDate: serviceDate || new Date().toISOString().split('T')[0],
         createdAt: new Date().toISOString(),
         paymentStatus: calculateTotal() === 0 ? "paid" : "unpaid",
         paidAmount: 0,
@@ -684,8 +701,25 @@ const Invoicing = () => {
 
     const contentStartY = 45;
     doc.setFontSize(10);
-    doc.text(`Service Date: ${invoice.date}`, 20, contentStartY);
-    doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, 20, contentStartY + 6);
+    
+    let displayServiceDate = invoice.serviceDate || invoice.date;
+    if (displayServiceDate && displayServiceDate.includes('-')) {
+      const parts = displayServiceDate.split('-');
+      if (parts.length === 3) {
+        displayServiceDate = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+      }
+    }
+    
+    let displayInvoiceDate = invoice.date || new Date().toLocaleDateString();
+    if (displayInvoiceDate && displayInvoiceDate.includes('-')) {
+      const parts = displayInvoiceDate.split('-');
+      if (parts.length === 3) {
+        displayInvoiceDate = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0]}`;
+      }
+    }
+
+    doc.text(`Service Date: ${displayServiceDate}`, 20, contentStartY);
+    doc.text(`Invoice Date: ${displayInvoiceDate}`, 20, contentStartY + 6);
     
     // Move Customer and Vehicle to the right side
     doc.setFont("helvetica", "bold");
@@ -1181,6 +1215,16 @@ Precision. Protection. Perfection.`;
                 </div>
 
                 <div className="space-y-2">
+                  <Label className="text-zinc-400">Service Date</Label>
+                  <Input 
+                    type="date"
+                    value={serviceDate}
+                    onChange={(e) => setServiceDate(e.target.value)}
+                    className="bg-zinc-950 border-zinc-800 text-zinc-200 [color-scheme:dark]"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-zinc-400">Vehicle Selection</Label>
                   {(() => {
                     const cust = customers.find(c => c.id === selectedCustomer);
@@ -1522,13 +1566,14 @@ Precision. Protection. Perfection.`;
                           : invoiceDiscount;
 
                         const tempInv: Invoice = {
-                          invoiceNumber: 9999,
+                          invoiceNumber: currentInvoiceNumber || generateInvoiceNumber(),
                           customerId: selectedCustomer,
                           customerName: customers.find(c => c.id === selectedCustomer)?.name || "Valued Customer",
                           vehicle: customVehicle || "Current Vehicle",
                           services,
                           total: calculateTotal(),
                           date: new Date().toLocaleDateString(),
+                          serviceDate: serviceDate || new Date().toISOString().split('T')[0],
                           notes: customNotes,
                           discount: finalDiscountAmount > 0 ? {
                             type: invoiceDiscountType === 'percent' ? 'percent' : 'fixed',
