@@ -41,6 +41,8 @@ export interface Booking {
   vehicleId?: string;
   source?: string;
   last_email_sent_at?: string;
+  discountCode?: string;
+  discountAmount?: number;
 }
 
 const STORAGE_KEY = "bookings";

@@ -664,8 +664,10 @@ const Estimates = () => {
                         <div className="space-y-4">
                             <div>
                                  <Label className="text-zinc-400">Customer</Label>
-                                 <Select value={selectedCustomer} onValueChange={(val) => {
+                                 <Select value={selectedCustomer} onValueChange={async (val) => {
                                      setSelectedCustomer(val);
+                                      setDiscount(0);
+                                      setDiscountType("percent");
                                      const cust = customers.find(c => c.id === val);
                                      if (cust && cust.vehicles && cust.vehicles.length === 1) {
                                          const v = cust.vehicles[0];
@@ -688,7 +690,64 @@ const Estimates = () => {
                                         else setSelectedVehicleType('midsize');
                                      } else {
                                          setSelectedVehicleId("");
-                                     }
+                                      }
+
+                                      // Auto-carry booking details (services, vehicle, discount)
+                                      try {
+                                        const { data: bookings, error } = await supabase
+                                          .from('bookings')
+                                          .select('*')
+                                          .eq('customerId', val)
+                                          .order('date', { ascending: false })
+                                          .limit(1);
+
+                                        if (!error && bookings && bookings.length > 0) {
+                                          const latestBooking = bookings[0];
+                                          
+                                          // Auto-populate package and services
+                                          if (latestBooking.title) {
+                                            const finalVType = (latestBooking.vehicle || 'midsize').toLowerCase().includes('compact') ? 'compact' : 
+                                                              (latestBooking.vehicle || 'midsize').toLowerCase().includes('luxury') ? 'luxury' :
+                                                              ((latestBooking.vehicle || 'midsize').toLowerCase().includes('truck') || (latestBooking.vehicle || 'midsize').toLowerCase().includes('suv')) ? 'truck' : 'midsize';
+                                            
+                                            setSelectedVehicleType(finalVType as any);
+                                            
+                                            // Find matched package
+                                            const { getCustomPackages } = await import('@/lib/servicesMeta');
+                                            const pkg = servicePackages.find(p => p.name === latestBooking.title) || getCustomPackages().find(p => p.name === latestBooking.title);
+                                            if (pkg) setSelectedPackage(pkg.id);
+                                            
+                                            let bPrice = pkg ? (pkg.pricing[finalVType] || pkg.basePrice) : 150;
+                                            const bServices = [{ name: latestBooking.title, price: bPrice }];
+                                            
+                                            // Addons
+                                            if (latestBooking.addons && Array.isArray(latestBooking.addons)) {
+                                              const bAddonIds: string[] = [];
+                                              latestBooking.addons.forEach((addonName: string) => {
+                                                const addon = addOns.find(a => a.name === addonName);
+                                                if (addon) bAddonIds.push(addon.id);
+                                                const addonPrice = addon ? (addon.pricing?.[finalVType] || addon.basePrice) : 30;
+                                                bServices.push({ name: addonName, price: addonPrice });
+                                              });
+                                              setSelectedAddons(bAddonIds);
+                                            }
+                                            setServices(bServices);
+                                          }
+
+                                          // Auto-fill discount
+                                          if (latestBooking.discountAmount > 0) {
+                                            setDiscountType('amount');
+                                            setDiscount(latestBooking.discountAmount);
+                                            
+                                            toast({
+                                              title: "Discount Carried Over!",
+                                              description: `Applied latest booking's discount: -$${latestBooking.discountAmount.toFixed(2)} (${latestBooking.discountCode || 'CUSTOM'})`
+                                            });
+                                          }
+                                        }
+                                      } catch (err) {
+                                        console.warn("Failed to automatically carry over booking details:", err);
+                                      }
                                  }}>
                                      <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1"><SelectValue placeholder="Select Customer" /></SelectTrigger>
                                      <SelectContent>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye } from "lucide-react"; // Added LayoutGrid
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye, Tag, DollarSign } from "lucide-react"; // Added LayoutGrid
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 import { Save, LogOut } from "lucide-react";
 import { useBookingsStore, type Booking } from "@/store/bookings";
+import { useCouponsStore } from "@/store/coupons";
 import type { BookingStatus } from "@/store/bookings";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
@@ -75,6 +76,7 @@ const mapToServiceVehicleType = (type: string = ""): VehicleType => {
 export default function BookingsPage() {
   const navigate = useNavigate();
   const { items, add, update, remove, refresh, subscribeRealtime } = useBookingsStore();
+  const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
@@ -109,11 +111,12 @@ export default function BookingsPage() {
   // Sync latest data on mount and subscribe to realtime updates
   useEffect(() => {
     refresh();
+    refreshCoupons();
     const unsubscribe = subscribeRealtime();
     return () => {
       unsubscribe();
     };
-  }, [refresh, subscribeRealtime]);
+  }, [refresh, refreshCoupons, subscribeRealtime]);
 
   // Form State
   const { isDemoMode } = useDemoMode();
@@ -140,7 +143,10 @@ export default function BookingsPage() {
     hasReminder: false,
     reminderFrequency: "3",
     status: (getCurrentUser()?.role === 'admin' ? 'confirmed' : 'tentative') as BookingStatus,
-    vehicleId: undefined as string | undefined
+    vehicleId: undefined as string | undefined,
+    discountType: "coupon" as "coupon" | "custom",
+    discountCode: "",
+    customDiscount: ""
   });
 
   const [cancelReason, setCancelReason] = useState("");
@@ -387,6 +393,12 @@ export default function BookingsPage() {
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
   const allAddons = useMemo(() => [...addOns, ...getCustomAddOns()], []);
 
+  const matchedCoupon = useMemo(() => {
+    if (formData.discountType !== 'coupon' || !formData.discountCode) return null;
+    const code = formData.discountCode.trim().toUpperCase();
+    return coupons.find(c => c.code === code && c.active);
+  }, [formData.discountCode, formData.discountType, coupons]);
+
   const liveTotal = useMemo(() => {
     let total = 0;
     const vType = mapToServiceVehicleType(formData.vehicle);
@@ -404,8 +416,21 @@ export default function BookingsPage() {
         }
       });
     }
+
+    if (formData.discountType === 'custom' && formData.customDiscount) {
+      const customVal = Number(formData.customDiscount);
+      if (!isNaN(customVal) && customVal > 0) {
+        total = Math.max(0, total - customVal);
+      }
+    } else if (formData.discountType === 'coupon' && matchedCoupon) {
+      if (matchedCoupon.percent) {
+        total = Math.max(0, total * (1 - matchedCoupon.percent / 100));
+      } else if (matchedCoupon.amount) {
+        total = Math.max(0, total - matchedCoupon.amount);
+      }
+    }
     return total;
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons]);
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon]);
 
   const getEventPrice = useCallback((event: any) => {
     if (event.type !== 'booking') return 0;
@@ -427,7 +452,10 @@ export default function BookingsPage() {
         total += getAddOnPrice(addonDef.id, vType);
       }
     });
-    
+
+    if (booking.discountAmount) {
+      total = Math.max(0, total - booking.discountAmount);
+    }
     return total;
   }, [items, allServices, allAddons]);
 
@@ -702,7 +730,10 @@ export default function BookingsPage() {
             hasReminder: booking.hasReminder || false,
             reminderFrequency: booking.reminderFrequency?.toString() || "3",
             status: booking.status || "confirmed",
-            vehicleId: booking.vehicleId
+            vehicleId: booking.vehicleId,
+            discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
+            discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
+            customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -891,6 +922,7 @@ export default function BookingsPage() {
     setSelectedDate(day);
     setSelectedBooking(null);
     setSelectedCustomer(null);
+    const defaultCoupon = coupons.find(c => c.active)?.code || "";
     setFormData({
       customerId: undefined,
       customer: "",
@@ -912,7 +944,10 @@ export default function BookingsPage() {
       hasReminder: false,
       reminderFrequency: "3",
       status: (getCurrentUser()?.role === 'admin' ? 'confirmed' : 'tentative') as BookingStatus,
-      vehicleId: undefined
+      vehicleId: undefined,
+      discountType: "coupon",
+      discountCode: defaultCoupon,
+      customDiscount: ""
     });
     setIsAddModalOpen(true);
   };
@@ -968,7 +1003,10 @@ export default function BookingsPage() {
       hasReminder: booking.hasReminder || false,
       reminderFrequency: booking.reminderFrequency?.toString() || "3",
       status: booking.status || "confirmed",
-      vehicleId: booking.vehicleId
+      vehicleId: booking.vehicleId,
+      discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
+      discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
+      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
     });
     
     if (booking.date) {
@@ -1159,8 +1197,6 @@ export default function BookingsPage() {
       const [endHours, endMinutes] = endTimeStr.split(":").map(Number);
       const endDate = new Date(dateBase);
       endDate.setHours(isNaN(endHours) ? 17 : endHours, isNaN(endMinutes) ? 0 : endMinutes, 0, 0);
-
-      // 3. Final Price Verification (ensure latest vehicle type is used)
       let calculatedPrice = 0;
       const finalVType = mapToServiceVehicleType(formData.vehicle);
       const pkg = allServices.find(s => s.name === formData.service);
@@ -1176,9 +1212,30 @@ export default function BookingsPage() {
           }
         });
       }
-
+ 
+      // Apply discount to calculatedPrice if matched or manual
+      let discountAmount = 0;
+      let finalDiscountCode = "";
+      
+      if (formData.discountType === 'custom' && formData.customDiscount) {
+        const customVal = Number(formData.customDiscount);
+        if (!isNaN(customVal) && customVal > 0) {
+          discountAmount = customVal;
+          finalDiscountCode = "CUSTOM";
+        }
+      } else if (formData.discountType === 'coupon' && matchedCoupon) {
+        finalDiscountCode = matchedCoupon.code;
+        if (matchedCoupon.percent) {
+          discountAmount = calculatedPrice * (matchedCoupon.percent / 100);
+        } else if (matchedCoupon.amount) {
+          discountAmount = matchedCoupon.amount;
+        }
+      }
+      
+      calculatedPrice = Math.max(0, calculatedPrice - discountAmount);
+ 
       let resultingBooking: any;
-
+ 
       if (selectedBooking) {
         // Update
         const updates: Partial<Booking> = {
@@ -1203,12 +1260,14 @@ export default function BookingsPage() {
           customerId: finalCustomerId,
           customerEmail: formData.email,
           customerPhone: formData.phone,
-          price: calculatedPrice
+          price: calculatedPrice,
+          discountCode: finalDiscountCode,
+          discountAmount: discountAmount
         };
         
         await update(selectedBooking.id, updates);
         resultingBooking = { ...selectedBooking, ...updates };
-
+ 
         // Notify Admin if Employee
         const currentUser = getCurrentUser();
         if (currentUser?.role === 'employee') {
@@ -1244,7 +1303,9 @@ export default function BookingsPage() {
           customerEmail: formData.email,
           customerPhone: formData.phone,
           price: calculatedPrice,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          discountCode: finalDiscountCode,
+          discountAmount: discountAmount
         };
         
         await add(newBooking as any);
@@ -1321,7 +1382,10 @@ export default function BookingsPage() {
           hasReminder: false,
           reminderFrequency: "6",
           status: "confirmed",
-          vehicleId: undefined
+          vehicleId: undefined,
+          discountType: "coupon",
+          discountCode: "",
+          customDiscount: ""
         });
       }, 300);
 
@@ -1385,7 +1449,10 @@ export default function BookingsPage() {
       hasReminder: false,
       reminderFrequency: "3",
       status: booking.status || "confirmed",
-      vehicleId: booking.vehicleId
+      vehicleId: booking.vehicleId,
+      discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
+      discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
+      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
     });
 
     // Reset validation/selection states for "New" mode
@@ -2220,6 +2287,15 @@ export default function BookingsPage() {
                       <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
                         ${liveTotal.toFixed(2)}
                       </div>
+                      {formData.discountType === 'custom' && formData.customDiscount ? (
+                        <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                          -${Number(formData.customDiscount).toFixed(2)} Manual Disc.
+                        </div>
+                      ) : matchedCoupon ? (
+                        <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                          -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
+                        </div>
+                      ) : null}
                       <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">
                         Live Estimate
                       </div>
@@ -2508,6 +2584,82 @@ export default function BookingsPage() {
                       <option value="in_progress">🔄 In Progress</option>
                       <option value="done">✅ Done</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Discount Option */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-amber-400">Discount</label>
+                  <div className="col-span-3 grid grid-cols-3 gap-2">
+                    <select
+                      className="flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                      value={formData.discountType || 'coupon'}
+                      onChange={(e) => setFormData({ ...formData, discountType: e.target.value as any })}
+                    >
+                      <option value="coupon">Coupon Code</option>
+                      <option value="custom">Manual Amount ($)</option>
+                    </select>
+                    
+                    {formData.discountType === 'custom' ? (
+                      <div className="col-span-2 relative">
+                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
+                        <Input
+                          type="number"
+                          placeholder="Amount e.g. 25"
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-amber-500/30"
+                          value={formData.customDiscount || ''}
+                          onChange={(e) => setFormData({ ...formData, customDiscount: e.target.value })}
+                        />
+                      </div>
+                    ) : (
+                      <div className="col-span-2 flex flex-col gap-2">
+                        <div className="relative">
+                          <Tag className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
+                          <select
+                            className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500 appearance-none cursor-pointer"
+                            value={(formData.discountCode && coupons.some(c => c.code === formData.discountCode)) ? formData.discountCode : (formData.discountCode ? 'CUSTOM_CODE' : '')}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'CUSTOM_CODE') {
+                                setFormData({ ...formData, discountCode: 'CUSTOM' });
+                              } else {
+                                setFormData({ ...formData, discountCode: val });
+                              }
+                            }}
+                          >
+                            <option value="">Select Coupon...</option>
+                            {coupons.filter(c => c.active).map(c => (
+                              <option key={c.code} value={c.code} className="bg-zinc-900 text-white">
+                                {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
+                              </option>
+                            ))}
+                            <option value="CUSTOM_CODE" className="bg-zinc-900 text-yellow-500 font-bold">-- Enter Custom Code --</option>
+                          </select>
+                          <div className="absolute right-3 top-3 pointer-events-none text-zinc-500 text-xs font-mono">▼</div>
+                        </div>
+                        {((formData.discountCode && !coupons.some(c => c.code === formData.discountCode)) || formData.discountCode === 'CUSTOM') && (
+                          <div className="relative animate-in slide-in-from-top-1 duration-150">
+                            <Input
+                              placeholder="ENTER CODE"
+                              className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 font-mono uppercase focus:border-amber-500/30"
+                              value={formData.discountCode === 'CUSTOM' ? '' : formData.discountCode}
+                              onChange={(e) => setFormData({ ...formData, discountCode: e.target.value.toUpperCase() })}
+                            />
+                            {formData.discountCode && !matchedCoupon && (
+                              <span className="absolute right-3 top-3 text-[10px] text-red-500 font-bold uppercase">Not Found</span>
+                            )}
+                            {formData.discountCode && matchedCoupon && (
+                              <span className="absolute right-3 top-3 text-[10px] text-green-500 font-bold uppercase">Applied!</span>
+                            )}
+                          </div>
+                        )}
+                        {formData.discountCode && coupons.some(c => c.code === formData.discountCode) && matchedCoupon && (
+                          <div className="text-[10px] text-green-500 font-bold uppercase tracking-wider pl-1">
+                            ✓ {matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} discount applied from coupon: {matchedCoupon.code}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -3401,6 +3553,9 @@ export default function BookingsPage() {
                                                 const svc = allServices.find(s => s.name === svcName || s.id === svcName);
                                                 const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
                                                 const total = getEventPrice(event);
+                                                const bookingItem = items.find(i => i.id === event.id) || event;
+                                                const discCode = bookingItem.discountCode;
+                                                const discAmt = Number(bookingItem.discountAmount || 0);
                                                 return (
                                                   <div className="flex flex-wrap gap-1 items-center">
                                                     <Badge variant="outline" className="text-[10px] font-black uppercase text-green-400 bg-green-500/10 border-green-500/20 px-1.5 py-0 h-4">
@@ -3409,6 +3564,11 @@ export default function BookingsPage() {
                                                     <Badge variant="outline" className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-800/40 border-zinc-700/50 px-1.5 py-0 h-4">
                                                       Service: ${basePrice}
                                                     </Badge>
+                                                    {discAmt > 0 && (
+                                                      <Badge variant="outline" className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border-amber-500/20 px-1.5 py-0 h-4">
+                                                        Discount: -${discAmt.toFixed(2)} {discCode ? `(${discCode})` : ''}
+                                                      </Badge>
+                                                    )}
                                                   </div>
                                                 );
                                               })()}

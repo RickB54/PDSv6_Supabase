@@ -2272,7 +2272,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 notes: b.notes || b.customers?.notes || meta.notes || '',
                 customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
                 isArchived: b.is_archived || meta.is_archived || false,
-                source: b.source_origin || meta.source_origin || b.source || 'Manual Entry'
+                source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
+                discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
+                discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0)
             };
         });
     } catch (err) {
@@ -2280,7 +2282,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
         return [];
     }
 };
-
+ 
 export const upsertSupabaseBooking = async (booking: any) => {
     if (isDemoActive()) return { ...booking, id: booking.id || `demo_b_${Date.now()}` };
     try {
@@ -2304,7 +2306,9 @@ export const upsertSupabaseBooking = async (booking: any) => {
               type: booking.vehicle || booking.type,
               color: booking.vehicleColor || booking.color || (booking.booking_vehicle?.color) || '',
               reminder_frequency: booking.reminderFrequency,
-              custom_reminder_date: booking.customReminderDate
+              custom_reminder_date: booking.customReminderDate,
+              discountCode: booking.discountCode || '',
+              discountAmount: Number(booking.discountAmount || 0)
             },
             end_time: booking.endTime || booking.end_time || null,
             is_archived: booking.isArchived || false,

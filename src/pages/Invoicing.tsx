@@ -112,6 +112,9 @@ const Invoicing = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [customVehicle, setCustomVehicle] = useState("");
+  const [invoiceDiscount, setInvoiceDiscount] = useState<number>(0);
+  const [invoiceDiscountType, setInvoiceDiscountType] = useState<"percent" | "fixed">("percent");
+  const [invoiceDiscountCode, setInvoiceDiscountCode] = useState<string>("");
   const [editVehicle, setEditVehicle] = useState("");
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
@@ -219,16 +222,86 @@ const Invoicing = () => {
     setServices(services.filter((_, i) => i !== index));
   };
 
-  const calculateTotal = () => services.reduce((sum, s) => sum + s.price, 0);
+  const calculateSubtotal = () => services.reduce((sum, s) => sum + s.price, 0);
 
-  const handleCustomerChange = (cid: string) => {
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    if (invoiceDiscountType === 'percent') {
+      return Math.max(0, subtotal * (1 - (invoiceDiscount / 100)));
+    } else {
+      return Math.max(0, subtotal - invoiceDiscount);
+    }
+  };
+
+  const handleCustomerChange = async (cid: string) => {
     setSelectedCustomer(cid);
+    // Reset discount states upon customer change first
+    setInvoiceDiscount(0);
+    setInvoiceDiscountType('percent');
+    setInvoiceDiscountCode('');
+    
     const c = customers.find(x => x.id === cid);
     if (c) {
       const primaryVehicle = c.vehicles && c.vehicles.length > 0 
         ? `${c.vehicles[0].year || ''} ${c.vehicles[0].make} ${c.vehicles[0].model} ${c.vehicles[0].color ? `[Color: ${c.vehicles[0].color}]` : ''}`.replace(/\s+/g, ' ').trim()
         : `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim();
       setCustomVehicle(primaryVehicle);
+
+      // Auto-carry booking discount, vehicle details and service package!
+      try {
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('customerId', cid)
+          .order('date', { ascending: false })
+          .limit(1);
+
+        if (!error && bookings && bookings.length > 0) {
+          const latestBooking = bookings[0];
+          
+          // Auto-fill vehicle details if available
+          if (latestBooking.vehicle) {
+            const bVehicle = `${latestBooking.vehicleYear || ''} ${latestBooking.vehicleMake || ''} ${latestBooking.vehicleModel || ''} ${latestBooking.vehicleColor ? `[Color: ${latestBooking.vehicleColor}]` : ''}`.replace(/\s+/g, ' ').trim();
+            if (bVehicle) setCustomVehicle(bVehicle);
+          }
+
+          // Auto-populate services and addons
+          if (latestBooking.title) {
+            const finalVType = toBuiltInVehKey(latestBooking.vehicle || 'midsize');
+            
+            // Find in servicePackages (from imports)
+            const { servicePackages: pkgs, addOns: ads } = await import('@/lib/services');
+            const pkg = pkgs.find(p => p.name === latestBooking.title);
+            let bPrice = pkg ? (pkg.pricing[finalVType] || pkg.basePrice) : 150;
+            
+            const bServices = [{ name: latestBooking.title, price: bPrice }];
+            
+            // Add ons
+            if (latestBooking.addons && Array.isArray(latestBooking.addons)) {
+              latestBooking.addons.forEach((addonName: string) => {
+                const addon = ads.find(a => a.name === addonName);
+                const addonPrice = addon ? (addon.pricing?.[finalVType] || addon.basePrice) : 30;
+                bServices.push({ name: addonName, price: addonPrice });
+              });
+            }
+            setServices(bServices);
+          }
+
+          // Auto-fill discount
+          if (latestBooking.discountAmount > 0) {
+            setInvoiceDiscountType('fixed');
+            setInvoiceDiscount(latestBooking.discountAmount);
+            setInvoiceDiscountCode(latestBooking.discountCode || 'DISCOUNT');
+            
+            toast({
+              title: "Discount Carried Over!",
+              description: `Applied latest booking's discount: -$${latestBooking.discountAmount.toFixed(2)} (${latestBooking.discountCode || 'CUSTOM'})`
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to automatically carry over booking details:", err);
+      }
     }
   };
 
@@ -261,6 +334,9 @@ const Invoicing = () => {
       setSelectedCustomer("");
       setServices([]);
       setShowCreateForm(false);
+      setInvoiceDiscount(0);
+      setInvoiceDiscountType('percent');
+      setInvoiceDiscountCode('');
       return;
     }
 
@@ -286,6 +362,11 @@ const Invoicing = () => {
 
       // 2. Prepare Invoice
       const vehicleDesc = customVehicle || `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
+      
+      const subtotal = calculateSubtotal();
+      const finalDiscountAmount = invoiceDiscountType === 'percent'
+        ? subtotal * (invoiceDiscount / 100)
+        : invoiceDiscount;
 
       const invoice: Invoice = {
         invoiceNumber: generateInvoiceNumber(),
@@ -300,6 +381,11 @@ const Invoicing = () => {
         paidAmount: 0,
         notes: customNotes,
         isSent: false,
+        discount: finalDiscountAmount > 0 ? {
+          type: invoiceDiscountType === 'percent' ? 'percent' : 'fixed',
+          value: invoiceDiscount,
+          amount: finalDiscountAmount
+        } : undefined
       };
 
       // 3. Create Invoice
@@ -310,6 +396,9 @@ const Invoicing = () => {
       setServices([]);
       setCustomVehicle("");
       setCustomNotes("");
+      setInvoiceDiscount(0);
+      setInvoiceDiscountType('percent');
+      setInvoiceDiscountCode('');
       setShowCreateForm(false);
       loadData();
 
@@ -1230,6 +1319,68 @@ Precision. Protection. Perfection.`;
                           </div>
                         </div>
                       ))}
+
+                      {/* Subtotal & Discount Inputs */}
+                      <div className="pt-3 mt-3 border-t border-zinc-800 space-y-2">
+                        <div className="flex justify-between items-center text-sm text-zinc-400">
+                          <span>Subtotal</span>
+                          <span className="font-mono">${calculateSubtotal().toFixed(2)}</span>
+                        </div>
+                        
+                        <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Apply Discount</span>
+                            {invoiceDiscountCode && (
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
+                                {invoiceDiscountCode}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Select 
+                              value={invoiceDiscountType} 
+                              onValueChange={(val: 'percent' | 'fixed') => setInvoiceDiscountType(val)}
+                            >
+                              <SelectTrigger className="w-[110px] bg-zinc-900 border-zinc-800 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="percent">Percent (%)</SelectItem>
+                                <SelectItem value="fixed">Fixed ($)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            
+                            <div className="relative flex-1">
+                              {invoiceDiscountType === 'fixed' && <span className="absolute left-3 top-2 text-zinc-500 text-sm">$</span>}
+                              <Input
+                                type="number"
+                                placeholder={invoiceDiscountType === 'percent' ? "e.g. 10" : "e.g. 25"}
+                                className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-sm ${invoiceDiscountType === 'fixed' ? 'pl-7' : ''}`}
+                                value={invoiceDiscount || ''}
+                                onChange={e => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setInvoiceDiscount(val);
+                                  if (!invoiceDiscountCode) setInvoiceDiscountCode('MANUAL');
+                                }}
+                              />
+                              {invoiceDiscountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-sm">%</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        {invoiceDiscount > 0 && (
+                          <div className="flex justify-between items-center text-sm text-red-400 font-medium">
+                            <span>Discount</span>
+                            <span className="font-mono">
+                              -${(invoiceDiscountType === 'percent' 
+                                ? calculateSubtotal() * (invoiceDiscount / 100) 
+                                : invoiceDiscount).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="pt-3 mt-3 border-t border-zinc-800 flex justify-between items-center">
                         <span className="font-bold text-zinc-400">Total</span>
                         <span className="font-bold text-xl text-white">${calculateTotal().toFixed(2)}</span>
@@ -1252,6 +1403,11 @@ Precision. Protection. Perfection.`;
                       className="border-zinc-700 text-zinc-300"
                       disabled={services.length === 0 || !selectedCustomer}
                       onClick={() => {
+                        const subtotal = calculateSubtotal();
+                        const finalDiscountAmount = invoiceDiscountType === 'percent'
+                          ? subtotal * (invoiceDiscount / 100)
+                          : invoiceDiscount;
+
                         const tempInv: Invoice = {
                           invoiceNumber: 9999,
                           customerId: selectedCustomer,
@@ -1261,6 +1417,11 @@ Precision. Protection. Perfection.`;
                           total: calculateTotal(),
                           date: new Date().toLocaleDateString(),
                           notes: customNotes,
+                          discount: finalDiscountAmount > 0 ? {
+                            type: invoiceDiscountType === 'percent' ? 'percent' : 'fixed',
+                            value: invoiceDiscount,
+                            amount: finalDiscountAmount
+                          } : undefined
                         };
                         generatePDF(tempInv, false);
                       }}
