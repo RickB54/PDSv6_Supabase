@@ -605,6 +605,7 @@ const Invoicing = () => {
     setEditVehicle(resolvedVehicle);
     setEditNotes(inv.notes || "");
     setEditIsSent(inv.isSent || false);
+    setServiceDate(inv.serviceDate || inv.date || new Date().toISOString().split('T')[0]);
     setIsEditingInvoice(true);
   };
 
@@ -624,6 +625,7 @@ const Invoicing = () => {
       notes: editNotes,
       isSent: editIsSent,
       sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
+      serviceDate: serviceDate,
       total: newTotal 
     };
     
@@ -1924,6 +1926,16 @@ Precision. Protection. Perfection.`;
 
                 <div className="space-y-4">
                   <div className="space-y-2">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Service Date</Label>
+                    <Input 
+                      type="date"
+                      value={serviceDate}
+                      onChange={(e) => setServiceDate(e.target.value)}
+                      className="bg-zinc-900 border-zinc-800 text-white [color-scheme:dark]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Vehicle Details</Label>
                     {(() => {
                       const cust = customers.find(c => c.id === selectedInvoice.customerId);
@@ -1980,14 +1992,15 @@ Precision. Protection. Perfection.`;
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-between pt-4 border-t border-zinc-800">
-                  <div className="flex gap-2">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-zinc-800 w-full">
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <Button variant="outline" className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10" onClick={() => {
                       const currentInv = {
                         ...selectedInvoice,
                         services: editServices,
                         vehicle: editVehicle,
                         notes: editNotes,
+                        serviceDate: serviceDate,
                         total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
                       };
                       generatePDF(currentInv as Invoice, false);
@@ -2000,6 +2013,7 @@ Precision. Protection. Perfection.`;
                         services: editServices,
                         vehicle: editVehicle,
                         notes: editNotes,
+                        serviceDate: serviceDate,
                         total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
                       };
                       generatePDF(currentInv as Invoice, false);
@@ -2012,6 +2026,7 @@ Precision. Protection. Perfection.`;
                         services: editServices,
                         vehicle: editVehicle,
                         notes: editNotes,
+                        serviceDate: serviceDate,
                         total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
                       };
                       generatePDF(currentInv as Invoice, true);
@@ -2024,6 +2039,7 @@ Precision. Protection. Perfection.`;
                         services: editServices,
                         vehicle: editVehicle,
                         notes: editNotes,
+                        serviceDate: serviceDate,
                         total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
                       };
                       openEmailModal(currentInv as Invoice);
@@ -2031,9 +2047,9 @@ Precision. Protection. Perfection.`;
                       <Mail className="h-4 w-4 mr-2" /> Preview Email
                     </Button>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-end w-full sm:w-auto">
                     <Button variant="ghost" className="text-zinc-500" onClick={() => setSelectedInvoice(null)}>Cancel</Button>
-                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20" onClick={saveEditedInvoice}>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 whitespace-nowrap" onClick={saveEditedInvoice}>
                       <CheckCircle className="h-4 w-4 mr-2" /> Save Changes
                     </Button>
                   </div>
