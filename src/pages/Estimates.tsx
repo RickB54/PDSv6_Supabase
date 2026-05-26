@@ -765,7 +765,7 @@ const Estimates = () => {
                                             const pkg = servicePackages.find(p => p.name === latestBooking.title) || getCustomPackages().find(p => p.name === latestBooking.title);
                                             if (pkg) setSelectedPackage(pkg.id);
                                             
-                                            let bPrice = pkg ? (pkg.pricing[finalVType] || pkg.basePrice) : 150;
+                                            let bPrice = pkg ? (pkg.pricing[finalVType] || (pkg as any).basePrice || 0) : 150;
                                             const bServices = [{ name: latestBooking.title, price: bPrice }];
                                             
                                             // Addons
@@ -899,7 +899,7 @@ const Estimates = () => {
                                               <Select 
                                                   value={discountMethod} 
                                                   onValueChange={(val) => {
-                                                      setDiscountMethod(val);
+                                                      setDiscountMethod(val as 'coupon' | 'manual');
                                                       if (val === 'coupon') {
                                                           const first = coupons.find(c => c.active)?.code || '';
                                                           setDiscountCode(first);
@@ -986,7 +986,7 @@ const Estimates = () => {
                                                       <Select 
                                                           value={discountType} 
                                                           onValueChange={(val) => {
-                                                              setDiscountType(val);
+                                                              setDiscountType(val as 'percent' | 'amount');
                                                           }}
                                                       >
                                                           <SelectTrigger className="w-16 bg-zinc-950 border-zinc-800 text-xs">
