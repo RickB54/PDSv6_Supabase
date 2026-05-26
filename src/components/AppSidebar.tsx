@@ -474,6 +474,12 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   const handleNavClick = (e: React.MouseEvent, url: string, topicId?: string) => {
     if (openMobile) setOpenMobile(false);
     
+    if (url === '/letter-maker' || url.startsWith('/letter-maker') || url.includes('/letter-maker')) {
+      e.preventDefault();
+      window.location.href = url;
+      return;
+    }
+    
     if (url.startsWith('#')) {
       e.preventDefault();
       if (url === '#call-assistant') {

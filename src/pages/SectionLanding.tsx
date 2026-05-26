@@ -150,6 +150,14 @@ export default function SectionLanding() {
                             );
                         }
 
+                        if (item.url === '/letter-maker' || item.url.startsWith('/letter-maker')) {
+                            return (
+                                <a key={item.url} href={item.url} className="block group">
+                                    {content}
+                                </a>
+                            );
+                        }
+
                         return (
                             <Link key={item.url} to={item.url} className="block group">
                                 {content}
