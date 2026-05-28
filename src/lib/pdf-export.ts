@@ -230,11 +230,23 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
       return `${canonical} ($${price})`;
     });
 
+    const rescheduleHistory = b.rescheduleHistory || b.booking_vehicle?.reschedule_history || [];
+    let rescheduleLines = '';
+    if (rescheduleHistory && rescheduleHistory.length > 0) {
+      rescheduleLines = `\nRESCHEDULES:\n` + rescheduleHistory.map((rh: any, i: number) => {
+        let fOld = 'N/A';
+        let fNew = 'N/A';
+        try { fOld = format(new Date(rh.originalDate), 'MMM dd, yyyy p'); } catch(e){}
+        try { fNew = format(new Date(rh.newDate), 'MMM dd, yyyy p'); } catch(e){}
+        return `• ${fOld} ➜ ${fNew}`;
+      }).join('\n');
+    }
+
     ledger.push({
       date: b.date || b.created_at,
       src: 'BOOKING',
       act: b.service || 'Service',
-      tech: `STATUS: ${b.status?.toUpperCase()}\nVEHICLE: ${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}\nBASE SERVICE: $${basePrice.toFixed(2)}\nADD-ONS: ${addonBreakdown.length > 0 ? addonBreakdown.join(', ') : 'None'}`,
+      tech: `STATUS: ${b.status?.toUpperCase()}\nVEHICLE: ${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}\nBASE SERVICE: $${basePrice.toFixed(2)}\nADD-ONS: ${addonBreakdown.length > 0 ? addonBreakdown.join(', ') : 'None'}${rescheduleLines}`,
       val: `$${(b.price || 0).toFixed(2)}`,
       note: sanitize(b.notes)
     });

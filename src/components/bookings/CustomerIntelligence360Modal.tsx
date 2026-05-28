@@ -513,6 +513,31 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                                        </span>
                                      )}
                                    </div>
+                                   {(() => {
+                                     const rawH = item.raw?.rescheduleHistory || item.raw?.booking_vehicle?.reschedule_history || [];
+                                     const rH = Array.isArray(rawH) ? rawH : [];
+                                     if (rH.length === 0) return null;
+                                     return (
+                                       <div className="mt-1.5 border-t border-zinc-800/80 pt-1.5 space-y-1">
+                                         <div className="text-[9px] font-black uppercase text-cyan-400 flex items-center gap-1">
+                                           🔄 Rescheduled Dates:
+                                         </div>
+                                         <div className="space-y-0.5">
+                                           {rH.map((rhItem: any, idx: number) => {
+                                             let oldStr = 'N/A';
+                                             let newStr = 'N/A';
+                                             try { oldStr = format(parseISO(rhItem.originalDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                                             try { newStr = format(parseISO(rhItem.newDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                                             return (
+                                               <div key={idx} className="text-[8px] text-zinc-500 font-mono">
+                                                 • {oldStr} ➜ {newStr}
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
+                                       </div>
+                                     );
+                                   })()}
                                  </div>
                                ) : (
                                  item.details

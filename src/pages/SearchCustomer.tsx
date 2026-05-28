@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -233,31 +233,50 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
             if (item.timelineType === 'engagement') {
               const eng = item;
               const date = new Date(eng.created_at);
+              const isRescheduled = eng.type === 'rescheduled';
               return (
-                <div key={`eng-${eng.id}-${idx}`} className="p-5 bg-zinc-950 rounded-2xl border border-zinc-800 hover:border-indigo-500/40 transition-all group shadow-xl relative overflow-hidden">
-                  <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <div key={`eng-${eng.id}-${idx}`} className={cn(
+                  "p-5 bg-zinc-950 rounded-2xl border border-zinc-800 transition-all group shadow-xl relative overflow-hidden",
+                  isRescheduled ? "hover:border-cyan-500/40" : "hover:border-indigo-500/40"
+                )}>
+                  <div className={cn(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none",
+                    isRescheduled ? "bg-cyan-500/5" : "bg-indigo-500/5"
+                  )} />
                   <div className="flex items-start justify-between relative z-10">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-                        <Mail className="h-4 w-4 text-indigo-400" />
+                      <div className={cn(
+                        "p-2.5 rounded-xl border",
+                        isRescheduled ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400" : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
+                      )}>
+                        {isRescheduled ? <RefreshCw className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-900/40">Engagement</span>
+                          <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border",
+                            isRescheduled ? "text-cyan-400 bg-cyan-950/40 border-cyan-900/40" : "text-indigo-400 bg-indigo-950/40 border-indigo-900/40"
+                          )}>
+                            {isRescheduled ? 'Reschedule' : 'Engagement'}
+                          </span>
                           <span className="text-zinc-600 text-xs">•</span>
                           <span className="text-zinc-500 text-xs font-bold">{format(date, 'MMM d, yyyy · h:mm a')}</span>
                         </div>
-                        <div className="text-sm font-black uppercase text-zinc-100 mt-2 tracking-tight">Sent Correspondence: {eng.subject || 'Direct Message'}</div>
+                        <div className="text-sm font-black uppercase text-zinc-100 mt-2 tracking-tight">
+                          {isRescheduled ? `Rescheduled Date Event` : `Sent Correspondence: ${eng.subject || 'Direct Message'}`}
+                        </div>
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 text-[10px] font-black text-indigo-400 hover:text-white bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500 px-3 rounded-lg transition-all"
-                      onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
-                    >
-                      Preview Email
-                    </Button>
+                    {!isRescheduled && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-black text-indigo-400 hover:text-white bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500 px-3 rounded-lg transition-all"
+                        onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
+                      >
+                        Preview Email
+                      </Button>
+                    )}
                   </div>
                   <div className="mt-3 p-3 bg-zinc-900/40 border border-zinc-800/40 rounded-xl text-xs text-zinc-400 italic">
                     "{eng.note || eng.body?.slice(0, 100) + '...'}"

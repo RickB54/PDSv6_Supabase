@@ -7,7 +7,7 @@ import {
   Phone, MessageSquare, StickyNote, Plus, 
   Clock, Trash2, Calendar, User, History,
   PhoneIncoming, PhoneOutgoing, Mail,
-  CheckCircle2, AlertCircle
+  CheckCircle2, AlertCircle, RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -125,6 +125,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
       case 'text': return <MessageSquare className="h-3.5 w-3.5 text-amber-400" />;
       case 'email': return <Mail className="h-3.5 w-3.5 text-indigo-400" />;
       case 'attempt': return <AlertCircle className="h-3.5 w-3.5 text-red-400" />;
+      case 'rescheduled': return <RefreshCw className="h-3.5 w-3.5 text-cyan-400" />;
       default: return <StickyNote className="h-3.5 w-3.5 text-zinc-400" />;
     }
   };
@@ -138,6 +139,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
       case 'attempt': return 'Contact Attempt';
       case 'initial': return 'System Intro';
       case 'retention': return 'Retention Reminder';
+      case 'rescheduled': return 'Rescheduling Event';
       default: return 'General Note';
     }
   };

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye, Tag, DollarSign } from "lucide-react"; // Added LayoutGrid
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, RefreshCw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye, Tag, DollarSign } from "lucide-react"; // Added LayoutGrid
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -886,6 +886,8 @@ export default function BookingsPage() {
         return 'bg-blue-500/20 border-blue-500 text-blue-200';
       case 'done':
         return 'bg-green-500/20 border-green-500 text-green-200';
+      case 'rescheduled':
+        return 'bg-cyan-500/10 border-cyan-500/50 border-dashed text-cyan-200';
       default:
         return 'bg-primary/20 border-primary text-primary-foreground';
     }
@@ -899,6 +901,7 @@ export default function BookingsPage() {
       case 'pending': return '⏳';
       case 'in_progress': return '🔄';
       case 'done': return '✅';
+      case 'rescheduled': return '🔄';
       default: return '✓';
     }
   };
@@ -1264,6 +1267,54 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount
         };
+
+        // Reschedule Tracking Logic
+        const oldDateObj = new Date(selectedBooking.date);
+        const newDateObj = date;
+        const dateChanged = oldDateObj.getTime() !== newDateObj.getTime();
+        const statusChangedToRescheduled = formData.status === 'rescheduled' && selectedBooking.status !== 'rescheduled';
+
+        if (dateChanged || statusChangedToRescheduled) {
+          const rawHistory = (selectedBooking as any).rescheduleHistory || (selectedBooking as any).booking_vehicle?.reschedule_history || [];
+          const existingHistory = Array.isArray(rawHistory) ? rawHistory : [];
+          
+          const newHistoryItem = {
+            originalDate: selectedBooking.date,
+            newDate: date.toISOString(),
+            updatedAt: new Date().toISOString(),
+            statusAtReschedule: formData.status
+          };
+          const updatedHistory = [...existingHistory, newHistoryItem];
+          
+          (updates as any).rescheduleHistory = updatedHistory;
+          (updates as any).booking_vehicle = {
+            ...(selectedBooking.booking_vehicle || {}),
+            reschedule_history: updatedHistory
+          };
+
+          try {
+            const formattedOldDate = format(oldDateObj, "MMMM dd, yyyy 'at' h:mm a");
+            const formattedNewDate = format(newDateObj, "MMMM dd, yyyy 'at' h:mm a");
+            const noteText = `Booking "${selectedBooking.title || formData.service}" rescheduled from ${formattedOldDate} to ${formattedNewDate}.`;
+            
+            await supabase.from('engagements').insert({
+              customer_id: finalCustomerId,
+              customer_name: formData.customer,
+              customer_email: formData.email,
+              note: noteText,
+              type: 'rescheduled',
+              created_at: new Date().toISOString()
+            });
+
+            const currentLocalDateStr = format(new Date(), "MMMM dd, yyyy");
+            const rescheduleNoteLine = `\n\n[RESCHEDULED on ${currentLocalDateStr}]: Moved from ${formattedOldDate} to ${formattedNewDate}.`;
+            if (!updates.notes?.includes(rescheduleNoteLine)) {
+              updates.notes = (updates.notes || "") + rescheduleNoteLine;
+            }
+          } catch (crmErr) {
+            console.error("⚠️ Failed to log reschedule history:", crmErr);
+          }
+        }
         
         await update(selectedBooking.id, updates);
         resultingBooking = { ...selectedBooking, ...updates };
@@ -2583,6 +2634,7 @@ export default function BookingsPage() {
                       <option value="pending">⏳ Pending</option>
                       <option value="in_progress">🔄 In Progress</option>
                       <option value="done">✅ Done</option>
+                      <option value="rescheduled">🔄 Rescheduled</option>
                     </select>
                   </div>
                 </div>
@@ -2797,6 +2849,40 @@ export default function BookingsPage() {
                     />
                   </div>
                 </div>
+
+                {/* Reschedule History list */}
+                {selectedBooking && (() => {
+                  const rawHistory = (selectedBooking as any).rescheduleHistory || (selectedBooking as any).booking_vehicle?.reschedule_history || [];
+                  const existingHistory = Array.isArray(rawHistory) ? rawHistory : [];
+                  if (existingHistory.length === 0) return null;
+                  return (
+                    <div className="grid grid-cols-4 items-start gap-4">
+                      <label className="text-right text-xs font-black uppercase text-cyan-400 mt-1">Reschedules</label>
+                      <div className="col-span-3 bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3.5 space-y-2">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                          <RefreshCw className="h-3 w-3 text-cyan-400" />
+                          Previous Date History ({existingHistory.length})
+                        </div>
+                        <div className="space-y-1.5">
+                          {existingHistory.map((item: any, idx: number) => {
+                            let oldStr = 'N/A';
+                            let newStr = 'N/A';
+                            try { oldStr = format(new Date(item.originalDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                            try { newStr = format(new Date(item.newDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                            return (
+                              <div key={idx} className="text-[10px] text-zinc-400 font-medium flex items-center gap-2 bg-zinc-900/40 p-2 rounded-lg border border-white/5">
+                                <span className="font-bold text-zinc-500">#{idx + 1}</span>
+                                <span>{oldStr}</span>
+                                <span className="text-cyan-500">➜</span>
+                                <span className="text-zinc-200 font-bold">{newStr}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Reminder Settings */}
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -3065,6 +3151,9 @@ export default function BookingsPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setStatusFilter('done')} className="cursor-pointer flex items-center gap-2">
                       <Package className="h-3 w-3 text-green-500" /> Done
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('rescheduled')} className="cursor-pointer flex items-center gap-2">
+                      <RefreshCw className="h-3 w-3 text-cyan-500" /> Rescheduled
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
