@@ -280,14 +280,23 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   }));
 
   const activityLog = customer?.activity_log || [];
-  activityLog.forEach((a: any) => ledger.push({
-    date: a.date || a.created_at,
-    src: 'CRM LOG',
-    act: (a.type || 'NOTE').toUpperCase(),
-    tech: '-',
-    val: '-',
-    note: sanitize(a.note)
-  }));
+  activityLog.forEach((a: any) => {
+    // Prevent duplicates between local activity_log and DB engagements
+    const isDup = engagements.some(e => 
+      e.note === a.note || 
+      Math.abs(new Date(e.created_at).getTime() - new Date(a.date || a.created_at).getTime()) < 5000
+    );
+    if (!isDup) {
+      ledger.push({
+        date: a.date || a.created_at,
+        src: 'CRM LOG',
+        act: (a.type || 'NOTE').toUpperCase(),
+        tech: '-',
+        val: '-',
+        note: sanitize(a.note)
+      });
+    }
+  });
 
   ledger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -309,7 +318,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
       try { 
         if (l.date) {
           const d = new Date(l.date);
-          dStr = isNaN(d.getTime()) ? 'N/A' : format(d, 'MMM dd, yyyy\nh:mm a');
+          dStr = isNaN(d.getTime()) ? 'N/A' : format(d, 'MMM dd, yyyy h:mm a');
         }
       } catch(e) {}
       return [

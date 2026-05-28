@@ -149,6 +149,10 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
   };
 
   const handleDeleteEngagement = async (id: string) => {
+    if (!id) {
+      toast({ title: "Error", description: "Missing engagement ID.", variant: "destructive" });
+      return;
+    }
     if (!confirm("Are you sure you want to delete this engagement record?")) return;
     try {
       const { error } = await supabase.from('engagements').delete().eq('id', id);
@@ -299,7 +303,7 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-zinc-500 hover:text-white bg-zinc-500/5 border border-zinc-500/20 hover:bg-blue-500/20 hover:border-blue-500/40 rounded-lg transition-all"
-                        onClick={() => handleEditEngagement(eng)}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleEditEngagement(eng); }}
                         title="Edit Engagement"
                       >
                         <Pencil className="h-4 w-4" />
@@ -308,7 +312,7 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
                         variant="ghost" 
                         size="sm" 
                         className="h-8 w-8 p-0 text-zinc-500 hover:text-white bg-zinc-500/5 border border-zinc-500/20 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded-lg transition-all"
-                        onClick={() => handleDeleteEngagement(eng.id)}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteEngagement(eng.id); }}
                         title="Delete Engagement"
                       >
                         <Trash2 className="h-4 w-4" />
