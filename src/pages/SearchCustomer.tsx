@@ -322,7 +322,7 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
                           variant="ghost" 
                           size="sm" 
                           className="h-8 text-[10px] font-black text-indigo-400 hover:text-white bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500 px-3 rounded-lg transition-all"
-                          onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
+                          onClick={() => handlePreviewEmailForBooking(eng, 'correspondence', eng)}
                         >
                           Preview Email
                         </Button>
@@ -330,7 +330,7 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
                     </div>
                   </div>
                   <div className="mt-3 p-3 bg-zinc-900/40 border border-zinc-800/40 rounded-xl text-xs text-zinc-400 italic">
-                    "{eng.note || eng.body?.slice(0, 100) + '...'}"
+                    "{eng.note?.length > 150 ? eng.note.slice(0, 150).replace(/\n/g, ' ') + '...' : eng.note?.replace(/\n/g, ' ') || eng.body?.slice(0, 100) + '...'}"
                   </div>
                 </div>
               );

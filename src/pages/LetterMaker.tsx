@@ -202,7 +202,7 @@ const LetterMaker = () => {
                     customer_name: customer.name,
                     customer_email: customer.email,
                     type: 'correspondence',
-                    note: `Generated Free-Form Letter: ${subject}`
+                    note: `Letter Generated: "${subject}"\n\n${body}`
                 });
                 if (error) throw error;
             }
@@ -212,7 +212,7 @@ const LetterMaker = () => {
                 id: Math.random().toString(36).substring(2, 9),
                 date: new Date().toISOString(),
                 type: 'correspondence',
-                note: `Generated Free-Form Letter: ${subject}`,
+                note: `Letter Generated: "${subject}"\n\n${body}`,
                 created_at: new Date().toISOString()
             };
             const currentLog = (customer as any).activity_log || [];

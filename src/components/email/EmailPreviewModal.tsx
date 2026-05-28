@@ -6,7 +6,7 @@ import { cn, formatETDate, formatETTime } from "@/lib/utils"
 interface EmailPreviewModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  type: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect'
+  type: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect' | 'correspondence'
   data: any
 }
 
@@ -43,6 +43,7 @@ export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPrevi
                  type === 'cancelled'    ? 'Job Cancelled' :
                  type === 'reminder'     ? '6-Month Reminder' :
                  type === 'prospect'     ? 'Welcome Prospect' :
+                 type === 'correspondence'? 'Direct Correspondence' :
                                           'Payment Success'}
               </Badge>
             </div>
@@ -63,6 +64,7 @@ export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPrevi
                type === 'cancelled'    ? 'When job was cancelled' :
                type === 'reminder'     ? 'When sent from Retention Hub' :
                type === 'prospect'     ? 'When sent from Prospects page' :
+               type === 'correspondence'? 'Sent manually via Letter Maker' :
                                         'When payment was processed'}
             </span>
             <span className="flex items-center gap-1">
@@ -217,6 +219,22 @@ export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPrevi
                   <div className="flex items-center justify-center gap-2 text-zinc-400">
                     <CreditCard className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Contactless Transaction Verified</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ═══ TEMPLATE: CORRESPONDENCE (LETTER MAKER) ═══ */}
+            {type === 'correspondence' && (
+              <>
+                <div style={{ background: '#18181b', padding: '40px 20px', textAlign: 'center', color: '#ffffff', borderBottom: '4px solid #3b82f6' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '15px' }}>✉️</div>
+                  <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prime Auto Detail</h1>
+                  <p style={{ margin: '10px 0 0', opacity: 0.7, fontSize: '14px', textTransform: 'uppercase', tracking: 'widest' }}>Direct Correspondence</p>
+                </div>
+                <div className="p-8">
+                  <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.7, fontSize: '15px' }}>
+                    {data.body || data.note?.replace(/^Letter Generated: ".*?"\n\n/, '') || 'No letter body found.'}
                   </div>
                 </div>
               </>

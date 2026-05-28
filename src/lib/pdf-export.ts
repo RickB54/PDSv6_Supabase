@@ -276,7 +276,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
     act: 'INTERACTION',
     tech: `CHANNEL: ${e.type || 'GENERAL'}`,
     val: '-',
-    note: sanitize(e.note)
+    note: sanitize(e.note?.length > 100 ? e.note.split('\n')[0] + '...' : e.note)
   }));
 
   const activityLog = customer?.activity_log || [];
@@ -293,7 +293,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
         act: (a.type || 'NOTE').toUpperCase(),
         tech: '-',
         val: '-',
-        note: sanitize(a.note)
+        note: sanitize(a.note?.length > 100 ? a.note.split('\n')[0] + '...' : a.note)
       });
     }
   });
