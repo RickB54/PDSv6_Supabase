@@ -68,7 +68,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`ANALYTICS & ACTIVITY AUDIT | GENERATED: ${format(new Date(), 'MMMM dd, yyyy p')}`, 14, 30);
+  doc.text(`ANALYTICS & ACTIVITY AUDIT | GENERATED: ${format(new Date(), 'MMMM dd, yyyy h:mm a')}`, 14, 30);
   doc.text(`PRIME AUTO DETAIL | ADMINISTRATIVE OPERATIONAL VIEW`, 14, 35);
 
   // Profile Overlay Card
@@ -236,8 +236,8 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
       rescheduleLines = `\nRESCHEDULES:\n` + rescheduleHistory.map((rh: any, i: number) => {
         let fOld = 'N/A';
         let fNew = 'N/A';
-        try { fOld = format(new Date(rh.originalDate), 'MMM dd, yyyy p'); } catch(e){}
-        try { fNew = format(new Date(rh.newDate), 'MMM dd, yyyy p'); } catch(e){}
+        try { fOld = format(new Date(rh.originalDate), 'MMM dd, yyyy h:mm a'); } catch(e){}
+        try { fNew = format(new Date(rh.newDate), 'MMM dd, yyyy h:mm a'); } catch(e){}
         return `• ${fOld} ➜ ${fNew}`;
       }).join('\n');
     }
@@ -279,6 +279,16 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
     note: sanitize(e.note)
   }));
 
+  const activityLog = customer?.activity_log || [];
+  activityLog.forEach((a: any) => ledger.push({
+    date: a.date || a.created_at,
+    src: 'CRM LOG',
+    act: (a.type || 'NOTE').toUpperCase(),
+    tech: '-',
+    val: '-',
+    note: sanitize(a.note)
+  }));
+
   ledger.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   if (currentY + 30 > pageHeight) { doc.addPage(); currentY = 20; }
@@ -299,7 +309,7 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
       try { 
         if (l.date) {
           const d = new Date(l.date);
-          dStr = isNaN(d.getTime()) ? 'N/A' : format(d, 'MMM dd, yyyy\np');
+          dStr = isNaN(d.getTime()) ? 'N/A' : format(d, 'MMM dd, yyyy\nh:mm a');
         }
       } catch(e) {}
       return [

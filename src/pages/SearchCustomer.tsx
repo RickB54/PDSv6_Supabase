@@ -148,6 +148,33 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
     }
   };
 
+  const handleDeleteEngagement = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this engagement record?")) return;
+    try {
+      const { error } = await supabase.from('engagements').delete().eq('id', id);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Engagement record removed." });
+      loadTimeline();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Could not delete engagement.", variant: "destructive" });
+    }
+  };
+
+  const handleEditEngagement = async (eng: any) => {
+    const newNote = prompt("Edit engagement note:", eng.note);
+    if (newNote === null || newNote === eng.note) return;
+    try {
+      const { error } = await supabase.from('engagements').update({ note: newNote }).eq('id', eng.id);
+      if (error) throw error;
+      toast({ title: "Updated", description: "Engagement note updated." });
+      loadTimeline();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Could not update engagement.", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
     loadTimeline();
   }, [customer.id, customer.notes]);
@@ -267,16 +294,36 @@ const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEmailForB
                         </div>
                       </div>
                     </div>
-                    {!isRescheduled && (
+                    <div className="flex gap-2">
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-8 text-[10px] font-black text-indigo-400 hover:text-white bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500 px-3 rounded-lg transition-all"
-                        onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
+                        className="h-8 w-8 p-0 text-zinc-500 hover:text-white bg-zinc-500/5 border border-zinc-500/20 hover:bg-blue-500/20 hover:border-blue-500/40 rounded-lg transition-all"
+                        onClick={() => handleEditEngagement(eng)}
+                        title="Edit Engagement"
                       >
-                        Preview Email
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0 text-zinc-500 hover:text-white bg-zinc-500/5 border border-zinc-500/20 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 rounded-lg transition-all"
+                        onClick={() => handleDeleteEngagement(eng.id)}
+                        title="Delete Engagement"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                      {!isRescheduled && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-[10px] font-black text-indigo-400 hover:text-white bg-indigo-500/5 border border-indigo-500/20 hover:bg-indigo-500 px-3 rounded-lg transition-all"
+                          onClick={() => handlePreviewEmailForBooking(eng, undefined, eng)}
+                        >
+                          Preview Email
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-3 p-3 bg-zinc-900/40 border border-zinc-800/40 rounded-xl text-xs text-zinc-400 italic">
                     "{eng.note || eng.body?.slice(0, 100) + '...'}"

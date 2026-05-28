@@ -183,6 +183,48 @@ const LetterMaker = () => {
         }
     };
 
+    const handleSaveToCRM = async () => {
+        if (!body.trim()) {
+            toast({ title: "No text found", description: "There is no letter body to save.", variant: "destructive" });
+            return;
+        }
+
+        const customer = customers.find(c => c.id === selectedCustomer);
+        if (!customer) {
+            toast({ title: "Cannot Log", description: "Please select a valid customer/prospect first.", variant: "destructive" });
+            return;
+        }
+
+        try {
+            if (customer.id && !customer.id.startsWith("id-")) {
+                const { error } = await supabase.from('engagements').insert({
+                    customer_id: customer.id,
+                    customer_name: customer.name,
+                    customer_email: customer.email,
+                    type: 'correspondence',
+                    note: `Generated Free-Form Letter: ${subject}`
+                });
+                if (error) throw error;
+            }
+
+            // Fallback: also update local activity_log array for immediate UI
+            const logEntry = {
+                id: Math.random().toString(36).substring(2, 9),
+                date: new Date().toISOString(),
+                type: 'correspondence',
+                note: `Generated Free-Form Letter: ${subject}`,
+                created_at: new Date().toISOString()
+            };
+            const currentLog = (customer as any).activity_log || [];
+            (customer as any).activity_log = [logEntry, ...currentLog];
+
+            toast({ title: "Logged to CRM!", description: "Letter generation recorded in the customer's timeline." });
+        } catch (err) {
+            console.error(err);
+            toast({ title: "Error", description: "Failed to log activity to CRM.", variant: "destructive" });
+        }
+    };
+
     const generatePDF = (action: 'print' | 'download') => {
         const doc = new jsPDF();
         const customer = customers.find(c => c.id === selectedCustomer);
@@ -402,7 +444,7 @@ const LetterMaker = () => {
                             />
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-zinc-800">
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-3 pt-4 border-t border-zinc-800">
                             <Button 
                                 type="button"
                                 variant="outline"
@@ -415,9 +457,17 @@ const LetterMaker = () => {
                             <Button 
                                 type="button"
                                 onClick={handleCopyToClipboard}
-                                className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-bold"
+                                className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 font-bold flex-1 sm:flex-none"
                             >
                                 <Copy className="h-4 w-4 mr-2 text-indigo-400" /> Copy Letter
+                            </Button>
+
+                            <Button 
+                                type="button"
+                                onClick={handleSaveToCRM}
+                                className="bg-zinc-800 hover:bg-zinc-700 text-white border border-blue-500/30 hover:border-blue-500/60 font-bold flex-1 sm:flex-none"
+                            >
+                                <Save className="h-4 w-4 mr-2 text-blue-400" /> Save to CRM
                             </Button>
 
                             <Button 
