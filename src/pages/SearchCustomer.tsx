@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -1065,12 +1065,39 @@ const SearchCustomer = () => {
           </div>
         </div>
 
+        {expandedCustomers.length > 0 && (
+          <div className="mb-6 flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setExpandedCustomers([])}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2 transition-all text-xs tracking-wider shadow-lg shadow-blue-500/20"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to All Customers
+              </Button>
+              <span className="text-zinc-500 text-xs font-semibold">|</span>
+              <span className="text-zinc-300 text-xs font-black uppercase tracking-wider">
+                Viewing Selected Customer Profile
+              </span>
+            </div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800/50">
+              Single-Client Mode
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[...filteredCustomers]
             .sort((a, b) => {
               const daStr = (a as any).updated_at || (a as any).updatedAt || "";
               const dbStr = (b as any).updated_at || (b as any).updatedAt || "";
               return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+            })
+            .filter((customer) => {
+              if (expandedCustomers.length > 0) {
+                return expandedCustomers.includes(customer.id!);
+              }
+              return true;
             })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
@@ -1351,6 +1378,31 @@ const SearchCustomer = () => {
                             </div>
                           </section>
 
+                          <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
+                              </h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
+                                onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                              >
+                                <Plus className="w-2.5 h-2.5" /> ADD NOTE
+                              </Button>
+                            </div>
+                            
+                            {customer.notes ? (
+                              <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+                                "{customer.notes}"
+                              </div>
+                            ) : (
+                              <div className="py-8 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
+                                <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
+                              </div>
+                            )}
+                          </section>
                         </div>
 
                         {/* RIGHT COLUMN: ENGAGEMENT & ADMIN */}
@@ -1441,37 +1493,10 @@ const SearchCustomer = () => {
                                    </div>
                                  </div>
                               </div>
+
                               {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
-                           </section>
-
-
-                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                  <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
-                                </h4>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
-                                  onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
-                                >
-                                  <Plus className="w-2.5 h-2.5" /> ADD NOTE
-                                </Button>
-                              </div>
-                              
-                              {customer.notes ? (
-                                <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
-                                  "{customer.notes}"
-                                </div>
-                              ) : (
-                                <div className="py-8 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
-                                  <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
-                                </div>
-                              )}
-                           </section>
-
-                           {customer.is_archived && (
+                            </section>
+                            {customer.is_archived && (
                              <div className="p-12 text-center border border-dashed border-zinc-800 rounded-3xl opacity-50">
                                <Archive className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
                                <p className="text-xs font-black uppercase tracking-widest text-zinc-600">This profile is archived.</p>

@@ -27,7 +27,7 @@ import {
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown,
   Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
-  Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck
+  Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -1230,13 +1230,39 @@ export default function Prospects() {
           </div>
         </div>
 
+        {expandedCustomers.length > 0 && (
+          <div className="mb-6 flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setExpandedCustomers([])}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2 transition-all text-xs tracking-wider shadow-lg shadow-purple-500/20"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to All Prospects
+              </Button>
+              <span className="text-zinc-500 text-xs font-semibold">|</span>
+              <span className="text-zinc-300 text-xs font-black uppercase tracking-wider">
+                Viewing Selected Prospect Profile
+              </span>
+            </div>
+            <div className="text-[10px] text-zinc-500 font-bold uppercase bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800/50">
+              Single-Prospect Mode
+            </div>
+          </div>
+        )}
+
         {/* Desktop Accordion Cards View */}
         <div className="hidden md:block space-y-4">
           {[...filteredCustomers]
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .filter((customer) => {
+              if (expandedCustomers.length > 0) {
+                return expandedCustomers.includes(customer.id!);
+              }
+              return true;
+            })
             .map((customer) => {
               const isExpanded = expandedCustomers.includes(customer.id!);
-              if (!allExpanded && expandedCustomers.length > 0 && !isExpanded) return null;
 
               return (
                 <div key={customer.id} id={`customer-${customer.id}`} className="border border-purple-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-purple-500/40">
@@ -1564,6 +1590,69 @@ export default function Prospects() {
                               })()}
                             </div>
                           </section>
+
+                          <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
+                              </h4>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-[9px] font-black text-purple-400 hover:text-purple-300 gap-1"
+                                onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                              >
+                                <Plus className="w-2.5 h-2.5" /> ADD NOTE
+                              </Button>
+                            </div>
+                            
+                            {customer.notes ? (
+                              <div className="p-4 bg-zinc-900/50 rounded-xl border border-zinc-800 text-sm text-zinc-300 italic leading-relaxed whitespace-pre-wrap">
+                                "{customer.notes}"
+                              </div>
+                            ) : (
+                              <div className="py-8 text-center border border-dashed border-zinc-800 rounded-2xl opacity-40">
+                                <div className="text-[10px] font-black uppercase tracking-widest">No internal directives set.</div>
+                              </div>
+                            )}
+                            
+                            {(() => {
+                              const photos = parseAttachedPhotos(customer.notes);
+                              if (photos.length === 0) return null;
+                              return (
+                                <div className="mt-4 pt-4 border-t border-zinc-800/60 space-y-3">
+                                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-black uppercase tracking-widest">
+                                    <ImageIcon className="h-4 w-4" />
+                                    Customer Uploaded Photos ({photos.length})
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {photos.map((url, i) => (
+                                      <div key={i} className="relative aspect-video rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group">
+                                        <img 
+                                          src={url} 
+                                          alt={`Attached ${i + 1}`} 
+                                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(url, '_blank');
+                                          }}
+                                        />
+                                        <a 
+                                          href={url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer" 
+                                          className="absolute bottom-1.5 right-1.5 p-1 bg-black/85 rounded-md text-[10px] text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+                                          onClick={e => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="h-3 w-3" /> View Full
+                                        </a>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </section>
                         </div>
 
                         {/* RIGHT COLUMN: CONTACT & NOTES */}
@@ -1653,7 +1742,7 @@ export default function Prospects() {
                               </div>
                            </section>
                            
-                           <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4">
+                            <div className="hidden" style={{display: 'none'}}>
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                                   <StickyNote className="h-3.5 w-3.5 text-amber-500" /> Admin Directives & Notes
@@ -1713,7 +1802,7 @@ export default function Prospects() {
                                    </div>
                                  );
                                })()}
-                            </section>
+                            </div>
                            {openMaps.includes(customer.id!) && customer.address && (<div className="mt-2 w-full h-48 rounded-lg overflow-hidden border border-zinc-800 shadow-2xl"><iframe width="100%" height="100%" frameBorder="0" scrolling="no" src={`https://maps.google.com/maps?q=${encodeURIComponent(customer.address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`} title="Map" /></div>)}
                         </div>
                       </div>
@@ -1873,6 +1962,12 @@ export default function Prospects() {
         <div className="md:hidden space-y-4">
           {[...filteredCustomers]
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
+            .filter((c) => {
+              if (expandedCustomers.length > 0) {
+                return expandedCustomers.includes(c.id!);
+              }
+              return true;
+            })
             .map(c => {
               const isExpanded = expandedCustomers.includes(c.id!);
               return (
