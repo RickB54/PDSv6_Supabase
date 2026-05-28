@@ -5,6 +5,7 @@ import { useBookingsStore, Booking } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { useFollowUpStore, FollowUpLog } from "@/store/followup";
 import { getSupabaseCustomers, Customer } from "@/lib/supa-data";
+import { RetentionHub } from "@/components/customers/RetentionHub";
 import { 
   Bell, 
   Search, 
@@ -364,7 +365,7 @@ export default function FollowUpCenter() {
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
-      <main className="container mx-auto px-4 md:pr-[70px] lg:pr-4 pt-20 pb-12">
+      <main className="container mx-auto px-4 md:pr-[70px] lg:pr-4 pt-2 pb-12 -mt-12">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div className="space-y-2">
@@ -822,228 +823,75 @@ export default function FollowUpCenter() {
 
       {/* CLIENT RETENTION DIALOG */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-xl rounded-[3rem] p-10 overflow-hidden">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-3xl rounded-[2rem] p-0 overflow-hidden max-h-[85vh] flex flex-col">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] pointer-events-none" />
-          <DialogHeader>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3.5 bg-blue-600/10 rounded-2xl border border-blue-600/20">
-                <Mail className="h-6 w-6 text-blue-500" />
+          <DialogHeader className="p-6 border-b border-zinc-900 bg-zinc-900/50 flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-600/10 rounded-xl border border-blue-600/20">
+                <Mail className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <DialogTitle className="text-3xl font-black uppercase tracking-tighter italic">Relationship Outreach</DialogTitle>
-                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Direct Maintenance Dispatch — {selectedCustomer?.customer}</DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase tracking-tight italic">Relationship CRM Hub</DialogTitle>
+                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[9px] mt-1">Direct Outreach & Unified History — {selectedCustomer?.customer}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
-
-          <div className="space-y-8 pt-6">
-            <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
-                Outreach Campaign Template
-              </label>
-              <Select value={selectedCampaignId} onValueChange={(val) => handleCampaignSelect(val, false)}>
-                <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight shadow-xl">
-                  <SelectValue placeholder="CHOOSE EMAIL CAMPAIGN..." />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
-                  {CLIENT_CAMPAIGNS.map(c => (
-                    <SelectItem key={c.id} value={c.id} className="text-[11px] font-black uppercase tracking-tight">
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
-                  <MessageSquare className="h-3.5 w-3.5" /> High-End Personal Note
-                </label>
-                <Badge className="bg-zinc-900 text-zinc-500 border-none font-black text-[9px] uppercase tracking-tighter">Overrides Default Greeting</Badge>
-              </div>
-              <Textarea 
-                placeholder="Compose a high-end personal note to convert this client back to a booked appointment..." 
-                value={customNote}
-                onChange={(e) => setCustomNote(e.target.value)}
-                className="bg-zinc-900/60 border-2 border-zinc-800 min-h-[160px] rounded-[2rem] font-bold italic text-lg text-white placeholder:text-zinc-700 focus:ring-blue-500/20 shadow-2xl transition-all"
+          
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            {selectedCustomer && (
+              <RetentionHub 
+                customer={{
+                  id: selectedCustomer.customerId || selectedCustomer.customer_id || selectedCustomer.id,
+                  name: selectedCustomer.customer || 'Unknown',
+                  email: selectedCustomer.customerEmail || '',
+                  phone: selectedCustomer.customerPhone || '',
+                  type: 'customer',
+                  notes: selectedCustomer.notes || ''
+                }}
+                onRefresh={() => {
+                  setIsDialogOpen(false);
+                  loadProspects(); // refresh data
+                }}
               />
-            </div>
-
-            <div className="bg-zinc-950 border-2 border-zinc-900 p-8 rounded-[2.5rem] space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                    <TicketPercent className="h-5 w-5 text-emerald-500" /> Loyalty Convertor
-                  </p>
-                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest opacity-60">Embed a professional discount voucher.</p>
-                </div>
-                <Switch 
-                  checked={includeDiscount} 
-                  onCheckedChange={setIncludeDiscount}
-                  className="data-[state=checked]:bg-emerald-600 scale-125"
-                />
-              </div>
-
-              {includeDiscount && (
-                <div className="pt-6 border-t-2 border-zinc-900 animate-in fade-in slide-in-from-top-4">
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-4">Strategic Conversion Asset:</p>
-                   <Select value={selectedCouponId} onValueChange={setSelectedCouponId}>
-                      <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight shadow-xl">
-                        <SelectValue placeholder="CHOOSE CAMPAIGN VOUCHER..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
-                        {activeCoupons.length > 0 ? activeCoupons.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div className="flex items-center gap-4">
-                              <span className="font-mono font-black text-amber-500 bg-amber-950/40 px-3 py-1 rounded border border-amber-900/40 text-[11px] tracking-tight">{c.code}</span>
-                              <span className="font-black uppercase text-[11px] text-zinc-500">— {c.percent ? `${c.percent}% REDUCTION` : `$${c.amount} FLAT OFF`}</span>
-                            </div>
-                          </SelectItem>
-                        )) : (
-                          <div className="p-6 text-[11px] font-black uppercase text-zinc-600 italic text-center">No active marketing assets detected.</div>
-                        )}
-                      </SelectContent>
-                   </Select>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-
-          <DialogFooter className="mt-10 border-t-2 border-zinc-900/50 pt-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsDialogOpen(false)}
-              className="text-zinc-600 hover:text-white hover:bg-zinc-900 font-black uppercase tracking-[0.2em] text-[10px] h-12"
-            >
-              Abort Prep
-            </Button>
-            <Button 
-              onClick={executeFollowUp}
-              disabled={isSending || (includeDiscount && !selectedCouponId)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-tighter h-16 px-10 rounded-2xl shadow-2xl shadow-blue-900/50 transition-all hover:scale-[1.03] active:scale-95 text-lg"
-            >
-              {isSending ? "DISPATCHING..." : (
-                <>
-                  COMMIT OUTREACH
-                  <ChevronRight className="ml-3 h-6 w-6" />
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* PROSPECT NURTURING DIALOG */}
       <Dialog open={isProspectDialogOpen} onOpenChange={setIsProspectDialogOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-xl rounded-[3rem] p-10 overflow-hidden">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-3xl rounded-[2rem] p-0 overflow-hidden max-h-[85vh] flex flex-col">
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/5 blur-[100px] pointer-events-none" />
-          <DialogHeader>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3.5 bg-purple-600/10 rounded-2xl border border-purple-600/20">
-                <Users2 className="h-6 w-6 text-purple-500" />
+          <DialogHeader className="p-6 border-b border-zinc-900 bg-zinc-900/50 flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-purple-600/10 rounded-xl border border-purple-600/20">
+                <Users2 className="h-5 w-5 text-purple-500" />
               </div>
               <div>
-                <DialogTitle className="text-3xl font-black uppercase tracking-tighter italic">Prospect Outreach</DialogTitle>
-                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[10px] mt-1">Lead Conversion Protocol — {selectedProspect?.name}</DialogDescription>
+                <DialogTitle className="text-xl font-black uppercase tracking-tight italic">Prospect CRM Hub</DialogTitle>
+                <DialogDescription className="text-zinc-500 font-bold uppercase tracking-widest text-[9px] mt-1">Lead Conversion & Unified History — {selectedProspect?.name}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
-
-          <div className="space-y-8 pt-6">
-            <div className="space-y-3">
-              <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
-                Outreach Campaign Template
-              </label>
-              <Select value={selectedCampaignId} onValueChange={(val) => handleCampaignSelect(val, true)}>
-                <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight shadow-xl">
-                  <SelectValue placeholder="CHOOSE EMAIL CAMPAIGN..." />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
-                  {PROSPECT_CAMPAIGNS.map(c => (
-                    <SelectItem key={c.id} value={c.id} className="text-[11px] font-black uppercase tracking-tight">
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2">
-                  <MessageSquare className="h-3.5 w-3.5" /> Discovery Introduction
-                </label>
-              </div>
-              <Textarea 
-                placeholder="Introduce your signature processes and premium care to this prospect..." 
-                value={customNote}
-                onChange={(e) => setCustomNote(e.target.value)}
-                className="bg-zinc-900/60 border-2 border-zinc-800 min-h-[160px] rounded-[2rem] font-bold italic text-lg text-white placeholder:text-zinc-700 focus:ring-purple-500/20 shadow-2xl transition-all"
+          
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            {selectedProspect && (
+              <RetentionHub 
+                customer={{
+                  id: selectedProspect.id,
+                  name: selectedProspect.name || 'Unknown',
+                  email: selectedProspect.email || '',
+                  phone: selectedProspect.phone || '',
+                  type: 'prospect',
+                  notes: selectedProspect.notes || ''
+                }}
+                onRefresh={() => {
+                  setIsProspectDialogOpen(false);
+                  loadProspects(); // refresh data
+                }}
               />
-            </div>
-
-            <div className="bg-zinc-950 border-2 border-zinc-900 p-8 rounded-[2.5rem] space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-base font-black uppercase tracking-tight flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-purple-500" /> First-Time Incentive
-                  </p>
-                  <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest opacity-60">Drive the first booking with a welcome voucher.</p>
-                </div>
-                <Switch 
-                  checked={includeDiscount} 
-                  onCheckedChange={setIncludeDiscount}
-                  className="data-[state=checked]:bg-purple-600 scale-125"
-                />
-              </div>
-
-              {includeDiscount && (
-                <div className="pt-6 border-t-2 border-zinc-900 animate-in fade-in slide-in-from-top-4">
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-4">Conversion Voucher:</p>
-                   <Select value={selectedCouponId} onValueChange={setSelectedCouponId}>
-                      <SelectTrigger className="bg-zinc-900 border-2 border-zinc-800 text-white h-14 rounded-2xl font-black uppercase tracking-tight">
-                        <SelectValue placeholder="SELECT WELCOME OFFER..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-2 border-zinc-800 text-zinc-200">
-                        {activeCoupons.length > 0 ? activeCoupons.map(c => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div className="flex items-center gap-4">
-                              <span className="font-mono font-black text-purple-400 bg-purple-950/40 px-3 py-1 rounded border border-purple-900/40 text-[11px] tracking-tight">{c.code}</span>
-                              <span className="font-black uppercase text-[11px] text-zinc-500">— {c.percent ? `${c.percent}% OFF` : `$${c.amount} OFF`}</span>
-                            </div>
-                          </SelectItem>
-                        )) : (
-                          <div className="p-6 text-[11px] font-black uppercase text-zinc-600 italic text-center">No active offers detected.</div>
-                        )}
-                      </SelectContent>
-                   </Select>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-
-          <DialogFooter className="mt-10 border-t-2 border-zinc-900/50 pt-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsProspectDialogOpen(false)}
-              className="text-zinc-600 hover:text-white hover:bg-zinc-900 font-black uppercase tracking-[0.2em] text-[10px] h-12"
-            >
-              Cancel Prep
-            </Button>
-            <Button 
-              onClick={executeProspectFollowUp}
-              disabled={isSending || (includeDiscount && !selectedCouponId)}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-black uppercase tracking-tighter h-16 px-10 rounded-2xl shadow-2xl shadow-purple-900/50 transition-all hover:scale-[1.03] active:scale-95 text-lg"
-            >
-              {isSending ? "DISPATCHING..." : (
-                <>
-                  WELCOME PROSPECT
-                  <ChevronRight className="ml-3 h-6 w-6" />
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
