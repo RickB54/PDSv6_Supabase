@@ -1075,21 +1075,20 @@ export default function Prospects() {
     setAllExpanded(false); 
     
     if (isExpanding) {
-      // Use a more aggressive multi-step scroll for mobile reliability
+      // Immediately scroll to top so the filtered single-card is visible
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      // Then fine-tune to the element position after React re-renders
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          setTimeout(() => {
-            const rect = el.getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            window.scrollTo({
-              top: rect.top + scrollTop - 120,
-              behavior: "smooth"
-            });
-          }, 450);
+          const rect = el.getBoundingClientRect();
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          window.scrollTo({
+            top: rect.top + scrollTop - 100,
+            behavior: "smooth"
+          });
         }
-      }, 350);
+      }, 250);
     }
   };
   const toggleAll = () => {
@@ -1251,8 +1250,8 @@ export default function Prospects() {
           </div>
         )}
 
-        {/* Desktop Accordion Cards View */}
-        <div className="hidden md:block space-y-4">
+        {/* Accordion Cards View — unified for all screen sizes */}
+        <div className="space-y-4">
           {[...filteredCustomers]
             .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
             .filter((customer) => {
@@ -1266,7 +1265,7 @@ export default function Prospects() {
 
               return (
                 <div key={customer.id} id={`customer-${customer.id}`} className="border border-purple-500/20 rounded-xl overflow-hidden bg-zinc-900/50 transition-all hover:border-purple-500/40">
-                  <div className="p-4 bg-purple-500/5 flex flex-col md:flex-row items-center justify-between cursor-pointer hover:bg-purple-500/10 transition-colors gap-4" onClick={() => toggleCustomer(customer.id!)}>
+                  <div className="p-3 sm:p-4 bg-purple-500/5 flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer hover:bg-purple-500/10 transition-colors gap-3 sm:gap-4" onClick={() => toggleCustomer(customer.id!)}>
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.5)]' : 'bg-zinc-600'}`} />
 
@@ -1371,8 +1370,8 @@ export default function Prospects() {
                   </div>
 
                   {isExpanded && (
-                    <div className="p-6 border-t border-purple-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
-                      <div className="flex justify-end mb-6 gap-2 border-b border-zinc-800 pb-4">
+                    <div className="p-3 sm:p-6 border-t border-purple-500/10 bg-zinc-900/30 animate-in slide-in-from-top-2">
+                      <div className="flex flex-wrap justify-end mb-4 sm:mb-6 gap-2 border-b border-zinc-800 pb-3 sm:pb-4">
                         {!customer.is_archived && (
                           <>
                             <Button variant="outline" size="sm" className="h-9 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800" asChild>
@@ -1959,208 +1958,7 @@ export default function Prospects() {
             })}
         </div>
 
-        <div className="md:hidden space-y-4">
-          {[...filteredCustomers]
-            .sort((a, b) => { const da = (a as any).updated_at || ""; const db = (b as any).updated_at || ""; return (db ? new Date(db).getTime() : 0) - (da ? new Date(da).getTime() : 0); })
-            .filter((c) => {
-              if (expandedCustomers.length > 0) {
-                return expandedCustomers.includes(c.id!);
-              }
-              return true;
-            })
-            .map(c => {
-              const isExpanded = expandedCustomers.includes(c.id!);
-              return (
-                <div key={c.id} id={`customer-${c.id}`} className="bg-zinc-900 border border-purple-500/20 rounded-xl overflow-hidden transition-all duration-300">
-                  {/* Header - Click to toggle */}
-                  <div 
-                    className={cn(
-                      "p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer active:bg-zinc-800 transition-colors gap-4",
-                      isExpanded && "bg-zinc-800/30 border-b border-zinc-800"
-                    )}
-                    onClick={() => toggleCustomer(c.id!)}
-                  >
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                      {(() => {
-                        const allPhotos = Array.from(new Set([
-                          ...(c.generalPhotos || []),
-                          ...(c.beforePhotos || []),
-                          ...(c.afterPhotos || []),
-                          ...((c.vehicles || []).flatMap(v => [
-                            ...(v.generalPhotos || []),
-                            ...(v.beforePhotos || []),
-                            ...(v.afterPhotos || [])
-                          ]))
-                        ])).filter(Boolean);
 
-                        if (allPhotos.length > 0) {
-                          return (
-                            <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <div
-                                className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400"
-                                onClick={() => openGallery(c, 0)}
-                              >
-                                <img src={allPhotos[0]} alt={c.name} className="h-full w-full object-cover" />
-                              </div>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center text-zinc-400 font-bold">
-                            <span>{(c.name || 'U').charAt(0).toUpperCase()}</span>
-                          </div>
-                        );
-                      })()}
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-zinc-200 text-base truncate">{c.name}</h3>
-                        <p className="text-zinc-500 text-[10px] uppercase tracking-widest font-black truncate">{c.phone || "No Phone"}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-                      <div className="flex flex-wrap items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                        {!c.is_archived && (
-                          <Button 
-                            asChild 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8 px-3 text-[10px] font-black border-purple-500/30 text-purple-400 bg-purple-500/10"
-                          >
-                            <Link to={`/bookings?add=true&customerId=${c.id}&customerName=${encodeURIComponent(c.name)}&notes=${encodeURIComponent(c.notes || '')}`}>Convert</Link>
-                          </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleArchiveId(c)} 
-                          className={cn("h-8 w-8 p-0", c.is_archived ? "text-amber-500" : "text-zinc-400")}
-                        >
-                          {c.is_archived ? <RotateCcw className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={async () => { 
-                            handlePreviewPdf(c.id!);
-                          }} 
-                          className="h-8 w-8 p-0 text-purple-400"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)} className="h-8 w-8 p-0 text-zinc-400"><Pencil className="h-4 w-4" /></Button>
-                        {isAdmin && (
-                          <Button variant="ghost" size="sm" onClick={() => setDeleteCustomerId(c.id!)} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      <ChevronDown className={cn("h-5 w-5 text-zinc-600 transition-transform duration-300", isExpanded && "rotate-180")} />
-                    </div>
-                  </div>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-
-                      {/* Attached Estimates inside mobile view */}
-                      <div className="space-y-3 pt-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
-                            <FileBarChart className="h-3 w-3 text-emerald-400" /> Attached Estimates ({(estimates || []).filter(e => e.customerId === c.id).length})
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {(() => {
-                            const customerEsts = (estimates || []).filter(e => e.customerId === c.id);
-                            if (customerEsts.length === 0) {
-                              return (
-                                <div className="text-[10px] text-zinc-600 uppercase font-black text-center py-3 border border-dashed border-zinc-800 rounded-lg">
-                                  No estimates on file.
-                                </div>
-                              );
-                            }
-                            return customerEsts.map((est: any) => (
-                              <div key={est.id} className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 flex flex-col gap-1.5">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-[9px] font-black text-zinc-500">ESTIMATE #${est.estimateNumber || est.id.slice(-6).toUpperCase()}</span>
-                                  <Badge variant="outline" className="text-[8px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/20">{est.status}</Badge>
-                                </div>
-                                <div className="text-[10px] text-zinc-400 truncate">{est.services?.map((s: any) => s.name).join(', ')}</div>
-                                <div className="flex justify-between items-center mt-1">
-                                  <span className="text-xs font-black text-emerald-500">${(est.total || 0).toFixed(2)}</span>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 px-2 text-[9px] font-black text-emerald-400 gap-1"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (!c.email) {
-                                          toast({ title: "No Email", description: "Email is required.", variant: "destructive" });
-                                          return;
-                                        }
-                                        toast({ title: "Sending Estimate", description: "Outreach in progress..." });
-                                        try {
-                                          await onSendProspectEstimateEmail(c, est);
-                                          toast({ title: "Estimate Sent", description: "Emailed successfully." });
-                                          refresh();
-                                        } catch (err: any) {
-                                          toast({ title: "Failed to Send", description: err.message, variant: "destructive" });
-                                        }
-                                      }}
-                                    >
-                                      <Send className="w-2.5 h-2.5" /> SEND
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 px-2 text-[9px] text-zinc-400"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/estimates?id=${est.id}`);
-                                      }}
-                                    >
-                                      INSPECT
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-zinc-800">
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleArchiveId(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">
-                          {c.is_archived ? <RotateCcw className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
-                          {c.is_archived ? "Restore" : "Archive"}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }} className="h-9 px-4 text-zinc-400 hover:text-white bg-zinc-800/50 rounded-lg">
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-9 px-4 text-pink-400 hover:text-pink-300 bg-zinc-800/50 rounded-lg"
-                          onClick={(e) => { e.stopPropagation(); navigate(`/vehicle-gallery?search=${encodeURIComponent(c.name)}&from=prospects&customerId=${c.id}`); }}
-                        >
-                          <Video className="h-4 w-4 mr-2" />
-                          Gallery
-                        </Button>
-                        {isAdmin && (
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteCustomerId(c.id!); }} className="h-9 px-4 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-        </div>
       </main>
 
       <AlertDialog open={deleteCustomerId !== null} onOpenChange={() => setDeleteCustomerId(null)}>

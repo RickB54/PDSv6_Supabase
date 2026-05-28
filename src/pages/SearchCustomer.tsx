@@ -931,23 +931,24 @@ const SearchCustomer = () => {
   const toggleMap = (id: string) => { setOpenMaps(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
   const toggleCustomer = (id: string) => {
     const isExpanding = !expandedCustomers.includes(id);
-    setExpandedCustomers(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+    setExpandedCustomers(prev => (prev.includes(id) ? [] : [id]));
     setAllExpanded(false);
     
     if (isExpanding) {
+      // Immediately scroll to top so the filtered single-card is visible on mobile
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      // Then fine-tune to the element position after React re-renders
       setTimeout(() => {
         const el = document.getElementById(`customer-${id}`);
         if (el) {
           const rect = el.getBoundingClientRect();
           const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          const targetY = rect.top + scrollTop - 120; // 120px offset for header
-          
           window.scrollTo({
-            top: targetY,
+            top: rect.top + scrollTop - 100,
             behavior: "smooth"
           });
         }
-      }, 200);
+      }, 250);
     }
   };
   const toggleAll = () => {
