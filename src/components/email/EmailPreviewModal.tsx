@@ -234,7 +234,7 @@ export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPrevi
                 </div>
                 <div className="p-8">
                   <div style={{ whiteSpace: 'pre-wrap', color: '#374151', lineHeight: 1.7, fontSize: '15px' }}>
-                    {data.body || data.note?.replace(/^Letter Generated: ".*?"\n\n/, '') || 'No letter body found.'}
+                    {data.body || (data.note ? data.note.replace(/^Letter Generated: ".*?"\n\n/, '') : null) || data.note || 'No letter body found.'}
                   </div>
                 </div>
               </>

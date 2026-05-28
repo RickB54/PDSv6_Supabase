@@ -674,6 +674,8 @@ export default function Prospects() {
       vehicleMake: booking.vehicleMake || booking.make || '',
       vehicleModel: booking.vehicleModel || booking.model || '',
       notes: booking.notes || '',
+      note: booking.note || '',
+      body: booking.body || '',
       addons: Array.isArray(booking.addons) ? booking.addons : 
               (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
       time: booking.date ? format(parseISO(booking.date), 'HH:mm') : '09:00',

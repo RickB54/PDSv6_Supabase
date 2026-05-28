@@ -558,11 +558,11 @@ const SearchCustomer = () => {
   const [emailPreviewType, setEmailPreviewType] = useState<'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect'>('confirmation');
   const [emailFormData, setEmailFormData] = useState<any>(null);
 
-  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect') => {
+  const handlePreviewEmailForBooking = (booking: any, forcedType?: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect' | 'correspondence', engagement?: any) => {
     if (!booking) return;
     setEmailFormData({
-      customer: booking.customer || '',
-      email: booking.customerEmail || booking.email || '',
+      customer: booking.customer || booking.customer_name || '',
+      email: booking.customerEmail || booking.email || booking.customer_email || '',
       phone: booking.customerPhone || booking.phone || '',
       address: booking.address || '',
       service: booking.service || booking.title || '',
@@ -571,10 +571,13 @@ const SearchCustomer = () => {
       vehicleMake: booking.vehicleMake || '',
       vehicleModel: booking.vehicleModel || '',
       notes: booking.notes || '',
+      note: booking.note || '',
+      body: booking.body || '',
       addons: Array.isArray(booking.addons) ? booking.addons : 
               (typeof booking.addons === 'string' ? JSON.parse(booking.addons) : []),
       time: booking.date ? format(new Date(booking.date), 'HH:mm') : '09:00',
-      status: (booking.status || 'pending').toLowerCase() as any
+      status: (booking.status || 'pending').toLowerCase() as any,
+      sent_at: booking.created_at || booking.date || undefined
     });
     
     let type: any = forcedType;
