@@ -25,9 +25,9 @@ import {
   Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, 
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
-  HelpCircle, History, Clock, ShieldCheck, Calendar, Car, Activity, FileDown,
+  HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown,
   Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench,
-  Zap, Check, Bell, Package, Play, Send
+  Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -111,7 +111,7 @@ export default function Prospects() {
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
-  const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -415,21 +415,27 @@ export default function Prospects() {
 
   const filterByDate = (customer: Customer) => {
     const now = new Date();
-    const baseDateStr = (customer as any).updated_at || (customer as any).created_at || customer.lastService;
-    if (!baseDateStr) return dateFilter === "all" && !(dateRange.from || dateRange.to);
+    const baseDateStr = (customer as any).created_at || (customer as any).updated_at || customer.lastService;
+    if (!baseDateStr) return dateFilter === "all";
     const d = new Date(baseDateStr);
 
-    let passQuick = true;
-    const dayMs = 24 * 60 * 60 * 1000;
-    if (dateFilter === "daily") passQuick = now.getTime() - d.getTime() < dayMs;
-    if (dateFilter === "weekly") passQuick = now.getTime() - d.getTime() < 7 * dayMs;
-    if (dateFilter === "monthly") passQuick = now.getTime() - d.getTime() < 30 * dayMs;
-
-    let passRange = true;
-    if (dateRange.from) passRange = d >= new Date(dateRange.from.setHours(0, 0, 0, 0));
-    if (passRange && dateRange.to) passRange = d <= new Date(dateRange.to.setHours(23, 59, 59, 999));
-
-    return passQuick && passRange;
+    if (dateFilter === "today") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    }
+    if (dateFilter === "week") {
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday start
+      startOfWeek.setHours(0, 0, 0, 0);
+      return d >= startOfWeek;
+    }
+    if (dateFilter === "month") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    if (dateFilter === "year") {
+      return d.getFullYear() === now.getFullYear();
+    }
+    // "all"
+    return true;
   };
 
   const filteredCustomers = (Array.isArray(customers) ? customers : []).filter(customer => {
@@ -740,6 +746,41 @@ export default function Prospects() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+            {/* Quick date-filter pills */}
+            <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-lg p-1">
+              {([
+                { key: "today", label: "Today",  Icon: Sun },
+                { key: "week",  label: "Week",   Icon: CalendarDays },
+                { key: "month", label: "Month",  Icon: Calendar },
+                { key: "year",  label: "Year",   Icon: CalendarRange },
+                { key: "all",   label: "All",    Icon: CalendarCheck },
+              ] as const).map(({ key, label, Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setDateFilter(key)}
+                  title={key === "today" ? "Today" : key === "week" ? "This Week" : key === "month" ? "This Month" : key === "year" ? "This Year" : "All Time"}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
+                    dateFilter === key
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </button>
+              ))}
+              {/* Clear / reset to default (all) */}
+              {dateFilter !== "all" && (
+                <button
+                  onClick={() => setDateFilter("all")}
+                  title="Reset to All Time"
+                  className="flex items-center justify-center w-6 h-6 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 ml-0.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -757,8 +798,6 @@ export default function Prospects() {
             >
               {showArchived ? "Hide Archived" : "Show Archived"}
             </Button>
-
-            <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="prospects-range" />
             <Button variant="outline" onClick={() => generatePDF(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-200">
               <Save className="h-4 w-4 mr-2" /> PDF
             </Button>

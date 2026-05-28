@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Customer, supabase, getSupabaseEstimates } from "@/lib/supa-data";
-import { useBookingsStore, Booking } from "@/store/bookings";
+import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { useFollowUpStore } from "@/store/followup";
 import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail, uploadToFileManager, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS } from "@/lib/bookingsSync";
@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, Star, ShieldCheck, Activity, Info, Eye, AlertCircle, Sparkles, Wand2, ArrowRight, CheckCircle2, PhoneIncoming, PhoneOutgoing, Mail, StickyNote, Trash2, FileText, FileBarChart } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, ShieldCheck, Info, Eye, AlertCircle, Sparkles, FileText, FileBarChart, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -27,6 +28,7 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
   const { addLog } = useFollowUpStore();
 
+  const [activeSubTab, setActiveSubTab] = useState<"timeline" | "send">("timeline");
   const [engagements, setEngagements] = useState<any[]>([]);
   const [loadingEngs, setLoadingEngs] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -50,11 +52,11 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   const isProspect = customer.type === 'prospect';
 
   useEffect(() => {
-    if (customer.email) {
+    if (customer.email || customer.id) {
       refreshCoupons();
       fetchEngagements();
     }
-  }, [customer.email, customer.id]);
+  }, [customer.email, customer.id, customer.notes]);
 
   useEffect(() => {
     if (customer.id) {
@@ -75,41 +77,6 @@ export function RetentionHub({ customer, onRefresh }: Props) {
     }
   };
 
-  const fetchEngagements = async () => {
-    setLoadingEngs(true);
-    try {
-      let combinedData: any[] = [];
-      
-      // 1. Get from activity_log field if present
-      const activityLog = (customer as any).activity_log || (customer as any).activityLog || [];
-      combinedData = [...activityLog];
-
-      // 2. Try to get from engagements table (legacy/automated)
-      if (customer.email || customer.name) {
-        const { data, error } = await supabase
-          .from('engagements')
-          .select('*')
-          .or(`customer_email.eq.${customer.email},customer_name.eq.${customer.name}`)
-          .order('created_at', { ascending: false });
-        
-        if (data) {
-          combinedData = [...combinedData, ...data];
-        }
-      }
-
-      // Sort combined data by date
-      combinedData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      setEngagements(combinedData);
-    } catch (e) {
-      console.warn("Could not fetch engagements", e);
-      const log = (customer as any).activity_log || (customer as any).activityLog || [];
-      setEngagements(log);
-    } finally {
-      setLoadingEngs(false);
-    }
-  };
-
   const relatedBookings = allBookings
     .filter(b => 
       (b.customerId === customer.id) || 
@@ -120,9 +87,104 @@ export function RetentionHub({ customer, onRefresh }: Props) {
 
   const latestBooking = relatedBookings[0];
 
+  const fetchEngagements = async () => {
+    setLoadingEngs(true);
+    try {
+      let combinedData: any[] = [];
+      
+      // 1. Get from manual activity_log field if present
+      const activityLog = (customer as any).activity_log || (customer as any).activityLog || [];
+      activityLog.forEach((log: any) => {
+        combinedData.push({
+          id: log.id || `activity_${log.timestamp || log.created_at || Date.now()}`,
+          created_at: log.timestamp || log.created_at || new Date().toISOString(),
+          customer_name: customer.name,
+          customer_email: customer.email,
+          type: log.type || 'activity',
+          note: log.note || log.text || 'Manual CRM Interaction logged',
+          source: 'CRM Activity Log'
+        });
+      });
+
+      // 2. Dynamically pull Customer Profile internal notes as a correspondence event
+      if (customer.notes && customer.notes.trim()) {
+        combinedData.push({
+          id: `profile_note_${customer.id}`,
+          created_at: customer.updated_at || customer.created_at || new Date().toISOString(),
+          customer_name: customer.name,
+          customer_email: customer.email,
+          type: 'profile_note',
+          note: `${customer.notes}`,
+          source: 'Profile Internal Notes'
+        });
+      }
+
+      // 3. Dynamically pull Booking Appointment notes as correspondence events
+      relatedBookings.forEach((b: any) => {
+        if (b.notes && b.notes.trim()) {
+          combinedData.push({
+            id: `booking_note_${b.id}`,
+            created_at: b.date || b.created_at || new Date().toISOString(),
+            customer_name: customer.name,
+            customer_email: customer.email,
+            type: 'booking_note',
+            note: `Appointment Note (${b.title}): ${b.notes}`,
+            source: `Booking System`
+          });
+        }
+      });
+
+      // 4. Get from engagements table (letters, estimates, Resend automated emails)
+      if (customer.email || customer.name) {
+        const { data, error } = await supabase
+          .from('engagements')
+          .select('*')
+          .or(`customer_email.eq.${customer.email},customer_name.eq.${customer.name}`)
+          .order('created_at', { ascending: false });
+        
+        if (data) {
+          data.forEach((eng: any) => {
+            let src = 'Engagement Table';
+            if (eng.type === 'letter') src = 'Letter Maker';
+            else if (eng.type === 'email') src = 'Automated Email';
+            else if (eng.type === 'estimate') src = 'Estimate Module';
+            else if (eng.type === 'retention') src = 'Outreach Campaign';
+            
+            combinedData.push({
+              ...eng,
+              source: src
+            });
+          });
+        }
+      }
+
+      // De-duplicate items by exact date/note combination to avoid duplicates
+      const uniqueData: any[] = [];
+      const seen = new Set<string>();
+      combinedData.forEach(item => {
+        const key = `${item.created_at}_${item.note}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueData.push(item);
+        }
+      });
+
+      // Sort combined data by date (newest first)
+      uniqueData.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      setEngagements(uniqueData);
+    } catch (e) {
+      console.warn("Could not fetch engagements", e);
+      const log = (customer as any).activity_log || (customer as any).activityLog || [];
+      setEngagements(log);
+    } finally {
+      setLoadingEngs(false);
+    }
+  };
+
   const getRetentionStatus = () => {
-    if (isProspect) return { label: "New Lead", color: "text-purple-400", bg: "bg-purple-500/10", icon: <Activity className="h-3 w-3 text-purple-400" /> };
-    if (!latestBooking || !latestBooking.date) return { label: "Cold Record", color: "text-zinc-500", bg: "bg-zinc-500/10", icon: <Clock className="h-3 w-3 text-zinc-500" /> };
+    if (isProspect) return { label: "New Lead", color: "text-purple-400", bg: "bg-purple-500/10", icon: <Zap className="h-3.5 w-3.5 text-purple-400" /> };
+    if (!latestBooking || !latestBooking.date) return { label: "Cold Lead", color: "text-zinc-500", bg: "bg-zinc-500/10", icon: <Clock className="h-3.5 w-3.5 text-zinc-500" /> };
 
     try {
       const lastDate = new Date(latestBooking.date);
@@ -133,10 +195,10 @@ export function RetentionHub({ customer, onRefresh }: Props) {
       const isDue = isBefore(dueDate, new Date());
       const daysDiff = differenceInDays(dueDate, new Date());
 
-      if (isDue) return { label: "Retention Due", color: "text-red-500", bg: "bg-red-500/10", icon: <Zap className="h-3 w-3 text-red-500 animate-pulse" />, sub: `${Math.abs(daysDiff)} days overdue` };
-      return { label: "Active Client", color: "text-emerald-500", bg: "bg-emerald-500/10", icon: <ShieldCheck className="h-3 w-3 text-emerald-500" />, sub: `${daysDiff} days until refresh` };
+      if (isDue) return { label: "Retention Due", color: "text-red-500", bg: "bg-red-500/10", icon: <Zap className="h-3.5 w-3.5 text-red-500 animate-pulse" />, sub: `${Math.abs(daysDiff)} days overdue` };
+      return { label: "Active Client", color: "text-emerald-500", bg: "bg-emerald-500/10", icon: <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />, sub: `${daysDiff} days until refresh` };
     } catch (e) {
-      return { label: "Data Incomplete", color: "text-zinc-500", bg: "bg-zinc-500/10", icon: <Info className="h-3 w-3 text-zinc-500" /> };
+      return { label: "Data Incomplete", color: "text-zinc-500", bg: "bg-zinc-500/10", icon: <Info className="h-3.5 w-3.5 text-zinc-500" /> };
     }
   };
 
@@ -157,8 +219,8 @@ export function RetentionHub({ customer, onRefresh }: Props) {
       }
       setOutreachNote(draft);
       setIsGenerating(false);
-      toast.info("AI Draft Generated", { description: "You can now edit this message as you wish." });
-    }, 600);
+      toast.info("AI Draft Generated", { description: "You can now edit this message." });
+    }, 500);
   };
 
   const handleCampaignChange = (campaignId: string) => {
@@ -213,14 +275,12 @@ export function RetentionHub({ customer, onRefresh }: Props) {
       }
 
       if (outreachType === "letter") {
-        // 1. Generate beautifully styled PDF letter
         const doc = new jsPDF();
         const year = new Date().getFullYear();
         const monthName = new Date().toLocaleString('default', { month: 'long' });
         
-        // Professional Header
         doc.setFontSize(18);
-        doc.setTextColor(30, 58, 138); // Dark Blue
+        doc.setTextColor(30, 58, 138);
         doc.setFont("helvetica", "bold");
         doc.text("Prime Auto Detail", 20, 20);
         
@@ -233,25 +293,19 @@ export function RetentionHub({ customer, onRefresh }: Props) {
         doc.setDrawColor(200, 200, 200);
         doc.line(20, 35, 190, 35);
         
-        // Date & Addressee
         doc.setFontSize(10);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 45);
         doc.setFont(undefined, 'bold');
         doc.text(`To: ${customer.name}`, 20, 52);
         if (customer.email) doc.text(`Email: ${customer.email}`, 20, 57);
         
-        // Subject
         doc.setFontSize(11);
         doc.text(`Subject: ${customSubject}`, 20, 67);
         
         doc.setFont(undefined, 'normal');
         doc.setFontSize(10);
         
-        // Clean letter body from non-ASCII (emojis) for PDF rendering
-        const cleanBody = outreachNote
-          .replace(/[^\x00-\x7F]/g, "")
-          .trim();
-          
+        const cleanBody = outreachNote.replace(/[^\x00-\x7F]/g, "").trim();
         const bodyLines = doc.splitTextToSize(cleanBody, 170);
         doc.text(bodyLines, 20, 77);
         
@@ -265,7 +319,6 @@ export function RetentionHub({ customer, onRefresh }: Props) {
           currentY += 15;
         }
         
-        // Sign-off
         doc.text("Sincerely,", 20, currentY);
         doc.setFont(undefined, 'bold');
         doc.text("Rick Berube", 20, currentY + 6);
@@ -275,13 +328,11 @@ export function RetentionHub({ customer, onRefresh }: Props) {
         const pdfDataUrl = doc.output('dataurlstring');
         const pdfFileName = `LETTER_${customer.name.replace(/\s/g, '_')}_${Date.now()}.pdf`;
         
-        // Save PDF to file manager
         await uploadToFileManager(pdfDataUrl, `Outreach Letters/${year}/${monthName}/`, { customer: customer.name, date: new Date().toISOString() } as any, {
           service: "Outreach Letter",
           silent: true
         });
 
-        // 2. Email correspondence to customer via Resend Edge Function
         const letterHtml = `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 35px 20px; text-align: center; color: #ffffff;">
@@ -315,28 +366,15 @@ export function RetentionHub({ customer, onRefresh }: Props) {
           </div>
         `;
 
-        // Log locally first
-        const tempLog = {
-          created_at: new Date().toISOString(),
-          customer_name: customer.name,
-          customer_email: customer.email,
-          note: `Letter Sent: "${customSubject}"`,
-          coupon_code: includeDiscount ? coupon?.code : undefined,
-          type: 'letter'
-        };
-        setEngagements([tempLog, ...engagements]);
-
-        // Insert to engagements in Supabase
         await supabase.from('engagements').insert({
           customer_name: customer.name,
           customer_email: customer.email,
           customer_id: customer.id,
           type: 'letter',
-          note: `Letter sent: ${customSubject}`,
+          note: `Custom Letter Sent: "${customSubject}"`,
           coupon_code: includeDiscount ? coupon?.code : undefined
         });
 
-        // Trigger email
         const { error } = await supabase.functions.invoke('send-booking-email', {
           body: {
             to: customer.email,
@@ -361,19 +399,6 @@ export function RetentionHub({ customer, onRefresh }: Props) {
         if (onRefresh) onRefresh();
         return;
       }
-
-      // Log locally first for immediate UI response
-      const logId = `log_${Date.now()}`;
-      const tempLog = {
-        created_at: new Date().toISOString(),
-        customer_name: customer.name,
-        customer_email: customer.email,
-        note: outreachNote.trim() || (isProspect ? "Introductory Outreach" : "Maintenance Reminder"),
-        coupon_code: includeDiscount ? coupon?.code : undefined,
-        type: isProspect ? 'initial' : 'retention',
-        addons: latestBooking?.addons || []
-      };
-      setEngagements([tempLog, ...engagements]);
 
       if (isProspect) {
         await onSendProspectEmail(customer, {
@@ -439,510 +464,369 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   };
 
   return (
-    <div className="p-6 space-y-8 animate-in fade-in duration-500">
-      {/* Workflow Guidance */}
-      <div className="bg-blue-600/5 border border-blue-600/10 rounded-2xl p-4 flex gap-4 items-center">
-         <div className="h-10 w-10 rounded-full bg-blue-600/10 flex items-center justify-center shrink-0">
-            <Zap className="h-5 w-5 text-blue-400" />
+    <div className="flex flex-col h-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
+      {/* Dynamic Status Header */}
+      <div className={cn("p-4 border-b border-zinc-800 flex items-center justify-between gap-4", status.bg)}>
+         <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-zinc-900 rounded-lg flex items-center justify-center border border-zinc-800">
+               {status.icon}
+            </div>
+            <div>
+               <h4 className={cn("text-xs font-black uppercase tracking-widest", status.color)}>{status.label}</h4>
+               {status.sub && <p className="text-[10px] text-zinc-400 font-bold uppercase mt-0.5">{status.sub}</p>}
+            </div>
          </div>
-         <div className="space-y-0.5">
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-blue-400">Retention Workflow</h4>
-            <p className="text-[10px] text-zinc-500 font-medium leading-relaxed">Follow the 3 steps below to analyze, draft, and securely dispatch personalized outreach.</p>
-         </div>
+         <Button 
+           variant="ghost" 
+           size="icon" 
+           onClick={fetchEngagements} 
+           disabled={loadingEngs}
+           className="h-7 w-7 text-zinc-400 hover:text-white rounded-full"
+           title="Sync correspondence history"
+         >
+           <RefreshCw className={cn("h-3.5 w-3.5", loadingEngs && "animate-spin")} />
+         </Button>
       </div>
 
-      {/* STEP 1: ANALYSIS */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-           <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">1</span>
-           Analysis: Current standing
+      {/* Tabs list for simplified navigation */}
+      <Tabs value={activeSubTab} onValueChange={(val) => setActiveSubTab(val as any)} className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-4 border-b border-zinc-800/80 bg-zinc-950">
+          <TabsList className="bg-transparent border-none p-0 h-10 gap-6 flex">
+            <TabsTrigger 
+              value="timeline" 
+              className="data-[state=active]:bg-transparent data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none h-10 px-0 text-[10px] font-black uppercase tracking-wider transition-all"
+            >
+              <History className="h-3 w-3 mr-1.5" /> Unified Timeline ({engagements.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="send" 
+              className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-500 rounded-none h-10 px-0 text-[10px] font-black uppercase tracking-wider transition-all"
+            >
+              <Send className="h-3 w-3 mr-1.5" /> Send Message
+            </TabsTrigger>
+          </TabsList>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className={cn("p-4 rounded-2xl border border-white/5 shadow-inner", status.bg)}>
-            <div className="text-zinc-500 text-[10px] uppercase font-black tracking-widest mb-2 flex items-center gap-1.5 opacity-60">
-              {status.icon} {isProspect ? 'Lead Pipeline' : 'Retention State'}
-            </div>
-            <div className={cn("text-lg font-black uppercase tracking-tight", status.color)}>
-              {status.label}
-            </div>
-            {status.sub && <div className="text-[10px] text-zinc-500 font-bold mt-1 uppercase tracking-wider">{status.sub}</div>}
-          </div>
 
-          <div className="bg-zinc-900 p-4 rounded-2xl border border-white/5 shadow-inner">
-            <div className="text-zinc-500 text-[10px] uppercase font-black tracking-widest mb-2 flex items-center gap-1.5 opacity-60">
-              <History className="h-3 w-3" /> Audit History
-            </div>
-            <div className="text-lg font-black text-white uppercase tracking-tight">
-              {engagements.length} Logs
-            </div>
-            <div className="text-[10px] text-zinc-600 font-bold mt-1 uppercase tracking-wider">
-              {engagements[0] ? `Last: ${format(new Date(engagements[0].created_at), 'MMM dd, yyyy')}` : 'No history found'}
-            </div>
-            {latestBooking && latestBooking.addons && latestBooking.addons.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {latestBooking.addons.slice(0, 3).map((a: string, i: number) => (
-                  <Badge key={i} variant="outline" className="text-[8px] font-black uppercase px-1.5 py-0 h-4 bg-blue-500/5 text-blue-400/60 border-blue-500/10">
-                    {a}
-                  </Badge>
-                ))}
-                {latestBooking.addons.length > 3 && <span className="text-[8px] text-zinc-600 font-bold">+{latestBooking.addons.length - 3}</span>}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 bg-zinc-950/20">
+          
+          {/* TAB 1: UNIFIED TIMELINE */}
+          <TabsContent value="timeline" className="m-0 space-y-3 outline-none">
+            {loadingEngs && (
+              <div className="text-[10px] text-zinc-500 italic p-8 text-center flex items-center justify-center gap-2">
+                <Clock className="h-3.5 w-3.5 animate-spin" /> Gathering all correspondence logs...
               </div>
             )}
-          </div>
-        </div>
-      </section>
-
-      <div className="h-px bg-zinc-800/50 mx-2" />
-
-      {/* STEP 2 & 3: COMPOSITION & HISTORY */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        <section className="space-y-4">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-             <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">2</span>
-             Composition: Design the offer
-          </div>
-
-          <div className="space-y-4 bg-zinc-900/40 p-5 rounded-2xl border border-white/5 h-full flex flex-col">
-              
-              {/* outreachType Segmented Button */}
-              <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800/80 mb-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOutreachType("campaign");
-                    setOutreachNote("");
-                  }}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
-                    outreachType === "campaign"
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  )}
-                >
-                  <Mail className="h-3 w-3" /> Campaign
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOutreachType("letter");
-                    setOutreachNote("");
-                  }}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
-                    outreachType === "letter"
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  )}
-                >
-                  <FileText className="h-3 w-3" /> Letter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOutreachType("estimate");
-                  }}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
-                    outreachType === "estimate"
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/10"
-                      : "text-zinc-400 hover:text-zinc-200"
-                  )}
-                >
-                  <FileBarChart className="h-3 w-3" /> Estimate
-                </button>
+            
+            {!loadingEngs && engagements.length === 0 && (
+              <div className="text-center p-8 border border-dashed border-zinc-900 rounded-xl space-y-2">
+                <p className="text-[10px] text-zinc-500 italic">No correspondence records or notes found.</p>
+                <p className="text-[9px] text-zinc-600 uppercase font-black">Generate a letter or send an outreach to start this timeline.</p>
               </div>
+            )}
 
-              {outreachType === "campaign" && (
-                <>
-                  <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Outreach Campaign Template</label>
-                      <Select 
-                        value={selectedCampaignId}
-                        onValueChange={handleCampaignChange}
-                      >
-                        <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase rounded-xl tracking-tight">
-                          <SelectValue placeholder="SELECT AN EMAIL CAMPAIGN..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-950 border-zinc-900 text-white rounded-xl shadow-2xl">
-                          {(isProspect ? PROSPECT_CAMPAIGNS : CLIENT_CAMPAIGNS).map(c => (
-                            <SelectItem key={c.id} value={c.id} className="text-[10px] font-black uppercase tracking-tight">
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+            {!loadingEngs && engagements.map((eng, idx) => (
+              <div 
+                key={eng.id || idx} 
+                className="p-3.5 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-900 hover:border-zinc-800 rounded-xl space-y-2 transition-all group"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-zinc-800 text-[8px] font-black uppercase border-none text-zinc-400 px-1.5 py-0">
+                      {eng.source || 'Engagement'}
+                    </Badge>
+                    <span className="text-[9px] text-zinc-500 font-bold">
+                      {format(new Date(eng.created_at || eng.timestamp), 'MMM dd, yyyy · p')}
+                    </span>
                   </div>
-
-                  <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Personal Message</label>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={generateAIDraft}
-                          disabled={isGenerating}
-                          className="h-6 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg border border-indigo-500/10 px-2"
-                        >
-                          <Sparkles className={cn("w-3 h-3 mr-1.5", isGenerating && "animate-pulse")} /> 
-                          {isGenerating ? "Drafting..." : "AI Auto-Draft"}
-                        </Button>
-                      </div>
-                      <Textarea 
-                        placeholder={isProspect ? "e.g. Welcome to Prime! Here is a special offer to get you started..." : "e.g. It's been a while since your last detail! We'd love to refresh your vehicle..."}
-                        value={outreachNote}
-                        onChange={(e) => setOutreachNote(e.target.value)}
-                        className="bg-zinc-950 border-zinc-800 min-h-[140px] text-xs font-semibold rounded-xl focus:ring-blue-500/20 placeholder:text-zinc-800 resize-none w-full"
-                      />
-                  </div>
-                </>
-              )}
-
-              {outreachType === "letter" && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Letter Subject</label>
-                    <Input
-                      value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
-                      className="bg-zinc-950 border-zinc-800 h-10 text-xs font-semibold rounded-xl text-white placeholder:text-zinc-700"
-                      placeholder="Letter Subject..."
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Letter Body</label>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={generateAIDraft}
-                          disabled={isGenerating}
-                          className="h-6 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg border border-indigo-500/10 px-2"
-                        >
-                          <Sparkles className={cn("w-3 h-3 mr-1.5", isGenerating && "animate-pulse")} /> 
-                          {isGenerating ? "Drafting..." : "AI Auto-Draft"}
-                        </Button>
-                      </div>
-                      <Textarea 
-                        placeholder="Write a completely custom, freeform letter to this client..."
-                        value={outreachNote}
-                        onChange={(e) => setOutreachNote(e.target.value)}
-                        className="bg-zinc-950 border-zinc-800 min-h-[140px] text-xs font-semibold rounded-xl focus:ring-blue-500/20 placeholder:text-zinc-800 resize-none w-full"
-                      />
-                  </div>
-                </>
-              )}
-
-              {outreachType === "estimate" && (
-                <div className="space-y-4 flex-1 flex flex-col justify-start">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest ml-1">Select Estimate to Send</label>
-                    {loadingEstimates ? (
-                      <div className="h-10 bg-zinc-950 border border-zinc-800 text-[10px] font-bold text-zinc-500 rounded-xl flex items-center justify-center animate-pulse">
-                        Loading estimates...
-                      </div>
-                    ) : estimates.length === 0 ? (
-                      <div className="p-6 bg-zinc-950/50 border border-dashed border-zinc-800/80 rounded-xl text-center flex flex-col items-center justify-center gap-2">
-                        <p className="text-[10px] text-zinc-500 italic">No estimates recorded for this customer.</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(`/estimates?customerId=${customer.id}`, '_blank')}
-                          className="h-7 text-[9px] font-black uppercase bg-zinc-900 border-zinc-800 text-zinc-300 gap-1.5 mt-1"
-                        >
-                          CREATE NEW ESTIMATE <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Select value={selectedEstimateId} onValueChange={setSelectedEstimateId}>
-                        <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase rounded-xl tracking-tight">
-                          <SelectValue placeholder="SELECT AN ESTIMATE..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-950 border-zinc-900 text-white rounded-xl shadow-2xl">
-                          {estimates.map((e) => (
-                            <SelectItem key={e.id} value={e.id!} className="text-[10px] font-black uppercase tracking-tight">
-                              Estimate #{e.estimateNumber} — ${(e.total || 0).toFixed(2)} ({formatDisplayDate(e.estimateDate || e.date)})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-
-                  {selectedEstimateId && (
-                    (() => {
-                      const est = estimates.find(e => e.id === selectedEstimateId);
-                      if (!est) return null;
-                      return (
-                        <div className="bg-zinc-950 border border-zinc-800/80 p-4 rounded-xl space-y-3 animate-in fade-in duration-300">
-                          <div className="flex justify-between items-center pb-2 border-b border-zinc-800/50">
-                            <span className="text-[10px] font-black uppercase text-emerald-400">ESTIMATE #{est.estimateNumber}</span>
-                            <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 h-4 bg-zinc-900 border-zinc-800 text-blue-400">
-                              {est.status || 'open'}
-                            </Badge>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-[10px]">
-                            <div>
-                              <span className="text-zinc-500 uppercase font-black tracking-wider block">Date</span>
-                              <span className="text-zinc-300 font-bold">{formatDisplayDate(est.estimateDate || est.date)}</span>
-                            </div>
-                            <div>
-                              <span className="text-zinc-500 uppercase font-black tracking-wider block">Vehicle</span>
-                              <span className="text-zinc-300 font-bold truncate block">{est.vehicle}</span>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <span className="text-zinc-500 uppercase font-black tracking-wider text-[9px] block">Services Proposed</span>
-                            <div className="max-h-20 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                              {est.services?.map((s: any, idx: number) => (
-                                <div key={idx} className="flex justify-between text-[9px] font-medium text-zinc-400">
-                                  <span className="truncate pr-2">{s.name}</span>
-                                  <span className="font-bold shrink-0">${(s.price || 0).toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="pt-2 border-t border-zinc-800/50 flex justify-between items-center">
-                            <span className="text-[10px] font-black uppercase text-zinc-400">Estimated Total</span>
-                            <span className="text-xs font-black text-emerald-400">${(est.total || 0).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      );
-                    })()
+                  {eng.coupon_code && (
+                    <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1.5 rounded border border-emerald-500/10">
+                      {eng.coupon_code}
+                    </span>
                   )}
                 </div>
-              )}
-              
-              {outreachType !== "estimate" && (
-                <>
-                  <div className="flex items-center justify-between px-1 bg-zinc-950/40 p-2 rounded-xl border border-zinc-800/50 mt-4">
-                     <div className="flex items-center gap-2">
-                        <TicketPercent className="h-3 w-3 text-emerald-400" />
-                        <span className="text-[10px] font-black uppercase text-zinc-300 tracking-widest">Include Incentive?</span>
-                     </div>
-                     <Switch 
-                       checked={includeDiscount} 
-                       onCheckedChange={setIncludeDiscount}
-                       className="scale-75 data-[state=checked]:bg-blue-600"
-                     />
-                  </div>
-
-                  {includeDiscount && (
-                    <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300 mt-2">
-                      <Select 
-                        value={outreachCouponId}
-                        onValueChange={setOutreachCouponId}
-                      >
-                        <SelectTrigger className="h-10 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase rounded-xl tracking-tight">
-                          <SelectValue placeholder="SELECT COUPON CODE..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-950 border-zinc-900 text-white rounded-xl shadow-2xl">
-                          {allCoupons.filter(c => c.active).length > 0 ? (
-                            allCoupons.filter(c => c.active).map(c => (
-                              <SelectItem key={c.id} value={c.id} className="text-[10px] font-black uppercase tracking-tight">
-                                {c.code} — {c.percent ? `${c.percent}% OFF` : `$${c.amount} OFF`}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-4 text-[10px] text-zinc-500 italic text-center">No active coupons available</div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4 px-1 mt-6">
-                 <span className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] text-white">3</span>
-                 Dispatch: Final Review & Send
+                <p className="text-zinc-200 text-xs leading-relaxed whitespace-pre-wrap font-medium">
+                  {eng.note || eng.text}
+                </p>
               </div>
+            ))}
+          </TabsContent>
 
+          {/* TAB 2: SEND MESSAGE */}
+          <TabsContent value="send" className="m-0 space-y-4 outline-none">
+            {/* Outreach Type Selector */}
+            <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+              <button
+                type="button"
+                onClick={() => { setOutreachType("campaign"); setOutreachNote(""); }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
+                  outreachType === "campaign" ? "bg-blue-600 text-white shadow" : "text-zinc-400 hover:text-zinc-200"
+                )}
+              >
+                <Mail className="h-3 w-3" /> Campaign
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOutreachType("letter"); setOutreachNote(""); }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
+                  outreachType === "letter" ? "bg-indigo-600 text-white shadow" : "text-zinc-400 hover:text-zinc-200"
+                )}
+              >
+                <FileText className="h-3 w-3" /> Custom Letter
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOutreachType("estimate"); }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1.5 py-2 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
+                  outreachType === "estimate" ? "bg-emerald-600 text-white shadow" : "text-zinc-400 hover:text-zinc-200"
+                )}
+              >
+                <FileBarChart className="h-3 w-3" /> Send Estimate
+              </button>
+            </div>
+
+            {/* Campaign Selection */}
+            {outreachType === "campaign" && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Select Campaign Template</label>
+                  <Select value={selectedCampaignId} onValueChange={handleCampaignChange}>
+                    <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-[10px] uppercase font-bold rounded-lg">
+                      <SelectValue placeholder="CHOOSE CAMPAIGN..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                      {(isProspect ? PROSPECT_CAMPAIGNS : CLIENT_CAMPAIGNS).map(c => (
+                        <SelectItem key={c.id} value={c.id} className="text-[10px] font-bold uppercase">
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Letter Subject */}
+            {outreachType === "letter" && (
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Letter Subject</label>
+                <Input
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 h-9 text-xs rounded-lg text-white"
+                  placeholder="Enter email subject line..."
+                />
+              </div>
+            )}
+
+            {/* Estimate Selector */}
+            {outreachType === "estimate" && (
+              <div className="space-y-3">
+                <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider block">Choose Customer Estimate</label>
+                {loadingEstimates ? (
+                  <div className="h-9 bg-zinc-900 border border-zinc-800 text-[10px] rounded-lg flex items-center justify-center animate-pulse text-zinc-500">
+                    Loading estimates...
+                  </div>
+                ) : estimates.length === 0 ? (
+                  <div className="p-4 bg-zinc-900/40 border border-dashed border-zinc-800 rounded-xl text-center space-y-2">
+                    <p className="text-[10px] text-zinc-500 italic">No estimates found for this profile.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/estimates?customerId=${customer.id}`, '_blank')}
+                      className="h-7 text-[9px] font-black uppercase bg-zinc-900 border-zinc-800 text-zinc-400"
+                    >
+                      New Estimate <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Select value={selectedEstimateId} onValueChange={setSelectedEstimateId}>
+                    <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-[10px] font-bold uppercase rounded-lg">
+                      <SelectValue placeholder="SELECT AN ESTIMATE..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                      {estimates.map((e) => (
+                        <SelectItem key={e.id} value={e.id!} className="text-[10px] font-bold">
+                          Estimate #{e.estimateNumber} — ${(e.total || 0).toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {selectedEstimateId && (
+                  (() => {
+                    const est = estimates.find(e => e.id === selectedEstimateId);
+                    if (!est) return null;
+                    return (
+                      <div className="bg-zinc-900/60 border border-zinc-800 p-3.5 rounded-xl space-y-2">
+                        <div className="flex justify-between text-[10px] font-black uppercase">
+                          <span className="text-emerald-400">Estimate #{est.estimateNumber}</span>
+                          <span className="text-zinc-400">${(est.total || 0).toFixed(2)}</span>
+                        </div>
+                        <p className="text-[9px] text-zinc-500 truncate">Vehicle: {est.vehicle}</p>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            )}
+
+            {/* Note/Draft Textarea */}
+            {outreachType !== "estimate" && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[9px] font-black uppercase text-zinc-500 tracking-wider">Message Draft</label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={generateAIDraft}
+                    disabled={isGenerating}
+                    className="h-6 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 px-2 rounded"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" /> AI Auto-Draft
+                  </Button>
+                </div>
+                <Textarea 
+                  placeholder="Draft your personalized message here..."
+                  value={outreachNote}
+                  onChange={(e) => setOutreachNote(e.target.value)}
+                  className="bg-zinc-900 border-zinc-800 min-h-[120px] text-xs rounded-lg placeholder:text-zinc-700 resize-none w-full"
+                />
+              </div>
+            )}
+
+            {/* Coupon Incentive */}
+            {outreachType !== "estimate" && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between bg-zinc-900/50 p-2.5 rounded-lg border border-zinc-900">
+                  <div className="flex items-center gap-2">
+                    <TicketPercent className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-[9px] font-black uppercase text-zinc-300">Add Loyalty Reward?</span>
+                  </div>
+                  <Switch checked={includeDiscount} onCheckedChange={setIncludeDiscount} className="scale-75 data-[state=checked]:bg-blue-600" />
+                </div>
+
+                {includeDiscount && (
+                  <Select value={outreachCouponId} onValueChange={setOutreachCouponId}>
+                    <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-[10px] font-bold uppercase rounded-lg">
+                      <SelectValue placeholder="SELECT COUPON CODE..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                      {allCoupons.filter(c => c.active).length > 0 ? (
+                        allCoupons.filter(c => c.active).map(c => (
+                          <SelectItem key={c.id} value={c.id} className="text-[10px] font-bold uppercase">
+                            {c.code} — {c.percent ? `${c.percent}% OFF` : `$${c.amount} OFF`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-[10px] text-zinc-500 italic text-center">No active coupons found</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            {/* Dispatch Buttons */}
+            <div className="pt-2">
               {outreachType === "estimate" ? (
                 <Button 
-                   variant="default"
-                   size="lg"
-                   disabled={isSending || !customer.email || !selectedEstimateId}
-                   onClick={handleSendOutreach}
-                   className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase tracking-widest h-14 rounded-2xl shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-4 whitespace-normal"
-                 >
-                   {isSending ? "Sending Estimate..." : "Dispatch Estimate Email Now"}
-                   <Send className="h-4 w-4 ml-2" />
-                 </Button>
+                  disabled={isSending || !customer.email || !selectedEstimateId}
+                  onClick={handleSendOutreach}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest h-10 rounded-xl"
+                >
+                  Send Estimate Email
+                </Button>
               ) : (
                 <Button 
-                   variant="default"
-                   size="lg"
-                   disabled={isSending || !customer.email || !outreachNote.trim()}
-                   onClick={() => setShowPreview(true)}
-                   className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-[11px] uppercase tracking-widest h-14 rounded-2xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 px-4 whitespace-normal"
-                 >
-                   <Eye className="h-4 w-4 mr-2" /> Review {outreachType === "letter" ? "Letter" : "Outreach Email"}
-                 </Button>
+                  disabled={isSending || !customer.email || !outreachNote.trim()}
+                  onClick={() => setShowPreview(true)}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest h-10 rounded-xl"
+                >
+                  <Eye className="h-3.5 w-3.5 mr-1.5" /> Review & Send
+                </Button>
               )}
-          </div>
-        </section>
-
-        {/* Engagement History Column */}
-        <section className="space-y-4 flex flex-col">
-          <div className="flex items-center gap-1.5 px-1 opacity-50">
-             <History className="h-3 w-3 text-zinc-500" />
-             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">Communication Audit Trail</span>
-          </div>
-          <div className="space-y-3 flex-1 max-h-[600px] overflow-y-auto custom-scrollbar pr-2 bg-zinc-900/20 p-4 rounded-2xl border border-white/5">
-             {loadingEngs && <div className="text-[10px] text-zinc-700 italic px-4 py-8 border border-dashed border-zinc-800 rounded-2xl text-center flex items-center justify-center gap-2 animate-pulse"><Clock className="h-3 w-3" /> Syncing communication history...</div>}
-             {!loadingEngs && engagements.length === 0 && (
-               <div className="text-[10px] text-zinc-500 italic px-4 py-12 border border-dashed border-zinc-800/80 rounded-2xl text-center flex flex-col items-center gap-3 h-full justify-center">
-                  <div className="h-10 w-10 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><MessageSquare className="h-5 w-5" /></div>
-                  No prior outreach recorded for this profile.
-               </div>
-             )}
-             {engagements.map((eng, idx) => (
-               <div key={idx} className="flex flex-col gap-2 p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] group/item hover:border-blue-500/20 transition-all shadow-sm">
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-center gap-2">
-                       <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 h-4 bg-zinc-900 border-zinc-800 text-blue-400">
-                         {eng.type === 'initial' ? 'Intro' : eng.type === 'letter' ? 'Letter' : 'Retention'}
-                       </Badge>
-                       <span className="text-zinc-500 font-bold tracking-tight">{format(new Date(eng.created_at), 'MMMM dd, yyyy · p')}</span>
-                     </div>
-                     {eng.coupon_code && <span className="text-emerald-500 font-black tracking-tighter text-[9px] bg-emerald-500/10 px-2 h-4 flex items-center rounded-full border-emerald-500/20">{eng.coupon_code}</span>}
-                  </div>
-                  <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1">
-                     "{eng.note}"
-                  </div>
-                  {eng.addons && Array.isArray(eng.addons) && eng.addons.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1 pl-3">
-                      {eng.addons.map((a: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-[7px] font-black uppercase px-1 py-0 h-3 bg-zinc-900 border-zinc-800 text-zinc-500">
-                          {a}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-               </div>
-             ))}
-          </div>
-        </section>
-      </div>
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
 
       {!customer.email && (
-        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-bottom-2">
-           <Info className="h-5 w-5 text-amber-500" />
-           <p className="text-[11px] text-amber-200/80 font-medium">To use the CRM Hub, please provide a valid email address on the Profile tab. This allows the system to log interactions and send professional communications.</p>
+        <div className="p-3 bg-amber-500/5 border-t border-amber-500/10 flex items-center gap-2">
+           <Info className="h-4 w-4 text-amber-500 shrink-0" />
+           <p className="text-[9px] text-amber-400 font-bold uppercase leading-normal">
+             CRM Hub requires customer email to send out message correspondence.
+           </p>
         </div>
       )}
 
-      {/* Outreach Preview & Modification Modal */}
+      {/* Review Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl w-[90vw] bg-zinc-950 border-zinc-800 text-white rounded-[32px] overflow-hidden p-0">
-           <DialogHeader className="p-6 bg-zinc-900/50 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-blue-500/10 rounded-xl">
-                    <Eye className="h-5 w-5 text-blue-400" />
-                 </div>
-                 <div>
-                    <DialogTitle className="text-xl font-black uppercase tracking-tight">Review {outreachType === "letter" ? "Custom Letter" : "Outreach Message"}</DialogTitle>
-                    <DialogDescription className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Verify text and rewards before sending to {customer.name}</DialogDescription>
-                 </div>
-              </div>
+        <DialogContent className="max-w-xl w-[90vw] bg-zinc-950 border-zinc-800 text-white rounded-2xl overflow-hidden p-0">
+           <DialogHeader className="p-5 bg-zinc-900 border-b border-zinc-800">
+              <DialogTitle className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
+                <Eye className="h-4 w-4 text-indigo-400" /> Final Message Review
+              </DialogTitle>
+              <DialogDescription className="text-[9px] text-zinc-500 font-black uppercase">
+                Sending outreach email to {customer.name}
+              </DialogDescription>
            </DialogHeader>
 
-           <div className="p-6 space-y-6">
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex gap-3 items-start">
-                 <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                 <p className="text-[11px] text-amber-200/70 font-medium leading-relaxed">
-                    <strong>PREVIEW MODE:</strong> This is the final draft. You can still modify the subject and body below. Emojis and complex formatting will be automatically cleaned for the PDF records to ensure absolute clarity.
-                 </p>
-              </div>
-
-              <div className="space-y-4">
+           <div className="p-5 space-y-4">
+              <div className="space-y-3">
                  {outreachType === "letter" && (
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Edit Letter Subject</label>
+                   <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-zinc-500">Letter Subject</label>
                       <Input
                         value={customSubject}
                         onChange={(e) => setCustomSubject(e.target.value)}
-                        className="bg-zinc-900 border-zinc-800 h-10 text-xs font-semibold rounded-xl text-white"
+                        className="bg-zinc-900 border-zinc-800 h-9 text-xs rounded-lg text-white"
                       />
                    </div>
                  )}
 
-                 <div className="space-y-1.5">
-                    <div className="flex items-center justify-between mb-1 px-1">
-                       <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">
-                         {outreachType === "letter" ? "Edit Letter Body" : "Edit Personalized Note"}
-                       </label>
-                       {outreachType !== "letter" && (
-                         <Button 
-                           variant="ghost" 
-                           size="sm" 
-                           onClick={generateAIDraft}
-                           disabled={isGenerating}
-                           className="h-6 text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg border border-indigo-500/10"
-                         >
-                            <Sparkles className={cn("w-3 h-3 mr-1.5", isGenerating && "animate-pulse")} /> 
-                            {isGenerating ? "Writing..." : "AI Refine"}
-                         </Button>
-                       )}
-                    </div>
+                 <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-zinc-500">Message Content</label>
                     <Textarea 
                       value={outreachNote}
                       onChange={(e) => setOutreachNote(e.target.value)}
-                      className="bg-zinc-900 border-zinc-800 min-h-[140px] text-xs font-semibold rounded-2xl focus:ring-blue-500/20"
-                      placeholder={outreachType === "letter" ? "Write custom letter..." : "Add a final personal touch..."}
+                      className="bg-zinc-900 border-zinc-800 min-h-[140px] text-xs rounded-lg"
                     />
                  </div>
 
-                 <div className="bg-zinc-900/50 rounded-2xl border border-white/5 p-4 space-y-3">
-                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-widest">
-                       <span className="text-zinc-500">Recipient:</span>
-                       <span className="text-white">{customer.name}</span>
+                 <div className="bg-zinc-900 p-3.5 rounded-xl border border-zinc-800 space-y-2">
+                    <div className="flex justify-between text-[9px] font-bold uppercase text-zinc-400">
+                       <span>Recipient:</span>
+                       <span className="text-zinc-200">{customer.name}</span>
                     </div>
-                    <div className="flex justify-between text-[10px] uppercase font-bold tracking-widest">
-                       <span className="text-zinc-500">Email:</span>
-                       <span className="text-white">{customer.email}</span>
+                    <div className="flex justify-between text-[9px] font-bold uppercase text-zinc-400">
+                       <span>Email:</span>
+                       <span className="text-zinc-200">{customer.email}</span>
                     </div>
-
-                    <div className="h-px bg-white/5 my-1" />
-
+                    <div className="h-px bg-zinc-800/80 my-1.5" />
                     <div className="flex items-center justify-between">
-                       <div className="flex items-center gap-2">
-                          <MessageSquare className="h-3 w-3 text-indigo-400" />
-                          <span className="text-[10px] font-black uppercase text-zinc-300 tracking-widest">BCC to my Gmail?</span>
-                       </div>
-                       <Switch 
-                         checked={bccMe} 
-                         onCheckedChange={setBccMe}
-                         className="scale-75 data-[state=checked]:bg-indigo-600"
-                       />
+                       <span className="text-[9px] font-bold uppercase text-zinc-400 flex items-center gap-1.5">
+                         <MessageSquare className="h-3 w-3 text-indigo-400" /> BCC Rick's Gmail?
+                       </span>
+                       <Switch checked={bccMe} onCheckedChange={setBccMe} className="scale-75 data-[state=checked]:bg-indigo-600" />
                     </div>
-
-                    {includeDiscount && (
-                       <div className="flex justify-between text-[10px] uppercase font-bold tracking-widest">
-                          <span className="text-emerald-500">Active Incentive:</span>
-                          <span className="text-emerald-400">Coupon Included</span>
-                       </div>
-                    )}
                  </div>
               </div>
            </div>
 
-           <DialogFooter className="p-6 bg-zinc-900/30 border-t border-white/5 gap-3">
-              <Button 
-                variant="ghost" 
-                onClick={() => setShowPreview(false)}
-                className="rounded-xl font-bold uppercase text-[10px] tracking-widest"
-              >
-                Back to Editor
+           <DialogFooter className="p-4 bg-zinc-900/50 border-t border-zinc-800 gap-2 flex flex-col sm:flex-row">
+              <Button variant="ghost" onClick={() => setShowPreview(false)} className="h-9 text-xs uppercase font-bold text-zinc-400">
+                Cancel
               </Button>
               <Button 
                 onClick={handleSendOutreach}
                 disabled={isSending}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] tracking-[0.2em] h-12 rounded-xl shadow-lg shadow-blue-600/20"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase text-[10px] tracking-wider h-9 px-6 rounded-lg ml-auto"
               >
-                {isSending ? "Sending Outreach..." : "Dispatch Email Now"}
-                <Send className="h-4 w-4 ml-2" />
+                {isSending ? "Sending Message..." : "Send Email Now"}
               </Button>
            </DialogFooter>
         </DialogContent>
