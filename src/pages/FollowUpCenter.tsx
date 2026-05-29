@@ -142,8 +142,8 @@ export default function FollowUpCenter() {
           customerEmail: r.customer_email || "",
           customerName: r.customer_name || "",
           dateSent: r.created_at,
-          frequency: r.type === 'initial' ? 'Lead Outreach' : 'Client Retention',
-          emailType: r.type === 'initial' ? 'prospect_intro' : 'maintenance_reminder',
+          frequency: r.type === 'initial' ? 'Lead Outreach' : r.type === 'correspondence' ? 'Correspondence' : 'Client Retention',
+          emailType: r.type === 'initial' ? 'prospect_intro' : r.type === 'correspondence' ? 'correspondence' : 'maintenance_reminder',
           customNote: r.note || undefined,
           couponCode: r.coupon_code || undefined
         }));
@@ -789,11 +789,10 @@ export default function FollowUpCenter() {
                                   </Badge>
                                </td>
                                <td className="px-4 py-7 text-center">
-                                  <span className={cn(
-                                      "text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border",
-                                      log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                                  <span className={cn("text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border",
+                                     log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : log.emailType === 'correspondence' ? "text-amber-400 border-amber-500/20 bg-amber-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
                                   )}>
-                                      {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
+                                     {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : log.emailType === 'correspondence' ? 'CORRESPONDENCE' : 'CLIENT RETENTION'}
                                   </span>
                                </td>
                                <td className="px-4 py-7 text-center">
@@ -872,12 +871,11 @@ export default function FollowUpCenter() {
                        </div>
                        
                        <div className="flex flex-wrap gap-2 items-center">
-                          <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
-                              log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
-                          )}>
-                              {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
-                          </span>
+                          <span className={cn("text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                              log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : log.emailType === 'correspondence' ? "text-amber-400 border-amber-500/20 bg-amber-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                           )}>
+                              {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : log.emailType === 'correspondence' ? 'CORRESPONDENCE' : 'CLIENT RETENTION'}
+                           </span>
                           {log.couponCode && (
                              <span className="font-mono text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-tighter">
                                 {log.couponCode}
@@ -1057,11 +1055,10 @@ export default function FollowUpCenter() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
                   <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider block mb-1">Engagement Strategy</span>
-                  <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border inline-block mt-1",
-                    selectedAuditLog.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                  <span className={cn("text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded border shadow-sm",
+                    selectedAuditLog.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : selectedAuditLog.emailType === 'correspondence' ? "text-amber-400 border-amber-500/20 bg-amber-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
                   )}>
-                    {selectedAuditLog.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
+                    {selectedAuditLog.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : selectedAuditLog.emailType === 'correspondence' ? 'CORRESPONDENCE' : 'CLIENT RETENTION'}
                   </span>
                 </div>
 

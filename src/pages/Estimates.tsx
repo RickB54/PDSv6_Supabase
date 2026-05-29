@@ -352,6 +352,22 @@ const Estimates = () => {
 
             // Save to Supabase
             const saved = await upsertSupabaseEstimate(estimateData);
+            
+            const estToUpdate = isEditing ? estimates.find(e => e.id === editingEstimateId) : null;
+            const wasSentBefore = estToUpdate?.isSent;
+            
+            if (editIsSent && !wasSentBefore && selectedCustomer) {
+                try {
+                    await supabase.from('engagements').insert({
+                        customer_id: selectedCustomer,
+                        customer_name: customer.name,
+                        type: 'correspondence',
+                        note: `Estimate Sent: #${estimateData.estimateNumber}\nTotal: $${(estimateData.total || 0).toFixed(2)}\nServices: ${services.map(s => s.name).join(', ') || 'N/A'}`
+                    });
+                } catch (e) {
+                    console.warn("Could not log estimate to engagements:", e);
+                }
+            }
 
             // OPTIMISTIC UPDATE: merge the returned record into local state immediately
             // so the list appears without waiting for a full network reload
@@ -451,6 +467,20 @@ const Estimates = () => {
 
         try {
             await upsertSupabaseEstimate(updatedEstimate as any);
+
+            if (newStatus && estimate.customerId) {
+                try {
+                    await supabase.from('engagements').insert({
+                        customer_id: estimate.customerId,
+                        customer_name: estimate.customerName,
+                        type: 'correspondence',
+                        note: `Estimate Sent: #${estimate.estimateNumber}\nTotal: $${(estimate.total || 0).toFixed(2)}\nServices: ${estimate.services?.map(s => s.name).join(', ') || 'N/A'}`
+                    });
+                } catch (e) {
+                    console.warn("Could not log estimate to engagements:", e);
+                }
+            }
+
             toast({
                 title: newStatus ? "Marked as Sent" : "Marked as Unsent",
                 description: newStatus ? `Estimate #${estimate.estimateNumber} recorded as sent.` : `Estimate #${estimate.estimateNumber} status cleared.`
@@ -1425,7 +1455,41 @@ const Estimates = () => {
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
-                                    onClick={() => setEditIsSent(!editIsSent)}
+                                    onClick={async () => {
+                                        const newIsSent = !editIsSent;
+                                        setEditIsSent(newIsSent);
+                                        // Auto-save the sent status when toggled from the detail modal
+                                        if (selectedEstimate) {
+                                            const updated = {
+                                                ...selectedEstimate,
+                                                isSent: newIsSent,
+                                                sentDate: newIsSent ? new Date().toISOString() : undefined
+                                            };
+                                            try {
+                                                await upsertSupabaseEstimate(updated as any);
+                                                setSelectedEstimate(updated);
+                                                
+                                                if (newIsSent && updated.customerId) {
+                                                    try {
+                                                        await supabase.from('engagements').insert({
+                                                            customer_id: updated.customerId,
+                                                            customer_name: updated.customerName,
+                                                            type: 'correspondence',
+                                                            note: `Estimate Sent: #${updated.estimateNumber}\nTotal: $${(updated.total || 0).toFixed(2)}\nServices: ${updated.services?.map(s => s.name).join(', ') || 'N/A'}`
+                                                        });
+                                                    } catch (e) {}
+                                                }
+                                                
+                                                toast({
+                                                    title: newIsSent ? "Marked as Sent" : "Marked as Unsent",
+                                                    description: "Sent status updated successfully."
+                                                });
+                                                loadData();
+                                            } catch (err) {
+                                                console.error("Failed to update sent status", err);
+                                            }
+                                        }
+                                    }}
                                     className={cn(
                                         "gap-2 font-bold text-[11px] uppercase tracking-wider",
                                         editIsSent 

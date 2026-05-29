@@ -511,6 +511,20 @@ const Invoicing = () => {
     };
     try {
       await upsertSupabaseInvoice(updated);
+
+      if (updated.isSent && invoice.customerId) {
+        try {
+          await supabase.from('engagements').insert({
+            customer_id: invoice.customerId,
+            customer_name: invoice.customerName,
+            type: 'correspondence',
+            note: `Invoice Sent: #${invoice.invoiceNumber}\nTotal: $${(invoice.total || 0).toFixed(2)}\nServices: ${invoice.services?.map(s => s.name).join(', ') || 'N/A'}`
+          });
+        } catch (e) {
+          console.warn("Could not log invoice to engagements:", e);
+        }
+      }
+
       await loadData();
       toast({ 
         title: updated.isSent ? "Invoice marked as sent" : "Invoice marked as unsent",
@@ -642,6 +656,20 @@ const Invoicing = () => {
 
     try {
       await upsertSupabaseInvoice(updated);
+      
+      if (updated.isSent && !selectedInvoice.isSent && updated.customerId) {
+        try {
+          await supabase.from('engagements').insert({
+            customer_id: updated.customerId,
+            customer_name: updated.customerName,
+            type: 'correspondence',
+            note: `Invoice Sent: #${updated.invoiceNumber}\nTotal: $${(updated.total || 0).toFixed(2)}\nServices: ${updated.services?.map(s => s.name).join(', ') || 'N/A'}`
+          });
+        } catch (e) {
+          console.warn("Could not log invoice to engagements:", e);
+        }
+      }
+
       setSelectedInvoice(updated);
       setIsEditingInvoice(false);
       await loadData();
