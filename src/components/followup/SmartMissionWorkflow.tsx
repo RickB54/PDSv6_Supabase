@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Phone, Mail, MessageSquare, CheckCircle2, Clock, 
+  Phone, Mail, MessageSquare, CheckCircle2, Clock, Info, Settings2, 
   Calendar, History, ShieldAlert, Sparkles, AlertTriangle, Zap, Check
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
@@ -24,6 +24,15 @@ interface SmartMissionWorkflowProps {
   onMarkComplete: (missionId: string) => void;
 }
 
+// --- CONFIGURABLE MISSION RULES ---
+export const MISSION_RULES = {
+  REACTIVATION_THRESHOLD_DAYS: 90, // Days overdue before moving to 'Reactivation' (Lost Client)
+  ACTION_REQUIRED_THRESHOLD_DAYS: 30, // Days overdue before moving to 'Action Required'
+  PROSPECT_MIN_DAYS: 1, // Minimum days a prospect must exist to trigger a lead mission
+  PROSPECT_MAX_DAYS: 30, // Maximum days before a prospect mission is considered stale
+  PROSPECT_URGENT_DAYS: 7, // Days before a lead drops from 'High' to 'Medium' priority
+};
+
 type MissionType = 'action_required' | 'maintenance' | 'quote_recovery' | 'reactivation';
 
 export interface Mission {
@@ -39,6 +48,7 @@ export interface Mission {
   priority: 'high' | 'medium' | 'low';
   recommendedAction: string;
   originalRecord: any;
+  explanation: string;
 }
 
 export function SmartMissionWorkflow({ 
@@ -50,6 +60,7 @@ export function SmartMissionWorkflow({
   onMarkComplete
 }: SmartMissionWorkflowProps) {
   const [selectedCustomerTimeline, setSelectedCustomerTimeline] = useState<any>(null);
+  const [showAdminRules, setShowAdminRules] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,20 +76,24 @@ export function SmartMissionWorkflow({
       let type: MissionType = 'maintenance';
       let priority: 'high' | 'medium' | 'low' = 'low';
       let recommendedAction = 'Send Maintenance Reminder';
+      let explanation = 'Routine check on service intervals.';
       
       if (c.isDue) {
-        if (c.daysRemaining < -90) {
+        if (c.daysRemaining < -MISSION_RULES.REACTIVATION_THRESHOLD_DAYS) {
           type = 'reactivation';
           priority = 'medium';
           recommendedAction = 'Send Reactivation Offer / Discount';
-        } else if (c.daysRemaining < -30) {
+          explanation = `Triggered because customer is extremely overdue by ${Math.abs(c.daysRemaining)} days (> ${MISSION_RULES.REACTIVATION_THRESHOLD_DAYS} day threshold).`;
+        } else if (c.daysRemaining < -MISSION_RULES.ACTION_REQUIRED_THRESHOLD_DAYS) {
           type = 'action_required';
           priority = 'high';
           recommendedAction = 'Call or Send Urgent Reminder';
+          explanation = `Triggered because customer is overdue by ${Math.abs(c.daysRemaining)} days (> ${MISSION_RULES.ACTION_REQUIRED_THRESHOLD_DAYS} day threshold).`;
         } else {
           type = 'maintenance';
           priority = 'medium';
           recommendedAction = 'Send Standard Reminder';
+          explanation = `Triggered because customer is entering the standard maintenance window (Due in ${c.daysRemaining} days).`;
         }
 
         const vehicleStr = c.vehicleMake 
@@ -97,7 +112,8 @@ export function SmartMissionWorkflow({
           daysInactive: daysSinceLast,
           priority,
           recommendedAction,
-          originalRecord: c
+          originalRecord: c,
+          explanation
         });
       }
     });
@@ -114,9 +130,11 @@ export function SmartMissionWorkflow({
         (b.customer && b.customer.toLowerCase() === p.name.toLowerCase())
       );
 
-      if (!hasBooking && daysSinceLead > 1 && daysSinceLead < 30) {
+      if (!hasBooking && daysSinceLead >= MISSION_RULES.PROSPECT_MIN_DAYS && daysSinceLead <= MISSION_RULES.PROSPECT_MAX_DAYS) {
         const vehicleStr = typeof p.vehicle === 'string' ? p.vehicle : 
                            typeof p.vehicle_info === 'object' ? `${p.vehicle_info?.make || ''} ${p.vehicle_info?.model || ''}` : 'Unknown';
+        
+        const isUrgent = daysSinceLead <= MISSION_RULES.PROSPECT_URGENT_DAYS;
         
         list.push({
           id: `prospect_${p.id}`,
@@ -127,9 +145,10 @@ export function SmartMissionWorkflow({
           customerPhone: p.phone,
           vehicle: vehicleStr,
           daysInactive: daysSinceLead,
-          priority: daysSinceLead > 7 ? 'medium' : 'high',
+          priority: isUrgent ? 'high' : 'medium',
           recommendedAction: 'Send Follow-Up / Welcome Offer',
-          originalRecord: p
+          originalRecord: p,
+          explanation: `Triggered because prospect lead was generated ${daysSinceLead} days ago and has zero recorded bookings. (Threshold: ${MISSION_RULES.PROSPECT_MIN_DAYS}-${MISSION_RULES.PROSPECT_MAX_DAYS} days).`
         });
       }
     });
@@ -201,9 +220,23 @@ export function SmartMissionWorkflow({
 
       {/* Mission Feed */}
       <div className="space-y-4">
-        <h2 className="text-xl font-black uppercase tracking-tighter italic flex items-center gap-2">
-          <Zap className="h-5 w-5 text-amber-400" /> Today's Action Items
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black uppercase tracking-tighter italic flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-400" /> Today's Action Items
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAdminRules(!showAdminRules)}
+            className={cn(
+              "text-xs font-bold uppercase tracking-widest transition-all",
+              showAdminRules ? "text-blue-400 bg-blue-500/10 border border-blue-500/20" : "text-zinc-500 hover:text-white"
+            )}
+          >
+            <Settings2 className="h-4 w-4 mr-2" />
+            Logic Inspector
+          </Button>
+        </div>
         
         {missions.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-zinc-800 rounded-3xl">
@@ -243,15 +276,26 @@ export function SmartMissionWorkflow({
                   </div>
 
                   {/* Middle: Details */}
-                  <div className="flex-1 grid grid-cols-2 gap-4">
-                    <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
-                      <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Vehicle</p>
-                      <p className="text-sm font-black text-zinc-300 truncate">{mission.vehicle}</p>
+                  <div className="flex-1 flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Vehicle</p>
+                        <p className="text-sm font-black text-zinc-300 truncate">{mission.vehicle}</p>
+                      </div>
+                      <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                        <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-sm font-black text-zinc-300">Inactive {mission.daysInactive} Days</p>
+                      </div>
                     </div>
-                    <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
-                      <p className="text-[9px] font-black text-zinc-600 uppercase tracking-widest mb-1">Status</p>
-                      <p className="text-sm font-black text-zinc-300">Inactive {mission.daysInactive} Days</p>
-                    </div>
+                    {showAdminRules && (
+                      <div className="bg-blue-950/20 border border-blue-900/40 p-3 rounded-xl flex items-start gap-3 mt-1 animate-in fade-in slide-in-from-top-2">
+                         <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                         <div>
+                           <p className="text-[9px] font-black uppercase text-blue-500 tracking-widest mb-0.5">Admin Transparency Log</p>
+                           <p className="text-xs text-zinc-300 font-medium leading-relaxed">{mission.explanation}</p>
+                         </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
