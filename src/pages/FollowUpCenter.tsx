@@ -93,7 +93,25 @@ export default function FollowUpCenter() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [operationalMode, setOperationalMode] = useState<'mission' | 'manual'>('mission');
-  const [dismissedMissions, setDismissedMissions] = useState<Set<string>>(new Set());
+  const todayKey = new Date().toISOString().split('T')[0];
+  const [dismissedMissions, setDismissedMissions] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(`dismissed_missions_${todayKey}`);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const handleDismissMission = (id: string) => {
+    setDismissedMissions(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem(`dismissed_missions_${todayKey}`, JSON.stringify(Array.from(next)));
+      return next;
+    });
+    toast.success("Mission marked as complete/dismissed for today.");
+  };
   const [prospects, setProspects] = useState<Customer[]>([]);
   const [loadingProspects, setLoadingProspects] = useState(false);
   const [dbLogs, setDbLogs] = useState<FollowUpLog[]>([]);
@@ -492,14 +510,7 @@ export default function FollowUpCenter() {
             allBookings={allBookings}
             onOpenFollowUp={openFollowUpDialog}
             onOpenProspect={openProspectDialog}
-            onMarkComplete={(id) => {
-              setDismissedMissions(prev => {
-                const next = new Set(prev);
-                next.add(id);
-                return next;
-              });
-              toast.success("Mission marked as complete/dismissed.");
-            }}
+            onMarkComplete={handleDismissMission}
           />
         ) : (
       <Tabs defaultValue="opportunities" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">

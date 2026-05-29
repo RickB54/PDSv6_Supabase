@@ -12,6 +12,8 @@ import { Customer } from '@/lib/supa-data';
 import { cn } from '@/lib/utils';
 import { UnifiedCustomerTimeline } from '@/components/customers/UnifiedCustomerTimeline';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface SmartMissionWorkflowProps {
   customerFollowUps: any[];
@@ -48,6 +50,8 @@ export function SmartMissionWorkflow({
   onMarkComplete
 }: SmartMissionWorkflowProps) {
   const [selectedCustomerTimeline, setSelectedCustomerTimeline] = useState<any>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const missions = useMemo(() => {
     const list: Mission[] = [];
@@ -55,7 +59,8 @@ export function SmartMissionWorkflow({
 
     // 1. Process Customers (Maintenance & Reactivation & Action Required)
     customerFollowUps.forEach(c => {
-      const daysSinceLast = differenceInDays(today, new Date(c.lastServiceDate));
+      const lastServiceDate = c.lastServiceDate ? new Date(c.lastServiceDate) : today;
+      const daysSinceLast = isNaN(lastServiceDate.getTime()) ? 0 : differenceInDays(today, lastServiceDate);
       
       let type: MissionType = 'maintenance';
       let priority: 'high' | 'medium' | 'low' = 'low';
@@ -100,8 +105,8 @@ export function SmartMissionWorkflow({
     // 2. Process Prospects (Quote Recovery / Lead Nurturing)
     prospects.forEach(p => {
       // Basic heuristic: if prospect is older than 2 days and no booking exists
-      const createdDate = (p as any).created_at ? new Date((p as any).created_at) : new Date();
-      const daysSinceLead = differenceInDays(today, createdDate);
+      const createdDate = (p as any).created_at ? new Date((p as any).created_at) : today;
+      const daysSinceLead = isNaN(createdDate.getTime()) ? 0 : differenceInDays(today, createdDate);
       
       // Check if they already have a booking (maybe they converted)
       const hasBooking = allBookings.some(b => 
@@ -310,9 +315,11 @@ export function SmartMissionWorkflow({
               <UnifiedCustomerTimeline 
                 customer={selectedCustomerTimeline} 
                 allBookings={allBookings} 
-                handlePreviewEmailForBooking={() => {}} 
-                navigate={() => {}} 
-                toast={(msg) => console.log(msg)} 
+                handlePreviewEmailForBooking={() => {
+                  toast({ title: "Preview Mode", description: "Email preview is available in the main CRM workspace." });
+                }} 
+                navigate={navigate} 
+                toast={toast} 
               />
             )}
           </div>
