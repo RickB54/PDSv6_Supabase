@@ -66,6 +66,7 @@ import { cn } from "@/lib/utils";
 import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS, EmailCampaign } from "@/lib/bookingsSync";
 import { toast } from "sonner";
 import supabase from "@/lib/supabase";
+import { SmartMissionWorkflow } from "@/components/followup/SmartMissionWorkflow";
 
 export default function FollowUpCenter() {
   const { items: allBookings, update: updateBooking } = useBookingsStore();
@@ -91,6 +92,8 @@ export default function FollowUpCenter() {
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [operationalMode, setOperationalMode] = useState<'mission' | 'manual'>('mission');
+  const [dismissedMissions, setDismissedMissions] = useState<Set<string>>(new Set());
   const [prospects, setProspects] = useState<Customer[]>([]);
   const [loadingProspects, setLoadingProspects] = useState(false);
   const [dbLogs, setDbLogs] = useState<FollowUpLog[]>([]);
@@ -455,7 +458,51 @@ export default function FollowUpCenter() {
             </div>
         </div>
 
-      <Tabs defaultValue="opportunities" className="space-y-12">
+        <div className="flex flex-col items-center justify-center mb-12">
+          <div className="bg-zinc-900/80 backdrop-blur-xl border-2 border-zinc-800 p-1.5 rounded-full flex gap-1 shadow-2xl w-full sm:w-auto">
+            <button
+              onClick={() => setOperationalMode('mission')}
+              className={cn(
+                "flex-1 sm:w-[320px] px-6 py-4 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
+                operationalMode === 'mission' 
+                  ? "bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.4)]" 
+                  : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+              )}
+            >
+              <Zap className="h-4 w-4" /> Smart Mission Workflow
+            </button>
+            <button
+              onClick={() => setOperationalMode('manual')}
+              className={cn(
+                "flex-1 sm:w-[320px] px-6 py-4 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
+                operationalMode === 'manual' 
+                  ? "bg-zinc-700 text-white shadow-xl" 
+                  : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+              )}
+            >
+              <Users className="h-4 w-4" /> Manual CRM Workspace
+            </button>
+          </div>
+        </div>
+
+        {operationalMode === 'mission' ? (
+          <SmartMissionWorkflow 
+            customerFollowUps={customerFollowUps.filter(c => !dismissedMissions.has(`cust_${c.id}`))} 
+            prospects={prospects.filter(p => !dismissedMissions.has(`prospect_${p.id}`))} 
+            allBookings={allBookings}
+            onOpenFollowUp={openFollowUpDialog}
+            onOpenProspect={openProspectDialog}
+            onMarkComplete={(id) => {
+              setDismissedMissions(prev => {
+                const next = new Set(prev);
+                next.add(id);
+                return next;
+              });
+              toast.success("Mission marked as complete/dismissed.");
+            }}
+          />
+        ) : (
+      <Tabs defaultValue="opportunities" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="w-full">
           <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-1.5 rounded-[1.5rem] sm:rounded-3xl h-auto flex flex-col sm:flex-row w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 mb-8 mx-auto">
             <TabsTrigger value="opportunities" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
@@ -1118,6 +1165,7 @@ export default function FollowUpCenter() {
         </DialogContent>
       </Dialog>
       </Tabs>
+      )}
       </main>
     </div>
   );
