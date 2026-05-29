@@ -12,6 +12,7 @@ import {
   Star, ShieldCheck, Zap, Users, Info, HelpCircle,
   Sparkles, Loader2, RotateCcw, Activity
 } from "lucide-react";
+import { ContactInput } from "@/components/ui/ContactInput";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -502,18 +503,15 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                     onChange={(e) => handleChange("name", e.target.value)}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Input
-                      placeholder="Phone"
-                      className="bg-zinc-900 border-zinc-800 text-white"
+                    <ContactInput
+                      type="phone"
                       value={form.phone}
-                      onChange={(e) => handleChange("phone", e.target.value)}
+                      onChange={(val) => handleChange("phone", val)}
                     />
-                    <Input
+                    <ContactInput
                       type="email"
-                      placeholder="Email"
-                      className="bg-zinc-900 border-zinc-800 text-white"
                       value={form.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
+                      onChange={(val) => handleChange("email", val)}
                     />
                   </div>
                   <div className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-lg border border-zinc-800/50">

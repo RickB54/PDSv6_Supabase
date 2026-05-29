@@ -47,6 +47,7 @@ import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig, s
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
 import VehicleClassificationDialog from "@/components/bookings/VehicleClassificationDialog";
+import { ContactInput } from "@/components/ui/ContactInput";
 
 // --- Types ---
 type ViewMode = "day" | "week" | "month" | "year" | "analytics";
@@ -1288,7 +1289,7 @@ export default function BookingsPage() {
           
           (updates as any).rescheduleHistory = updatedHistory;
           (updates as any).booking_vehicle = {
-            ...(selectedBooking.booking_vehicle || {}),
+            ...((selectedBooking as any).booking_vehicle || {}),
             reschedule_history: updatedHistory
           };
 
@@ -2491,21 +2492,17 @@ export default function BookingsPage() {
                   <label className="text-right text-sm font-medium text-gray-400">Contact</label>
                   <div className="col-span-3 grid grid-cols-2 gap-2">
                     <div className="relative">
-                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input
-                        placeholder="Email (optional)"
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                      <ContactInput
+                        type="email"
                         value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        onChange={(val) => setFormData({ ...formData, email: val })}
                       />
                     </div>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                      <Input
-                        placeholder="Phone (optional)"
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
+                      <ContactInput
+                        type="phone"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        onChange={(val) => setFormData({ ...formData, phone: val })}
                       />
                     </div>
                   </div>

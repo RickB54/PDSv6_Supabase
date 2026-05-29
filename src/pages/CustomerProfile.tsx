@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { ContactInput } from "@/components/ui/ContactInput";
 import supabase from "@/lib/supabase";
 import { getCurrentUser, isSupabaseEnabled } from "@/lib/auth";
 
@@ -113,7 +114,11 @@ export default function CustomerProfile() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone</label>
-            <input name="phone" value={form.phone || ''} onChange={onChange} className="w-full rounded-md border px-3 py-2 bg-background" />
+            <ContactInput 
+              type="phone" 
+              value={form.phone || ''} 
+              onChange={(val) => setForm(prev => ({ ...prev, phone: val }))} 
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
