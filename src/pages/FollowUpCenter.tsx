@@ -456,19 +456,19 @@ export default function FollowUpCenter() {
         </div>
 
       <Tabs defaultValue="opportunities" className="space-y-12">
-        <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-1.5 rounded-3xl h-auto flex flex-nowrap w-max min-w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 overflow-x-auto no-scrollbar mb-8">
-            <TabsTrigger value="opportunities" className="rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all flex items-center gap-3 whitespace-nowrap">
+        <div className="w-full">
+          <TabsList className="bg-zinc-900 border-2 border-zinc-800 p-1.5 rounded-[1.5rem] sm:rounded-3xl h-auto flex flex-col sm:flex-row w-full sm:w-fit backdrop-blur-3xl shadow-2xl gap-2 mb-8 mx-auto">
+            <TabsTrigger value="opportunities" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
                <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                Client Retention
                <Badge className="bg-black/40 text-blue-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.dueNow}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="prospects" className="rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all flex items-center gap-3 w-full sm:w-auto whitespace-nowrap">
+            <TabsTrigger value="prospects" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
                <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
                Potential Leads
                <Badge className="bg-black/40 text-purple-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.prospects}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-zinc-800 data-[state=active]:text-white transition-all flex items-center gap-3 w-full sm:w-auto whitespace-nowrap">
+            <TabsTrigger value="history" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-zinc-800 data-[state=active]:text-white transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
                <History className="h-4 w-4 sm:h-5 sm:w-5" />
                Engagement History
             </TabsTrigger>
