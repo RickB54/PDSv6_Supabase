@@ -258,6 +258,14 @@ export default function FollowUpCenter() {
     p.notes?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredCombinedLogs = combinedLogs.filter(log => 
+    log.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+    log.customerEmail?.toLowerCase().includes(search.toLowerCase()) ||
+    log.emailType?.toLowerCase().includes(search.toLowerCase()) ||
+    log.customNote?.toLowerCase().includes(search.toLowerCase()) ||
+    log.couponCode?.toLowerCase().includes(search.toLowerCase())
+  );
+
   const stats = {
     total: customerFollowUps.length,
     dueNow: customerFollowUps.filter(c => c.isDue).length,
@@ -764,7 +772,7 @@ export default function FollowUpCenter() {
                         </tr>
                      </thead>
                       <tbody className="divide-y divide-zinc-900/60">
-                         {combinedLogs.length > 0 ? combinedLogs.map(log => (
+                         {filteredCombinedLogs.length > 0 ? filteredCombinedLogs.map(log => (
                             <tr key={log.id} className="group hover:bg-zinc-800/30 transition-all duration-300">
                                <td className="px-4 py-7">
                                   <p className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{log.customerName}</p>
@@ -851,7 +859,7 @@ export default function FollowUpCenter() {
                 </div>
 
                 <div className="lg:hidden flex flex-col divide-y divide-zinc-900/60">
-                  {combinedLogs.length > 0 ? combinedLogs.map(log => (
+                  {filteredCombinedLogs.length > 0 ? filteredCombinedLogs.map(log => (
                     <div key={log.id} className="p-6 flex flex-col gap-4 group hover:bg-zinc-800/30 transition-all">
                        <div className="flex items-start justify-between">
                           <div>
