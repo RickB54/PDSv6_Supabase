@@ -336,22 +336,7 @@ const LetterMaker = () => {
         doc.setTextColor(150);
         doc.text("Prime Auto Detail - Professional Mobile Detailing Services", 105, pageHeight - 15, { align: "center" });
 
-        // Log engagement for letter action
-        try {
-            if (customer && customer.id) {
-                supabase.from('engagements').insert({
-                    customer_name: customer.name,
-                    customer_email: customer.email,
-                    customer_id: customer.id,
-                    type: 'letter',
-                    note: `Letter Generated: "${subject || 'Untitled Correspondence'}"`
-                }).then(({ error }) => {
-                    if (error) console.error("Error logging letter engagement:", error);
-                });
-            }
-        } catch (e) {
-            console.error("Failed to log letter engagement:", e);
-        }
+
 
         if (action === 'download') doc.save(`Letter_${customer?.name || 'Customer'}.pdf`);
         else window.open(doc.output('bloburl'), '_blank');

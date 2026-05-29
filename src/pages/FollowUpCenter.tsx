@@ -70,7 +70,24 @@ import supabase from "@/lib/supabase";
 export default function FollowUpCenter() {
   const { items: allBookings, update: updateBooking } = useBookingsStore();
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
-  const { logs, addLog, clearHistory } = useFollowUpStore();
+  const { logs, addLog, clearHistory, removeLog } = useFollowUpStore();
+  
+  const handleDeleteAuditLog = async (logId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this engagement record?")) return;
+    try {
+      if (!logId.startsWith('log_') && !logId.startsWith('db_')) {
+        const { error } = await supabase.from('engagements').delete().eq('id', logId);
+        if (error) throw error;
+      }
+      removeLog(logId);
+      setDbLogs(prev => prev.filter(l => l.id !== logId));
+      toast.success("Engagement record deleted.");
+      loadDbLogs();
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to delete record.");
+    }
+  };
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
@@ -150,7 +167,11 @@ export default function FollowUpCenter() {
       const key = `${(log.customerName || '').trim().toLowerCase()}_${(log.customerEmail || '').trim().toLowerCase()}_${roundedTime}`;
       unique.set(key, log);
     });
-    return Array.from(unique.values()).sort((a, b) => new Date(b.dateSent).getTime() - new Date(a.dateSent).getTime());
+    return Array.from(unique.values()).sort((a, b) => {
+      const nameCompare = (a.customerName || '').localeCompare(b.customerName || '');
+      if (nameCompare !== 0) return nameCompare;
+      return new Date(b.dateSent).getTime() - new Date(a.dateSent).getTime();
+    });
   }, [logs, dbLogs]);
 
   // Group bookings by customer to find the LATEST service for each
@@ -730,22 +751,22 @@ export default function FollowUpCenter() {
                 </Button>
              </CardHeader>
              <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full text-left">
                      <thead>
                         <tr className="bg-zinc-950/80 text-[10px] font-black uppercase tracking-[0.15em] text-zinc-500 border-b border-zinc-800">
-                           <th className="px-10 py-6">Recipient & Contact</th>
-                           <th className="px-10 py-6 text-center">Dispatch Time</th>
-                           <th className="px-10 py-6 text-center">Engagement Type</th>
-                           <th className="px-10 py-6 text-center">Loyalty Code</th>
-                           <th className="px-10 py-6 text-center">Audit Log</th>
-                           <th className="px-10 py-6 text-right">Verification</th>
+                           <th className="px-4 py-6">Recipient & Contact</th>
+                           <th className="px-4 py-6 text-center">Dispatch Time</th>
+                           <th className="px-4 py-6 text-center">Engagement Type</th>
+                           <th className="px-4 py-6 text-center">Loyalty Code</th>
+                           <th className="px-4 py-6 text-center">Audit Log</th>
+                           <th className="px-4 py-6 text-right">Verification</th>
                         </tr>
                      </thead>
                       <tbody className="divide-y divide-zinc-900/60">
                          {combinedLogs.length > 0 ? combinedLogs.map(log => (
                             <tr key={log.id} className="group hover:bg-zinc-800/30 transition-all duration-300">
-                               <td className="px-10 py-7">
+                               <td className="px-4 py-7">
                                   <p className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{log.customerName}</p>
                                   <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mt-1 opacity-70">{log.customerEmail}</p>
                                   {log.id.startsWith("db_") && (
@@ -754,12 +775,12 @@ export default function FollowUpCenter() {
                                      </span>
                                   )}
                                </td>
-                               <td className="px-10 py-7 text-center">
+                               <td className="px-4 py-7 text-center">
                                   <Badge variant="outline" className="bg-zinc-950 border-zinc-800 text-zinc-400 font-black text-[9px] px-3 py-1">
                                      {format(new Date(log.dateSent), 'MMM dd, h:mm a')}
                                   </Badge>
                                </td>
-                               <td className="px-10 py-7 text-center">
+                               <td className="px-4 py-7 text-center">
                                   <span className={cn(
                                       "text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border",
                                       log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
@@ -767,14 +788,14 @@ export default function FollowUpCenter() {
                                       {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
                                   </span>
                                </td>
-                               <td className="px-10 py-7 text-center">
+                               <td className="px-4 py-7 text-center">
                                   {log.couponCode ? (
                                      <span className="font-mono text-[11px] font-black text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-lg border border-emerald-500/20 uppercase tracking-tighter">
                                         {log.couponCode}
                                      </span>
                                   ) : <span className="text-zinc-800 font-black">STANDARD_DISPATCH</span>}
                                </td>
-                               <td className="px-10 py-7 text-center">
+                               <td className="px-4 py-7 text-center">
                                   <Button 
                                     size="sm" 
                                     variant="ghost" 
@@ -785,24 +806,35 @@ export default function FollowUpCenter() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                </td>
-                               <td className="px-10 py-7 text-right">
-                                  {log.customNote ? (
-                                     <Dialog>
-                                        <DialogTrigger asChild>
-                                           <Button variant="ghost" size="sm" className="h-10 border border-zinc-800 hover:scale-105 active:scale-95 text-blue-500 hover:text-blue-400 text-[10px] font-black tracking-widest uppercase rounded-xl">
-                                              View Message
-                                           </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[3rem] p-10">
-                                           <DialogHeader>
-                                              <DialogTitle className="text-xs uppercase font-black tracking-[0.2em] text-zinc-500 mb-6 underline decoration-blue-500 decoration-4 underline-offset-8">Dispatched Note</DialogTitle>
-                                           </DialogHeader>
-                                           <div className="bg-zinc-900/50 p-8 rounded-[2rem] font-bold italic text-xl border-2 border-zinc-800 text-blue-200/90 leading-relaxed">
-                                              "{log.customNote}"
-                                           </div>
-                                        </DialogContent>
-                                     </Dialog>
-                                  ) : <span className="text-zinc-700 text-[10px] font-black uppercase italic tracking-widest opacity-30">PRO_TEMPLATE_V1</span>}
+                               <td className="px-4 py-7 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                     {log.customNote ? (
+                                        <Dialog>
+                                           <DialogTrigger asChild>
+                                              <Button variant="ghost" size="sm" className="h-10 border border-zinc-800 hover:scale-105 active:scale-95 text-blue-500 hover:text-blue-400 text-[10px] font-black tracking-widest uppercase rounded-xl">
+                                                 View Message
+                                              </Button>
+                                           </DialogTrigger>
+                                           <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[3rem] p-10">
+                                              <DialogHeader>
+                                                 <DialogTitle className="text-xs uppercase font-black tracking-[0.2em] text-zinc-500 mb-6 underline decoration-blue-500 decoration-4 underline-offset-8">Dispatched Note</DialogTitle>
+                                              </DialogHeader>
+                                              <div className="bg-zinc-900/50 p-8 rounded-[2rem] font-bold italic text-xl border-2 border-zinc-800 text-blue-200/90 leading-relaxed">
+                                                 "{log.customNote}"
+                                              </div>
+                                           </DialogContent>
+                                        </Dialog>
+                                     ) : <span className="text-zinc-700 text-[10px] font-black uppercase italic tracking-widest opacity-30">PRO_TEMPLATE_V1</span>}
+                                     
+                                     <Button 
+                                       variant="ghost" 
+                                       size="icon" 
+                                       onClick={() => handleDeleteAuditLog(log.id)}
+                                       className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 rounded-xl transition-all"
+                                     >
+                                       <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                  </div>
                                </td>
                             </tr>
                          )) : (
@@ -816,6 +848,87 @@ export default function FollowUpCenter() {
                          )}
                       </tbody>
                   </table>
+                </div>
+
+                <div className="lg:hidden flex flex-col divide-y divide-zinc-900/60">
+                  {combinedLogs.length > 0 ? combinedLogs.map(log => (
+                    <div key={log.id} className="p-6 flex flex-col gap-4 group hover:bg-zinc-800/30 transition-all">
+                       <div className="flex items-start justify-between">
+                          <div>
+                             <p className="text-base font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{log.customerName}</p>
+                             <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest mt-1 opacity-70">{log.customerEmail}</p>
+                          </div>
+                          <Badge variant="outline" className="bg-zinc-950 border-zinc-800 text-zinc-400 font-black text-[9px] px-3 py-1 h-fit">
+                             {format(new Date(log.dateSent), 'MMM dd, h:mm a')}
+                          </Badge>
+                       </div>
+                       
+                       <div className="flex flex-wrap gap-2 items-center">
+                          <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
+                              log.emailType === 'prospect_intro' ? "text-purple-400 border-purple-500/20 bg-purple-500/5" : "text-blue-400 border-blue-500/20 bg-blue-500/5"
+                          )}>
+                              {log.emailType === 'prospect_intro' ? 'PROSPECT NURTURING' : 'CLIENT RETENTION'}
+                          </span>
+                          {log.couponCode && (
+                             <span className="font-mono text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-tighter">
+                                {log.couponCode}
+                             </span>
+                          )}
+                          {log.id.startsWith("db_") && (
+                             <span className="text-[8px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-widest">
+                                Cloud
+                             </span>
+                          )}
+                       </div>
+
+                       <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => setSelectedAuditLog(log)}
+                            className="h-8 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg text-[10px] font-black uppercase tracking-widest"
+                          >
+                            <Eye className="h-3 w-3 mr-2" /> Card
+                          </Button>
+                          
+                          <div className="flex items-center gap-2">
+                            {log.customNote ? (
+                               <Dialog>
+                                  <DialogTrigger asChild>
+                                     <Button variant="ghost" size="sm" className="h-8 border border-zinc-800 text-blue-500 hover:text-blue-400 text-[9px] font-black tracking-widest uppercase rounded-lg">
+                                        View Msg
+                                     </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[3rem] p-10">
+                                     <DialogHeader>
+                                        <DialogTitle className="text-xs uppercase font-black tracking-[0.2em] text-zinc-500 mb-6 underline decoration-blue-500 decoration-4 underline-offset-8">Dispatched Note</DialogTitle>
+                                     </DialogHeader>
+                                     <div className="bg-zinc-900/50 p-8 rounded-[2rem] font-bold italic text-xl border-2 border-zinc-800 text-blue-200/90 leading-relaxed">
+                                        "{log.customNote}"
+                                     </div>
+                                  </DialogContent>
+                               </Dialog>
+                            ) : <span className="text-zinc-700 text-[9px] font-black uppercase italic tracking-widest opacity-30">PRO_V1</span>}
+                            
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteAuditLog(log.id)}
+                              className="text-zinc-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 rounded-lg transition-all"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                       </div>
+                    </div>
+                  )) : (
+                    <div className="p-16 text-center">
+                      <History className="h-12 w-12 text-zinc-900 mx-auto mb-4 opacity-20" />
+                      <p className="text-zinc-600 font-black uppercase tracking-[0.2em] text-[10px]">Audit Cache Depleted</p>
+                      {loadingDbLogs && <p className="text-zinc-500 text-xs mt-2 uppercase font-black animate-pulse">Syncing Cloud Ledger...</p>}
+                    </div>
+                  )}
                 </div>
              </CardContent>
           </Card>

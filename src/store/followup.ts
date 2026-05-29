@@ -16,6 +16,7 @@ interface FollowUpState {
   logs: FollowUpLog[];
   addLog: (log: FollowUpLog) => void;
   clearHistory: () => void;
+  removeLog: (id: string) => void;
 }
 
 export const useFollowUpStore = create<FollowUpState>()(
@@ -24,6 +25,7 @@ export const useFollowUpStore = create<FollowUpState>()(
       logs: [],
       addLog: (log) => set((state) => ({ logs: [log, ...state.logs] })),
       clearHistory: () => set({ logs: [] }),
+      removeLog: (id) => set((state) => ({ logs: state.logs.filter(l => l.id !== id) })),
     }),
     {
       name: 'followup-history-storage',
