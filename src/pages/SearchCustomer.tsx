@@ -180,17 +180,6 @@ const SearchCustomer = () => {
 
   const handleCreateTestAccount = async () => {
     try {
-      if (window.confirm("Would you like to PURGE all previous 'Rick Berube' test history (bookings, prospects, CRM cards) before auto-filling?")) {
-        // Find existing test users
-        const { data: existing } = await supabase.from('customers').select('id').eq('full_name', 'Rick Berube');
-        if (existing && existing.length > 0) {
-          for (const c of existing) {
-            await deleteSupabaseCustomer(c.id);
-          }
-          toast({ title: "Purged", description: "Old test data has been deleted." });
-        }
-      }
-
       setIsRefreshing(true);
       
       const newTestCustomer = {
@@ -219,7 +208,7 @@ const SearchCustomer = () => {
         description: "Rick Berube test account is now available."
       });
 
-      await loadData();
+      await refresh();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -696,9 +685,11 @@ const SearchCustomer = () => {
             </Button>
             <Button variant="outline" onClick={() => generatePDF(true)} className="border-zinc-700 hover:bg-zinc-800 text-zinc-200"><Save className="h-4 w-4 mr-2" /> PDF</Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white border-0" onClick={openAdd}><Plus className="h-4 w-4 mr-2" /> Add</Button>
-            <Button variant="outline" className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 whitespace-nowrap" onClick={handleCreateTestAccount}>
-              🧪 Auto-Fill Rick Berube Test
-            </Button>
+            {isAdmin && (
+              <Button variant="outline" className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 whitespace-nowrap" onClick={handleCreateTestAccount}>
+                Create Rick Berube Test
+              </Button>
+            )}
             {filteredCustomers.length > 0 && (
               <Button variant="ghost" size="sm" onClick={toggleAll} className="text-zinc-400">{allExpanded ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}</Button>
             )}
