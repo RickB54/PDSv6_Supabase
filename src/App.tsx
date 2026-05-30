@@ -114,6 +114,7 @@ import LetterMaker from "./pages/LetterMaker";
 import ProceduresBooklet from "./pages/ProceduresBooklet";
 import { PerspectiveBanner } from "./components/PerspectiveBanner";
 import CustomerEstimatePage from "./pages/CustomerEstimatePage";
+import CustomerInvoicePage from "./pages/CustomerInvoicePage";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +150,8 @@ const isAppRoute = (path: string) => {
   if (websitePrefixes.includes(normalizedPath)) return false;
   if (normalizedPath.startsWith('/blog/')) return false;
   if (normalizedPath.startsWith('/estimate/')) return false;
+  if (normalizedPath.startsWith('/invoice/')) return false;
+  if (normalizedPath.startsWith('/invoice-success/')) return false;
   if (normalizedPath.startsWith('/demo')) return true;
   return true;
 };
@@ -233,7 +236,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
   const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/book-now', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
-  const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/') || location.pathname.startsWith('/estimate/');
+  const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/') || location.pathname.startsWith('/estimate/') || location.pathname.startsWith('/invoice/') || location.pathname.startsWith('/invoice-success/');
 
   const publicRoutes = (
     <>
@@ -254,6 +257,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/shop-setup-preview" element={<ShopSetup />} />
       <Route path="/contact-support" element={<ContactSupport />} />
       <Route path="/estimate/:id" element={<CustomerEstimatePage />} />
+      <Route path="/invoice/:id" element={<CustomerInvoicePage />} />
+      <Route path="/invoice-success/:id/payment-success" element={<CustomerInvoicePage />} />
+      <Route path="/invoice-success/:id/payment-canceled" element={<CustomerInvoicePage />} />
     </>
   );
 

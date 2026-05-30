@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -690,6 +690,12 @@ const Invoicing = () => {
     }
   };
 
+  const handleCopyLink = (invoiceId: string) => {
+    const link = `https://primeautodetail.net/invoice/${invoiceId}`;
+    navigator.clipboard.writeText(link);
+    toast({ title: "Link Copied!", description: "Hosted Invoice URL copied to clipboard." });
+  };
+
   const generatePDF = (invoice: Invoice, download = false, styleOverride?: 'original' | 'professional') => {
     const doc = new jsPDF();
     
@@ -820,20 +826,23 @@ const Invoicing = () => {
     }
 
     if (invoice.notes) {
-      if (y > 230) {
-        doc.addPage();
-        y = 20;
+      const cleanNotes = invoice.notes.replace('[PAID_VIA_STRIPE]', '').trim();
+      if (cleanNotes) {
+        if (y > 230) {
+          doc.addPage();
+          y = 20;
+        }
+        y += 8;
+        doc.setFontSize(10);
+        doc.setTextColor(60, 60, 60); // Darker grey
+        doc.setFont("helvetica", "bold");
+        doc.text("Notes:", 20, y);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(80, 80, 80);
+        const splitNotes = doc.splitTextToSize(cleanNotes, 170);
+        doc.text(splitNotes, 20, y + 5);
+        y += (splitNotes.length * 5) + 4;
       }
-      y += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60); // Darker grey
-      doc.setFont("helvetica", "bold");
-      doc.text("Notes:", 20, y);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(80, 80, 80);
-      const splitNotes = doc.splitTextToSize(invoice.notes, 170);
-      doc.text(splitNotes, 20, y + 5);
-      y += (splitNotes.length * 5) + 4;
     }
 
     // Google Review Section - Compact Layout
@@ -1744,6 +1753,9 @@ Precision. Protection. Perfection.`;
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(invoice, true)} title="Download PDF">
                         <Save className="h-3.5 w-3.5" />
                       </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => handleCopyLink(invoice.id!)} title="Copy Hosted Link">
+                        <LinkIcon className="h-3.5 w-3.5" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(invoice.id!)} title="Delete Invoice">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -1804,6 +1816,13 @@ Precision. Protection. Perfection.`;
                     {(selectedInvoice.paymentStatus === 'paid') && <CheckCircle className="h-5 w-5 text-emerald-500" />}
                   </h2>
                   <p className="text-zinc-400">Prime Auto Detail</p>
+                  
+                  {selectedInvoice.notes?.includes('[PAID_VIA_STRIPE]') && (
+                    <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-emerald-400" />
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">PAID VIA STRIPE (ONLINE)</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 items-center">
                   <Button 
