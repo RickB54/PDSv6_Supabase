@@ -301,6 +301,7 @@ export default function BookingsPage() {
           id: eng.id,
           date: eng.created_at, // Map to common date field
           type: 'activity' as const,
+          originalType: eng.type,
           source: 'System Outreach'
         }))
       ];
@@ -343,16 +344,25 @@ export default function BookingsPage() {
         : null;
 
       const mostRecent = sortedEvents[0];
+      const mostRecentBooking = sortedEvents.find(e => e.type === 'booking');
 
       return {
         name: customerName,
         bookingCount: customerEvents.length,
-        lastBooking: mostRecent.date,
+        lastBooking: mostRecentBooking ? mostRecentBooking.date : mostRecent.date,
         nextBookingDate: nextDate,
         lastPastBookingDate: lastPastDate,
-        mostRecentStatus: mostRecent.type,
-        mostRecentStatusValue: mostRecent.type === 'booking' ? (mostRecent.status || 'pending').toUpperCase() : 'BLOCKED',
-        vehicle: (mostRecent.vehicleYear && mostRecent.vehicleMake)
+        mostRecentStatus: mostRecentBooking ? mostRecentBooking.type : mostRecent.type,
+        mostRecentStatusValue: mostRecentBooking 
+          ? (mostRecentBooking.status || 'pending').toUpperCase() 
+          : mostRecent.type === 'activity' 
+            ? ((mostRecent as any).originalType || 'ENGAGED').toUpperCase() 
+            : mostRecent.type === 'google-event'
+              ? 'EXTERNAL'
+              : 'BLOCKED',
+        vehicle: (mostRecentBooking?.vehicleYear && mostRecentBooking?.vehicleMake)
+          ? `${mostRecentBooking.vehicleYear} ${mostRecentBooking.vehicleMake} ${mostRecentBooking.vehicleModel}`
+          : (mostRecent.vehicleYear && mostRecent.vehicleMake)
           ? `${mostRecent.vehicleYear} ${mostRecent.vehicleMake} ${mostRecent.vehicleModel}`
           : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
         vehicles: customerData?.vehicles || [],
