@@ -2992,10 +2992,85 @@ const customerManagementFlowTopic: HelpTopic = {
   ],
 };
 
+export const logicInspectorTopic: HelpTopic = {
+  id: 'logic-inspector',
+  title: 'Smart Mission Logic Inspector',
+  summary: 'Transparency tool that reveals exactly why a customer was flagged for follow-up.',
+  content: [
+    '**The "Logic Inspector" Button**',
+    'Located at the top right of your Smart Mission Workflow in the Retention Hub. This button toggles the **Admin Transparency Log**.',
+    '',
+    '### 🎯 What It Does',
+    'Instead of blindly trusting the CRM to assign follow-up missions, the Logic Inspector shows you the exact mathematical criteria the system used to flag a customer.',
+    '',
+    '### 💡 Example Scenarios',
+    '• **Reactivation**: "Triggered because customer is extremely overdue by 45 days (> 30 day threshold)."',
+    '• **Action Required**: "Triggered because customer is moderately overdue by 12 days (> 10 day threshold)."',
+    '• **Lead Recovery**: "Triggered because quote was sent 6 days ago but remains unaccepted (> 5 day threshold)."',
+    '',
+    '### ⚙️ Why It Matters',
+    'This ensures complete transparency over the automated retention engine. If you ever wonder "Why am I being told to call John Doe?", simply click the Logic Inspector to see the underlying data.',
+  ],
+};
+
+export const hostedEstimatePortalTopic: HelpTopic = {
+  id: 'hosted-estimate-portal',
+  title: 'Hosted Estimate Acceptance Portal',
+  summary: 'A secure, guest-accessible webpage where customers can review and accept their estimates online.',
+  content: [
+    '**The Hosted Estimate Portal** is a major upgrade to how you close deals. Instead of asking customers to reply to an email or call you, they now interact with a secure webpage.',
+    '',
+    '### 🌐 How It Works',
+    '1. When you generate an Estimate PDF, the system automatically creates a unique, secure URL (e.g., `/estimate/123-abc`).',
+    '2. You click **"Copy Hosted Link"** in the Estimates CRM and paste it into your email template.',
+    '3. The customer clicks the link in their email and is taken to a beautiful, branded webpage. **They do not need to log in.**',
+    '',
+    '### ✅ The Acceptance Process',
+    'On the portal, the customer can:',
+    '• Review the total price, services, and any discounts.',
+    '• Click **"Accept Estimate"**.',
+    '• Fill out a mandatory **Pre-Check Form** (confirming vehicle condition, clearing out personal items, and acknowledging paint risks).',
+    '',
+    '### 🚀 What Happens After Acceptance?',
+    'Once they submit the form:',
+    '• The Estimate is instantly marked as **"Approved"** in your CRM.',
+    '• Their Pre-Check answers are permanently attached to the Estimate Notes for you to review before the job.',
+    '• Both you and the customer receive an automated confirmation email.',
+  ],
+};
+
+export const hostedInvoicePortalTopic: HelpTopic = {
+  id: 'hosted-invoice-portal',
+  title: 'Hosted Invoice Payment Portal',
+  summary: 'A secure, Stripe-integrated webpage allowing customers to instantly pay their invoices online.',
+  content: [
+    '**The Hosted Invoice Portal** streamlines your billing process by allowing customers to securely pay via credit card directly from their phone or computer.',
+    '',
+    '### 💳 How It Works',
+    '1. When you generate an Invoice PDF, the system generates a secure URL (e.g., `/invoice/123-abc`).',
+    '2. You click **"Copy Hosted Link"** in the Invoicing CRM and send it to the customer.',
+    '3. The customer opens the webpage (no login required) and clicks **"Pay Invoice Now"**.',
+    '',
+    '### 🔒 Stripe Integration & Security',
+    '• The portal automatically redirects the customer to a secure **Stripe Checkout Session**.',
+    '• Prices, discounts, and line items are calculated purely on your secure server, preventing any tampering.',
+    '',
+    '### 💰 What Happens After Payment?',
+    'When the customer successfully pays via Stripe:',
+    '• The Invoice in your CRM is instantly marked as **Paid** with a special `PAID VIA STRIPE (ONLINE)` badge.',
+    '• A permanent Engagement Audit Trail log is created.',
+    '• An automated notification email is sent to you (the Admin) confirming the successful payment.',
+    '• A receipt is automatically emailed to the customer by Stripe.',
+  ],
+};
+
 export const adminTopics: HelpTopic[] = [
   ...adminMenuTopics,
   ...adminDashboardTopics,
   customerManagementFlowTopic,
+  logicInspectorTopic,
+  hostedEstimatePortalTopic,
+  hostedInvoicePortalTopic,
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [
