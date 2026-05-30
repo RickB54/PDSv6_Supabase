@@ -726,20 +726,19 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       
       availableChemicals.forEach(chem => {
         const desc = descriptions.find(d => d.id === chem.id);
-        if (!desc) return;
         
         if (currentY > 230) { doc.addPage(); currentY = 20; }
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
         doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
-        doc.text(`Purpose: ${desc.purpose || "—"}`, 14, currentY);
+        doc.text(`Purpose: ${desc?.purpose || "—"}`, 14, currentY);
         currentY += 10;
 
         autoTable(doc, {
           startY: currentY,
           head: [['Scenario', 'Professional Ratio']],
-          body: (desc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
+          body: (desc?.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
           theme: 'striped',
           styles: { fontSize: 9 },
           headStyles: { fillColor: [15, 22, 41] },
@@ -821,7 +820,6 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
       availableChemicals.forEach(chem => {
         const desc = descriptions.find(d => d.id === chem.id);
-        if (!desc) return;
         
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
@@ -830,20 +828,20 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(desc.purpose || "—", 40, currentY);
+        doc.text(desc?.purpose || "—", 40, currentY);
         currentY += 8;
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        const splitInst = doc.splitTextToSize(desc.instructions || "Standard application procedures.", 156);
+        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
         doc.text(splitInst, 40, currentY);
         currentY += (splitInst.length * 5) + 8;
 
         autoTable(doc, {
           startY: currentY,
           head: [['Scenario', 'Professional Ratio']],
-          body: (desc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
+          body: (desc?.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
           theme: 'grid',
           styles: { fontSize: 9 },
           headStyles: { fillColor: [15, 22, 41] },
