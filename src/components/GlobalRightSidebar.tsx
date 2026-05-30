@@ -120,6 +120,16 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             <Beaker className="w-5 h-5 text-green-400" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Calc</span>}
         </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Database" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Users className="w-5 h-5 text-blue-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Customers</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/prospects')} title="Prospects Overview" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Users className="w-5 h-5 text-purple-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Prospects</span>}
+        </Button>
     </>
 );
 
