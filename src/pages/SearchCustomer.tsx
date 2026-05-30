@@ -188,20 +188,17 @@ const SearchCustomer = () => {
         phone: "978-764-5047",
         address: "54 Boston Street, Methuen, MA",
         notes: "Test Admin Account",
-        type: "client"
+        type: "client",
+        vehicles: [{
+          year: "2018",
+          make: "Ford",
+          model: "F-150",
+          color: "Black",
+          condition: "Excellent"
+        }]
       };
 
       const result = await upsertSupabaseCustomer(newTestCustomer);
-      
-      // Optionally add a default vehicle so it's ready for Estimate/Invoice testing
-      await supabase.from('vehicles').insert({
-        customer_id: result.id,
-        year: 2018,
-        make: "Ford",
-        model: "F-150",
-        color: "Black",
-        condition: "Excellent"
-      });
 
       toast({
         title: "Test Account Created",
