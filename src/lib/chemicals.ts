@@ -114,17 +114,16 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             );
 
             if (libMatch) {
-                // Return the library card data but preserve the inventory's specific ID and image
                 return {
                     ...libMatch,
                     id: inv.id, // Use inventory ID so it maps correctly to their specific stock
                     chemical_library_id: libMatch.id, // Preserve library ID for backward compatibility in tips
                     primary_image_url: inv.image_url || inv.imageUrl || libMatch.primary_image_url,
-                    is_inventory_only: false
+                    is_inventory_only: false,
+                    updated_at: inv.updated_at || libMatch.updated_at || inv.created_at || libMatch.created_at
                 };
             }
 
-            // If no library match, return a pseudo-chemical for this inventory item
             return {
                 id: inv.id,
                 name: inv.name,
@@ -135,12 +134,11 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                 dilution_ratios: [],
                 primary_image_url: inv.image_url || inv.imageUrl,
                 gallery_image_urls: [],
-                is_inventory_only: true
+                is_inventory_only: true,
+                updated_at: inv.updated_at || inv.created_at
             } as any;
         });
 
-        // 4. (Optional) Add Library items that the user DOES NOT have in inventory yet
-        // This allows them to see what else they could use/add.
         library.forEach(lib => {
             const alreadyIncluded = inventoryData.some(inv => 
                 inv.chemical_library_id === lib.id ||
@@ -152,12 +150,35 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                 result.push({
                     ...lib,
                     is_inventory_only: false,
-                    not_in_stock: true // Tag it so we can show it differently if needed
+                    not_in_stock: true, // Tag it so we can show it differently if needed
+                    updated_at: lib.updated_at || (lib as any).created_at
                 } as any);
             }
         });
         
-        return result;
+        // 5. Deduplicate based on name and brand to combine different sizes (e.g. 16oz and 1 Gallon)
+        const uniqueResult: Chemical[] = [];
+        const seenNames = new Set<string>();
+        
+        result.forEach(chem => {
+            const key = `${(chem.name || '').trim().toLowerCase()}_${(chem.brand || '').trim().toLowerCase()}`;
+            if (!seenNames.has(key)) {
+                seenNames.add(key);
+                uniqueResult.push(chem);
+            } else {
+                // Keep the most recent timestamp among duplicates
+                const existing = uniqueResult.find(c => `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}` === key);
+                if (existing) {
+                    const existingTime = new Date((existing as any).updated_at || 0).getTime();
+                    const newTime = new Date((chem as any).updated_at || 0).getTime();
+                    if (newTime > existingTime) {
+                        (existing as any).updated_at = (chem as any).updated_at;
+                    }
+                }
+            }
+        });
+        
+        return uniqueResult;
     } catch (e) {
         console.error('getCombinedSelectableProducts exception:', e);
         return await getChemicals();

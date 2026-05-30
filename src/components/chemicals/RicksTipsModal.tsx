@@ -405,6 +405,20 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     (c.brand || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const latestChemicalDate = useMemo(() => {
+    if (!availableChemicals.length) return null;
+    let latest = 0;
+    availableChemicals.forEach(c => {
+      const ts = new Date((c as any).updated_at || (c as any).created_at || 0).getTime();
+      if (ts > latest) latest = ts;
+    });
+    if (!latest) return null;
+    return new Date(latest).toLocaleString(undefined, { 
+      year: 'numeric', month: 'short', day: 'numeric', 
+      hour: 'numeric', minute: '2-digit' 
+    });
+  }, [availableChemicals]);
+
   const selectedChemicals = availableChemicals.filter(c => {
     const chemIds = currentTip.chemicalIds.map(id => String(id));
     return chemIds.includes(String(c.id)) || (c.chemical_library_id && chemIds.includes(String(c.chemical_library_id)));
@@ -1129,7 +1143,17 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                <div className="p-4 border-b border-slate-800/60 bg-black/40 shrink-0 z-10">
                 <div className="max-w-xl mx-auto flex flex-col gap-2">
                    <div className="flex items-center justify-between px-1">
-                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Describe Individual Chemical</label>
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-3">
+                        Describe Individual Chemical
+                        <span className="bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded text-[10px] border border-purple-500/20 font-black">
+                          Total Chemicals = {availableChemicals.length}
+                        </span>
+                        {latestChemicalDate && (
+                          <span className="text-[10px] text-slate-500 font-medium lowercase">
+                            (last updated: {latestChemicalDate})
+                          </span>
+                        )}
+                      </label>
                       <div className="flex items-center gap-1">
                         <button onClick={() => handlePrint('master-chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
                           <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Chemicals</span>
