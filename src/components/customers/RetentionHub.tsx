@@ -78,11 +78,11 @@ export function RetentionHub({ customer, onRefresh }: Props) {
   };
 
   const relatedBookings = allBookings
-    .filter(b => 
-      (b.customerId === customer.id) || 
-      (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-      (b.customer?.toLowerCase() === customer.name?.toLowerCase())
-    )
+    .filter(b => {
+      if (customer.id) return b.customerId === customer.id;
+      return (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
+             (b.customer?.toLowerCase() === customer.name?.toLowerCase());
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const latestBooking = relatedBookings[0];
@@ -135,7 +135,28 @@ export function RetentionHub({ customer, onRefresh }: Props) {
       });
 
       // 4. Get from engagements table (letters, estimates, Resend automated emails)
-      if (customer.email || customer.name) {
+      if (customer.id) {
+        const { data, error } = await supabase
+          .from('engagements')
+          .select('*')
+          .eq('customer_id', customer.id)
+          .order('created_at', { ascending: false });
+        
+        if (data) {
+          data.forEach((eng: any) => {
+            let src = 'Engagement Table';
+            if (eng.type === 'letter') src = 'Letter Maker';
+            else if (eng.type === 'email') src = 'Automated Email';
+            else if (eng.type === 'estimate') src = 'Estimate Module';
+            else if (eng.type === 'retention') src = 'Outreach Campaign';
+            
+            combinedData.push({
+              ...eng,
+              source: src
+            });
+          });
+        }
+      } else if (customer.email || customer.name) {
         const { data, error } = await supabase
           .from('engagements')
           .select('*')
