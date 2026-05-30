@@ -476,15 +476,15 @@ export default function FollowUpCenter() {
             </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center mb-12">
-          <div className="bg-zinc-900/80 backdrop-blur-xl border-2 border-zinc-800 p-1.5 rounded-full flex gap-1 shadow-2xl w-full sm:w-auto">
+        <div className="w-full flex justify-center mb-12">
+          <div className="bg-zinc-950 border-2 border-zinc-800 p-2 rounded-2xl sm:rounded-full flex flex-col sm:flex-row gap-2 shadow-2xl w-full max-w-2xl">
             <button
               onClick={() => setOperationalMode('mission')}
               className={cn(
-                "flex-1 sm:w-[320px] px-6 py-4 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
+                "flex-1 px-6 py-4 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
                 operationalMode === 'mission' 
                   ? "bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.4)]" 
-                  : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                  : "bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800"
               )}
             >
               <Zap className="h-4 w-4" /> Smart Mission Workflow
@@ -492,10 +492,10 @@ export default function FollowUpCenter() {
             <button
               onClick={() => setOperationalMode('manual')}
               className={cn(
-                "flex-1 sm:w-[320px] px-6 py-4 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
+                "flex-1 px-6 py-4 rounded-xl sm:rounded-full text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2",
                 operationalMode === 'manual' 
                   ? "bg-zinc-700 text-white shadow-xl" 
-                  : "text-zinc-500 hover:text-white hover:bg-zinc-800"
+                  : "bg-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-800"
               )}
             >
               <Users className="h-4 w-4" /> Manual CRM Workspace
