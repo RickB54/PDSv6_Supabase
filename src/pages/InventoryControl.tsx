@@ -2043,7 +2043,7 @@ const InventoryControl = () => {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
-              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
                   value={chemicalSort}
@@ -2207,7 +2207,7 @@ const InventoryControl = () => {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
-              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
                   value={supplySort}
@@ -2536,7 +2536,7 @@ const InventoryControl = () => {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-zinc-400 ml-auto sm:ml-0">
-              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2 mr-4" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                 <span className="text-[10px] uppercase tracking-tighter text-zinc-500 font-bold">Sort:</span>
                 <select
                   value={equipmentSort}
@@ -2677,7 +2677,7 @@ const InventoryControl = () => {
 
               {/* Mobile Card View (Equipment) */}
               <div className="md:hidden space-y-3 mt-4">
-                {tools.map(t => (
+                {filteredEquipment.map(t => (
                   <div
                     key={t.id}
                     ref={registerRow(t.id)}
