@@ -113,6 +113,7 @@ import StickerMaker from "./pages/StickerMaker";
 import LetterMaker from "./pages/LetterMaker";
 import ProceduresBooklet from "./pages/ProceduresBooklet";
 import { PerspectiveBanner } from "./components/PerspectiveBanner";
+import CustomerEstimatePage from "./pages/CustomerEstimatePage";
 
 const queryClient = new QueryClient();
 
@@ -147,6 +148,7 @@ const isAppRoute = (path: string) => {
   
   if (websitePrefixes.includes(normalizedPath)) return false;
   if (normalizedPath.startsWith('/blog/')) return false;
+  if (normalizedPath.startsWith('/estimate/')) return false;
   if (normalizedPath.startsWith('/demo')) return true;
   return true;
 };
@@ -231,7 +233,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const showDarkTheme = isApp && (isDemoMode || (user && (user?.role === 'admin' || user?.role === 'employee')));
 
   const publicRoutePaths = ['/', '/about', '/contact', '/faq', '/services', '/book', '/book-now', '/availability', '/blog', '/thank-you', '/checkout', '/payment-success', '/portal', '/f150-setup', '/contact-support'];
-  const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/');
+  const isPublicPage = publicRoutePaths.includes(location.pathname.toLowerCase().replace(/\/+/g, '/')) || location.pathname.startsWith('/blog/') || location.pathname.startsWith('/estimate/');
 
   const publicRoutes = (
     <>
@@ -251,6 +253,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <Route path="/f150-setup" element={<MobileSetup />} />
       <Route path="/shop-setup-preview" element={<ShopSetup />} />
       <Route path="/contact-support" element={<ContactSupport />} />
+      <Route path="/estimate/:id" element={<CustomerEstimatePage />} />
     </>
   );
 

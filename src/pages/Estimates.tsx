@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -66,27 +66,38 @@ interface Estimate {
 }
 
 
+const extractPreCheckData = (notes: string) => {
+    if (!notes) return null;
+    const marker = "[PRE_CHECK_DATA]: ";
+    const idx = notes.indexOf(marker);
+    if (idx === -1) return null;
+    try {
+        const jsonStr = notes.substring(idx + marker.length).trim();
+        return JSON.parse(jsonStr);
+    } catch {
+        return null;
+    }
+};
+
 const getPublicNotes = (notes: string): string => {
     if (!notes) return "";
+    let clean = notes;
+    if (clean.includes("[ACCEPTED_BY_CUSTOMER]")) clean = clean.split("[ACCEPTED_BY_CUSTOMER]")[0];
+    if (clean.includes("[PRE_CHECK_DATA]:")) clean = clean.split("[PRE_CHECK_DATA]:")[0];
     let divider = "=== INTERNAL HISTORY LOG ===";
-    if (notes.includes(divider)) {
-        return notes.split(divider)[0].trim();
-    }
-    if (notes.includes("[VEHICLE INFO]")) {
-        return notes.split("[VEHICLE INFO]")[0].trim();
-    }
-    return notes.trim();
+    if (clean.includes(divider)) return clean.split(divider)[0].trim();
+    if (clean.includes("[VEHICLE INFO]")) return clean.split("[VEHICLE INFO]")[0].trim();
+    return clean.trim();
 };
 
 const getInternalNotes = (notes: string): string => {
     if (!notes) return "";
+    let clean = notes;
+    if (clean.includes("[ACCEPTED_BY_CUSTOMER]")) clean = clean.split("[ACCEPTED_BY_CUSTOMER]")[0];
+    if (clean.includes("[PRE_CHECK_DATA]:")) clean = clean.split("[PRE_CHECK_DATA]:")[0];
     let divider = "=== INTERNAL HISTORY LOG ===";
-    if (notes.includes(divider)) {
-        return notes.split(divider)[1].trim();
-    }
-    if (notes.includes("[VEHICLE INFO]")) {
-        return notes.substring(notes.indexOf("[VEHICLE INFO]")).trim();
-    }
+    if (clean.includes(divider)) return clean.split(divider)[1].trim();
+    if (clean.includes("[VEHICLE INFO]")) return clean.substring(clean.indexOf("[VEHICLE INFO]")).trim();
     return "";
 };
 
@@ -489,6 +500,12 @@ const Estimates = () => {
         } catch (err) {
             toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
         }
+    };
+
+    const handleCopyLink = (estId: string) => {
+        const link = `https://primeautodetail.net/estimate/${estId}`;
+        navigator.clipboard.writeText(link);
+        toast({ title: "Link Copied", description: "Estimate URL copied to clipboard." });
     };
 
     const generatePDF = (estimate: Estimate, action: 'print' | 'download' | 'archive') => {
@@ -1283,6 +1300,9 @@ const Estimates = () => {
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(est, 'download')} title="Download PDF">
                                                 <Save className="h-4 w-4" />
                                             </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => handleCopyLink(est.id!)} title="Copy Hosted Link">
+                                                <LinkIcon className="h-4 w-4" />
+                                            </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-500 hover:text-red-400 hover:bg-red-400/10" onClick={() => setDeleteId(est.id!)} title="Delete Estimate">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -1526,6 +1546,43 @@ const Estimates = () => {
                                 </div>
                             </div>
 
+                            {/* Pre-Check Data Block if customer accepted online */}
+                            {selectedEstimate.notes?.includes("[ACCEPTED_BY_CUSTOMER]") && extractPreCheckData(selectedEstimate.notes) && (
+                                <div className="py-4 border-b border-zinc-800">
+                                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl">
+                                        <div className="flex items-center gap-2 text-emerald-400 font-bold mb-3 uppercase tracking-wider text-xs">
+                                            <CheckCircle className="h-4 w-4" />
+                                            Accepted Online by Customer - Pre-Check Data
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 text-sm">
+                                            {(() => {
+                                                const preCheck = extractPreCheckData(selectedEstimate.notes!);
+                                                if (!preCheck) return null;
+                                                return (
+                                                    <>
+                                                        <div className="text-zinc-400">Pet Hair: <span className="text-zinc-200">{preCheck.petHair ? 'Yes' : 'No'}</span></div>
+                                                        <div className="text-zinc-400">Stains: <span className="text-zinc-200">{preCheck.stains ? `Yes (${preCheck.stainDesc})` : 'No'}</span></div>
+                                                        <div className="text-zinc-400">Odors: <span className="text-zinc-200">{preCheck.odors ? `Yes (${preCheck.odorDesc})` : 'No'}</span></div>
+                                                        <div className="text-zinc-400">Exterior Paint: <span className="text-zinc-200">{preCheck.exteriorPaint || 'N/A'}</span></div>
+                                                        <div className="text-zinc-400">Scratches: <span className="text-zinc-200">{preCheck.paintScratches ? `Yes (${preCheck.scratchDesc})` : 'No'}</span></div>
+                                                        <div className="text-zinc-400">Interior Condition: <span className="text-zinc-200">{preCheck.interiorCondition || 'N/A'}</span></div>
+                                                        <div className="text-zinc-400">Tires/Wheels: <span className="text-zinc-200">{preCheck.tireCondition || 'N/A'}</span></div>
+                                                        <div className="text-zinc-400">Known Damage: <span className="text-zinc-200">{preCheck.knownDamage ? `Yes (${preCheck.damageDesc})` : 'No'}</span></div>
+                                                        <div className="text-zinc-400 col-span-2">Last Detail: <span className="text-zinc-200">{preCheck.lastDetail || 'N/A'}</span></div>
+                                                        {preCheck.specialRequests && (
+                                                            <div className="text-zinc-400 col-span-2 mt-2">
+                                                                Special Requests/Notes: <br/>
+                                                                <span className="text-zinc-200 italic">{preCheck.specialRequests}</span>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Notes & Conversation Details display in Detail modal */}
                             <div className="py-4 border-b border-zinc-800 space-y-3">
                                 <div 
@@ -1577,6 +1634,9 @@ const Estimates = () => {
                                         <XCircle className="h-4 w-4 mr-2" /> Mark Declined
                                     </Button>
                                 )}
+                                <Button variant="outline" className="border-blue-700/50 hover:bg-blue-800/20 text-blue-400" onClick={() => handleCopyLink(selectedEstimate.id!)}>
+                                    <LinkIcon className="h-4 w-4 mr-2" /> Copy Link
+                                </Button>
                                  <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => generatePDF(selectedEstimate, 'download')}>
                                     <Save className="h-4 w-4 mr-2" /> Save PDF
                                 </Button>
