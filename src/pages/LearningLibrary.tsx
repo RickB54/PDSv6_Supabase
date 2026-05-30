@@ -77,6 +77,21 @@ export default function LearningLibrary() {
         });
     }, [items, activeCategory]);
 
+    const categoryCounts = useMemo(() => {
+        const counts: Record<string, number> = { "All": items.length };
+        categories.forEach(cat => {
+            if (cat !== "All") {
+                const target = cat.toLowerCase();
+                const count = items.filter(i => {
+                    const cats = (i.category || 'General').split(',').map(s => s.trim().toLowerCase());
+                    return cats.includes(target);
+                }).length;
+                counts[cat] = count;
+            }
+        });
+        return counts;
+    }, [items, categories]);
+
     useEffect(() => {
         loadItems();
         
@@ -526,12 +541,19 @@ export default function LearningLibrary() {
                                                 setActiveCategory(cat);
                                                 if (window.innerWidth < 1024) setCategoriesExpanded(false);
                                             }}
-                                            className={`flex-1 text-left px-3 py-2 rounded-lg text-sm font-medium transition-all ${activeCategory === cat
+                                            className={`flex-1 text-left px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-between ${activeCategory === cat
                                                 ? 'bg-blue-600 text-white shadow-md shadow-blue-900/20'
                                                 : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
                                                 }`}
                                         >
-                                            {cat}
+                                            <span className="truncate mr-2">{cat}</span>
+                                            <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                                                activeCategory === cat 
+                                                    ? 'bg-blue-700/50 text-white' 
+                                                    : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700'
+                                            }`}>
+                                                {categoryCounts[cat] || 0}
+                                            </span>
                                         </button>
                                         {isAdmin && cat !== 'All' && cat !== 'General' && (
                                             <div className="flex opacity-100 group-hover:opacity-100 transition-opacity pr-1">
