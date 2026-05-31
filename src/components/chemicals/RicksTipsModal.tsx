@@ -78,6 +78,13 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     return list;
   }, [availableChemicals, chemicalSortBy]);
 
+  
+  const getChemDesc = (chemId: string) => {
+    const chem = availableChemicals.find(c => String(c.id) === String(chemId));
+    const searchId = chem?.chemical_library_id || chem?.id || chemId;
+    return descriptions.find(d => String(d.id) === String(searchId) || String(d.id) === String(chemId));
+  };
+
   const DEFAULT_SCENARIOS = useMemo(() => [
     { scenario: "Maintenance / Light", ratio: "" },
     { scenario: "Standard", ratio: "" },
@@ -293,7 +300,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
 
   // Get current description with 3 default rows if empty
   const currentDesc = useMemo(() => {
-    const found = descriptions.find(d => d.id === selectedChemicalId);
+    const found = getChemDesc(selectedChemicalId);
     if (found) {
         // If it has NO dilutions, give it the 3 defaults
         if (!found.dilutions || found.dilutions.length === 0) {
@@ -402,12 +409,16 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   };
 
   const updateDescField = (field: keyof ChemicalDescription, value: any) => {
-    const existingIndex = descriptions.findIndex(d => d.id === selectedChemicalId);
+    
+    const chem = availableChemicals.find(c => String(c.id) === String(selectedChemicalId));
+    const searchId = chem?.chemical_library_id || chem?.id || selectedChemicalId;
+    const existingIndex = descriptions.findIndex(d => String(d.id) === String(searchId) || String(d.id) === String(selectedChemicalId));
+  
     let newDescs = [...descriptions];
     if (existingIndex > -1) {
       newDescs[existingIndex] = { ...currentDesc, [field]: value };
     } else {
-      newDescs.push({ ...currentDesc, [field]: value });
+      newDescs.push({ ...currentDesc, id: searchId, [field]: value });
     }
     updateDescriptions(newDescs);
   };
@@ -633,7 +644,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
           c.name,
           c.brand || 'N/A',
           c.category || 'General',
-          descriptions.find(d => d.id === c.id)?.purpose || '—'
+          getChemDesc(c.id)?.purpose || '—'
         ]),
         theme: 'grid',
         headStyles: { fillColor: [15, 22, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -702,7 +713,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         currentY = drawSectionTitle(`${zone} Setup`, currentY + 5, zone === 'interior' ? [56, 189, 248] : [245, 158, 11]);
 
         zoneChems.forEach((chem, idx) => {
-          const desc = descriptions.find(d => d.id === chem.id);
+          const desc = getChemDesc(chem.id);
           if (currentY > 240) { doc.addPage(); currentY = 20; }
           
           doc.setFontSize(11);
@@ -753,7 +764,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
       
       availableChemicals.forEach(chem => {
-        const desc = descriptions.find(d => d.id === chem.id);
+        const desc = getChemDesc(chem.id);
         
         if (currentY > 230) { doc.addPage(); currentY = 20; }
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
@@ -847,7 +858,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     } else {
       currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
       availableChemicals.forEach(chem => {
-        const desc = descriptions.find(d => d.id === chem.id);
+        const desc = getChemDesc(chem.id);
         
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
@@ -1396,7 +1407,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                          ['perfection', 'buster', 'bomber', 'terminator', 'xpress'].some(n => name.includes(n));
                                })
                                .map(chem => {
-                                  const desc = descriptions.find(d => d.id === chem.id);
+                                  const desc = getChemDesc(chem.id);
                                   return (
                                     <Card key={chem.id} className="bg-slate-900/60 border-slate-800 p-4 hover:border-sky-500/30 transition-all group relative border-l-4 border-l-sky-500/50 shadow-lg">
                                        <button 
@@ -1464,7 +1475,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                          ['gold class', 'warrior', 'dark fury', 'formula 4', 'spray wax', 'aqua gloss', 'apc', 'pink perfection'].some(n => name.includes(n));
                                })
                                .map(chem => {
-                                  const desc = descriptions.find(d => d.id === chem.id);
+                                  const desc = getChemDesc(chem.id);
                                   return (
                                     <Card key={chem.id} className="bg-slate-900/60 border-slate-800 p-4 hover:border-amber-500/30 transition-all group relative border-l-4 border-l-amber-500/50 shadow-lg">
                                        <button 

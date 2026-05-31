@@ -106,19 +106,35 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
         // 3. Inventory-Centric Merge: 
         // We want to show EVERY item in the user's inventory.
         const result: Chemical[] = inventoryData.map(inv => {
+            const invName = inv.name.toLowerCase().trim();
+            const invBrand = (inv.brand || '').toLowerCase().trim();
+
             // Find a professional library card for this inventory item
-            const libMatch = library.find(lib => 
-                lib.id === inv.chemical_library_id ||
-                (lib.name.toLowerCase().trim() === inv.name.toLowerCase().trim() &&
-                 (lib.brand || '').toLowerCase().trim() === (inv.brand || '').toLowerCase().trim())
-            );
+            const libMatch = library.find(lib => {
+                if (lib.id === inv.chemical_library_id) return true;
+                
+                const libName = lib.name.toLowerCase().trim();
+                const libBrand = (lib.brand || '').toLowerCase().trim();
+                
+                // If brands don't match, they aren't the same
+                if (invBrand && libBrand && invBrand !== libBrand) return false;
+                
+                // Exact match
+                if (invName === libName) return true;
+                
+                // Fuzzy match: one is contained inside the other (e.g. "Total Interior" in "Total Interior Cleaner")
+                if (invName.length > 5 && libName.includes(invName)) return true;
+                if (libName.length > 5 && invName.includes(libName)) return true;
+                
+                return false;
+            });
 
             if (libMatch) {
                 return {
                     ...libMatch,
                     id: inv.id, // Use inventory ID so it maps correctly to their specific stock
-                    name: inv.name || libMatch.name,
-                    brand: inv.brand || libMatch.brand,
+                    name: libMatch.name, // Force standardized library name to ensure deduplication
+                    brand: libMatch.brand || inv.brand,
                     chemical_library_id: libMatch.id, // Preserve library ID for backward compatibility in tips
                     primary_image_url: inv.image_url || inv.imageUrl || libMatch.primary_image_url,
                     is_inventory_only: false,
@@ -142,11 +158,22 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
         });
 
         library.forEach(lib => {
-            const alreadyIncluded = inventoryData.some(inv => 
-                inv.chemical_library_id === lib.id ||
-                (inv.name.toLowerCase().trim() === lib.name.toLowerCase().trim() &&
-                 (inv.brand || '').toLowerCase().trim() === (lib.brand || '').toLowerCase().trim())
-            );
+            const libName = lib.name.toLowerCase().trim();
+            const libBrand = (lib.brand || '').toLowerCase().trim();
+            
+            const alreadyIncluded = inventoryData.some(inv => {
+                if (inv.chemical_library_id === lib.id) return true;
+                
+                const invName = inv.name.toLowerCase().trim();
+                const invBrand = (inv.brand || '').toLowerCase().trim();
+                
+                if (invBrand && libBrand && invBrand !== libBrand) return false;
+                if (invName === libName) return true;
+                if (invName.length > 5 && libName.includes(invName)) return true;
+                if (libName.length > 5 && invName.includes(libName)) return true;
+                
+                return false;
+            });
             
             if (!alreadyIncluded) {
                 result.push({
