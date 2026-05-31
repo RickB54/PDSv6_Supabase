@@ -785,7 +785,7 @@ const InventoryControl = () => {
 
   // Group by Product (Name + Brand)
   const productGroups = Object.values(filteredChemicals.reduce((acc, chem) => {
-    const key = chem.name.trim().toLowerCase();
+    const key = `${(chem.name || '').trim().toLowerCase()}_${(chem.brand || '').trim().toLowerCase()}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(chem);
     return acc;
@@ -1642,7 +1642,8 @@ const InventoryControl = () => {
   const collapseAll = () => setExpandedSections({ chemicals: false, materials: false, tools: false });
 
   // Metrics
-  const totalItems = chemicals.length + materials.length + tools.length;
+  const uniqueChemicalCount = new Set(chemicals.map(c => `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}`)).size;
+  const totalItems = uniqueChemicalCount + materials.length + tools.length;
   const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
     materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length +
     tools.filter(t => (t as any).lowThreshold && (t.quantity || 0) < (t as any).lowThreshold).length;
