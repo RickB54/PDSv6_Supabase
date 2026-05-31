@@ -1315,8 +1315,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 bg-[#0f1629]/30 custom-scrollbar">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                  <div className="space-y-6 lg:col-span-3">
                     {/* What it does */}
                     <div className="space-y-3">
                       <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
@@ -1335,7 +1335,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         value={currentDesc.purpose}
                         onChange={(e) => updateDescField('purpose', e.target.value)}
                         placeholder="What is this chemical designed for? (e.g., 'A high-foaming pH neutral soap for safely removing surface grit without stripping wax...')"
-                        className="bg-slate-900/50 border-slate-800 min-h-[120px] focus:ring-purple-500/20 text-base text-white"
+                        className="bg-slate-900/50 border-slate-800 min-h-[180px] focus:ring-purple-500/20 text-base text-white"
                       />
                     </div>
 
@@ -1349,12 +1349,12 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         value={currentDesc.instructions}
                         onChange={(e) => updateDescField('instructions', e.target.value)}
                         placeholder="Step-by-step professional usage guide..."
-                        className="bg-slate-900/50 border-slate-800 min-h-[160px] focus:ring-purple-500/20 text-base text-white"
+                        className="bg-slate-900/50 border-slate-800 min-h-[240px] focus:ring-purple-500/20 text-base text-white"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-6 lg:col-span-1">
                     {/* Dilution Scenarios */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
