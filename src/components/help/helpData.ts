@@ -525,7 +525,7 @@ export const recentUpdatesTopic: HelpTopic = {
     '🧪 **1. Chemical Management Enhancements**',
     '• **Searchable Dropdown**: Added a fast, searchable text input directly inside the chemical selection dropdown to help you find specific assets without scrolling.',
     '• **Chemical Description Shortcut**: A brand new dedicated shortcut button has been added to the right slide-out sidebar, taking you instantly to the Chemical Description section.',
-    '• **Layout Optimization**: Upgraded the "Rick\\'s Tips" interface to a highly readable 75/25 split, providing much taller text areas for chemical descriptions and dilution notes.',
+    "• **Layout Optimization**: Upgraded the 'Rick's Tips' interface to a highly readable 75/25 split, providing much taller text areas for chemical descriptions and dilution notes.",
     '',
     '🖨️ **2. Professional PDF & Printing Fixes**',
     '• **Batch Print Modal**: Implemented a new selection modal allowing you to selectively batch print/PDF specific chemicals rather than the entire library.',
