@@ -333,6 +333,16 @@ const procedures: ProcedurePage[] = [
             title: "Master Ratio Sync",
             content: "Updating a ratio on a chemical card instantly propagates that change to every checklist.",
             icon: Zap
+          },
+          {
+            title: "Rick's Tips & Descriptions",
+            content: "Access the 75/25 split view directly via the 'Chem Desc' icon in the right sidebar. This provides highly readable, taller text areas for chemical descriptions and dilution notes.",
+            icon: Book
+          },
+          {
+            title: "Searchable Chemical Index",
+            content: "A fast, real-time searchable text input is located directly inside the chemical selection dropdown to help you find specific assets without scrolling.",
+            icon: Search
           }
         ]
       },
@@ -355,6 +365,11 @@ const procedures: ProcedurePage[] = [
             title: "Cost per Ounce",
             content: "The engine calculates the 'Ready-to-Use' cost to help you refine your package pricing.",
             icon: DollarSign
+          },
+          {
+            title: "Batch PDF Exports",
+            content: "Use the Batch Print Modal to selectively batch print/PDF specific chemicals rather than the entire library. The export engine automatically handles page breaks for clean, professional documents.",
+            icon: FileText
           }
         ]
       }
