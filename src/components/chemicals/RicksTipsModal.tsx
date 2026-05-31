@@ -799,8 +799,19 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         
         doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
-        doc.text(`Purpose: ${desc?.purpose || "—"}`, 14, currentY);
-        currentY += 10;
+        doc.setFont("helvetica", "bold");
+        doc.text("PURPOSE:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
+        doc.text(splitPurpose, 40, currentY);
+        currentY += (splitPurpose.length * 5) + 8;
+
+        doc.setFont("helvetica", "bold");
+        doc.text("USAGE:", 14, currentY);
+        doc.setFont("helvetica", "normal");
+        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
+        doc.text(splitInst, 40, currentY);
+        currentY += (splitInst.length * 5) + 8;
 
         autoTable(doc, {
           startY: currentY,
@@ -897,8 +908,9 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(desc?.purpose || "—", 40, currentY);
-        currentY += 8;
+        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
+        doc.text(splitPurpose, 40, currentY);
+        currentY += (splitPurpose.length * 5) + 8;
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
@@ -1221,20 +1233,45 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                           </span>
                         )}
                       </label>
-                      <div className="flex items-center gap-1">
-                          <button onClick={() => setIsBatchModalOpen(true)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group border border-dashed border-sky-500/30" title="Batch Print Selected">
-                            <span className="text-[9px] font-black uppercase text-sky-400 hidden group-hover:inline">Select & Print</span>
-                            <Printer className="w-4 h-4 text-sky-400" />
-                          </button>
-                          <div className="w-px h-4 bg-slate-800 mx-1"></div>
-                          <button onClick={() => handlePrint('master-chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
-                            <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Chemicals</span>
-                            <Printer className="w-4 h-4 text-emerald-400" />
-                          </button>
-                          <button onClick={() => saveMasterCatalog('chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Save Master PDF">
-                            <FileText className="w-4 h-4 text-sky-400" />
-                          </button>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Options">
+                              <Printer className="w-4 h-4 text-emerald-400" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent sideOffset={8} className="w-48 p-1 bg-slate-900 border-slate-700 rounded-xl shadow-xl z-[400]">
+                            <button onClick={() => handlePrint('master-chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                              <Printer className="w-4 h-4 text-emerald-400" /> 
+                              All Chemicals
+                            </button>
+                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                              <CheckSquare className="w-4 h-4 text-sky-400" /> 
+                              Select Chemicals...
+                            </button>
+                          </PopoverContent>
+                        </Popover>
+
+                        <div className="w-px h-4 bg-slate-800"></div>
+
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Save PDF Options">
+                              <FileText className="w-4 h-4 text-sky-400" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent sideOffset={8} className="w-48 p-1 bg-slate-900 border-slate-700 rounded-xl shadow-xl z-[400]">
+                            <button onClick={() => saveMasterCatalog('chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                              <FileText className="w-4 h-4 text-emerald-400" /> 
+                              All Chemicals
+                            </button>
+                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                              <CheckSquare className="w-4 h-4 text-sky-400" /> 
+                              Select Chemicals...
+                            </button>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <select
