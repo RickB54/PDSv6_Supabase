@@ -524,11 +524,11 @@ export const chemicalDescriptionTopic: HelpTopic = {
   summary: 'How to quickly find, read, and manage detailed descriptions and safety notes for your chemicals.',
   content: [
     '**Overview**',
-    'The Chemical Description section (also known as Rick\\'s Tips) is your team\\'s primary resource for detailed safety, usage, and dilution information for every chemical in your shop.',
+    "The Chemical Description section (also known as Rick's Tips) is your team's primary resource for detailed safety, usage, and dilution information for every chemical in your shop.",
     '',
     '**How to Access the Section**',
     '• **The Quick Shortcut**: From anywhere in the app, open the Right Slide-out Sidebar (the app menu on the right) and click the **"Chem Desc"** icon (Book icon). This instantly opens the modal and drops you straight into the Description tab without navigating through the main menu.',
-    '• **From the Library**: You can also access it by clicking the "Rick\\'s Tips" button on any chemical card.',
+    "• **From the Library**: You can also access it by clicking the 'Rick's Tips' button on any chemical card.",
     '',
     '**How to Find a Chemical Quickly**',
     'Once the modal is open, use the **Searchable Dropdown** at the top:',
