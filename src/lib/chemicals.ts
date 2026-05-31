@@ -133,8 +133,8 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                 return {
                     ...libMatch,
                     id: inv.id, // Use inventory ID so it maps correctly to their specific stock
-                    name: libMatch.name, // Force standardized library name to ensure deduplication
-                    brand: libMatch.brand || inv.brand,
+                    name: inv.name || libMatch.name, // Use inventory name to respect user's naming
+                    brand: inv.brand || libMatch.brand,
                     chemical_library_id: libMatch.id, // Preserve library ID for backward compatibility in tips
                     primary_image_url: inv.image_url || inv.imageUrl || libMatch.primary_image_url,
                     is_inventory_only: false,
