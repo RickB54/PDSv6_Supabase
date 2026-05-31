@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw, HelpCircle } from 'lucide-react';
+import { Search, Save, Package, FlaskConical, Trash2, Plus, Info, Zap, Check, CheckSquare, List, MessageSquare, Droplets, BookOpen, Printer, FileText, RefreshCw, HelpCircle, X } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -42,6 +42,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   const [prepList, setPrepList] = useState<string[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [selectedChemicalId, setSelectedChemicalId] = useState<string>('');
+  const [chemicalSortBy, setChemicalSortBy] = useState<string>('brand');
   const [availableChemicals, setAvailableChemicals] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activePackages, setActivePackages] = useState<any[]>(servicePackages);
@@ -50,6 +51,32 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin';
+
+  const chemicalSortOptions = useMemo(() => {
+    return Array.from(new Set(availableChemicals.map(c => c.brand || "Other / No Brand"))).sort((a, b) => {
+      if (a === "Other / No Brand") return 1;
+      if (b === "Other / No Brand") return -1;
+      return a.localeCompare(b);
+    });
+  }, [availableChemicals]);
+
+  const displayChemicals = useMemo(() => {
+    let list = [...availableChemicals];
+    if (chemicalSortBy === 'brand') {
+       list.sort((a, b) => {
+         const brandA = (a.brand || 'Other / No Brand').toLowerCase();
+         const brandB = (b.brand || 'Other / No Brand').toLowerCase();
+         if (brandA < brandB) return -1;
+         if (brandA > brandB) return 1;
+         return a.name.localeCompare(b.name);
+       });
+    } else if (chemicalSortBy === 'alphabetical') {
+       list.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+       list = list.filter(c => (c.brand || 'Other / No Brand') === chemicalSortBy).sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [availableChemicals, chemicalSortBy]);
 
   const DEFAULT_SCENARIOS = useMemo(() => [
     { scenario: "Maintenance / Light", ratio: "" },
@@ -1162,26 +1189,43 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         </button>
                       </div>
                     </div>
-                  <Select value={selectedChemicalId} onValueChange={setSelectedChemicalId}>
-                    <SelectTrigger className="w-full bg-slate-900 border-slate-700 h-14 text-white focus:ring-purple-500/50">
-                      <SelectValue placeholder="Select a Chemical" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
-                      {availableChemicals.map(chem => (
-                        <SelectItem key={String(chem.id)} value={String(chem.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
-                          <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
-                                {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
-                             </div>
-                             <div className="flex flex-col gap-0.5 items-start">
-                                <span className="font-semibold text-sm">{chem.name}</span>
-                                <span className="text-[10px] text-slate-500 uppercase tracking-tight">{chem.brand}</span>
-                             </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={chemicalSortBy}
+                      onChange={(e) => setChemicalSortBy(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 text-sm h-14 px-3 text-white rounded-md focus:ring-purple-500/50 sm:w-1/3"
+                    >
+                      <option value="brand">By Brand (All)</option>
+                      <option value="alphabetical">A-Z List</option>
+                      {chemicalSortOptions.length > 0 && (
+                        <optgroup label="Jump to Brand">
+                          {chemicalSortOptions.map(brand => (
+                            <option key={brand} value={brand}>{brand}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <Select value={selectedChemicalId} onValueChange={setSelectedChemicalId}>
+                      <SelectTrigger className="w-full sm:w-2/3 bg-slate-900 border-slate-700 h-14 text-white focus:ring-purple-500/50">
+                        <SelectValue placeholder="Select a Chemical" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
+                        {displayChemicals.map(chem => (
+                          <SelectItem key={String(chem.id)} value={String(chem.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
+                            <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
+                                  {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
+                               </div>
+                               <div className="flex flex-col gap-0.5 items-start">
+                                  <span className="font-semibold text-sm">{chem.name}</span>
+                                  <span className="text-[10px] text-slate-500 uppercase tracking-tight">{chem.brand}</span>
+                               </div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
