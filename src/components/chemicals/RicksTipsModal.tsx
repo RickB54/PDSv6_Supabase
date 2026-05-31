@@ -84,6 +84,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     { scenario: "Heavy Dirt / Degreasing", ratio: "" }
   ], []);
 
+
   useEffect(() => {
     if (!open) return;
 
@@ -1226,6 +1227,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                       </SelectContent>
                     </Select>
                   </div>
+
                 </div>
               </div>
 
