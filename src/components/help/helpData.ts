@@ -515,7 +515,30 @@ export const manualBookingFlowTopic: HelpTopic = {
   section: 'system',
 };
 
+export const recentUpdatesTopic: HelpTopic = {
+  id: 'recent-updates',
+  title: 'Recent System Updates (May 31)',
+  summary: 'A summary of the latest features, enhancements, and bug fixes applied to the system.',
+  content: [
+    '**Latest Platform Improvements**',
+    '',
+    '🧪 **1. Chemical Management Enhancements**',
+    '• **Searchable Dropdown**: Added a fast, searchable text input directly inside the chemical selection dropdown to help you find specific assets without scrolling.',
+    '• **Chemical Description Shortcut**: A brand new dedicated shortcut button has been added to the right slide-out sidebar, taking you instantly to the Chemical Description section.',
+    '• **Layout Optimization**: Upgraded the "Rick\\'s Tips" interface to a highly readable 75/25 split, providing much taller text areas for chemical descriptions and dilution notes.',
+    '',
+    '🖨️ **2. Professional PDF & Printing Fixes**',
+    '• **Batch Print Modal**: Implemented a new selection modal allowing you to selectively batch print/PDF specific chemicals rather than the entire library.',
+    '• **Layout Stability**: Resolved layout constraints where text lines were wrapping incorrectly or being cut off mid-sentence at page breaks. Professional export documents now flawlessly transition between pages.',
+    '',
+    '🔄 **3. Smart Inventory Syncing**',
+    '• **Deduplication Engine**: Hardened the deduplication logic and added bulletproof fuzzy matching to ensure that the chemical inventory accurately links with your Shop Knowledge Base.',
+  ],
+  section: 'system',
+};
+
 export const adminMenuTopics: HelpTopic[] = [
+  recentUpdatesTopic,
   vehicleManagementTopic,
   manualBookingFlowTopic,
   operationsFlowTopic,
