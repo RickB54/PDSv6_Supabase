@@ -47,6 +47,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   const [searchQuery, setSearchQuery] = useState('');
   const [activePackages, setActivePackages] = useState<any[]>(servicePackages);
   const [loading, setLoading] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [batchPrintIds, setBatchPrintIds] = useState<string[]>([]);
   const dataInitialized = useRef(false);
   
   const user = getCurrentUser();
@@ -81,8 +83,32 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   
   const getChemDesc = (chemId: string) => {
     const chem = availableChemicals.find(c => String(c.id) === String(chemId));
-    const searchId = chem?.chemical_library_id || chem?.id || chemId;
-    return descriptions.find(d => String(d.id) === String(searchId) || String(d.id) === String(chemId));
+    if (!chem) return undefined;
+    const searchId = chem.chemical_library_id || chem.id || chemId;
+    let found = descriptions.find(d => String(d.id) === String(searchId) || String(d.id) === String(chemId));
+    
+    if (!found) {
+      const cleanName = (chem.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const FALLBACK: Record<string, string> = {
+        'apc': 'a1000002-0000-0000-0000-000000000002',
+        'armorallwheel': 'a1000005-0000-0000-0000-000000000005',
+        'platinumrapid': 'a1000007-0000-0000-0000-000000000007',
+        'ceramiccoatingcerakote': 'a1000007-0000-0000-0000-000000000007',
+        'blackwax': 'a1000008-0000-0000-0000-000000000008',
+        'darkfury': 'a1000012-0000-0000-0000-000000000012',
+        'ezshine': 'a1000015-0000-0000-0000-000000000015',
+        'musclemagic': 'a1000023-0000-0000-0000-000000000023',
+        'totalinterior': 'a1000034-0000-0000-0000-000000000034',
+        'zapit': 'a1000037-0000-0000-0000-000000000037'
+      };
+      for (const [key, uuid] of Object.entries(FALLBACK)) {
+        if (cleanName.includes(key)) {
+          found = descriptions.find(d => String(d.id) === uuid);
+          if (found) break;
+        }
+      }
+    }
+    return found;
   };
 
   const DEFAULT_SCENARIOS = useMemo(() => [
@@ -578,7 +604,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     `;
   };
 
-  const handlePrint = (type: 'single-package' | 'single-chemical' | 'master-packages' | 'master-chemicals' | 'prep-interior' | 'prep-exterior') => {
+  const handlePrint = (type: 'single-package' | 'single-chemical' | 'master-packages' | 'master-chemicals' | 'prep-interior' | 'prep-exterior' | 'batch-selected') => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let currentY = 20;
@@ -760,10 +786,12 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         currentY += 15;
       });
 
-    } else if (type === 'master-chemicals') {
-      currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
+    } else if (type === 'master-chemicals' || type === 'batch-selected') {
+      currentY = drawHeader(type === 'batch-selected' ? "Rick's Custom Selection" : "Rick's Strategic Catalog", type === 'batch-selected' ? "Custom Print" : "Full Chemical Asset Reference");
       
-      availableChemicals.forEach(chem => {
+      const targetChems = type === 'batch-selected' ? availableChemicals.filter(c => batchPrintIds.includes(c.id)) : availableChemicals;
+
+      targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
         if (currentY > 230) { doc.addPage(); currentY = 20; }
@@ -791,7 +819,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     toast.success("Professional Document Generated");
   };
 
-  const saveMasterCatalog = (type: 'packages' | 'chemicals') => {
+  const saveMasterCatalog = (type: 'packages' | 'chemicals' | 'batch-selected') => {
     const toastId = toast.loading(`Generating Master ${type === 'packages' ? 'Package Matrix' : 'Chemical Catalog'}...`);
     
     const doc = new jsPDF();
@@ -856,8 +884,10 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         currentY = (doc as any).lastAutoTable.finalY + 20;
       });
     } else {
-      currentY = drawHeader("Rick's Strategic Catalog", "Full Chemical Asset Reference");
-      availableChemicals.forEach(chem => {
+      currentY = drawHeader(type === 'batch-selected' ? "Rick's Custom Selection" : "Rick's Strategic Catalog", type === 'batch-selected' ? "Custom PDF" : "Full Chemical Asset Reference");
+      const targetChems = type === 'batch-selected' ? availableChemicals.filter(c => batchPrintIds.includes(c.id)) : availableChemicals;
+
+      targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
@@ -890,8 +920,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       });
     }
 
-    doc.save(`Ricks_${type === 'packages' ? 'Package_Matrix' : 'Chemical_Catalog'}_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Master Catalog Saved Successfully", { id: toastId });
+    doc.save(`Ricks_${type === 'packages' ? 'Package_Matrix' : type === 'batch-selected' ? 'Custom_Selection' : 'Chemical_Catalog'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Catalog Saved Successfully", { id: toastId });
   };
 
   const isAllSelected = filteredChemicals.length > 0 && filteredChemicals.every(c => currentTip.chemicalIds.includes(c.id));
@@ -1192,14 +1222,19 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         )}
                       </label>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => handlePrint('master-chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
-                          <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Chemicals</span>
-                          <Printer className="w-4 h-4 text-emerald-400" />
-                        </button>
-                        <button onClick={() => saveMasterCatalog('chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Save Master PDF">
-                          <FileText className="w-4 h-4 text-sky-400" />
-                        </button>
-                      </div>
+                          <button onClick={() => setIsBatchModalOpen(true)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group border border-dashed border-sky-500/30" title="Batch Print Selected">
+                            <span className="text-[9px] font-black uppercase text-sky-400 hidden group-hover:inline">Select & Print</span>
+                            <Printer className="w-4 h-4 text-sky-400" />
+                          </button>
+                          <div className="w-px h-4 bg-slate-800 mx-1"></div>
+                          <button onClick={() => handlePrint('master-chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Print Master Chemical Catalog">
+                            <span className="text-[9px] font-black uppercase text-emerald-400 hidden group-hover:inline">All Chemicals</span>
+                            <Printer className="w-4 h-4 text-emerald-400" />
+                          </button>
+                          <button onClick={() => saveMasterCatalog('chemicals')} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1 group" title="Save Master PDF">
+                            <FileText className="w-4 h-4 text-sky-400" />
+                          </button>
+                        </div>
                     </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <select
@@ -1519,6 +1554,74 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
             </>
           )}
         </div>
+
+        <Dialog open={isBatchModalOpen} onOpenChange={setIsBatchModalOpen}>
+          <DialogContent className="w-[90vw] max-w-2xl h-[80vh] bg-slate-900 border-slate-700 text-white flex flex-col p-0 overflow-hidden rounded-xl shadow-2xl z-[500]">
+            <DialogHeader className="p-4 border-b border-slate-800 bg-[#0f1629] shrink-0">
+              <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <FileText className="w-5 h-5 text-sky-400" />
+                Batch Select for Print/PDF
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-xs mt-1">
+                Select the specific chemicals you want to compile into a single document.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-black/20">
+              <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                 <button 
+                   onClick={() => setBatchPrintIds(batchPrintIds.length === availableChemicals.length ? [] : availableChemicals.map(c => c.id))}
+                   className="text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors uppercase tracking-wider"
+                 >
+                   {batchPrintIds.length === availableChemicals.length ? "Deselect All" : "Select All"}
+                 </button>
+                 <Badge variant="outline" className="bg-sky-500/10 text-sky-400 border-sky-500/20">
+                   {batchPrintIds.length} Selected
+                 </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {availableChemicals.map(chem => (
+                  <label key={chem.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${batchPrintIds.includes(chem.id) ? 'bg-sky-500/10 border-sky-500/50' : 'bg-slate-800/50 border-slate-700 hover:border-slate-500'}`}>
+                    <Checkbox 
+                      checked={batchPrintIds.includes(chem.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) setBatchPrintIds([...batchPrintIds, chem.id]);
+                        else setBatchPrintIds(batchPrintIds.filter(id => id !== chem.id));
+                      }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">{chem.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{chem.brand || 'No Brand'}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 bg-[#0f1629] shrink-0 flex items-center justify-end gap-3">
+              <button onClick={() => setIsBatchModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+              <button 
+                disabled={batchPrintIds.length === 0}
+                onClick={() => { handlePrint('batch-selected'); setIsBatchModalOpen(false); }} 
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Print Selected
+              </button>
+              <button 
+                disabled={batchPrintIds.length === 0}
+                onClick={() => { saveMasterCatalog('batch-selected'); setIsBatchModalOpen(false); }} 
+                className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-bold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileText className="w-4 h-4" />
+                Save PDF
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </DialogContent>
     </Dialog>
