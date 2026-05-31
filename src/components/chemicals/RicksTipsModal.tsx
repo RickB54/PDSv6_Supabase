@@ -35,8 +35,15 @@ interface ChemicalDescription {
 
 const RICK_TIPS_KEY = "ricks_chemical_tips_v3"; 
 
-export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
-  const [activeTab, setActiveTab] = useState<'package' | 'description' | 'prep'>('package');
+export default function RicksTipsModal({ open, onOpenChange, initialTab = 'package' }: { open: boolean, onOpenChange: (open: boolean) => void, initialTab?: 'package' | 'description' | 'prep' }) {
+  const [activeTab, setActiveTab] = useState<'package' | 'description' | 'prep'>(initialTab);
+
+  useEffect(() => {
+    if (open && initialTab) {
+        setActiveTab(initialTab);
+    }
+  }, [open, initialTab]);
+
   const [tips, setTips] = useState<TipMapping[]>([]);
   const [descriptions, setDescriptions] = useState<ChemicalDescription[]>([]);
   const [prepList, setPrepList] = useState<string[]>([]);
@@ -45,6 +52,7 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
   const [chemicalSortBy, setChemicalSortBy] = useState<string>('brand');
   const [availableChemicals, setAvailableChemicals] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [chemicalSearchText, setChemicalSearchText] = useState('');
   const [activePackages, setActivePackages] = useState<any[]>(servicePackages);
   const [loading, setLoading] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -77,8 +85,14 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
     } else {
        list = list.filter(c => (c.brand || 'Other / No Brand') === chemicalSortBy).sort((a, b) => a.name.localeCompare(b.name));
     }
+    
+    if (chemicalSearchText.trim()) {
+      const query = chemicalSearchText.toLowerCase();
+      list = list.filter(c => c.name.toLowerCase().includes(query) || (c.brand && c.brand.toLowerCase().includes(query)));
+    }
+    
     return list;
-  }, [availableChemicals, chemicalSortBy]);
+  }, [availableChemicals, chemicalSortBy, chemicalSearchText]);
 
   
   const getChemDesc = (chemId: string) => {
@@ -1318,24 +1332,45 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                         </optgroup>
                       )}
                     </select>
-                    <Select value={selectedChemicalId} onValueChange={setSelectedChemicalId}>
+                    <Select 
+                      value={selectedChemicalId} 
+                      onValueChange={(val) => { setSelectedChemicalId(val); setChemicalSearchText(''); }}
+                      onOpenChange={(open) => { if (!open) setChemicalSearchText(''); }}
+                    >
                       <SelectTrigger className="w-full sm:w-2/3 bg-slate-900 border-slate-700 h-14 text-white focus:ring-purple-500/50">
                         <SelectValue placeholder="Select a Chemical" />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
-                        {displayChemicals.map(chem => (
-                          <SelectItem key={String(chem.id)} value={String(chem.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
-                            <div className="flex items-center gap-3">
-                               <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
-                                  {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
+                        <div className="p-2 sticky top-0 bg-slate-900 z-10 border-b border-slate-800">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                            <input 
+                              type="text"
+                              placeholder="Search chemical..."
+                              value={chemicalSearchText}
+                              onChange={(e) => setChemicalSearchText(e.target.value)}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="w-full bg-slate-800 border-slate-700 rounded-md pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 text-white"
+                            />
+                          </div>
+                        </div>
+                        {displayChemicals.length === 0 ? (
+                           <div className="p-4 text-center text-sm text-slate-500">No chemicals found.</div>
+                        ) : (
+                           displayChemicals.map(chem => (
+                             <SelectItem key={String(chem.id)} value={String(chem.id)} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
+                               <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
+                                     {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
+                                  </div>
+                                  <div className="flex flex-col gap-0.5 items-start">
+                                     <span className="font-semibold text-sm">{chem.name}</span>
+                                     <span className="text-[10px] text-slate-500 uppercase tracking-tight">{chem.brand}</span>
+                                  </div>
                                </div>
-                               <div className="flex flex-col gap-0.5 items-start">
-                                  <span className="font-semibold text-sm">{chem.name}</span>
-                                  <span className="text-[10px] text-slate-500 uppercase tracking-tight">{chem.brand}</span>
-                               </div>
-                            </div>
-                          </SelectItem>
-                        ))}
+                             </SelectItem>
+                           ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

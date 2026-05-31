@@ -8,9 +8,13 @@ import { useTasksStore } from "@/store/tasks";
 import { Sparkles, FileText, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
+
 export const GlobalModals: React.FC = () => {
     const [noteOpen, setNoteOpen] = useState(false);
     const [taskOpen, setTaskOpen] = useState(false);
+    const [ricksTipsOpen, setRicksTipsOpen] = useState(false);
+    const [ricksTipsTab, setRicksTipsTab] = useState<'package' | 'description' | 'prep'>('package');
 
     // Note State
     const [noteTitle, setNoteTitle] = useState('');
@@ -35,13 +39,21 @@ export const GlobalModals: React.FC = () => {
             setTaskTitle(`Follow up: ${e.detail?.path || ''}`);
             setTaskOpen(true);
         };
+        const handleRicksTips = (e: any) => {
+            if (e.detail?.tab) {
+                setRicksTipsTab(e.detail.tab);
+            }
+            setRicksTipsOpen(true);
+        };
 
         window.addEventListener('open-quick-note', handleNote);
         window.addEventListener('open-quick-task', handleTask);
+        window.addEventListener('open-ricks-tips', handleRicksTips);
 
         return () => {
             window.removeEventListener('open-quick-note', handleNote);
             window.removeEventListener('open-quick-task', handleTask);
+            window.removeEventListener('open-ricks-tips', handleRicksTips);
         };
     }, []);
 
@@ -168,6 +180,12 @@ export const GlobalModals: React.FC = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <RicksTipsModal 
+                open={ricksTipsOpen} 
+                onOpenChange={setRicksTipsOpen} 
+                initialTab={ricksTipsTab}
+            />
         </>
     );
 };

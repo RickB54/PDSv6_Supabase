@@ -20,7 +20,8 @@ import {
     Calculator,
     Beaker,
     CalendarDays,
-    DollarSign
+    DollarSign,
+    BookOpen
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -114,6 +115,11 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <FlaskConical className="w-5 h-5 text-teal-400" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Chemicals</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.dispatchEvent(new CustomEvent('open-ricks-tips', { detail: { tab: 'description' } }))} title="Chemical Description" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <BookOpen className="w-5 h-5 text-purple-400" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Chem Desc</span>}
         </Button>
 
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dilution-calculator')} title="Dilution Calculator" className={collapsed ? "" : "w-full justify-start gap-2"}>
