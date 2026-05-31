@@ -1357,10 +1357,10 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                   <div className="space-y-6 lg:col-span-1">
                     {/* Dilution Scenarios */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                          <List className="w-4 h-4 text-purple-400" />
-                          Dilution & Job Scenarios
+                          <List className="w-4 h-4 text-purple-400 shrink-0" />
+                          <span className="truncate">Dilution & Scenarios</span>
                         </h4>
                         <Button 
                           variant="ghost" 
@@ -1375,8 +1375,8 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                       <div className="space-y-3">
                         {(currentDesc.dilutions || []).map((row, idx) => (
                           <Card key={idx} className="bg-slate-900/40 border-slate-800 p-3 relative group">
-                            <div className="grid grid-cols-12 gap-3 items-end">
-                               <div className="col-span-7 space-y-1.5">
+                            <div className="flex flex-col gap-3">
+                               <div className="space-y-1.5">
                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Job Scenario</label>
                                  <Input 
                                    value={row.scenario}
@@ -1385,22 +1385,24 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                                    className="bg-black/60 border-slate-700 h-10 text-sm text-white placeholder:text-slate-600 focus:border-purple-500 transition-colors"
                                  />
                                </div>
-                               <div className="col-span-4 space-y-1.5">
-                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Ratio</label>
-                                 <Input 
-                                   value={row.ratio}
-                                   onChange={(e) => updateDilutionRow(idx, { ratio: e.target.value })}
-                                   placeholder="e.g. 10:1"
-                                   className="bg-black/60 border-slate-700 h-10 text-sm text-white placeholder:text-slate-600 focus:border-purple-500 transition-colors"
-                                 />
-                               </div>
-                               <div className="col-span-1 flex justify-end pb-1">
-                                  <button 
-                                    onClick={() => removeDilutionRow(idx)}
-                                    className="p-2 text-slate-600 hover:text-red-400 transition-colors"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                               <div className="flex gap-3 items-end">
+                                 <div className="flex-1 space-y-1.5">
+                                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Ratio</label>
+                                   <Input 
+                                     value={row.ratio}
+                                     onChange={(e) => updateDilutionRow(idx, { ratio: e.target.value })}
+                                     placeholder="e.g. 10:1"
+                                     className="bg-black/60 border-slate-700 h-10 text-sm text-white placeholder:text-slate-600 focus:border-purple-500 transition-colors"
+                                   />
+                                 </div>
+                                 <div className="pb-1 shrink-0">
+                                    <button 
+                                      onClick={() => removeDilutionRow(idx)}
+                                      className="p-2 text-slate-600 hover:text-red-400 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                 </div>
                                </div>
                             </div>
                           </Card>
