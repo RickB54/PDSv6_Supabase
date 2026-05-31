@@ -794,22 +794,25 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
-        if (currentY > 230) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(10);
+        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
+        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
+        const requiredHeight = 15 + 8 + (splitPurpose.length * 5) + 8 + (splitInst.length * 5) + 10 + ((desc?.dilutions?.length || 3) * 10) + 15;
+        
+        if (currentY + requiredHeight > 280) { doc.addPage(); currentY = 20; }
+        
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
-        doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
         doc.text(splitPurpose, 40, currentY);
         currentY += (splitPurpose.length * 5) + 8;
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
         doc.text(splitInst, 40, currentY);
         currentY += (splitInst.length * 5) + 8;
 
@@ -901,21 +904,25 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
+        doc.setFontSize(10);
+        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
+        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
+        const requiredHeight = 15 + 8 + (splitPurpose.length * 5) + 8 + (splitInst.length * 5) + 10 + ((desc?.dilutions?.length || 3) * 10) + 15;
+        
+        if (currentY + requiredHeight > 280) { doc.addPage(); currentY = 20; }
+        
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
-        doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
         doc.text(splitPurpose, 40, currentY);
         currentY += (splitPurpose.length * 5) + 8;
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
         doc.text(splitInst, 40, currentY);
         currentY += (splitInst.length * 5) + 8;
 
