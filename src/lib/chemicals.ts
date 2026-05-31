@@ -103,6 +103,29 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             return library;
         }
 
+        const isMatch = (invName: string, libName: string) => {
+            const clean = (s: string) => s.replace(/[^a-z0-9]/g, '');
+            const iName = clean(invName);
+            const lName = clean(libName);
+            
+            // Explicit hardcoded mappings to bulletproof the remaining edge cases
+            if (iName.includes('apc') && lName.includes('apc')) return true;
+            if (iName.includes('platinumrapid') && lName.includes('ceramiccoatingcerakote')) return true;
+            if (iName.includes('blackwax') && lName.includes('blackwax')) return true;
+            if (iName.includes('darkfury') && lName.includes('darkfury')) return true;
+            if (iName.includes('ezshine') && lName.includes('ezshine')) return true;
+            if (iName.includes('musclemagic') && lName.includes('musclemagic')) return true;
+            if (iName.includes('totalinterior') && lName.includes('totalinterior')) return true;
+            if (iName.includes('zapit') && lName.includes('zapit')) return true;
+            if (iName.includes('armorallwheel') && lName.includes('armorallwheel')) return true;
+
+            if (iName === lName) return true;
+            if (iName.length > 3 && lName.includes(iName)) return true;
+            if (lName.length > 3 && iName.includes(lName)) return true;
+            
+            return false;
+        };
+
         // 3. Inventory-Centric Merge: 
         // We want to show EVERY item in the user's inventory.
         const result: Chemical[] = inventoryData.map(inv => {
@@ -114,19 +137,7 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                 if (lib.id === inv.chemical_library_id) return true;
                 
                 const libName = lib.name.toLowerCase().trim();
-                const libBrand = (lib.brand || '').toLowerCase().trim();
-                
-                // If brands don't match, they aren't the same
-                if (invBrand && libBrand && invBrand !== libBrand) return false;
-                
-                // Exact match
-                if (invName === libName) return true;
-                
-                // Fuzzy match: one is contained inside the other (e.g. "Total Interior" in "Total Interior Cleaner")
-                if (invName.length > 5 && libName.includes(invName)) return true;
-                if (libName.length > 5 && invName.includes(libName)) return true;
-                
-                return false;
+                return isMatch(invName, libName);
             });
 
             if (libMatch) {
@@ -163,16 +174,8 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             
             const alreadyIncluded = inventoryData.some(inv => {
                 if (inv.chemical_library_id === lib.id) return true;
-                
                 const invName = inv.name.toLowerCase().trim();
-                const invBrand = (inv.brand || '').toLowerCase().trim();
-                
-                if (invBrand && libBrand && invBrand !== libBrand) return false;
-                if (invName === libName) return true;
-                if (invName.length > 5 && libName.includes(invName)) return true;
-                if (libName.length > 5 && invName.includes(libName)) return true;
-                
-                return false;
+                return isMatch(invName, libName);
             });
             
             if (!alreadyIncluded) {
