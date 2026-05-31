@@ -794,12 +794,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
-        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
         const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
         const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
-        const requiredHeight = 15 + 8 + (splitPurpose.length * 5) + 8 + (splitInst.length * 5) + 10 + ((desc?.dilutions?.length || 3) * 10) + 15;
         
-        if (currentY + requiredHeight > 280) { doc.addPage(); currentY = 20; }
+        if (currentY > 260) { doc.addPage(); currentY = 20; }
         
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
@@ -807,14 +806,26 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(splitPurpose, 40, currentY);
-        currentY += (splitPurpose.length * 5) + 8;
+        
+        splitPurpose.forEach((line: string, i: number) => {
+          if (currentY > 280) { doc.addPage(); currentY = 20; }
+          doc.text(line, 40, currentY);
+          if (i < splitPurpose.length - 1) currentY += 5;
+        });
+        currentY += 8;
+
+        if (currentY > 270) { doc.addPage(); currentY = 20; }
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(splitInst, 40, currentY);
-        currentY += (splitInst.length * 5) + 8;
+        
+        splitInst.forEach((line: string, i: number) => {
+          if (currentY > 280) { doc.addPage(); currentY = 20; }
+          doc.text(line, 40, currentY);
+          if (i < splitInst.length - 1) currentY += 5;
+        });
+        currentY += 8;
 
         autoTable(doc, {
           startY: currentY,
@@ -904,12 +915,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
       targetChems.forEach(chem => {
         const desc = getChemDesc(chem.id);
         
-        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
         const splitPurpose = doc.splitTextToSize(desc?.purpose || "—", 156);
         const splitInst = doc.splitTextToSize(desc?.instructions || "Standard application procedures.", 156);
-        const requiredHeight = 15 + 8 + (splitPurpose.length * 5) + 8 + (splitInst.length * 5) + 10 + ((desc?.dilutions?.length || 3) * 10) + 15;
         
-        if (currentY + requiredHeight > 280) { doc.addPage(); currentY = 20; }
+        if (currentY > 260) { doc.addPage(); currentY = 20; }
         
         currentY = drawSectionTitle(`${chem.name} (${chem.brand})`, currentY, [56, 189, 248]);
         
@@ -917,14 +927,26 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
         doc.setFont("helvetica", "bold");
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(splitPurpose, 40, currentY);
-        currentY += (splitPurpose.length * 5) + 8;
+        
+        splitPurpose.forEach((line: string, i: number) => {
+          if (currentY > 280) { doc.addPage(); currentY = 20; }
+          doc.text(line, 40, currentY);
+          if (i < splitPurpose.length - 1) currentY += 5;
+        });
+        currentY += 8;
+
+        if (currentY > 270) { doc.addPage(); currentY = 20; }
 
         doc.setFont("helvetica", "bold");
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
-        doc.text(splitInst, 40, currentY);
-        currentY += (splitInst.length * 5) + 8;
+        
+        splitInst.forEach((line: string, i: number) => {
+          if (currentY > 280) { doc.addPage(); currentY = 20; }
+          doc.text(line, 40, currentY);
+          if (i < splitInst.length - 1) currentY += 5;
+        });
+        currentY += 8;
 
         autoTable(doc, {
           startY: currentY,
