@@ -1270,11 +1270,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                             </button>
                           </PopoverTrigger>
                           <PopoverContent sideOffset={8} className="w-48 p-1 bg-slate-900 border-slate-700 rounded-xl shadow-xl z-[400]">
-                            <button onClick={() => handlePrint('master-chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                            <button onClick={() => handlePrint('master-chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
                               <Printer className="w-4 h-4 text-emerald-400" /> 
                               All Chemicals
                             </button>
-                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
                               <CheckSquare className="w-4 h-4 text-sky-400" /> 
                               Select Chemicals...
                             </button>
@@ -1290,11 +1290,11 @@ export default function RicksTipsModal({ open, onOpenChange }: { open: boolean, 
                             </button>
                           </PopoverTrigger>
                           <PopoverContent sideOffset={8} className="w-48 p-1 bg-slate-900 border-slate-700 rounded-xl shadow-xl z-[400]">
-                            <button onClick={() => saveMasterCatalog('chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                            <button onClick={() => saveMasterCatalog('chemicals')} className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
                               <FileText className="w-4 h-4 text-emerald-400" /> 
                               All Chemicals
                             </button>
-                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
+                            <button onClick={() => setIsBatchModalOpen(true)} className="w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-200 hover:text-white hover:bg-slate-800 transition-colors rounded-lg flex items-center gap-3">
                               <CheckSquare className="w-4 h-4 text-sky-400" /> 
                               Select Chemicals...
                             </button>
