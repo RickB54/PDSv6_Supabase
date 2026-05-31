@@ -351,6 +351,11 @@ export default function AppManual() {
                                 features={["Chemical Cards", "Rick's Tips Integration", "Safety Protocol Integration"]}
                             />
                             <ManualEntry 
+                                title="Chemical Descriptions (Rick's Tips)" 
+                                description="A highly readable 75/25 split layout focusing on detailed chemical safety and dilution guidelines. Features a fast searchable index to find assets without scrolling."
+                                features={["Chem Desc Sidebar Shortcut", "Searchable Asset Dropdown", "75/25 Description/Dilution Split", "Batch PDF Exporting"]}
+                            />
+                            <ManualEntry 
                                 title="Dilution Reference Charts" 
                                 description="Printable guides for the mix station. Provides exact product and water amounts for 16oz, 24oz, and 32oz bottles."
                                 features={["Standard/Heavy/Maintenance Ratios", "Color-Coded Oz Markers", "Interactive Shop Guide"]}
@@ -375,7 +380,7 @@ export default function AppManual() {
                             <ManualEntry 
                                 title="Inventory Control" 
                                 description="Real-time tracking of chemicals, towels, and equipment. Prevents job delays with automated low-stock warnings."
-                                features={["Material Updates (Restock)", "Usage History Audits", "Smart Sync Deduplication"]}
+                                features={["Material Updates (Restock)", "Usage History Audits", "Smart Sync Deduplication Engine"]}
                             />
                             <ManualEntry 
                                 title="Prime Dilution Chart (Interactive)" 
