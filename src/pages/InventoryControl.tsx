@@ -783,9 +783,9 @@ const InventoryControl = () => {
   const filteredSupplies = getSortedSupplies();
   const filteredEquipment = getSortedEquipment();
 
-  // Group by Product (Name + Brand)
+  // Group by Product (Name + Brand or Library ID)
   const productGroups = Object.values(filteredChemicals.reduce((acc, chem) => {
-    const key = `${(chem.name || '').trim().toLowerCase()}_${(chem.brand || '').trim().toLowerCase()}`;
+    const key = chem.chemicalLibraryId ? `lib_${chem.chemicalLibraryId}` : `${(chem.name || '').trim().toLowerCase()}_${(chem.brand || '').trim().toLowerCase()}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(chem);
     return acc;
@@ -1642,7 +1642,7 @@ const InventoryControl = () => {
   const collapseAll = () => setExpandedSections({ chemicals: false, materials: false, tools: false });
 
   // Metrics
-  const uniqueChemicalCount = new Set(chemicals.map(c => `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}`)).size;
+  const uniqueChemicalCount = new Set(chemicals.map(c => c.chemicalLibraryId ? `lib_${c.chemicalLibraryId}` : `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}`)).size;
   const totalItems = uniqueChemicalCount + materials.length + tools.length;
   const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
     materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length +
@@ -2038,7 +2038,7 @@ const InventoryControl = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{chemicals.length} items</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 whitespace-nowrap">{productGroups.length} items</span>
               <div className="sm:hidden">
                 {renderHeaderStats('chemical', true)}
               </div>
