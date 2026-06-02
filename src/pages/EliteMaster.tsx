@@ -295,7 +295,7 @@ export default function EliteMaster() {
     // Active Item States
     const [activeItem, setActiveItem] = useState<LibraryItem | null>(null);
     const [history, setHistory] = useState<HistoryItem[]>([]);
-    const [editFormData, setEditFormData] = useState({ title: '', category: '', description: '' });
+    const [editFormData, setEditFormData] = useState({ title: '', category: '', description: '', resource_url: '' });
 
     // DnD Sensors
     const sensors = useSensors(
@@ -441,7 +441,7 @@ export default function EliteMaster() {
 
     const openEdit = (item: LibraryItem) => {
         setActiveItem(item);
-        setEditFormData({ title: item.title || '', category: item.category || '', description: item.description || '' });
+        setEditFormData({ title: item.title || '', category: item.category || '', description: item.description || '', resource_url: item.resource_url || '' });
         setIsEditOpen(true);
     };
 
@@ -737,6 +737,16 @@ export default function EliteMaster() {
                                         style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '15px', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: 'bold' }}
                                     />
                                 </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Image / Resource URL</label>
+                                <input 
+                                    value={editFormData.resource_url}
+                                    onChange={e => setEditFormData({...editFormData, resource_url: e.target.value})}
+                                    style={{ width: '100%', backgroundColor: '#050505', border: '1px solid #222', padding: '15px', borderRadius: '12px', color: 'white', fontSize: '14px', fontWeight: 'bold' }}
+                                    placeholder="https://example.com/image.jpg"
+                                />
                             </div>
 
                             <div>
