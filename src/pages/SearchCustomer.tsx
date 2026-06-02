@@ -319,8 +319,7 @@ const SearchCustomer = () => {
   const filterByDate = (customer: Customer) => {
     const now = new Date();
     // Normalize date fields: DB uses snake_case, but some local types might be camelCase
-    const baseDateStr = (customer as any).created_at || (customer as any).updated_at || (customer as any).createdAt || (customer as any).updatedAt || customer.lastService;
-    if (!baseDateStr) return dateFilter === "all";
+    const baseDateStr = (customer as any).created_at || (customer as any).updated_at || (customer as any).createdAt || (customer as any).updatedAt || customer.lastService || new Date().toISOString();
     const d = new Date(baseDateStr);
 
     if (dateFilter === "today") {

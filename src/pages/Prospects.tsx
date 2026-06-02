@@ -426,8 +426,7 @@ export default function Prospects() {
 
   const filterByDate = (customer: Customer) => {
     const now = new Date();
-    const baseDateStr = (customer as any).created_at || (customer as any).updated_at || customer.lastService;
-    if (!baseDateStr) return dateFilter === "all";
+    const baseDateStr = (customer as any).created_at || (customer as any).updated_at || (customer as any).createdAt || (customer as any).updatedAt || customer.lastService || new Date().toISOString();
     const d = new Date(baseDateStr);
 
     if (dateFilter === "today") {
