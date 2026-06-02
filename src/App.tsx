@@ -20,6 +20,7 @@ import supabase from "@/lib/supabase";
 import "@/lib/storage-utils";
 import { DemoProvider, useDemoMode, DemoBanner } from "@/contexts/DemoContext";
 import { BusinessBanner } from "@/components/BusinessBanner";
+import { TestCustomerBanner } from "@/components/TestCustomerBanner";
 import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { contentService } from "@/lib/content";
@@ -591,6 +592,7 @@ const App = () => {
               <DemoProvider>
                 <DemoBanner />
                 <BusinessBanner />
+                <TestCustomerBanner />
                 <PerspectiveBanner />
                 <WalkthroughProvider>
                   <Toaster />

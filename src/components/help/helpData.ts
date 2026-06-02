@@ -451,6 +451,32 @@ export const deletingRecordsTopic: HelpTopic = {
   relatedTopicIds: ['prospect-vs-customer', 'operations-flow'],
 };
 
+export const testCustomerWorkflowTopic: HelpTopic = {
+  id: 'test-customer-workflow',
+  title: 'Test Customer & Sandbox Workflow',
+  summary: 'How to safely use the Rick Berube test account to simulate customer interactions without impacting analytics.',
+  content: [
+    '**The Safe Testing Protocol**: The system includes a specially programmed test account ("Rick Berube") designed to let you experience the full customer journey safely.',
+    '',
+    '🧪 **1. Creating Test Data**',
+    'Look for the **"🧪 Auto-Fill Rick Berube Test"** button on the Contact, Book Now, or Phone Assistant screens. This will automatically fill the form using a special email alias: **rberube54+test@gmail.com**.',
+    '',
+    '🚩 **2. The Red Warning Banner**',
+    'As soon as a test profile is created, a persistent RED BANNER appears at the bottom of all your admin screens. This is your visual warning that test data is currently active and affecting your analytics.',
+    '',
+    '👤 **3. Testing the Customer Portal**',
+    'To see what a customer sees:',
+    '1. Click **Logout** from your Admin account.',
+    '2. The login screen will automatically pre-fill your `+test` email alias.',
+    '3. Sign in to enter the strict Customer Portal view.',
+    '*(Note: System emails will still route to your primary Gmail inbox for convenience.)*',
+    '',
+    '🧹 **4. Wiping Test Data (1-Click)**',
+    'When you are done testing, click the **"Wipe Test Data Now"** button located directly inside the red banner. This triggers a cascading deletion that permanently erases all test Estimates, Invoices, Bookings, Vehicles, and Customer records associated with the test account. Your analytics will instantly revert to real production numbers.',
+  ],
+  section: 'system',
+};
+
 // Admin help split into full coverage of slide-out Menu and Admin Dashboard actions
 
 export const vehicleManagementTopic: HelpTopic = {
@@ -570,6 +596,7 @@ export const adminMenuTopics: HelpTopic[] = [
   multiVehicleBookingHelpTopic,
   prospectVsCustomerTopic,
   deletingRecordsTopic,
+  testCustomerWorkflowTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',

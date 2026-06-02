@@ -190,7 +190,7 @@ const BookNow = () => {
     setFormData(prev => ({
       ...prev,
       name: "Rick Berube",
-      email: "rberube54@gmail.com",
+      email: "rberube54+test@gmail.com",
       phone: "978-764-5047",
       address: "54 Boston Street, Methuen, MA",
       year: "2018",

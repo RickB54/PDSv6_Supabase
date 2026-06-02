@@ -402,6 +402,11 @@ export async function signupSupabase(email: string, password: string, name?: str
 }
 
 export async function logout(): Promise<void> {
+  const current = getCurrentUser();
+  if (current && current.role === 'admin') {
+    localStorage.setItem('wasJustAdmin', 'true');
+  }
+
   // 1. Clear ALL application-specific local storage immediately
   const keysToClear = [
     'currentUser', 

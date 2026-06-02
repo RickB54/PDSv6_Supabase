@@ -27,6 +27,17 @@ export default function Login() {
                 duration: 6000,
             });
         }
+        
+        // Auto-fill Test Customer credentials for Admin
+        const wasJustAdmin = localStorage.getItem('wasJustAdmin') === 'true';
+
+        if (wasJustAdmin) {
+            setEmail("rberube54+test@gmail.com");
+            setPassword("test1234");
+            
+            // Clear the flag so it only auto-fills once after logout
+            localStorage.removeItem('wasJustAdmin');
+        }
     }, [demoDisabled, disabledReason]);
 
     const handleLogin = async (e: React.FormEvent) => {

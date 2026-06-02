@@ -439,7 +439,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const handleFillRickBerubeTest = () => {
         setCallerName("Rick Berube");
         setCallerPhone("978-764-5047");
-        setCallerEmail("rberube54@gmail.com");
+        setCallerEmail("rberube54+test@gmail.com");
 
         setVehicles(prev => prev.map((v, idx) => {
             if (idx === 0) {

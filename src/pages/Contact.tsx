@@ -106,7 +106,7 @@ const Contact = () => {
 
     setFormData({
       name: "Rick Berube",
-      email: "rberube54@gmail.com",
+      email: "rberube54+test@gmail.com",
       phone: "978-764-5047",
       address: "54 Boston Street",
       city: "Methuen",

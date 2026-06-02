@@ -192,7 +192,7 @@ const SearchCustomer = () => {
       
       const newTestCustomer = {
         name: "Rick Berube",
-        email: "rberube54@gmail.com",
+        email: "rberube54+test@gmail.com",
         phone: "978-764-5047",
         address: "54 Boston Street, Methuen, MA",
         notes: "Test Admin Account",
@@ -1411,12 +1411,24 @@ const SearchCustomer = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Permanently?</AlertDialogTitle>
             <AlertDialogDescription className="text-zinc-400">
-              This will permanently delete <strong>{customerToDelete?.name || 'this customer'}</strong>, 
-              all <strong>{impactCounts.vehicles} related vehicle(s)</strong>, 
-              and detach <strong>{impactCounts.bookings} booking(s)</strong> from this profile. 
-              <br /><br />
-              Booking history will be preserved as a snapshot, but the link to this customer record will be removed. 
-              <strong> This action cannot be undone.</strong>
+              {customerToDelete?.name?.toLowerCase().trim() === 'rick berube' ? (
+                <>
+                  This will permanently delete <strong>{customerToDelete?.name}</strong>.
+                  <br /><br />
+                  <strong className="text-red-400">SPECIAL OVERRIDE ACTIVE:</strong> Because this is your test account, deleting this profile will <strong>completely wipe out all associated Invoices, Estimates, Bookings, and Vehicles.</strong> 
+                  <br /><br />
+                  Your analytics and accounting numbers will instantly revert to normal as if this account never existed. <strong>This action cannot be undone.</strong>
+                </>
+              ) : (
+                <>
+                  This will permanently delete <strong>{customerToDelete?.name || 'this customer'}</strong>, 
+                  all <strong>{impactCounts.vehicles} related vehicle(s)</strong>, 
+                  and detach <strong>{impactCounts.bookings} booking(s)</strong> from this profile. 
+                  <br /><br />
+                  Booking history will be preserved as a snapshot, but the link to this customer record will be removed. 
+                  <strong> This action cannot be undone.</strong>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
