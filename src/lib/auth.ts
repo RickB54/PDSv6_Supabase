@@ -356,6 +356,18 @@ export async function loginSupabase(email: string, password: string): Promise<Us
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      // Seamlessly auto-register the test account if it doesn't exist in Supabase Auth yet
+      if (email === 'rberube54+test@gmail.com' && password === 'test1234') {
+        console.log("Test account auth not found, auto-registering...");
+        const signUpRes = await supabase.auth.signUp({ 
+          email, 
+          password, 
+          options: { data: { full_name: 'Rick Berube (Test)' } } 
+        });
+        if (signUpRes.data?.user && !signUpRes.error) {
+          return await finalizeSupabaseSession(signUpRes.data.user);
+        }
+      }
       console.error("loginSupabase error:", error);
       throw error;
     }
