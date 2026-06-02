@@ -10,6 +10,7 @@ import {
 import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
 import { useToast } from "@/hooks/use-toast";
+import { uploadFile } from "@/lib/storage-utils";
 
 // DND Kit Imports
 import {
@@ -296,6 +297,7 @@ export default function EliteMaster() {
     const [activeItem, setActiveItem] = useState<LibraryItem | null>(null);
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [editFormData, setEditFormData] = useState({ title: '', category: '', description: '', resource_url: '' });
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     // DnD Sensors
     const sensors = useSensors(
@@ -456,6 +458,22 @@ export default function EliteMaster() {
             toast({ title: "Post Updated", description: "Changes saved successfully." });
         } catch (e) {
             toast({ title: "Error", description: "Failed to save edits.", variant: "destructive" });
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const url = await uploadFile('blog-media', file);
+            setEditFormData(prev => ({ ...prev, resource_url: url }));
+            toast({ title: "Image Uploaded", description: "Image successfully uploaded and link generated." });
+        } catch (error) {
+            toast({ title: "Upload Failed", description: "Failed to upload image.", variant: "destructive" });
+        } finally {
+            setIsUploadingImage(false);
+            e.target.value = ''; // Reset input
         }
     };
 
@@ -740,7 +758,20 @@ export default function EliteMaster() {
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Image / Resource URL</label>
+                                <label style={{ fontSize: '10px', fontWeight: 'bold', color: '#555', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>Image / Resource URL</span>
+                                    <label style={{ cursor: 'pointer', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        {isUploadingImage ? <Loader2 size={12} className="animate-spin" /> : null}
+                                        {isUploadingImage ? 'UPLOADING...' : 'UPLOAD NEW FILE'}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={handleImageUpload} 
+                                            disabled={isUploadingImage}
+                                            style={{ display: 'none' }} 
+                                        />
+                                    </label>
+                                </label>
                                 <input 
                                     value={editFormData.resource_url}
                                     onChange={e => setEditFormData({...editFormData, resource_url: e.target.value})}
