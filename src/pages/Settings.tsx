@@ -959,6 +959,70 @@ const Settings = () => {
               </div>
             </div>
 
+            <div className="bg-blue-900/10 border border-blue-900/30 rounded-xl p-4 flex flex-col gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <TestTube2 className="w-5 h-5 text-blue-400" />
+                <h3 className="text-white font-bold">Sandbox Testing Workflow</h3>
+              </div>
+              <p className="text-sm text-blue-200/80">
+                Safely simulate the customer experience. You can log out and test the portal using the "Rick Berube" sandbox account, or wipe all test data to reset your analytics.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <Button 
+                  onClick={() => {
+                    localStorage.setItem('wasJustAdmin', 'true');
+                    supabase.auth.signOut().then(() => {
+                      navigate('/login');
+                    });
+                  }}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                >
+                  <TestTube2 className="w-4 h-4 mr-2" />
+                  Customer Test as Rick Berube
+                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="bg-red-900/50 hover:bg-red-600 border border-red-500/30 text-white font-bold">
+                      <Trash2 className="w-4 h-4 mr-2 text-red-400" />
+                      Wipe Test Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-zinc-900 border border-red-500/30 text-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        Confirm Test Data Wipe
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-400">
+                        Are you sure you want to completely erase the "Rick Berube" test account? This will permanently delete all associated test estimates, invoices, bookings, and vehicles.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700 hover:text-white">Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={async () => {
+                        try {
+                          toast({ title: "Wiping Test Data..." });
+                          const { data } = await supabase.from('customers').select('id').ilike('full_name', '%Rick Berube%').limit(1).maybeSingle();
+                          if (data?.id) {
+                            const { deleteSupabaseCustomer } = await import('@/lib/supa-data');
+                            await deleteSupabaseCustomer(data.id);
+                            toast({ title: "Success", description: "All test data successfully wiped. Analytics restored." });
+                          } else {
+                            toast({ title: "Notice", description: "No active test data found to wipe." });
+                          }
+                        } catch (err: any) {
+                          toast({ title: "Error", description: err.message || "Failed to wipe data", variant: "destructive" });
+                        }
+                      }} className="bg-red-600 text-white hover:bg-red-500">
+                        Yes, Wipe Test Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-bold flex items-center gap-2">
