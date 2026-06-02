@@ -371,7 +371,7 @@ const FileManager = () => {
           <TabsList className="grid w-full grid-cols-2 mb-8 bg-[#0d1117] border border-zinc-800 h-14 p-1 rounded-xl shadow-lg">
             <TabsTrigger 
               value="archive" 
-              className="data-[state=active]:bg-red-700 data-[state=active]:text-white font-black uppercase tracking-widest text-xs h-full rounded-lg transition-all"
+              className="data-[state=active]:bg-purple-600 data-[state=active]:text-white font-black uppercase tracking-widest text-xs h-full rounded-lg transition-all"
             >
               <Archive className="w-4 h-4 mr-2" /> Alerts & PDF Archive
             </TabsTrigger>
@@ -384,7 +384,7 @@ const FileManager = () => {
           </TabsList>
 
           <TabsContent value="archive" className="space-y-8 focus-visible:outline-none focus-visible:ring-0">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-red-900/20 to-black p-6 rounded-xl border border-red-900/20 shadow-2xl">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-gradient-to-r from-purple-900/20 to-black p-6 rounded-xl border border-purple-900/20 shadow-2xl">
               <div>
                 <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">PDF Archive</h1>
                 <p className="text-zinc-400 mt-2">Manage and organize all your business documents in one secure place.</p>
@@ -406,7 +406,7 @@ const FileManager = () => {
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete All Files
                 </Button>
-                <Button className="bg-red-700 hover:bg-red-800" onClick={() => setAdminModalOpen(true)}>
+                <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setAdminModalOpen(true)}>
                   Create Admin Update PDF
                 </Button>
               </div>

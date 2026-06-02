@@ -293,6 +293,19 @@ const ServiceChecklist = () => {
     setMasterStartTime(null);
     setMasterIsRunning(false);
     setMasterElapsedTimeMs(0);
+
+    // Clear Drafts from LocalStorage
+    localStorage.removeItem('service_checklist_draft');
+    if (checklistId) {
+      localStorage.removeItem(`service_checklist_draft_${checklistId}`);
+      localStorage.removeItem(`master_timer_${checklistId}`);
+    }
+    sessionStorage.removeItem('pending_draft_steps');
+
+    // Clear URL parameters to prevent re-hydration on refresh
+    const url = new URL(window.location.href);
+    url.search = '';
+    window.history.replaceState(null, '', url.toString());
   };
 
   // Read employee from URL params (from Staff Schedule "Start Job")
