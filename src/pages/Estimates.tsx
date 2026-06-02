@@ -244,6 +244,15 @@ const Estimates = () => {
         const customerId = searchParams.get('customerId');
         const customerName = searchParams.get('customerName');
         const discountParam = searchParams.get('discount');
+        const editId = searchParams.get('editId');
+
+        if (editId && estimates.length > 0) {
+            const found = estimates.find(e => e.id === editId);
+            if (found && !selectedEstimate) {
+                setSelectedEstimate(found);
+                return; // Stop here if we opened an estimate
+            }
+        }
         if (customerName) {
             const found = customers.find(c => c.name.toLowerCase().includes(customerName.toLowerCase()));
             if (found) {

@@ -157,7 +157,17 @@ const Invoicing = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const cid = params.get('customerId');
-    if (cid && customers.length > 0) {
+    const eid = params.get('editId');
+
+    if (eid && invoices.length > 0) {
+      const inv = invoices.find(i => i.id === eid);
+      if (inv && !selectedInvoice) {
+        setSelectedInvoice(inv);
+        // Clear filter so all invoices are loaded in the background?
+        // Let's just return to stop here
+        return;
+      }
+    } else if (cid && customers.length > 0) {
       setFilterCustomerId(cid);
       const cust = customers.find(c => c.id === cid);
       if (cust) {

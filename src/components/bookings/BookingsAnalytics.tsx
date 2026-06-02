@@ -1093,7 +1093,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 title: 'Unpaid Invoice',
                 description: `Invoice #${inv.id.slice(0,6).toUpperCase()} for $${(inv.total || 0).toFixed(2)} is pending.`,
                 actionText: 'View Invoice',
-                actionUrl: `/invoicing?customerId=${inv.customerId}`,
+                actionUrl: `/invoicing?editId=${inv.id}`,
                 icon: <FileText className="w-4 h-4" />,
                 color: 'red'
             });
@@ -1133,7 +1133,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 title: 'Unsent Invoice',
                 description: `Invoice #${inv.invoiceNumber || inv.id.slice(0,6).toUpperCase()} has not been sent yet.`,
                 actionText: 'View Invoice',
-                actionUrl: `/invoicing?customerId=${inv.customerId}`,
+                actionUrl: `/invoicing?editId=${inv.id}`,
                 icon: <Send className="w-4 h-4" />,
                 color: 'indigo'
             });
@@ -1620,7 +1620,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         variant="ghost" 
                                                         size="sm" 
                                                         className="h-8 text-[9px] uppercase font-black tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
-                                                        onClick={() => navigate(`/invoicing?customerId=${inv.customerId}`)}
+                                                        onClick={() => navigate(`/invoicing?editId=${inv.id}`)}
                                                     >
                                                         View Invoice
                                                     </Button>
@@ -1766,7 +1766,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             }
 
                                             return (
-                                                <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                                <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors cursor-pointer" onClick={() => navigate(`/estimates?editId=${q.id}`)}>
                                                     <TableCell className="text-zinc-400 text-xs font-mono">
                                                         {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
                                                     </TableCell>
