@@ -66,7 +66,15 @@ const SearchCustomer = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [autoOpenedAdd, setAutoOpenedAdd] = useState(false);
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">("month");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">(() => {
+    const saved = sessionStorage.getItem("customerDatabaseDateFilter");
+    return (saved as any) || "all";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("customerDatabaseDateFilter", dateFilter);
+  }, [dateFilter]);
+
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -663,11 +671,11 @@ const SearchCustomer = () => {
                   <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
-              {/* Clear / reset to default (month) */}
-              {dateFilter !== "month" && (
+              {/* Clear / reset to default (all) */}
+              {dateFilter !== "all" && (
                 <button
-                  onClick={() => setDateFilter("month")}
-                  title="Reset to This Month"
+                  onClick={() => setDateFilter("all")}
+                  title="Reset to All Time"
                   className="flex items-center justify-center w-6 h-6 rounded-md text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 ml-0.5"
                 >
                   <X className="h-3.5 w-3.5" />

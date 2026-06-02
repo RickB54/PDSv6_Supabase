@@ -113,7 +113,14 @@ export default function Prospects() {
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month" | "year">(() => {
+    const saved = sessionStorage.getItem("prospectsDateFilter");
+    return (saved as any) || "all";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("prospectsDateFilter", dateFilter);
+  }, [dateFilter]);
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);

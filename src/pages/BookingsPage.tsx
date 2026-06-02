@@ -233,7 +233,28 @@ export default function BookingsPage() {
   }, []);
 
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
-  const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
+  const [dateFilter, setDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+    const saved = sessionStorage.getItem("bookingsHistoryDateFilter");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          start: parsed.start ? new Date(parsed.start) : undefined,
+          end: parsed.end ? new Date(parsed.end) : undefined
+        };
+      } catch (e) {
+        return { start: undefined, end: undefined };
+      }
+    }
+    return { start: undefined, end: undefined };
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("bookingsHistoryDateFilter", JSON.stringify({
+      start: dateFilter.start?.toISOString(),
+      end: dateFilter.end?.toISOString()
+    }));
+  }, [dateFilter]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'blocked' | null>(null);

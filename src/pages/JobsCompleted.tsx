@@ -43,7 +43,14 @@ export default function JobsCompleted() {
   const [params] = useSearchParams();
   const [pdfJobs, setPdfJobs] = useState<PDFRecord[]>([]);
   const [checklists, setChecklists] = useState<ChecklistRecord[]>([]);
-  const [preset, setPreset] = useState<FilterPreset>("all");
+  const [preset, setPreset] = useState<FilterPreset>(() => {
+    const saved = sessionStorage.getItem("jobsCompletedDateFilter");
+    return (saved as FilterPreset) || "all";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("jobsCompletedDateFilter", preset);
+  }, [preset]);
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
   const [openIdx, setOpenIdx] = useState<number | null>(null);

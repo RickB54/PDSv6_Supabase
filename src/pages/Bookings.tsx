@@ -24,7 +24,14 @@ export default function Bookings() {
   const { items, add, update, remove, refresh: refreshBookings } = useBookingsStore();
   const [viewDate, setViewDate] = useState(new Date());
   const [filter, setFilter] = useState<BookingStatus | "all">("all");
-  const [timeRange, setTimeRange] = useState<'all' | 'day' | 'week' | 'month' | 'custom'>('all');
+  const [timeRange, setTimeRange] = useState<'all' | 'day' | 'week' | 'month' | 'custom'>(() => {
+    const saved = sessionStorage.getItem("bookingsTimeRangeFilter");
+    return (saved as any) || "all";
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("bookingsTimeRangeFilter", timeRange);
+  }, [timeRange]);
   const [customStart, setCustomStart] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const user = getCurrentUser();
