@@ -19,7 +19,12 @@ Because `rberube54@gmail.com` is your Admin email, you cannot use it to view the
 2. Navigate to the **Login Page**.
 3. Because you just logged out as an Admin, the system will **automatically pre-fill** the login form with `rberube54+test@gmail.com`.
 4. Click Sign In to securely enter the Customer Portal without conflicting with your Admin session.
-5. *Note:* Because Gmail ignores the `+test` modifier, all test estimates and invoices will still arrive in your standard `rberube54@gmail.com` inbox!
+
+### 📧 Important Note on the First Login (Email Confirmation)
+If this is your first time logging in as the test account, the system will auto-register the account for you securely. Because of Supabase security settings, it will send a **"Confirm your signup" email** to your inbox.
+*   **This is completely safe and expected.**
+*   **Device Restriction:** Since you are currently testing the app locally (`localhost`), the confirmation link in the email will point to `http://localhost`. Therefore, **you MUST open that email and click the confirmation link on the exact same computer** you are developing on. If you try to click it on your phone, it will fail because your phone does not understand what `localhost` means.
+*   *Note:* Because Gmail ignores the `+test` modifier, all test estimates, invoices, and confirmation emails will safely arrive in your standard `rberube54@gmail.com` inbox!
 
 ## Phase 3: Invoicing and Analytics
 1. **Converting to Invoice:**
