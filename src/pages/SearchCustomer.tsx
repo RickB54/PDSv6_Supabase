@@ -60,6 +60,7 @@ const SearchCustomer = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'>('latest');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const { items: allBookings } = useBookingsStore();
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
@@ -694,6 +695,16 @@ const SearchCustomer = () => {
                 Create Rick Berube Test
               </Button>
             )}
+            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+              <SelectTrigger className="w-[140px] bg-zinc-950 border-zinc-800 text-zinc-300">
+                <SelectValue placeholder="Sort by..." />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                <SelectItem value="latest">Latest</SelectItem>
+                <SelectItem value="updated">Last Updated</SelectItem>
+                <SelectItem value="alpha">Alphabetically</SelectItem>
+              </SelectContent>
+            </Select>
             {filteredCustomers.length > 0 && (
               <Button variant="ghost" size="sm" onClick={toggleAll} className="text-zinc-400">{allExpanded ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}</Button>
             )}
@@ -724,9 +735,20 @@ const SearchCustomer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[...filteredCustomers]
             .sort((a, b) => {
-              const daStr = (a as any).updated_at || (a as any).updatedAt || "";
-              const dbStr = (b as any).updated_at || (b as any).updatedAt || "";
-              return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+              if (sortBy === 'latest') {
+                const daStr = (a as any).created_at || (a as any).createdAt || "";
+                const dbStr = (b as any).created_at || (b as any).createdAt || "";
+                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+              }
+              if (sortBy === 'updated') {
+                const daStr = (a as any).updated_at || (a as any).updatedAt || (a as any).created_at || "";
+                const dbStr = (b as any).updated_at || (b as any).updatedAt || (b as any).created_at || "";
+                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+              }
+              if (sortBy === 'alpha') {
+                return (a.name || '').localeCompare(b.name || '');
+              }
+              return 0;
             })
             .filter((customer) => {
               if (expandedCustomers.length > 0) {

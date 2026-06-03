@@ -474,7 +474,7 @@ export const deletingRecordsTopic: HelpTopic = {
 export const testCustomerWorkflowTopic: HelpTopic = {
   id: 'test-customer-workflow',
   title: 'Test Customer & Sandbox Workflow',
-  summary: 'How to safely use the Rick Berube test account to simulate customer interactions without impacting analytics.',
+  summary: 'If you want to test how an estimate looks to a customer, you MUST log in (either by logging out of Admin to use the auto-fill login, or by typing it manually in an Incognito window). The public "Auto-fill" button won\'t get you inside the private dashboard!',
   content: [
     '**The Safe Testing Protocol**: The system includes a specially programmed test account ("Rick Berube") designed to let you experience the full customer journey safely, while giving you the ability to cleanly remove the test data afterward so your real analytics are unaffected.',
     '',
