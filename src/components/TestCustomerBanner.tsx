@@ -28,7 +28,7 @@ export const TestCustomerBanner = () => {
         const { data, error } = await supabase
           .from('customers')
           .select('id, full_name')
-          .ilike('full_name', '%Rick Berube%')
+          .or('full_name.ilike.%Rick Berube%,email.ilike.%rberube54+test@gmail.com%')
           .limit(1)
           .maybeSingle();
         

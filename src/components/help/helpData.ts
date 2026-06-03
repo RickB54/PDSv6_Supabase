@@ -645,6 +645,7 @@ export const adminMenuTopics: HelpTopic[] = [
   prospectVsCustomerTopic,
   deletingRecordsTopic,
   testCustomerWorkflowTopic,
+  checklistFinalStepsTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
@@ -3188,6 +3189,7 @@ export const adminTopics: HelpTopic[] = [
 
 export const employeeMenuTopics: HelpTopic[] = [
   demoModeHelpTopic,
+  checklistFinalStepsTopic,
   {
     id: 'chemical-decision-system',
     title: 'Chemical Decision System',
