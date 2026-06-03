@@ -2790,6 +2790,21 @@ const ServiceChecklist = () => {
                 }}>
                   {checklistSteps.length > 0 && checklistSteps.every(s => s.checked) ? 'Uncheck All' : 'Check All'}
                 </Button>
+                <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" onClick={() => {
+                  setItemDurations(prev => {
+                    const next = { ...prev };
+                    checklistSteps.forEach(s => {
+                      if (!next[s.id] || next[s.id] === 0) {
+                        next[s.id] = getAvgTime(s.name);
+                      }
+                    });
+                    return next;
+                  });
+                  toast({ title: 'Times Prefilled', description: 'Average durations applied to empty steps.' });
+                }}>
+                  <Clock className="h-4 w-4 mr-2" />
+                  Prefill Avg Times
+                </Button>
               </div>
 
               <div className="flex items-center gap-3 w-full sm:w-auto bg-black/40 px-3 py-1.5 rounded-lg border border-white/5">
@@ -3831,19 +3846,28 @@ const ServiceChecklist = () => {
           {/* Link to Customer (Optional) */}
           {checklistId && (
             <Card className="p-6 bg-gradient-card border-border">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Link to Customer (Optional)</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Search Customer</Label>
-                  <div className="flex gap-2">
-                    <Input value={customerSearch} onChange={async (e) => {
-                      const q = e.target.value; setCustomerSearch(q);
-                      const res = await api(`/api/customers/search?q=${encodeURIComponent(q)}`, { method: 'GET' });
-                      setCustomerSearchResults(Array.isArray(res) ? res : []);
-                    }} placeholder="Type name, phone, or email" />
-                    <Button variant="outline" onClick={() => setCustomerModalOpen(true)}>Add New</Button>
+              <h2 className="text-2xl font-bold text-foreground mb-4">Link to Customer</h2>
+              {selectedCustomer ? (
+                <div className="flex items-center gap-4 bg-emerald-900/10 border border-emerald-500/30 p-4 rounded-xl">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+                  <div>
+                    <p className="font-bold text-emerald-400">Job is actively linked to:</p>
+                    <p className="text-white text-lg">{customers.find(c => c.id === selectedCustomer)?.name || "Selected Customer"}</p>
                   </div>
-                  <div className="mt-2 max-h-[200px] overflow-auto space-y-2">
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Search Customer</Label>
+                    <div className="flex gap-2">
+                      <Input value={customerSearch} onChange={async (e) => {
+                        const q = e.target.value; setCustomerSearch(q);
+                        const res = await api(`/api/customers/search?q=${encodeURIComponent(q)}`, { method: 'GET' });
+                        setCustomerSearchResults(Array.isArray(res) ? res : []);
+                      }} placeholder="Type name, phone, or email" />
+                      <Button variant="outline" onClick={() => setCustomerModalOpen(true)}>Add New</Button>
+                    </div>
+                    <div className="mt-2 max-h-[200px] overflow-auto space-y-2">
                     {customerSearchResults.map((c) => (
                       <div key={c.id} className="flex items-center justify-between">
                         <div>
@@ -3876,6 +3900,8 @@ const ServiceChecklist = () => {
                   <Button variant="outline" onClick={() => { /* skip */ toast({ title: 'Saved as generic', description: 'You can link later from history.' }); }}>Skip</Button>
                 </div>
               </div>
+                </div>
+              )}
             </Card>
           )}
 

@@ -277,8 +277,12 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     }
 
     // Construct Final User
-    const finalRole = role || profile?.role || 'customer';
-    const finalName = profile?.name || u.user_metadata?.full_name || (email || '').split('@')[0];
+    let finalRole = role || profile?.role || 'customer';
+    let finalName = profile?.name || u.user_metadata?.full_name || (email || '').split('@')[0];
+
+    if (email === 'rberube54+test@gmail.com') {
+      finalName = 'Rick Berube';
+    }
 
     const mapped: User = {
       id: u.id,
