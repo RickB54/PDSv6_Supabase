@@ -846,10 +846,14 @@ const SearchCustomer = () => {
                              </Badge>
                            )}
                         </div>
-                        <div className="flex gap-3 text-sm text-zinc-400">
+                        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-400 mt-1 items-center">
                           <span>{customer.phone || 'No phone'}</span>
                           <span className="hidden sm:inline">•</span>
                           <span className="hidden sm:inline">{customer.vehicle} {customer.model}</span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="text-zinc-500 text-[10px] sm:text-xs">
+                            Added: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
                         </div>
                       </div>
                     </div>

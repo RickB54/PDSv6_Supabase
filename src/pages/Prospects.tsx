@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
 import { UnifiedCustomerTimeline } from "@/components/customers/UnifiedCustomerTimeline";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const parseAttachedPhotos = (notes?: string) => {
   if (!notes) return [];
@@ -940,7 +941,7 @@ export default function Prospects() {
                             </Badge>
                           )}
                         </h3>
-                        <div className="flex gap-3 text-sm text-zinc-400">
+                        <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-400 mt-1 items-center">
                           <span>{customer.phone || 'No phone'}</span>
                           {(customer.vehicle || customer.model) && (
                             <>
@@ -950,6 +951,10 @@ export default function Prospects() {
                               </span>
                             </>
                           )}
+                          <span className="hidden sm:inline">•</span>
+                          <span className="text-zinc-500 text-[10px] sm:text-xs">
+                            Added: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
                         </div>
                       </div>
                     </div>
