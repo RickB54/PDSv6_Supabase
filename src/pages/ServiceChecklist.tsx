@@ -3900,10 +3900,9 @@ const ServiceChecklist = () => {
                   <Button variant="outline" onClick={() => { /* skip */ toast({ title: 'Saved as generic', description: 'You can link later from history.' }); }}>Skip</Button>
                 </div>
               </div>
-                </div>
-              )}
-            </Card>
-          )}
+            )}
+          </Card>
+        )}
 
 
           <CustomerModal
