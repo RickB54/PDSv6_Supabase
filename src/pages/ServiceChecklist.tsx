@@ -3765,7 +3765,22 @@ const ServiceChecklist = () => {
           <div className="flex flex-col gap-6">
             <Card className="p-4 md:p-6 bg-gradient-card border-border space-y-6">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <h2 className="text-xl md:text-2xl font-bold text-white">Final Steps</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-white">Final Steps</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open-help', { 
+                        detail: { topicId: 'checklist-final-steps', role: getCurrentUser()?.role } 
+                      }));
+                    }}
+                    title="How Finishing Works"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button 
                     onClick={async () => { 
@@ -3800,17 +3815,10 @@ const ServiceChecklist = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button 
                   onClick={finishJob} 
-                  className="bg-red-600 hover:bg-red-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                  className="md:col-span-2 bg-red-600 hover:bg-red-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(220,38,38,0.3)]"
                 >
                   <CheckCircle2 className="h-5 w-5 mr-3" />
                   FINISH & COMPLETE JOB
-                </Button>
-                <Button 
-                  onClick={handleCreateInvoiceGeneric} 
-                  className="bg-purple-600 hover:bg-purple-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(147,51,234,0.3)] transition-all active:scale-95"
-                >
-                  <Receipt className="h-5 w-5 mr-3" />
-                  SAVE & CREATE INVOICE
                 </Button>
                 <Button 
                   onClick={async () => {

@@ -61,6 +61,26 @@ export const operationsFlowTopic: HelpTopic = {
   section: 'system',
 };
 
+export const checklistFinalStepsTopic: HelpTopic = {
+  id: 'checklist-final-steps',
+  title: 'Checklist Final Steps & Offline Capability',
+  summary: 'Understand the difference between saving progress and completing a job, and how the checklist handles local data.',
+  content: [
+    '**The Active Checklist is "Local-First"**',
+    'The Service Checklist was intentionally engineered to run out of your device\'s local memory (`localStorage`) rather than requiring a constant internet connection to the cloud database. This guarantees that if you are out in the field on your phone and lose cell service, you won\'t lose your progress every time you check a box.',
+    '',
+    '• **Device Specific**: Because of this local-first design, you cannot start a checklist on your phone (or an incognito window) and pick it up on a different browser/computer. The active state is tied strictly to the exact browser you started it on.',
+    '',
+    '**Saving vs. Finishing**',
+    '• 💾 **Save Progress**: If you need to pause a job and pick it up later *on the same device*, use this button. It saves your active session locally without finalizing it.',
+    '• ✅ **FINISH & COMPLETE JOB**: When you hit this button, the system immediately **ends the active detailing session**. It takes your local progress, archives it to a PDF, logs your materials to the database, creates the official Invoice, and **clears the active job out of your queue** so you can start the next vehicle.',
+    '',
+    '*Important*: Because hitting "Finish & Complete" finalizes the session, that job is permanently closed out and sent to your Analytics/Invoice history. It will never reappear as an active job in your checklist queue after that button is pressed.'
+  ],
+  section: 'system',
+  relatedTopicIds: ['operations-flow'],
+};
+
 export const demoModeHelpTopic: HelpTopic = {
   id: 'interactive-training-demo',
   title: 'Guided Training & Demo Mode',
