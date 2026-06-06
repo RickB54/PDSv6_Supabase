@@ -575,7 +575,9 @@ const CustomerPortal = () => {
           {addOnsExpanded && (
             <div className="px-6 pb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {liveAddOns.map((addon: any) => {
+                {liveAddOns
+                  .filter((addon: any) => !addon.applicableVehicleTypes || addon.applicableVehicleTypes.includes(vehicleType))
+                  .map((addon: any) => {
                   const isSelected = selectedAddOns.includes(addon.id);
                   return (
                     <Card
@@ -890,7 +892,9 @@ const CustomerPortal = () => {
                   </AccordionTrigger>
                   <AccordionContent className="pt-4">
                     <div className="grid grid-cols-1 gap-2">
-                      {liveAddOns.map(addon => {
+                      {liveAddOns
+                        .filter((addon: any) => !addon.applicableVehicleTypes || addon.applicableVehicleTypes.includes(vehicleType))
+                        .map((addon: any) => {
                         const isSelected = modalAddOns.includes(addon.id);
                         return (
                           <div

@@ -1361,7 +1361,9 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                     </AccordionTrigger>
                                                                     <AccordionContent className="pt-2">
                                                                         <div className="space-y-0.5 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar border border-zinc-800/50 rounded-lg p-2 bg-black/20">
-                                                                            {liveAddOns.map(ao => {
+                                                                            {liveAddOns
+                                                                                .filter(ao => !ao.applicableVehicleTypes || ao.applicableVehicleTypes.includes(activeVehicle.type))
+                                                                                .map(ao => {
                                                                                 const price = parseFloat(savedPrices[`addon:${ao.id}:${activeVehicle.type}`]) || ao.pricing?.[activeVehicle.type] || 0;
                                                                                 return (
                                                                                     <div key={ao.id} className="flex items-center justify-between p-1.5 hover:bg-zinc-800/50 rounded transition-colors group">

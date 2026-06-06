@@ -2499,7 +2499,9 @@ const ServiceChecklist = () => {
                     
                     {addOnsExpanded && (
                       <div className="grid grid-cols-1 gap-1.5 animate-in slide-in-from-top-1 duration-200">
-                        {liveAddOns.map((a: any) => (
+                        {liveAddOns
+                          .filter((a: any) => !a.applicableVehicleTypes || a.applicableVehicleTypes.includes(vehicleType))
+                          .map((a: any) => (
                           <label key={a.id} className="flex items-center gap-2 text-xs p-2 rounded hover:bg-white/10 cursor-pointer transition-colors border border-transparent hover:border-white/5">
                             <input 
                               type="checkbox" 

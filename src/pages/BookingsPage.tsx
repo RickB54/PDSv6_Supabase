@@ -2604,7 +2604,9 @@ export default function BookingsPage() {
                             <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
                             <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
                             <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
-                              {allAddons.map((addon) => (
+                              {allAddons
+                                .filter((addon: any) => !addon.applicableVehicleTypes || addon.applicableVehicleTypes.includes(formData.vehicle))
+                                .map((addon) => (
                                 <CommandItem
                                   key={addon.id}
                                   value={addon.name}

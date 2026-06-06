@@ -58,17 +58,14 @@ export function getServiceInstructions(name: string, id?: string): string {
   return "Perform this step with care. Ensure quality standards are met before proceeding.";
 }
 
+export type VehicleType = 'compact' | 'midsize' | 'truck' | 'luxury';
+
 export interface ServicePackage {
   id: string;
   name: string;
   description: string;
   basePrice: number;
-  pricing: {
-    compact: number;
-    midsize: number;
-    truck: number;
-    luxury: number;
-  };
+  pricing: Record<VehicleType, number>;
   steps: ServiceStep[];
 }
 
@@ -78,12 +75,8 @@ export interface AddOn {
   category?: 'exterior' | 'interior' | 'final';
   description?: string;
   basePrice: number;
-  pricing: {
-    compact: number;
-    midsize: number;
-    truck: number;
-    luxury: number;
-  };
+  pricing: Record<VehicleType, number>;
+  applicableVehicleTypes?: VehicleType[];
 }
 
 // Pricing overrides (persisted) allow admin to update package pricing globally
@@ -290,10 +283,19 @@ export const addOns: AddOn[] = [
     description: 'Premium Professional Nano Ceramic Coating – delivers up to 2+ years of maximum gloss, hydrophobic protection, and durability.', 
     basePrice: 299, 
     pricing: { compact: 299, midsize: 349, truck: 399, luxury: 499 } 
+  },
+  {
+    id: '3rd-row-seating',
+    name: '3rd Row Seating',
+    category: 'interior',
+    description: 'Additional charge for vehicles with a third row — includes full cleaning of the rear seating area.',
+    basePrice: 50,
+    pricing: { compact: 50, midsize: 50, truck: 50, luxury: 50 },
+    applicableVehicleTypes: ['truck']
   }
 ];
 
-export type VehicleType = 'compact' | 'midsize' | 'truck' | 'luxury';
+
 
 // Read latest overrides on each getter to ensure immediate reflection without reload
 export function getServicePrice(serviceId: string, vehicleType: VehicleType): number {
