@@ -36,6 +36,9 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [category, setCategory] = useState<string>("");
     
+    // Level 1 state
+    const [selectedLevel1Make, setSelectedLevel1Make] = useState<string | null>(null);
+
     // Custom Vehicle state
     const [isCustomMode, setIsCustomMode] = useState(false);
     const [customMake, setCustomMake] = useState("");
@@ -52,6 +55,7 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
             setSelectedMake("");
             setSelectedModel("");
             setCategory("");
+            setSelectedLevel1Make(null);
             setIsCustomMode(false);
             setCustomMake("");
             setCustomModel("");
@@ -89,12 +93,22 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
         return flat.sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model));
     }, [safeDB]);
 
+    // Group makes with model counts
+    const makesWithCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const v of flattenedVehicles) {
+            counts[v.make] = (counts[v.make] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .map(([make, count]) => ({ make, count }))
+            .sort((a, b) => a.make.localeCompare(b.make));
+    }, [flattenedVehicles]);
+
     // Apply fuzzy search
     const filteredVehicles = useMemo(() => {
         const q = searchQuery.toLowerCase().trim();
         if (!q) {
-            // Show a preview of popular models if empty, or just return top 50
-            return flattenedVehicles.slice(0, 50);
+            return [];
         }
         const terms = q.split(/\s+/);
         return flattenedVehicles.filter(v => {
@@ -174,13 +188,21 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                                             <Input
                                                 placeholder="e.g. Ford F-150, Honda Civic..."
                                                 value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onChange={(e) => {
+                                                    setSearchQuery(e.target.value);
+                                                    if (e.target.value.trim().length > 0) {
+                                                        setSelectedLevel1Make(null);
+                                                    }
+                                                }}
                                                 className="bg-black/50 border-purple-500/20 pl-10 pr-10 focus:border-purple-500 text-lg py-6"
                                                 autoFocus
                                             />
                                             {searchQuery && (
                                                 <button 
-                                                    onClick={() => setSearchQuery('')}
+                                                    onClick={() => {
+                                                        setSearchQuery('');
+                                                        setSelectedLevel1Make(null);
+                                                    }}
                                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
                                                 >
                                                     <X className="h-4 w-4" />
@@ -188,22 +210,51 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
-                                            {filteredVehicles.map((v, i) => (
-                                                <button
-                                                    key={`${v.make}-${v.model}-${i}`}
-                                                    onClick={() => handleSelectVehicle(v.make, v.model, v.category)}
-                                                    className="flex flex-col p-3 text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
-                                                >
-                                                    <span className="font-bold text-white group-hover:text-purple-400 transition-colors">{v.make} {v.model}</span>
-                                                    <span className="text-[10px] text-gray-500 uppercase font-black">{v.category}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                        {!searchQuery.trim() && !selectedLevel1Make ? (
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
+                                                {makesWithCounts
+                                                    .filter(m => !searchQuery.trim() || m.make.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+                                                    .map(({ make, count }) => (
+                                                    <button
+                                                        key={make}
+                                                        onClick={() => setSelectedLevel1Make(make)}
+                                                        className="flex flex-col p-3 text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
+                                                    >
+                                                        <span className="font-bold text-white group-hover:text-purple-400 transition-colors">{make}</span>
+                                                        <span className="text-[10px] text-gray-500 uppercase font-black mt-0.5">{count} Models</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4 mt-4">
+                                                {!searchQuery.trim() && selectedLevel1Make && (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        onClick={() => setSelectedLevel1Make(null)}
+                                                        className="text-gray-400 hover:text-white -ml-2 h-8"
+                                                    >
+                                                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Makes
+                                                    </Button>
+                                                )}
+                                                
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    {(searchQuery.trim() ? filteredVehicles : flattenedVehicles.filter(v => v.make === selectedLevel1Make)).map((v, i) => (
+                                                        <button
+                                                            key={`${v.make}-${v.model}-${i}`}
+                                                            onClick={() => handleSelectVehicle(v.make, v.model, v.category)}
+                                                            className="flex flex-col p-3 text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
+                                                        >
+                                                            <span className="font-bold text-white group-hover:text-purple-400 transition-colors">{v.make} {v.model}</span>
+                                                            <span className="text-[10px] text-gray-500 uppercase font-black mt-0.5">{v.category}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
 
-                                        {filteredVehicles.length === 0 && (
-                                            <div className="text-center py-8 text-gray-500">
-                                                No exact matches found for "{searchQuery}".
+                                                {searchQuery.trim() && filteredVehicles.length === 0 && (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        No exact matches found for "{searchQuery}".
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
