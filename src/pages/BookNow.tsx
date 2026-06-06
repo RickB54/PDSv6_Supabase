@@ -911,11 +911,14 @@ const BookNow = () => {
         make: "",
         model: "",
         year: "",
+        color: "",
+        condition: "",
         datetime: "",
         package: "",
         message: "",
         conditionInside: "",
-        conditionOutside: ""
+        conditionOutside: "",
+        placeOfService: "Customer's address"
       });
       setAddOns([]);
       setErrors({});
