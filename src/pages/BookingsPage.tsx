@@ -3722,7 +3722,7 @@ export default function BookingsPage() {
                                                 <>
                                                   <span className="text-zinc-700">•</span>
                                                   <span className="text-blue-400/80 font-bold uppercase text-[10px]">
-                                                    {(event.vehicleYear && event.vehicleYear !== '-' && event.vehicleYear !== '---') ? `${event.vehicleYear} ` : ''}{event.vehicleMake} {event.vehicleModel}
+                                                    {(event.vehicleYear && event.vehicleYear !== '-' && event.vehicleYear !== '---') ? `${event.vehicleYear} ` : ''}{event.vehicleMake} {event.vehicleModel}{event.vehicleColor ? ` (${event.vehicleColor})` : ''}
                                                   </span>
                                                 </>
                                               )}

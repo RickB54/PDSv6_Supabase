@@ -225,49 +225,48 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
  * Handles variations in makes, models, and missing years.
  */
 export function areVehiclesDuplicates(vA: any, vB: any): boolean {
-    const yrA = (vA.year && vA.year !== '-' && vA.year !== '---') ? String(vA.year).trim() : '';
-    const yrB = (vB.year && vB.year !== '-' && vB.year !== '---') ? String(vB.year).trim() : '';
+    const yrA = (vA.year && String(vA.year).trim() !== '-' && String(vA.year).trim() !== '---') ? String(vA.year).trim() : '';
+    const yrB = (vB.year && String(vB.year).trim() !== '-' && String(vB.year).trim() !== '---') ? String(vB.year).trim() : '';
     
     // If both have years, and the years are different, they are NOT duplicates
     if (yrA && yrB && yrA !== yrB) {
         return false;
     }
     
-    // Normalize make and model strings
-    const makeA = (vA.make || '').toLowerCase().trim();
-    const modelA = (vA.model || '').toLowerCase().trim();
-    const makeB = (vB.make || '').toLowerCase().trim();
-    const modelB = (vB.model || '').toLowerCase().trim();
+    // Normalize make and model strings, treating "make" or "model" placeholders as empty
+    let makeA = (vA.make || '').toLowerCase().trim();
+    if (makeA === 'make') makeA = '';
+    let modelA = (vA.model || '').toLowerCase().trim();
+    if (modelA === 'model') modelA = '';
     
-    // Combine make and model, removing extra whitespace
+    let makeB = (vB.make || '').toLowerCase().trim();
+    if (makeB === 'make') makeB = '';
+    let modelB = (vB.model || '').toLowerCase().trim();
+    if (modelB === 'model') modelB = '';
+    
     const fullA = `${makeA} ${modelA}`.replace(/\s+/g, ' ').trim();
     const fullB = `${makeB} ${modelB}`.replace(/\s+/g, ' ').trim();
     
     if (fullA === fullB) return true;
+    if (!fullA || !fullB) return false;
     
-    // List of common car brands to strip for model comparison
-    const brands = [
-        'toyota', 'ford', 'chevrolet', 'chevy', 'honda', 'nissan', 'jeep', 'ram', 'dodge',
-        'hyundai', 'kia', 'subaru', 'gmc', 'volkswagen', 'vw', 'bmw', 'audi', 'lexus',
-        'mazda', 'mercedes-benz', 'mercedes', 'benz', 'tesla', 'chrysler', 'buick', 
-        'cadillac', 'lincoln', 'infiniti', 'acura', 'volvo', 'porsche', 'land rover', 'rover'
-    ];
-    
-    let cleanA = fullA;
-    let cleanB = fullB;
-    brands.forEach(b => {
-        // Strip brand word boundaries
-        cleanA = cleanA.replace(new RegExp(`\\b${b}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
-        cleanB = cleanB.replace(new RegExp(`\\b${b}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
-    });
-    
-    // If clean names are identical after stripping brands, they are duplicates
-    if (cleanA && cleanB && cleanA === cleanB) {
+    // If one is a complete substring of the other
+    if (fullA.includes(fullB) || fullB.includes(fullA)) {
         return true;
     }
-    
-    // Check if one clean string is subset of the other
-    if (cleanA && cleanB && (cleanA.includes(cleanB) || cleanB.includes(cleanA))) {
+
+    // If models are identical and at least one make is missing
+    if (modelA && modelB && modelA === modelB) {
+        if (!makeA || !makeB) return true;
+        // If makes are different, it could be a different car (e.g. Chevy 1500 vs Ram 1500)
+        // But if one make string includes the other, it's a duplicate
+        if (makeA.includes(makeB) || makeB.includes(makeA)) return true;
+    }
+
+    // Remove all spaces and check substring as a fallback for weird formatting
+    const strippedA = fullA.replace(/[\s-]/g, '');
+    const strippedB = fullB.replace(/[\s-]/g, '');
+    if (strippedA && strippedB && (strippedA.includes(strippedB) || strippedB.includes(strippedA))) {
         return true;
     }
     
