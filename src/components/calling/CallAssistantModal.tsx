@@ -360,7 +360,17 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
         const saved = localStorage.getItem("phone_assistant_draft_vehicles");
         if (saved) {
-            try { return JSON.parse(saved); } catch(e) {}
+            try { 
+                const parsed = JSON.parse(saved); 
+                return parsed.map((v: any) => {
+                    let vType = v.type || "midsize";
+                    if (vType === "Compact/Sedan" || vType === "Compact") vType = "compact";
+                    else if (vType === "Mid-Size/SUV") vType = "midsize";
+                    else if (vType === "Truck/Van/Large SUV") vType = "truck";
+                    else if (vType === "Luxury/High-End") vType = "luxury";
+                    return { ...v, type: vType };
+                });
+            } catch(e) {}
         }
         return [createEmptyVehicle()];
     });
@@ -1001,10 +1011,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                     {/* Evaluation Guide Logic */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-zinc-900/40 p-4 rounded-xl border border-blue-500/10">
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <Label className="text-[10px] font-black uppercase text-blue-300 flex items-center gap-2">
-                                                    <Car className="w-3.5 h-3.5 text-blue-400" /> Vehicle Class
-                                                </Label>
+                                            <div className="flex items-center justify-start mb-1.5">
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
@@ -1014,9 +1021,9 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         e.stopPropagation();
                                                         setShowAutoClassify(true);
                                                     }}
-                                                    className="h-6 px-2 text-[9px] font-bold text-blue-300 hover:text-white bg-blue-500/15 hover:bg-blue-500/30 border border-blue-500/30 rounded-md transition-colors"
+                                                    className="h-6 px-2 text-[10px] font-black uppercase text-blue-300 hover:text-white bg-blue-500/15 hover:bg-blue-500/30 border border-blue-500/30 rounded-md transition-colors flex items-center gap-2"
                                                 >
-                                                    <HelpCircle className="w-3 h-3 mr-1 text-blue-400 animate-pulse" /> Classifier Help
+                                                    <Car className="w-3.5 h-3.5 text-blue-400" /> Vehicle Class
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-1.5">
@@ -1645,7 +1652,13 @@ ${firstVehicle.notes || ''}`.trim(),
                 open={showAutoClassify}
                 onOpenChange={setShowAutoClassify}
                 onSelect={(data) => {
-                    const updates: any = { type: data.category as VehicleType };
+                    let mappedType: VehicleType = "midsize";
+                    if (data.category === "Compact/Sedan" || data.category === "Compact") mappedType = "compact";
+                    else if (data.category === "Mid-Size/SUV") mappedType = "midsize";
+                    else if (data.category === "Truck/Van/Large SUV") mappedType = "truck";
+                    else if (data.category === "Luxury/High-End") mappedType = "luxury";
+
+                    const updates: any = { type: mappedType };
                     if (data.make) updates.make = data.make;
                     if (data.model) updates.model = data.model;
                     
