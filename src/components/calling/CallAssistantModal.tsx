@@ -1464,12 +1464,12 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                 `}
                                                             >
                                                                 <div>
-                                                                    <div className="flex items-center justify-between gap-1.5 mb-2 border-b border-zinc-800/40 pb-1.5">
-                                                                        <span className="text-[9px] font-black uppercase text-zinc-400 tracking-wider truncate">
+                                                                    <div className="flex items-start justify-between gap-1.5 mb-2 border-b border-zinc-800/40 pb-1.5">
+                                                                        <span className="text-[9px] font-black uppercase text-zinc-400 tracking-wider whitespace-normal leading-tight">
                                                                             {s.label}
                                                                         </span>
                                                                         {isSelected && (
-                                                                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                                                            <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
                                                                                 Active
                                                                             </span>
                                                                         )}
@@ -1482,16 +1482,14 @@ ${firstVehicle.notes || ''}`.trim(),
 
                                                                     {/* Itemized package & addons */}
                                                                     <div className="mt-3.5 pt-3.5 border-t border-zinc-800/80 space-y-1.5 text-[10px] text-zinc-300">
-                                                                        <div className="flex items-center justify-between font-bold text-zinc-200">
-                                                                            <span className="truncate">📦 {pkgObj ? pkgObj.name.replace('Prime ', '') : 'No Package Selected'}</span>
-                                                                            <span className="font-mono text-zinc-400">${pkgPrice}</span>
+                                                                        <div className="font-bold text-zinc-200 whitespace-normal leading-tight">
+                                                                            📦 {pkgObj ? pkgObj.name.replace('Prime ', '') : 'No Package Selected'}
                                                                         </div>
                                                                         {itemizedAddOns.length > 0 && (
-                                                                            <div className="space-y-1 pt-1.5 border-t border-zinc-900/60">
+                                                                            <div className="space-y-1.5 pt-1.5 border-t border-zinc-900/60">
                                                                                 {itemizedAddOns.map((ao, aIdx) => (
-                                                                                    <div key={aIdx} className="flex items-center justify-between text-zinc-400">
-                                                                                        <span className="truncate">➕ {ao.name}</span>
-                                                                                        <span className="font-mono text-zinc-500">${ao.price}</span>
+                                                                                    <div key={aIdx} className="text-zinc-400 whitespace-normal leading-tight">
+                                                                                        ➕ {ao.name}
                                                                                     </div>
                                                                                 ))}
                                                                             </div>
