@@ -53,7 +53,7 @@ import {
 import { servicePackages, addOns, type VehicleType } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import { upsertSupabaseCustomer, upsertSupabaseEstimate } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
 import localforage from "localforage";
@@ -1641,19 +1641,20 @@ ${firstVehicle.notes || ''}`.trim(),
                     </div>
                 </div>
             </DialogContent>
-            <VehicleClassificationDialog
+            <VehicleSelectorModal
                 open={showAutoClassify}
                 onOpenChange={setShowAutoClassify}
-                onSelect={(type, details) => {
-                    const updates: any = { type: type as VehicleType };
-                    if (details?.make) updates.make = details.make;
-                    if (details?.model) updates.model = details.model;
+                onSelect={(data) => {
+                    const updates: any = { type: data.category as VehicleType };
+                    if (data.make) updates.make = data.make;
+                    if (data.model) updates.model = data.model;
                     
                     updateVehicle(activeVehicleId, updates);
+                    setShowAutoClassify(false);
                     
                     toast({
                         title: "Vehicle Set & Classified",
-                        description: `Set to ${details?.make || ''} ${details?.model || ''} (${type.toUpperCase()})`,
+                        description: `Set to ${data.make || ''} ${data.model || ''} (${data.category.toUpperCase()})`,
                     });
                 }}
             />

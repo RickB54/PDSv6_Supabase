@@ -3,15 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, AlertCircle, ArrowLeft, Car, Plus, Search, HelpCircle, Save, X } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Car, Plus, Search, HelpCircle, Save, X } from "lucide-react";
 import vehicleDatabase from "@/data/vehicle_db.json";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
-import { getSupabaseCustomers, Customer, upsertSupabaseVehicle } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Shared types
-type ClassificationType = "Compact/Sedan" | "Mid-Size/SUV" | "Truck/Van/Large SUV" | "Luxury/High-End";
 type VehicleDB = Record<string, Record<string, string>>;
 
 const CLASSIFICATION_OPTIONS: { label: string; value: string }[] = [
@@ -30,25 +28,33 @@ interface VehicleSelectorModalProps {
 
 export default function VehicleSelectorModal({ open, onOpenChange, onSelect, initialCustomerId }: VehicleSelectorModalProps) {
     const { toast } = useToast();
-    const [step, setStep] = useState<1 | 2 | 3>(1);
+    const [step, setStep] = useState<1 | 2>(1);
+    const [searchQuery, setSearchQuery] = useState("");
+    
+    // Selection state
     const [selectedMake, setSelectedMake] = useState<string>("");
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [category, setCategory] = useState<string>("");
-    const [makeSearchQuery, setMakeSearchQuery] = useState("");
-    const [isCustomModel, setIsCustomModel] = useState(false);
+    
+    // Custom Vehicle state
+    const [isCustomMode, setIsCustomMode] = useState(false);
+    const [customMake, setCustomMake] = useState("");
+    const [customModel, setCustomModel] = useState("");
+
+    // Customer linking
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>(initialCustomerId || "");
-    const [overrideModalOpen, setOverrideModalOpen] = useState(false);
 
-    // Reset state when modal opens
     useEffect(() => {
         if (open) {
             setStep(1);
+            setSearchQuery("");
             setSelectedMake("");
             setSelectedModel("");
             setCategory("");
-            setMakeSearchQuery("");
-            setIsCustomModel(false);
+            setIsCustomMode(false);
+            setCustomMake("");
+            setCustomModel("");
             setSelectedCustomerId(initialCustomerId || "");
             loadCustomers();
         }
@@ -63,97 +69,82 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
         }
     };
 
-    // Use stock vehicle database directly
     const safeDB = useMemo((): VehicleDB => {
         return (vehicleDatabase as VehicleDB) || {};
     }, []);
 
-    // Get all makes
-    const allMakes = useMemo(() => {
-        try {
-            return Object.keys(safeDB).sort();
-        } catch { return []; }
+    // Flatten the database for bidirectional searching
+    const flattenedVehicles = useMemo(() => {
+        const flat: { make: string; model: string; category: string; searchString: string }[] = [];
+        for (const [make, models] of Object.entries(safeDB)) {
+            for (const [model, category] of Object.entries(models)) {
+                flat.push({
+                    make,
+                    model,
+                    category,
+                    searchString: `${make} ${model}`.toLowerCase()
+                });
+            }
+        }
+        return flat.sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model));
     }, [safeDB]);
 
-    // Filter makes based on search
-    const filteredMakes = useMemo(() => {
-        if (!makeSearchQuery || !makeSearchQuery.trim()) return allMakes;
-        const q = makeSearchQuery.toLowerCase().trim();
-        return allMakes.filter(m => m.toLowerCase().includes(q));
-    }, [allMakes, makeSearchQuery]);
+    // Apply fuzzy search
+    const filteredVehicles = useMemo(() => {
+        const q = searchQuery.toLowerCase().trim();
+        if (!q) {
+            // Show a preview of popular models if empty, or just return top 50
+            return flattenedVehicles.slice(0, 50);
+        }
+        const terms = q.split(/\s+/);
+        return flattenedVehicles.filter(v => {
+            return terms.every(term => v.searchString.includes(term));
+        }).slice(0, 50);
+    }, [flattenedVehicles, searchQuery]);
 
-    // Get models for selected make
-    const availableModels = useMemo(() => {
-        if (!selectedMake) return [];
+    const autoClassify = (make: string, model: string, knownCategory?: string) => {
+        let autoCategory = "Mid-Size/SUV"; // Default fallback
         try {
-            return Object.keys(safeDB[selectedMake] || {}).sort();
-        } catch { return []; }
-    }, [selectedMake, safeDB]);
-
-    const handleMakeSelect = (make: string) => {
-        setSelectedMake(make);
-        setStep(2);
-    };
-
-    const handleModelSelect = (model: string) => {
-        if (!model) return;
-        setSelectedModel(model);
-
-        // Classification Logic
-        let autoCategory = "Mid-Size/SUV"; // Default
-        try {
-            // 1. Check JSON DB (now includes custom vehicles)
-            if (selectedMake && safeDB[selectedMake]) {
-                const value = safeDB[selectedMake][model];
-                if (value) {
-                    if (value === "Compact" || value.includes("Compact")) autoCategory = "Compact/Sedan";
-                    else if (value.includes("Midsize")) autoCategory = "Mid-Size/SUV";
-                    else if (value.includes("SUV")) autoCategory = "Mid-Size/SUV";
-                    else if (value.includes("Truck")) autoCategory = "Truck/Van/Large SUV";
-                    else if (value.includes("Oversized")) autoCategory = "Luxury/High-End";
-                    // Direct match for already-saved custom classifications
-                    else if (value.includes("Compact/Sedan")) autoCategory = "Compact/Sedan";
-                    else if (value.includes("Mid-Size/SUV")) autoCategory = "Mid-Size/SUV";
-                    else if (value.includes("Truck/Van/Large SUV")) autoCategory = "Truck/Van/Large SUV";
-                    else if (value.includes("Luxury/High-End")) autoCategory = "Luxury/High-End";
-                }
+            // 1. Direct match from JSON DB
+            if (knownCategory) {
+                if (knownCategory === "Compact" || knownCategory.includes("Compact")) autoCategory = "Compact/Sedan";
+                else if (knownCategory.includes("Midsize")) autoCategory = "Mid-Size/SUV";
+                else if (knownCategory.includes("SUV")) autoCategory = "Mid-Size/SUV";
+                else if (knownCategory.includes("Truck")) autoCategory = "Truck/Van/Large SUV";
+                else if (knownCategory.includes("Oversized")) autoCategory = "Luxury/High-End";
+                else if (knownCategory.includes("Compact/Sedan")) autoCategory = "Compact/Sedan";
+                else if (knownCategory.includes("Mid-Size/SUV")) autoCategory = "Mid-Size/SUV";
+                else if (knownCategory.includes("Truck/Van/Large SUV")) autoCategory = "Truck/Van/Large SUV";
+                else if (knownCategory.includes("Luxury/High-End")) autoCategory = "Luxury/High-End";
+            } else {
+                // 2. Check Pricing Helpers/Overrides for Custom Vehicles
+                const pricingType = normalizeVehicleType(`${make} ${model}`);
+                if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
+                if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
+                if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
+                if (pricingType === 'compact') autoCategory = "Compact/Sedan";
             }
-
-            // 2. Check Pricing Helpers/Overrides
-            const pricingType = normalizeVehicleType(`${selectedMake} ${model}`);
-            if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
-            if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
-            if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
-            if (pricingType === 'compact') autoCategory = "Compact/Sedan";
         } catch (e) {
             console.error("Classification error:", e);
         }
-
-        setCategory(autoCategory);
-        setStep(3);
+        return autoCategory;
     };
 
-    const handleConfirm = async () => {
-        // DO NOT save to Supabase here - only pass data back to the modal
-        // The actual save happens when the customer profile is saved
-        console.log('🔍 VehicleSelector: Confirming vehicle classification');
-        console.log('  Make:', selectedMake);
-        console.log('  Model:', selectedModel);
-        console.log('  Category:', category);
+    const handleSelectVehicle = (make: string, model: string, knownCategory?: string) => {
+        setSelectedMake(make);
+        setSelectedModel(model);
+        setCategory(autoClassify(make, model, knownCategory));
+        setStep(2);
+    };
 
-        // Return the classification to the parent modal
+    const handleConfirm = () => {
         onSelect({
             make: selectedMake,
             model: selectedModel,
             category: category,
-            customerId: selectedCustomerId || initialCustomerId
+            customerId: selectedCustomerId && selectedCustomerId !== "none" ? selectedCustomerId : undefined
         });
-        
         onOpenChange(false);
-    };
-
-    const handleManualSelect = (val: string) => {
-        setCategory(val);
     };
 
     return (
@@ -164,14 +155,10 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                     <div className="p-6 pb-2 border-b border-white/10">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-                                {step === 1 ? "Select Vehicle Make" : 
-                                 step === 2 ? `Select ${selectedMake} Model` : 
-                                 "Classify Vehicle"}
+                                {step === 1 ? "Search Vehicle Classification" : "Confirm Vehicle Classification"}
                             </DialogTitle>
                             <DialogDescription className="text-gray-400">
-                                {step === 1 ? "Find the vehicle manufacturer to begin." : 
-                                 step === 2 ? `Choose the specific model for your ${selectedMake}.` : 
-                                 "Assign a pricing category for this vehicle."}
+                                {step === 1 ? "Search by make, model, or both." : "Assign a pricing category for this vehicle."}
                             </DialogDescription>
                         </DialogHeader>
                     </div>
@@ -180,98 +167,95 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                     <div className="flex-1 overflow-y-auto p-6 pt-4">
                         {step === 1 && (
                             <div className="space-y-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                    <Input
-                                        placeholder="Search makes (e.g. Ford, Toyota)..."
-                                        value={makeSearchQuery}
-                                        onChange={(e) => setMakeSearchQuery(e.target.value)}
-                                        className="bg-black/50 border-purple-500/20 pl-10 pr-10 focus:border-purple-500"
-                                    />
-                                    {makeSearchQuery && (
-                                        <button 
-                                            onClick={() => setMakeSearchQuery('')}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    {filteredMakes.map((make) => (
-                                        <button
-                                            key={make}
-                                            onClick={() => handleMakeSelect(make)}
-                                            className="p-3 text-sm text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
-                                        >
-                                            <span className="group-hover:text-purple-400 font-medium">{make}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {step === 2 && (
-                            <div className="space-y-4">
-                                <Button 
-                                    variant="ghost" 
-                                    onClick={() => setStep(1)}
-                                    className="text-gray-400 hover:text-white -ml-2"
-                                >
-                                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Makes
-                                </Button>
-                                
-                                {!isCustomModel ? (
+                                {!isCustomMode ? (
                                     <>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                            {availableModels.map((model) => (
-                                                <button
-                                                    key={model}
-                                                    onClick={() => handleModelSelect(model)}
-                                                    className="p-3 text-sm text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <Input
+                                                placeholder="e.g. Ford F-150, Honda Civic..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="bg-black/50 border-purple-500/20 pl-10 pr-10 focus:border-purple-500 text-lg py-6"
+                                                autoFocus
+                                            />
+                                            {searchQuery && (
+                                                <button 
+                                                    onClick={() => setSearchQuery('')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
                                                 >
-                                                    <span className="group-hover:text-purple-400">{model}</span>
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                                            {filteredVehicles.map((v, i) => (
+                                                <button
+                                                    key={`${v.make}-${v.model}-${i}`}
+                                                    onClick={() => handleSelectVehicle(v.make, v.model, v.category)}
+                                                    className="flex flex-col p-3 text-left rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group"
+                                                >
+                                                    <span className="font-bold text-white group-hover:text-purple-400 transition-colors">{v.make} {v.model}</span>
+                                                    <span className="text-[10px] text-gray-500 uppercase font-black">{v.category}</span>
                                                 </button>
                                             ))}
-                                            <button
-                                                onClick={() => setIsCustomModel(true)}
-                                                className="p-3 text-sm text-left rounded-lg bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 transition-all flex items-center justify-center gap-2"
+                                        </div>
+
+                                        {filteredVehicles.length === 0 && (
+                                            <div className="text-center py-8 text-gray-500">
+                                                No exact matches found for "{searchQuery}".
+                                            </div>
+                                        )}
+
+                                        <div className="pt-4 border-t border-white/10 flex justify-center">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setIsCustomMode(true)}
+                                                className="bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 w-full"
                                             >
-                                                <Plus className="w-4 h-4" /> Custom Model
-                                            </button>
+                                                <Plus className="w-4 h-4 mr-2" /> Add Custom Vehicle
+                                            </Button>
                                         </div>
                                     </>
                                 ) : (
                                     <div className="space-y-4 bg-purple-500/5 p-4 rounded-xl border border-purple-500/20">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Button variant="ghost" size="icon" onClick={() => setIsCustomMode(false)} className="h-8 w-8 -ml-2 hover:bg-transparent text-gray-400 hover:text-white">
+                                                <ArrowLeft className="h-4 w-4" />
+                                            </Button>
+                                            <h3 className="text-sm font-bold text-white">Custom Vehicle Entry</h3>
+                                        </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-purple-300">Custom Model Name</label>
+                                            <label className="text-xs font-medium text-purple-300 uppercase">Make / Brand</label>
                                             <Input
-                                                placeholder="Enter model name..."
-                                                value={selectedModel}
-                                                onChange={(e) => setSelectedModel(e.target.value)}
+                                                placeholder="e.g. Rivian"
+                                                value={customMake}
+                                                onChange={(e) => setCustomMake(e.target.value)}
+                                                className="bg-black/50 border-purple-500/30"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-medium text-purple-300 uppercase">Model</label>
+                                            <Input
+                                                placeholder="e.g. R1T"
+                                                value={customModel}
+                                                onChange={(e) => setCustomModel(e.target.value)}
                                                 className="bg-black/50 border-purple-500/30"
                                             />
                                         </div>
                                         <Button 
-                                            className="w-full bg-purple-600 hover:bg-purple-500"
-                                            onClick={() => handleModelSelect(selectedModel)}
-                                            disabled={!selectedModel.trim()}
+                                            className="w-full bg-purple-600 hover:bg-purple-500 mt-2"
+                                            onClick={() => handleSelectVehicle(customMake, customModel)}
+                                            disabled={!customMake.trim() || !customModel.trim()}
                                         >
                                             Continue
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            className="w-full text-xs text-gray-500"
-                                            onClick={() => setIsCustomModel(false)}
-                                        >
-                                            Cancel Custom Entry
                                         </Button>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {step === 3 && (
+                        {step === 2 && (
                             <div className="space-y-6">
                                 <div className="flex items-center gap-4 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
                                     <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -302,7 +286,7 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                                         {CLASSIFICATION_OPTIONS.map((opt) => (
                                             <button
                                                 key={opt.value}
-                                                onClick={() => handleManualSelect(opt.value)}
+                                                onClick={() => setCategory(opt.value)}
                                                 className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
                                                     category === opt.value 
                                                         ? "bg-purple-500/20 border-purple-500 text-white ring-1 ring-purple-500/50" 
@@ -317,7 +301,7 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                                 </div>
 
                                 <div className="space-y-3 pt-2">
-                                    <label className="text-sm font-medium text-gray-300">Link to Customer (Optional)</label>
+                                    <label className="text-sm font-medium text-gray-300">Link to Customer Profile (Optional)</label>
                                     <Select 
                                         value={selectedCustomerId} 
                                         onValueChange={setSelectedCustomerId}
@@ -338,11 +322,11 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
                     </div>
 
                     {/* Footer */}
-                    {step === 3 && (
+                    {step === 2 && (
                         <div className="p-6 bg-white/5 border-t border-white/10 flex gap-3">
                             <Button 
                                 variant="outline" 
-                                onClick={() => setStep(2)}
+                                onClick={() => setStep(1)}
                                 className="flex-1 bg-transparent border-white/10 text-white hover:bg-white/5"
                             >
                                 Back

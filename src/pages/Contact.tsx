@@ -24,7 +24,7 @@ import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/servicesMeta";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
-import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import logo from "@/assets/logo-primary.png";
 
 export const sanitizeShopOnlyText = (text: string, isShopOnly: boolean) => {
@@ -1116,16 +1116,17 @@ const Contact = () => {
         </div>
       </main>
       <AboutDialog open={showAbout} onOpenChange={setShowAbout} />
-      <VehicleClassificationDialog
+      <VehicleSelectorModal
         open={showClassificationModal}
         onOpenChange={setShowClassificationModal}
-        onSelect={(simpleCategory, details) => {
+        onSelect={(data) => {
           setFormData(prev => ({
             ...prev,
-            vehicleType: simpleCategory,
-            vehicleMake: details?.make || prev.vehicleMake,
-            vehicleModel: details?.model || prev.vehicleModel
+            vehicleType: data.category,
+            vehicleMake: data.make,
+            vehicleModel: data.model
           }));
+          setShowClassificationModal(false);
         }}
       />
       <Footer />

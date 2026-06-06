@@ -46,7 +46,7 @@ import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } fro
 import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig, signInToGoogle } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
-import VehicleClassificationDialog from "@/components/bookings/VehicleClassificationDialog";
+
 import { ContactInput } from "@/components/ui/ContactInput";
 
 // --- Types ---
@@ -4029,7 +4029,7 @@ export default function BookingsPage() {
         onSave={onSaveCustomer}
       />
 
-      <VehicleClassificationDialog 
+      <VehicleSelectorModal 
         open={showClassificationModal}
         onOpenChange={setShowClassificationModal}
         onSelect={handleClassificationSelect}

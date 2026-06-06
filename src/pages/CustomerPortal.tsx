@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import localforage from "localforage";
 import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X, RefreshCw, Info, PlusCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
-import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { CompareServicesModal } from "@/components/CompareServicesModal";
 import { formatTimeAMPM } from "@/lib/availability";
@@ -1066,18 +1066,19 @@ const CustomerPortal = () => {
         </DialogContent>
       </Dialog>
 
-      <VehicleClassificationDialog
+      <VehicleSelectorModal
         open={showClassification}
         onOpenChange={setShowClassification}
-        onSelect={(cat, details) => {
-          if (details) setVehicleDetails(details);
+        onSelect={(data) => {
+          setVehicleDetails({ make: data.make, model: data.model });
           // Normalize the category back to the internal IDs if possible
-          const lower = cat.toLowerCase();
+          const lower = data.category.toLowerCase();
           if (lower.includes("compact")) setVehicleType("compact");
           else if (lower.includes("mid-size") || lower.includes("midsize")) setVehicleType("midsize");
           else if (lower.includes("truck") || lower.includes("van") || lower.includes("large suv")) setVehicleType("truck");
           else if (lower.includes("luxury")) setVehicleType("luxury");
           else setVehicleType("midsize"); // Fallback
+          setShowClassification(false);
         }}
       />
 

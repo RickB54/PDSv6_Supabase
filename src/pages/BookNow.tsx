@@ -12,7 +12,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, Clock, CheckCircle, ArrowLeft, Loader2, HelpCircle, Tag, AlertCircle, Check, CreditCard, ChevronRight, ArrowRight, TestTube2, CarFront } from "lucide-react"; // Merged icons
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
-import { VehicleClassificationDialog } from "@/components/vehicles/VehicleClassificationDialog";
+import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import { useBookingsStore } from "@/store/bookings";
 import { notify } from "@/store/alerts";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -1584,20 +1584,18 @@ const BookNow = () => {
         <p className="text-center text-sm text-muted-foreground">
           By submitting this form, you agree to be contacted by Prime Auto Detail regarding your booking.
         </p>
-        <VehicleClassificationDialog
+        <VehicleSelectorModal
           open={showClassification}
           onOpenChange={setShowClassification}
-          onSelect={(category, details) => {
-            setVehicleType(category);
-            if (details) {
-              setFormData(prev => ({
-                ...prev,
-                make: details.make,
-                model: details.model
-              }));
-              // UX: Toast confirmation
-              toast({ title: "Vehicle Updated", description: `${details.make} ${details.model} classified as ${category.toUpperCase()}` });
-            }
+          onSelect={(data) => {
+            setVehicleType(data.category);
+            setFormData(prev => ({
+              ...prev,
+              make: data.make,
+              model: data.model
+            }));
+            // UX: Toast confirmation
+            toast({ title: "Vehicle Updated", description: `${data.make} ${data.model} classified as ${data.category.toUpperCase()}` });
             setShowClassification(false);
           }}
         />
