@@ -1097,7 +1097,7 @@ const SearchCustomer = () => {
                                       : '';
                                     const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
                                     const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
-                                    window.open(url, '_blank');
+                                    navigate(url);
                                   }}
                                 >
                                   <Mail className="w-4 h-4 text-blue-400 shrink-0" />

@@ -1308,7 +1308,7 @@ export default function Prospects() {
                                       : '';
                                     const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
                                     const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
-                                    window.open(url, '_blank');
+                                    navigate(url);
                                   }}
                                 >
                                   <Mail className="w-4 h-4 text-purple-400 shrink-0" />

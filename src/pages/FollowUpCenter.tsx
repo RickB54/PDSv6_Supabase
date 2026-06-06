@@ -92,7 +92,9 @@ export default function FollowUpCenter() {
   
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") || "");
-  const [operationalMode, setOperationalMode] = useState<'mission' | 'manual'>('mission');
+  const [operationalMode, setOperationalMode] = useState<'mission' | 'manual'>(
+    searchParams.get("search") ? 'manual' : 'mission'
+  );
   const todayKey = new Date().toISOString().split('T')[0];
   const [dismissedMissions, setDismissedMissions] = useState<Set<string>>(() => {
     try {
