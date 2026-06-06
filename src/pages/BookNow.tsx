@@ -388,7 +388,7 @@ const BookNow = () => {
             const id = a.id;
             finalAddOnMeta[id] = {
               id,
-              visible: a.is_active === true,
+              visible: a.is_active != null ? Boolean(a.is_active) : defaultAddonIds.includes(id),
               deleted: false
             };
             if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);

@@ -96,7 +96,11 @@
       "addon:wheel-cleaning:compact": "25",
       "addon:wheel-cleaning:midsize": "30",
       "addon:wheel-cleaning:truck": "40",
-      "addon:wheel-cleaning:luxury": "50"
+      "addon:wheel-cleaning:luxury": "50",
+      "addon:3rd-row-seating:compact": "50",
+      "addon:3rd-row-seating:midsize": "50",
+      "addon:3rd-row-seating:truck": "50",
+      "addon:3rd-row-seating:luxury": "50"
     },
     "packageMeta": {
       "prime-elite-exterior": {
@@ -250,11 +254,16 @@
         "id": "wheel-cleaning",
         "visible": true,
         "deleted": false
+      },
+      "3rd-row-seating": {
+        "id": "3rd-row-seating",
+        "visible": true,
+        "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1779647274409
+    "version": 1780762557160
   },
   "vehicleTypesLive": [
     {

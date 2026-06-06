@@ -2963,8 +2963,15 @@ export default function PackagePricing() {
                 return (
                   <Card key={addon.id} className={`p-4 space-y-3 transition-all duration-300 ${isArchivedAddon ? 'opacity-60 border-zinc-800 grayscale-[0.5]' : ''}`}>
                     <div className="flex justify-between items-start">
-                      <h3 className="font-semibold">{addon.name}</h3>
-                      {isArchivedAddon && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-black uppercase tracking-widest">Archived</span>}
+                      <div>
+                        <h3 className="font-semibold">{addon.name}</h3>
+                        {addon.id === '3rd-row-seating' && (
+                          <p className="text-[10px] text-amber-500 mt-1 italic pr-4">
+                            * Special Add-on: Automatically configured to only display for Truck/Van/Large SUV and Luxury vehicle classifications.
+                          </p>
+                        )}
+                      </div>
+                      {isArchivedAddon && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-black uppercase tracking-widest shrink-0">Archived</span>}
                     </div>
                     <div className="flex items-center gap-2">
                       <Label className="text-white">Show on Live Website</Label>
