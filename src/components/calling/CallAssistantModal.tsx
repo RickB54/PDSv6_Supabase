@@ -227,7 +227,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         // Smart defaults for add-ons
         const defaultAddonIds = [
             'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
-            'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment'
+            'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment', '3rd-row-seating'
         ];
         addOns.forEach(a => {
             const isDefault = defaultAddonIds.includes(a.id);

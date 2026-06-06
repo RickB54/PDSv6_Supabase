@@ -349,7 +349,7 @@ const BookNow = () => {
     
     const defaultAddonIds = [
       'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
-      'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment'
+      'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment', '3rd-row-seating'
     ];
     builtInAddOns.forEach(a => {
       const isDefault = defaultAddonIds.includes(a.id);

@@ -291,7 +291,7 @@ export const addOns: AddOn[] = [
     description: 'Additional charge for vehicles with a third row — includes full cleaning of the rear seating area.',
     basePrice: 50,
     pricing: { compact: 50, midsize: 50, truck: 50, luxury: 50 },
-    applicableVehicleTypes: ['truck']
+    applicableVehicleTypes: ['truck', 'luxury']
   }
 ];
 
