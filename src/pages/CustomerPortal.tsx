@@ -23,6 +23,9 @@ import localforage from "localforage";
 import { Check, ChevronDown, ChevronUp, HelpCircle, ShieldCheck, AlertCircle, Clock, X, RefreshCw, Info, PlusCircle } from "lucide-react";
 import { HeroSection } from "@/components/HeroSection";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
+// FUTURE USE: Google Maps Autocomplete (Uncomment when API key is ready)
+// import { useLoadScript, Autocomplete } from '@react-google-maps/api';
+// const libraries: ("places")[] = ["places"];
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { CompareServicesModal } from "@/components/CompareServicesModal";
 import { formatTimeAMPM } from "@/lib/availability";
@@ -101,6 +104,76 @@ const CustomerPortal = () => {
   const [availTime, setAvailTime] = useState('');
   const [modalAddOns, setModalAddOns] = useState<string[]>([]);
   const { items: allBookings } = useBookingsStore();
+
+  /*
+  // FUTURE USE: Google Maps Distance API Logic
+  // Uncomment this block to enable auto-distance calculation once the API key is set.
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY_HERE", // FLAG: INSERT API KEY HERE
+    libraries,
+  });
+
+  const autoCompleteRef = React.useRef<HTMLInputElement>(null);
+  const [searchAddress, setSearchAddress] = useState("");
+  const [distanceError, setDistanceError] = useState<string | null>(null);
+
+  const calculateRouteDistance = (destinationAddress: string) => {
+    if (!window.google) return;
+    const origin = "54 Boston Street, Lawrence, MA";
+    const service = new google.maps.DistanceMatrixService();
+    service.getDistanceMatrix(
+      {
+        origins: [origin],
+        destinations: [destinationAddress],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.IMPERIAL,
+      },
+      (response, status) => {
+        if (status === "OK" && response) {
+          const result = response.rows[0].elements[0];
+          if (result.status === "OK") {
+            const distanceText = result.distance.text; // e.g., "15.2 mi"
+            const match = distanceText.replace(/,/g, '').match(/[\d.]+/);
+            if (match) {
+              const distanceValue = parseFloat(match[0]);
+              setDistance(distanceValue);
+              setDistanceError(null);
+            }
+          } else {
+            setDistanceError("Unable to calculate distance. Please enter miles manually.");
+          }
+        } else {
+          setDistanceError("Distance calculation failed. Please enter miles manually.");
+        }
+      }
+    );
+  };
+
+  useEffect(() => {
+    if (!isLoaded || !autoCompleteRef.current || !window.google) return;
+    
+    const autocompleteInstance = new window.google.maps.places.Autocomplete(autoCompleteRef.current, {
+      fields: ["formatted_address", "geometry", "name"],
+    });
+
+    const listener = autocompleteInstance.addListener("place_changed", () => {
+      const place = autocompleteInstance.getPlace();
+      if (place.geometry && place.geometry.location) {
+        const address = place.formatted_address || place.name || "";
+        setSearchAddress(address);
+        calculateRouteDistance(address);
+      } else {
+        setDistanceError("Please select a valid address from the dropdown.");
+      }
+    });
+
+    return () => {
+      if (window.google && window.google.maps.event) {
+        window.google.maps.event.removeListener(listener);
+      }
+    };
+  }, [isLoaded]);
+  */
 
   // Sequential Step Blinking Logic
   const [vehicleInteracted, setVehicleInteracted] = useState(false);
@@ -641,19 +714,91 @@ const CustomerPortal = () => {
           <Input
             type="number"
             min="0"
-            value={distance}
+            step="0.1"
+            value={distance || ''}
             onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
             placeholder="Enter distance in miles"
             className="w-full max-w-xs bg-background border-border"
           />
           <p className="text-sm text-muted-foreground mt-2">
-            {distance <= 5 && "Free within 5 miles"}
-            {distance > 5 && distance <= 10 && `$10 destination fee (6-10 miles)`}
-            {distance > 10 && distance <= 20 && `$${destinationFee} destination fee (11-20 miles)`}
-            {distance > 20 && distance <= 30 && `$${destinationFee} destination fee (21-30 miles)`}
-            {distance > 30 && distance <= 50 && `$${destinationFee} destination fee (31-50 miles)`}
-            {distance > 50 && `$75 destination fee (50+ miles)`}
+            {distance <= 1 && "Free within 1 mile"}
+            {distance > 1 && `$${destinationFee} destination fee`}
           </p>
+
+          {/* 
+            FUTURE USE: Google Maps Auto-Address UI
+            Uncomment this section (and the logic block above) to restore the Auto Address search bar.
+          */}
+          {/*
+          <Label className="text-lg font-semibold text-foreground mb-3 block mt-8">
+            Where are you located?
+          </Label>
+          
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground">
+                Enter your address (Auto-calculates distance from shop)
+              </Label>
+              {loadError ? (
+                <div className="text-sm text-red-500">Error loading Maps API. Please enter miles manually below.</div>
+              ) : !isLoaded ? (
+                <Input disabled placeholder="Loading Google Maps..." className="w-full max-w-md bg-background border-border" />
+              ) : (
+                <Input
+                  ref={autoCompleteRef}
+                  type="text"
+                  placeholder="Search your address..."
+                  className="w-full max-w-md bg-background border-border"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault(); // Prevent accidental form submission
+                    }
+                  }}
+                />
+              )}
+              {searchAddress && !distanceError && (
+                <div className="text-sm text-blue-700 font-medium bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2 max-w-md">
+                  Selected: {searchAddress} <br/>
+                  Calculated Distance: {distance} miles
+                </div>
+              )}
+              {distanceError && (
+                <div className="text-sm text-red-600 font-medium bg-red-50 p-3 rounded-lg border border-red-100 mt-2 max-w-md">
+                  {distanceError}
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex items-center py-2 max-w-md">
+              <div className="flex-grow border-t border-border"></div>
+              <span className="flex-shrink-0 mx-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">Or</span>
+              <div className="flex-grow border-t border-border"></div>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-foreground mb-2 block">
+                Distance to Your Location (miles) - Manual Entry
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.1"
+                value={distance || ''}
+                onChange={(e) => {
+                  setDistance(parseFloat(e.target.value) || 0);
+                  setSearchAddress("");
+                  setDistanceError(null);
+                }}
+                placeholder="Enter distance in miles"
+                className="w-full max-w-xs bg-background border-border"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                {distance <= 1 && "Free within 1 mile"}
+                {distance > 1 && `$${destinationFee} destination fee`}
+              </p>
+            </div>
+          </div>
+          */}
         </Card>
 
         {/* Order Summary */}
