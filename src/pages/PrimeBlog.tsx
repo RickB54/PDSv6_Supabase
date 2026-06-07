@@ -600,72 +600,74 @@ export default function PrimeBlog() {
                 <div className="container mx-auto px-4 py-12 max-w-7xl">
                     {/* Category & Filters */}
                     <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 bg-zinc-900/30 p-2 rounded-[28px] border border-zinc-800/50 backdrop-blur-xl">
-                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto">
-                            <TabsList className="bg-transparent h-14 p-1 gap-1">
-                                <TabsTrigger value="All" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">ALL POSTS</TabsTrigger>
-                                <TabsTrigger value="Latest" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">LATEST POSTS</TabsTrigger>
-                                <TabsTrigger value="Facebook" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">FACEBOOK</TabsTrigger>
+                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto overflow-hidden">
+                            <TabsList className="bg-transparent h-auto flex flex-nowrap p-1 gap-2 justify-start overflow-x-auto no-scrollbar w-full max-w-[100vw] sm:max-w-none shadow-inner border border-zinc-800/30 rounded-2xl md:border-none md:shadow-none">
+                                <TabsTrigger value="All" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">ALL POSTS</TabsTrigger>
+                                <TabsTrigger value="Latest" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">LATEST POSTS</TabsTrigger>
+                                <TabsTrigger value="Facebook" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">FACEBOOK</TabsTrigger>
                                 {customCategories.map(cat => (
-                                    <TabsTrigger key={cat || 'default'} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
+                                    <TabsTrigger key={cat || 'default'} value={cat} className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase whitespace-nowrap text-xs md:text-sm shadow-sm">{cat}</TabsTrigger>
                                 ))}
                             </TabsList>
                         </Tabs>
 
-                        <div className="flex flex-wrap items-center gap-4 px-4 w-full md:w-auto">
-                            <div className="flex items-center gap-2 bg-zinc-950/50 border border-zinc-800 rounded-2xl px-3 h-11">
-                                <CalendarDays className="w-4 h-4 text-zinc-500" />
+                        <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full md:w-auto">
+                            <div className="flex items-center gap-2 bg-zinc-950/50 border border-zinc-800 rounded-2xl px-3 h-12 w-full md:w-auto shadow-inner">
+                                <CalendarDays className="w-4 h-4 text-zinc-500 shrink-0" />
                                 <input
                                     type="date"
                                     value={dateRange.start}
                                     onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                    className="bg-transparent border-none text-[10px] font-black text-zinc-400 focus:ring-0 w-24 outline-none uppercase"
+                                    className="bg-transparent border-none text-[11px] sm:text-xs font-black text-zinc-400 focus:ring-0 flex-1 min-w-0 outline-none uppercase"
                                     placeholder="Start"
                                 />
-                                <span className="text-zinc-700 font-bold">/</span>
+                                <span className="text-zinc-700 font-bold shrink-0">/</span>
                                 <input
                                     type="date"
                                     value={dateRange.end}
                                     onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                    className="bg-transparent border-none text-[10px] font-black text-zinc-400 focus:ring-0 w-24 outline-none uppercase"
+                                    className="bg-transparent border-none text-[11px] sm:text-xs font-black text-zinc-400 focus:ring-0 flex-1 min-w-0 outline-none uppercase"
                                     placeholder="End"
                                 />
                                 {(dateRange.start || dateRange.end) && (
                                     <button
                                         onClick={() => setDateRange({ start: "", end: "" })}
-                                        className="p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
+                                        className="p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors shrink-0"
                                     >
                                         <X className="w-3 h-3" />
                                     </button>
                                 )}
                             </div>
 
-                            <div className="relative group flex-1 md:w-64">
-                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                <Input
-                                    placeholder="Search stories..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="bg-zinc-950/50 border-zinc-800 pl-10 pr-10 rounded-2xl h-11 focus:border-indigo-500/50 transition-all text-xs font-medium"
-                                />
-                                {searchTerm && (
-                                    <button
-                                        onClick={() => setSearchTerm("")}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <div className="relative group flex-1 md:w-64">
+                                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                    <Input
+                                        placeholder="Search stories..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="bg-zinc-950/50 border-zinc-800 pl-10 pr-10 rounded-2xl h-12 w-full focus:border-indigo-500/50 transition-all text-xs font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm("")}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full text-zinc-500 hover:text-white transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                {isAdmin && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsSettingsModalOpen(true)}
+                                        className="h-12 w-12 shrink-0 rounded-2xl bg-zinc-950/50 border border-zinc-800 hover:bg-zinc-800 active:scale-90 transition-all"
                                     >
-                                        <X className="w-4 h-4" />
-                                    </button>
+                                        <Settings className="w-4 h-4 text-zinc-400" />
+                                    </Button>
                                 )}
                             </div>
-                            {isAdmin && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setIsSettingsModalOpen(true)}
-                                    className="h-11 w-11 rounded-2xl bg-zinc-950/50 border border-zinc-800 hover:bg-zinc-800 active:scale-90 transition-all"
-                                >
-                                    <Settings className="w-4 h-4 text-zinc-400" />
-                                </Button>
-                            )}
                         </div>
                     </div>
 
