@@ -600,13 +600,13 @@ export default function PrimeBlog() {
                 <div className="container mx-auto px-4 py-12 max-w-7xl">
                     {/* Category & Filters */}
                     <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 bg-zinc-900/30 p-2 rounded-[28px] border border-zinc-800/50 backdrop-blur-xl">
-                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto overflow-hidden">
-                            <TabsList className="bg-transparent h-auto flex flex-nowrap p-1 gap-2 justify-start overflow-x-auto no-scrollbar w-full max-w-[100vw] sm:max-w-none shadow-inner border border-zinc-800/30 rounded-2xl md:border-none md:shadow-none">
-                                <TabsTrigger value="All" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">ALL POSTS</TabsTrigger>
-                                <TabsTrigger value="Latest" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">LATEST POSTS</TabsTrigger>
-                                <TabsTrigger value="Facebook" className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">FACEBOOK</TabsTrigger>
+                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full max-w-full">
+                            <TabsList className="bg-transparent h-auto flex flex-nowrap p-1 gap-2 justify-start overflow-x-auto no-scrollbar w-full border border-zinc-800/30 rounded-2xl md:border-none md:shadow-none">
+                                <TabsTrigger value="All" className="shrink-0 rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-300 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">ALL POSTS</TabsTrigger>
+                                <TabsTrigger value="Latest" className="shrink-0 rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-300 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">LATEST POSTS</TabsTrigger>
+                                <TabsTrigger value="Facebook" className="shrink-0 rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-300 font-bold whitespace-nowrap text-xs md:text-sm shadow-sm">FACEBOOK</TabsTrigger>
                                 {customCategories.map(cat => (
-                                    <TabsTrigger key={cat || 'default'} value={cat} className="rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase whitespace-nowrap text-xs md:text-sm shadow-sm">{cat}</TabsTrigger>
+                                    <TabsTrigger key={cat || 'default'} value={cat} className="shrink-0 rounded-xl px-4 md:px-6 py-2.5 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-300 font-bold uppercase whitespace-nowrap text-xs md:text-sm shadow-sm">{cat}</TabsTrigger>
                                 ))}
                             </TabsList>
                         </Tabs>
@@ -618,16 +618,18 @@ export default function PrimeBlog() {
                                     type="date"
                                     value={dateRange.start}
                                     onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                    className="bg-transparent border-none text-[11px] sm:text-xs font-black text-zinc-400 focus:ring-0 flex-1 min-w-0 outline-none uppercase"
+                                    className="bg-transparent border-none text-xs md:text-sm font-black text-zinc-200 focus:ring-0 flex-1 min-w-[90px] outline-none uppercase p-0"
                                     placeholder="Start"
+                                    style={{ colorScheme: 'dark' }}
                                 />
-                                <span className="text-zinc-700 font-bold shrink-0">/</span>
+                                <span className="text-zinc-500 font-bold shrink-0 px-1">/</span>
                                 <input
                                     type="date"
                                     value={dateRange.end}
                                     onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                    className="bg-transparent border-none text-[11px] sm:text-xs font-black text-zinc-400 focus:ring-0 flex-1 min-w-0 outline-none uppercase"
+                                    className="bg-transparent border-none text-xs md:text-sm font-black text-zinc-200 focus:ring-0 flex-1 min-w-[90px] outline-none uppercase p-0"
                                     placeholder="End"
+                                    style={{ colorScheme: 'dark' }}
                                 />
                                 {(dateRange.start || dateRange.end) && (
                                     <button
@@ -646,7 +648,7 @@ export default function PrimeBlog() {
                                         placeholder="Search stories..."
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        className="bg-zinc-950/50 border-zinc-800 pl-10 pr-10 rounded-2xl h-12 w-full focus:border-indigo-500/50 transition-all text-xs font-medium"
+                                        className="bg-zinc-950/50 border-zinc-800 pl-10 pr-10 rounded-2xl h-12 w-full focus:border-indigo-500/50 transition-all text-zinc-200 text-sm font-medium"
                                     />
                                     {searchTerm && (
                                         <button
