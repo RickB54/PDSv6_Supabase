@@ -285,6 +285,7 @@ export default function EliteMaster() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    const [sortBy, setSortBy] = useState("custom");
     
     // Modals & Panels
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -521,7 +522,13 @@ export default function EliteMaster() {
     const filteredItems = items.filter(it => 
         it.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
         it.category.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    ).sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.created_at || b.updated_at || 0).getTime() - new Date(a.created_at || a.updated_at || 0).getTime();
+        if (sortBy === 'oldest') return new Date(a.created_at || a.updated_at || 0).getTime() - new Date(b.created_at || b.updated_at || 0).getTime();
+        if (sortBy === 'a-z') return (a.title || '').localeCompare(b.title || '');
+        if (sortBy === 'z-a') return (b.title || '').localeCompare(a.title || '');
+        return 0; // custom order relies on items array which is pre-sorted
+    });
 
     return (
         <div style={{ 
@@ -613,6 +620,28 @@ export default function EliteMaster() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            style={{
+                                backgroundColor: '#0a0a0a',
+                                border: '1px solid #151515',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                color: '#aaa',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                cursor: 'pointer',
+                                outline: 'none'
+                            }}
+                        >
+                            <option value="custom">Sort: Manual</option>
+                            <option value="newest">Sort: Newest</option>
+                            <option value="oldest">Sort: Oldest</option>
+                            <option value="a-z">Sort: A-Z</option>
+                            <option value="z-a">Sort: Z-A</option>
+                        </select>
                         <button 
                             onClick={loadData}
                             style={{ background: '#0a0a0a', border: '1px solid #151515', color: '#444', padding: '12px', borderRadius: '12px', cursor: 'pointer' }}

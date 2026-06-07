@@ -37,6 +37,7 @@ export default function LearningLibrary() {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{ step: string; message: string }>({ step: 'idle', message: '' });
     const [placeholderCategories, setPlaceholderCategories] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<string>("newest");
 
     // Video player state
     const [isPlayerOpen, setIsPlayerOpen] = useState(false);
@@ -69,13 +70,24 @@ export default function LearningLibrary() {
     }, [items, placeholderCategories]);
 
     const filteredItems = useMemo(() => {
-        if (activeCategory === "All") return items;
-        const target = activeCategory.toLowerCase();
-        return items.filter(i => {
-            const cats = (i.category || 'General').split(',').map(s => s.trim().toLowerCase());
-            return cats.includes(target);
+        let result = items;
+        if (activeCategory !== "All") {
+            const target = activeCategory.toLowerCase();
+            result = result.filter(i => {
+                const cats = (i.category || 'General').split(',').map(s => s.trim().toLowerCase());
+                return cats.includes(target);
+            });
+        }
+        
+        // Apply sorting
+        return result.sort((a, b) => {
+            if (sortBy === 'newest') return new Date(b.created_at || b.updated_at || 0).getTime() - new Date(a.created_at || a.updated_at || 0).getTime();
+            if (sortBy === 'oldest') return new Date(a.created_at || a.updated_at || 0).getTime() - new Date(b.created_at || b.updated_at || 0).getTime();
+            if (sortBy === 'a-z') return (a.title || '').localeCompare(b.title || '');
+            if (sortBy === 'z-a') return (b.title || '').localeCompare(a.title || '');
+            return 0;
         });
-    }, [items, activeCategory]);
+    }, [items, activeCategory, sortBy]);
 
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = { "All": items.length };
@@ -444,27 +456,42 @@ export default function LearningLibrary() {
     };
 
     const getEmbedUrl = (url: string): string => {
-        // Convert YouTube URLs to embed format
-        if (url.includes('youtube.com/watch')) {
-            const videoId = new URL(url).searchParams.get('v');
-            return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        if (!url) return '';
+        try {
+            const validUrl = url.startsWith('http') ? url : `https://${url}`;
+            if (validUrl.includes('youtube.com/watch')) {
+                const videoId = new URL(validUrl).searchParams.get('v');
+                return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            }
+            if (validUrl.includes('youtube.com/shorts/')) {
+                const videoId = new URL(validUrl).pathname.split('/shorts/')[1];
+                return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            }
+            if (validUrl.includes('youtu.be/')) {
+                const videoId = validUrl.split('youtu.be/')[1].split('?')[0];
+                return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            }
+            return validUrl;
+        } catch (e) {
+            console.error("Invalid URL format:", url);
+            return url;
         }
-        if (url.includes('youtu.be/')) {
-            const videoId = url.split('youtu.be/')[1].split('?')[0];
-            return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-        }
-        // Return direct video URL as-is
-        return url;
     };
 
     const getYouTubeThumbnail = (url: string): string | null => {
+        if (!url) return null;
         try {
-            if (url.includes('youtube.com/watch')) {
-                const videoId = new URL(url).searchParams.get('v');
+            const validUrl = url.startsWith('http') ? url : `https://${url}`;
+            if (validUrl.includes('youtube.com/watch')) {
+                const videoId = new URL(validUrl).searchParams.get('v');
                 return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
             }
-            if (url.includes('youtu.be/')) {
-                const videoId = url.split('youtu.be/')[1].split('?')[0];
+            if (validUrl.includes('youtube.com/shorts/')) {
+                const videoId = new URL(validUrl).pathname.split('/shorts/')[1];
+                return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            }
+            if (validUrl.includes('youtu.be/')) {
+                const videoId = validUrl.split('youtu.be/')[1].split('?')[0];
                 return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
             }
         } catch (e) {
@@ -579,6 +606,20 @@ export default function LearningLibrary() {
 
                     {/* Grid of library items */}
                     <div className="flex-1">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-white capitalize">{activeCategory} Resources</h2>
+                            <Select value={sortBy} onValueChange={setSortBy}>
+                                <SelectTrigger className="w-[180px] bg-zinc-900 border-zinc-800 text-zinc-300">
+                                    <SelectValue placeholder="Sort By" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                                    <SelectItem value="newest">Newest First</SelectItem>
+                                    <SelectItem value="oldest">Oldest First</SelectItem>
+                                    <SelectItem value="a-z">A-Z</SelectItem>
+                                    <SelectItem value="z-a">Z-A</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         {filteredItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/30 border border-zinc-800 border-dashed rounded-xl">
                                 <Video className="h-12 w-12 text-zinc-700 mb-4" />
