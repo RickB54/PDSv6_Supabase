@@ -600,17 +600,15 @@ export default function PrimeBlog() {
                 <div className="container mx-auto px-4 py-12 max-w-7xl">
                     {/* Category & Filters */}
                     <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-6 bg-zinc-900/30 p-2 rounded-[28px] border border-zinc-800/50 backdrop-blur-xl">
-                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full overflow-hidden">
-                            <div className="w-full overflow-x-auto no-scrollbar pb-2 -mb-2">
-                                <TabsList className="bg-transparent h-auto flex flex-nowrap p-1 gap-2 justify-start w-max min-w-full border border-zinc-800/30 rounded-2xl md:border-none md:shadow-none">
-                                    <TabsTrigger value="All" className="rounded-xl px-5 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-xs md:text-sm shadow-sm">ALL POSTS</TabsTrigger>
-                                    <TabsTrigger value="Latest" className="rounded-xl px-5 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-xs md:text-sm shadow-sm">LATEST POSTS</TabsTrigger>
-                                    <TabsTrigger value="Facebook" className="rounded-xl px-5 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-xs md:text-sm shadow-sm">FACEBOOK</TabsTrigger>
-                                    {customCategories.map(cat => (
-                                        <TabsTrigger key={cat || 'default'} value={cat} className="rounded-xl px-5 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black uppercase whitespace-nowrap text-xs md:text-sm shadow-sm">{cat}</TabsTrigger>
-                                    ))}
-                                </TabsList>
-                            </div>
+                        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+                            <TabsList className="bg-transparent h-auto flex flex-wrap md:flex-nowrap p-2 md:p-1 gap-3 md:gap-2 justify-center md:justify-start w-full border border-zinc-800/50 md:border-none rounded-2xl md:shadow-none bg-zinc-950/50 md:bg-transparent">
+                                <TabsTrigger value="All" className="flex-grow md:flex-grow-0 rounded-xl px-4 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-[13px] md:text-sm shadow-sm border border-zinc-800 md:border-transparent">ALL POSTS</TabsTrigger>
+                                <TabsTrigger value="Latest" className="flex-grow md:flex-grow-0 rounded-xl px-4 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-[13px] md:text-sm shadow-sm border border-zinc-800 md:border-transparent">LATEST POSTS</TabsTrigger>
+                                <TabsTrigger value="Facebook" className="flex-grow md:flex-grow-0 rounded-xl px-4 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black whitespace-nowrap text-[13px] md:text-sm shadow-sm border border-zinc-800 md:border-transparent">FACEBOOK</TabsTrigger>
+                                {customCategories.map(cat => (
+                                    <TabsTrigger key={cat || 'default'} value={cat} className="flex-grow md:flex-grow-0 rounded-xl px-4 py-3 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-white font-black uppercase whitespace-nowrap text-[13px] md:text-sm shadow-sm border border-zinc-800 md:border-transparent">{cat}</TabsTrigger>
+                                ))}
+                            </TabsList>
                         </Tabs>
 
                         <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full md:w-auto">
