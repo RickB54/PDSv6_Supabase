@@ -372,9 +372,11 @@ export default function PrimeBlog() {
         return url;
     };
 
-    const displayedItems = (items || []).filter(item => {
+    let displayedItems = (items || []).filter(item => {
+        if (activeCategory === 'Facebook') return false;
+
         // Category filter
-        const matchesCategory = activeCategory === 'All'
+        const matchesCategory = (activeCategory === 'All' || activeCategory === 'Latest')
             ? true
             : activeCategory === 'NEEDS REVIEW'
                 ? !item.is_verified
@@ -394,6 +396,14 @@ export default function PrimeBlog() {
 
         return matchesCategory && matchesSearch && matchesDate;
     });
+
+    if (activeCategory === 'Latest') {
+        displayedItems = [...displayedItems].sort((a, b) => {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+        });
+    }
 
     const filteredMgmtItems = (items || []).filter(item =>
         (item.title || "").toLowerCase().includes(mgmtSearch.toLowerCase()) ||
@@ -593,8 +603,8 @@ export default function PrimeBlog() {
                         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full md:w-auto">
                             <TabsList className="bg-transparent h-14 p-1 gap-1">
                                 <TabsTrigger value="All" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">ALL POSTS</TabsTrigger>
-                                {/* NEEDS REVIEW Tab Removed */}
-                                <TabsTrigger value="General" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">UPDATES</TabsTrigger>
+                                <TabsTrigger value="Latest" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">LATEST POSTS</TabsTrigger>
+                                <TabsTrigger value="Facebook" className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold">FACEBOOK</TabsTrigger>
                                 {customCategories.map(cat => (
                                     <TabsTrigger key={cat || 'default'} value={cat} className="rounded-2xl px-6 data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all text-zinc-400 font-bold uppercase">{cat}</TabsTrigger>
                                 ))}
@@ -659,7 +669,22 @@ export default function PrimeBlog() {
                         </div>
                     </div>
 
-                    {isLoading ? (
+                    {activeCategory === 'Facebook' ? (
+                        <div className="w-full bg-zinc-950 border border-zinc-800/80 rounded-[32px] overflow-hidden flex justify-center items-start min-h-[800px] shadow-2xl p-4 md:p-8">
+                            <div className="bg-white rounded-xl overflow-hidden shadow-xl" style={{ width: 500, maxWidth: '100%' }}>
+                                <iframe 
+                                    src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FPrimeAutoDetail.net&tabs=timeline&width=500&height=800&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId" 
+                                    width="500" 
+                                    height="800" 
+                                    style={{ border: 'none', overflow: 'hidden', maxWidth: '100%' }} 
+                                    scrolling="no" 
+                                    frameBorder="0" 
+                                    allowFullScreen={true} 
+                                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                                ></iframe>
+                            </div>
+                        </div>
+                    ) : isLoading ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {[1, 2, 3, 4, 5, 6].map(i => (
                                 <div key={`skeleton-${i}`} className="aspect-[4/5] rounded-[32px] bg-zinc-900 animate-pulse border border-zinc-800" />
