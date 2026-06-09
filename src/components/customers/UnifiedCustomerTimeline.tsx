@@ -198,7 +198,7 @@ export const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEm
                   : "text-zinc-500 hover:text-zinc-300"
               )}
             >
-              {t === "all" ? "ALL DATA" : t + "s"}
+              {t === "all" ? "ALL DATA" : t === "notes" ? "NOTES" : t === "activity" ? "ACTIVITIES" : t + "s"}
             </Button>
           ))}
         </div>

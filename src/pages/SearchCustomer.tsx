@@ -1079,7 +1079,7 @@ const SearchCustomer = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 text-[9px] font-black text-blue-400 hover:text-blue-300 gap-1"
-                                onClick={(e) => { e.stopPropagation(); openEdit(customer); }}
+                                onClick={(e) => { e.stopPropagation(); openEdit(customer, "notes"); }}
                               >
                                 <Plus className="w-2.5 h-2.5" /> ADD NOTE
                               </Button>
