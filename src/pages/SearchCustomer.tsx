@@ -60,7 +60,7 @@ const SearchCustomer = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'>('latest');
+  const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'|'status'>('latest');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const { items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
@@ -704,6 +704,7 @@ const SearchCustomer = () => {
                 <SelectItem value="latest">Latest</SelectItem>
                 <SelectItem value="updated">Last Updated</SelectItem>
                 <SelectItem value="alpha">Alphabetically</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
               </SelectContent>
             </Select>
             {filteredCustomers.length > 0 && (
@@ -756,6 +757,26 @@ const SearchCustomer = () => {
               }
               if (sortBy === 'alpha') {
                 return (a.name || '').localeCompare(b.name || '');
+              }
+              if (sortBy === 'status') {
+                const getStatusWeight = (c: any) => {
+                  const custBookings = allBookings.filter(bk => 
+                    (bk.customer && c.name && bk.customer.toLowerCase() === c.name.toLowerCase()) ||
+                    (bk.customerEmail && c.email && bk.customerEmail.toLowerCase() === c.email.toLowerCase()) ||
+                    (bk.customerPhone && c.phone && bk.customerPhone === c.phone)
+                  );
+                  if (custBookings.length === 0) return 0; // NEW
+                  const statuses = custBookings.map(bk => (bk.status || 'Pending').toLowerCase());
+                  if (statuses.includes('in progress')) return 5;
+                  if (statuses.includes('confirmed booking') || statuses.includes('confirmed')) return 4;
+                  if (statuses.includes('tentative (hold)') || statuses.includes('tentative')) return 3;
+                  if (statuses.includes('pending')) return 2;
+                  if (statuses.includes('rescheduled')) return 1;
+                  if (statuses.includes('done')) return -1;
+                  if (statuses.includes('blocked')) return -2;
+                  return 0;
+                };
+                return getStatusWeight(b) - getStatusWeight(a); // Higher weight (in progress, confirmed) first
               }
               return 0;
             })
