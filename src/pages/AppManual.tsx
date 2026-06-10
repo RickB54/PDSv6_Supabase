@@ -111,6 +111,7 @@ export default function AppManual() {
         { id: "ch9", title: "09: Marketing & Retention", icon: TicketPercent, color: "text-pink-400" },
         { id: "ch10", title: "10: System Settings & Security", icon: Settings, color: "text-zinc-400" },
         { id: "ch11", title: "11: Technical Reference SOPs", icon: BookOpen, color: "text-white" },
+        { id: "ch12", title: "12: Intake & Interaction Workflows", icon: ClipboardCheck, color: "text-indigo-400" },
     ];
 
     return (
@@ -554,6 +555,33 @@ export default function AppManual() {
                                     <p className="text-zinc-500 font-bold uppercase tracking-widest text-sm">No matching technical topics found</p>
                                 </div>
                             )}
+                        </div>
+                    </section>
+
+                    {/* Chapter 12: Intake & Interaction Workflows */}
+                    <section id="ch12" className="scroll-mt-20 print:break-before-page">
+                        <ChapterHeader title="12: Intake & Interaction Workflows" subtitle="Master workflows for ensuring 100% database accuracy." icon={ClipboardCheck} color="bg-indigo-600" />
+                        <div className="space-y-6">
+                            <ManualEntry 
+                                title="1. Online Booking (Automatic)" 
+                                description="System automatically checks Email, then Name, then Phone. If match found, links to existing record. Your action: Edit booking to select correct profile if it shows 'No Booking Data Yet'."
+                                features={["Automatic Matching", "3-Tier Cascade", "Booking Lifecycle Verification"]}
+                            />
+                            <ManualEntry 
+                                title="2. Direct / Admin Booking" 
+                                description="Never navigate to the Bookings page directly for known customers. Search Customer Profiles -> Open Card -> Click 'Book Job' -> Save."
+                                features={["Customer-First Rule", "Atomic Linking", "Profile Search"]}
+                            />
+                            <ManualEntry 
+                                title="3. Website / Email Inquiry" 
+                                description="Search -> Log Activity (Inquiry) -> Reply via Engagement Hub -> On confirm, click 'Book Job' from their card."
+                                features={["Lead Trail Creation", "Engagement Logging", "Card-Based Booking"]}
+                            />
+                            <ManualEntry 
+                                title="4. Phone Call" 
+                                description="Live calls require immediate search to prevent duplicates. Search/Create Profile -> Log Activity -> Click 'Book Job' from card."
+                                features={["Duplicate Prevention", "Immediate Logging", "Card-Based Booking"]}
+                            />
                         </div>
                     </section>
 
