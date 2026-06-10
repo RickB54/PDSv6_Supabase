@@ -63,6 +63,7 @@ export interface Customer {
     vehicles?: Vehicle[]; // Support for multiple vehicles
     notes?: string;
     created_at?: string;
+    updated_at?: string;
     type?: string;
     is_archived?: boolean; // New field
     generalPhotos?: string[];
@@ -397,6 +398,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 },
                 notes: c.notes,
                 created_at: c.created_at,
+                updated_at: c.updated_at,
                 accountType: c.account_type,
                 companyName: c.company_name,
                 type: c.type || 'customer',
