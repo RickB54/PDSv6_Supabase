@@ -838,7 +838,18 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
             <section className="space-y-4 mt-8">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
-                    <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Workflow</Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Workflow</Badge>
+                        <HelpCircle 
+                            className="w-4 h-4 text-zinc-500 hover:text-emerald-400 transition-colors cursor-help" 
+                            title="View Intake Workflows"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }));
+                            }}
+                        />
+                    </div>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[

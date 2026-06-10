@@ -2072,7 +2072,7 @@ export const adminMenuTopics: HelpTopic[] = [
     ],
     route: '/search-customer',
     section: 'menu',
-    relatedTopicIds: ['bookings', 'prospects', 'media-library', 'customer-management-flow'],
+    relatedTopicIds: ['intake-workflows', 'bookings', 'prospects', 'media-library', 'customer-management-flow'],
   },
   {
     id: 'prospects',
