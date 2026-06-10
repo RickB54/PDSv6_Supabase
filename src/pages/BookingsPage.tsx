@@ -3736,9 +3736,13 @@ export default function BookingsPage() {
                                             ))}
                                             <Badge
                                               variant="outline"
-                                              className={cn("text-[10px] h-5", event.type === 'booking' ? getStatusColor((event.status || 'pending') as any) : "text-blue-400 border-blue-900")}
+                                              className={cn("text-[10px] h-5", 
+                                                event.type === 'booking' ? getStatusColor((event.status || 'pending') as any) : 
+                                                event.type === 'activity' ? "text-purple-400 border-purple-900 bg-purple-500/10" :
+                                                "text-red-400 border-red-900 bg-red-500/10"
+                                              )}
                                             >
-                                              {event.type === 'booking' ? (event.status || 'PENDING') : 'BLOCKED'}
+                                              {event.type === 'booking' ? (event.status || 'PENDING') : event.type === 'activity' ? (event.originalType || 'LOG') : 'BLOCKED'}
                                             </Badge>
                                           </div>
                                         </div>
@@ -3916,7 +3920,7 @@ export default function BookingsPage() {
                                                 </Button>
                                               )}
                                             </>
-                                          ) : (
+                                          ) : event.type === 'manual-block' ? (
                                             <Button
                                               size="sm"
                                               variant="ghost"
@@ -3932,7 +3936,7 @@ export default function BookingsPage() {
                                             >
                                               <Trash2 className="h-2.5 w-2.5" /> Delete Block
                                             </Button>
-                                          )}
+                                          ) : null}
                                         </div>
                                       </div>
                                     ))}
