@@ -77,7 +77,7 @@ const parseAttachedPhotos = (notes?: string) => {
 
 export default function Prospects() {
   const navigate = useNavigate();
-  const { items: allBookings } = useBookingsStore();
+  const { items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'>('latest');
@@ -173,6 +173,7 @@ export default function Prospects() {
     // But only once per mount to avoid duplicate calls
     if (!hasLoadedThisMount || isDemoMode) {
       refresh();
+      refreshBookings(true);
       setHasLoadedThisMount(true);
     }
   }, [isDemoMode]);
@@ -859,14 +860,22 @@ export default function Prospects() {
           {[...filteredCustomers]
             .sort((a, b) => {
               if (sortBy === 'latest') {
-                const daStr = (a as any).created_at || (a as any).createdAt || "";
-                const dbStr = (b as any).created_at || (b as any).createdAt || "";
-                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+                const getValidTime = (c: any) => {
+                  const d = c.created_at || c.createdAt;
+                  if (!d) return 0;
+                  const t = new Date(d).getTime();
+                  return isNaN(t) ? 0 : t;
+                };
+                return getValidTime(b) - getValidTime(a);
               }
               if (sortBy === 'updated') {
-                const daStr = (a as any).updated_at || (a as any).updatedAt || (a as any).created_at || "";
-                const dbStr = (b as any).updated_at || (b as any).updatedAt || (b as any).created_at || "";
-                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+                const getValidTime = (c: any) => {
+                  const d = c.updated_at || c.updatedAt || c.created_at || c.createdAt;
+                  if (!d) return 0;
+                  const t = new Date(d).getTime();
+                  return isNaN(t) ? 0 : t;
+                };
+                return getValidTime(b) - getValidTime(a);
               }
               if (sortBy === 'alpha') {
                 return (a.name || '').localeCompare(b.name || '');
@@ -940,6 +949,43 @@ export default function Prospects() {
                               <span className="text-[9px] font-black uppercase tracking-tight">ARCHIVED</span>
                             </Badge>
                           )}
+                           {/* Dynamic Status Badge */}
+                           {(() => {
+                             const custBookings = allBookings.filter(b => 
+                               (b.customerId && b.customerId === customer.id) || 
+                               ((b as any).customer_id && (b as any).customer_id === customer.id) || 
+                               (b.customer && customer.name && b.customer.toLowerCase() === customer.name.toLowerCase()) ||
+                               (b.customerEmail && customer.email && b.customerEmail.toLowerCase() === customer.email.toLowerCase()) ||
+                               (b.customerPhone && customer.phone && b.customerPhone === customer.phone)
+                             );
+                             if (custBookings.length === 0) {
+                               return (
+                                 <Badge variant="outline" className="h-5 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 gap-1 px-1.5 ml-2">
+                                   <Zap className="h-3 w-3" />
+                                   <span className="text-[9px] font-black uppercase tracking-tight">NEW</span>
+                                 </Badge>
+                               );
+                             }
+                             const statuses = custBookings.map(b => (b.status || 'Pending').toLowerCase());
+                             
+                             let label = "PENDING";
+                             let color = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+                             let StatusIcon = Clock;
+                             
+                             if (statuses.includes('done')) { label = "DONE"; color = "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"; StatusIcon = Check; }
+                             else if (statuses.includes('in progress')) { label = "IN PROGRESS"; color = "bg-purple-500/10 text-purple-400 border-purple-500/30"; StatusIcon = Activity; }
+                             else if (statuses.includes('confirmed booking') || statuses.includes('confirmed')) { label = "CONFIRMED"; color = "bg-green-500/10 text-green-400 border-green-500/30"; StatusIcon = CalendarCheck; }
+                             else if (statuses.includes('tentative (hold)') || statuses.includes('tentative')) { label = "TENTATIVE"; color = "bg-amber-500/10 text-amber-500 border-amber-500/30"; StatusIcon = Clock; }
+                             else if (statuses.includes('rescheduled')) { label = "RESCHEDULED"; color = "bg-blue-500/10 text-blue-400 border-blue-500/30"; StatusIcon = RefreshCw; }
+                             else if (statuses.includes('blocked')) { label = "BLOCKED"; color = "bg-red-500/10 text-red-400 border-red-500/30"; StatusIcon = AlertCircle; }
+
+                             return (
+                               <Badge variant="outline" className={`h-5 ${color} gap-1 px-1.5 ml-2`}>
+                                 <StatusIcon className="h-3 w-3" />
+                                 <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
+                               </Badge>
+                             );
+                           })()}
                         </h3>
                         <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-400 mt-1 items-center">
                           <span>{customer.phone || 'No phone'}</span>
@@ -954,6 +1000,10 @@ export default function Prospects() {
                           <span className="hidden sm:inline">•</span>
                           <span className="text-zinc-500 text-[10px] sm:text-xs">
                             Added: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="text-zinc-500 text-[10px] sm:text-xs" title="Last Updated">
+                            Updated: {(customer.updated_at || (customer as any).updatedAt) ? new Date((customer.updated_at || (customer as any).updatedAt)).toLocaleString() : (customer.created_at ? new Date(customer.created_at).toLocaleString() : 'N/A')}
                           </span>
                         </div>
                       </div>

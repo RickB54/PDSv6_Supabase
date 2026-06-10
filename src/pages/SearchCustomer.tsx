@@ -62,7 +62,7 @@ const SearchCustomer = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'>('latest');
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const { items: allBookings } = useBookingsStore();
+  const { items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -140,6 +140,7 @@ const SearchCustomer = () => {
 
   useEffect(() => {
     refresh();
+    refreshBookings(true);
   }, [isDemoMode]);
 
   useEffect(() => {
@@ -736,14 +737,22 @@ const SearchCustomer = () => {
           {[...filteredCustomers]
             .sort((a, b) => {
               if (sortBy === 'latest') {
-                const daStr = (a as any).created_at || (a as any).createdAt || "";
-                const dbStr = (b as any).created_at || (b as any).createdAt || "";
-                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+                const getValidTime = (c: any) => {
+                  const d = c.created_at || c.createdAt;
+                  if (!d) return 0;
+                  const t = new Date(d).getTime();
+                  return isNaN(t) ? 0 : t;
+                };
+                return getValidTime(b) - getValidTime(a);
               }
               if (sortBy === 'updated') {
-                const daStr = (a as any).updated_at || (a as any).updatedAt || (a as any).created_at || "";
-                const dbStr = (b as any).updated_at || (b as any).updatedAt || (b as any).created_at || "";
-                return (dbStr ? new Date(dbStr).getTime() : 0) - (daStr ? new Date(daStr).getTime() : 0);
+                const getValidTime = (c: any) => {
+                  const d = c.updated_at || c.updatedAt || c.created_at || c.createdAt;
+                  if (!d) return 0;
+                  const t = new Date(d).getTime();
+                  return isNaN(t) ? 0 : t;
+                };
+                return getValidTime(b) - getValidTime(a);
               }
               if (sortBy === 'alpha') {
                 return (a.name || '').localeCompare(b.name || '');
@@ -847,7 +856,13 @@ const SearchCustomer = () => {
                            )}
                            {/* Dynamic Status Badge */}
                            {(() => {
-                             const custBookings = allBookings.filter(b => b.customerId === customer.id);
+                             const custBookings = allBookings.filter(b => 
+                               (b.customerId && b.customerId === customer.id) || 
+                               ((b as any).customer_id && (b as any).customer_id === customer.id) || 
+                               (b.customer && customer.name && b.customer.toLowerCase() === customer.name.toLowerCase()) ||
+                               (b.customerEmail && customer.email && b.customerEmail.toLowerCase() === customer.email.toLowerCase()) ||
+                               (b.customerPhone && customer.phone && b.customerPhone === customer.phone)
+                             );
                              if (custBookings.length === 0) {
                                return (
                                  <Badge variant="outline" className="h-5 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 gap-1 px-1.5 ml-2">
@@ -884,6 +899,10 @@ const SearchCustomer = () => {
                           <span className="hidden sm:inline">•</span>
                           <span className="text-zinc-500 text-[10px] sm:text-xs">
                             Added: {customer.created_at ? new Date(customer.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                          <span className="hidden sm:inline">•</span>
+                          <span className="text-zinc-500 text-[10px] sm:text-xs" title="Last Updated">
+                            Updated: {(customer.updated_at || (customer as any).updatedAt) ? new Date((customer.updated_at || (customer as any).updatedAt)).toLocaleString() : (customer.created_at ? new Date(customer.created_at).toLocaleString() : 'N/A')}
                           </span>
                         </div>
                       </div>
