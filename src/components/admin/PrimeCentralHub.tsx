@@ -532,7 +532,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold tracking-tight text-white">{format(new Date(), 'EEEE, MMMM do')}</h1>
                             <button 
-                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'prime-central-hub' } }))}
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics' } }))}
                                 className="p-1 text-zinc-500 hover:text-blue-400 transition-colors"
                                 title="Help & Documentation"
                             >

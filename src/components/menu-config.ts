@@ -54,7 +54,7 @@ export type MenuGroup = {
 };
 
 export const TOP_ITEMS: MenuItem[] = [
-    { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'admin-dashboard' },
+    { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'analytics' },
     { title: "Website Administration", url: "/website-admin", role: "admin", key: "website-admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
 ];
 
