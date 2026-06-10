@@ -226,6 +226,12 @@ export default function BookingsPage() {
 
   const fetchEngagements = useCallback(async () => {
     try {
+      const isDemo = localStorage.getItem("demo_mode_active") === "true";
+      if (isDemo) {
+        const { MOCK_ENGAGEMENTS } = await import('@/lib/demoMockData');
+        setEngagements(MOCK_ENGAGEMENTS);
+        return;
+      }
       const { data, error } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
       if (!error && data) setEngagements(data);
     } catch (e) {

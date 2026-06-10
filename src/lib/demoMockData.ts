@@ -71,6 +71,29 @@ export const MOCK_PROSPECTS = [
   }
 ];
 
+export const MOCK_ENGAGEMENTS = [
+  {
+    id: "demo-eng-1",
+    customer_id: "demo-cust-1",
+    type: "email",
+    original_type: "Welcome Email",
+    source: "System Outreach",
+    title: "Welcome to Prime Auto Detail",
+    content: "Hi John,\n\nWelcome to Prime Auto Detail! We are thrilled to have you.",
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+  },
+  {
+    id: "demo-eng-2",
+    customer_id: "demo-cust-2",
+    type: "sms",
+    original_type: "Appointment Reminder",
+    source: "Booking System",
+    title: "Appointment Reminder",
+    content: "Hi Sarah, this is a reminder for your upcoming detailing appointment.",
+    created_at: new Date(Date.now() - 3600000 * 24).toISOString()
+  }
+];
+
 export const MOCK_INVENTORY = {
   materials: [
     { id: "mat-1", name: "Premium Car Soap", brand: "Chemical Guys", quantity: 15, lowThreshold: 5, unit: "Gallon", price: 45.00, costPerItem: 45.00 },
