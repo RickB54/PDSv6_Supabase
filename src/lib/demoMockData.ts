@@ -115,8 +115,8 @@ export const MOCK_TASKS: any[] = [
 ];
 
 export const MOCK_INVOICES = [
-  { id: "demo-inv-1", customerName: "John Smith", total: 249.99, paymentStatus: "paid", createdAt: new Date().toISOString(), invoiceNumber: "INV-5001", paidAmount: 249.99 },
-  { id: "demo-inv-2", customerName: "Sarah Johnson", total: 1575.50, paymentStatus: "unpaid", createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), dueDate: new Date(Date.now() + 86400000 * 7).toISOString(), invoiceNumber: "INV-5002", paidAmount: 0 },
+  { id: "demo-inv-1", customerName: "John Smith", total: 249.99, paymentStatus: "paid", createdAt: new Date().toISOString(), invoiceNumber: "INV-5001", paidAmount: 249.99, services: [{ name: "Standard Interior Detail", price: 249.99 }] },
+  { id: "demo-inv-2", customerName: "Sarah Johnson", total: 1575.50, paymentStatus: "unpaid", createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), dueDate: new Date(Date.now() + 86400000 * 7).toISOString(), invoiceNumber: "INV-5002", paidAmount: 0, services: [{ name: "Prime Elite Package", price: 1575.50 }] },
 ];
 
 export const MOCK_EMPLOYEES = [
@@ -210,8 +210,8 @@ export const MOCK_PAYROLL = [
 ];
 
 export const MOCK_ESTIMATES = [
-  { id: "est-1", customer: "Michael Chen", service: "Multi-Stage Paint Correction", total: 850.00, status: "sent", date: new Date().toISOString() },
-  { id: "est-2", customer: "Linda Walker", service: "Interior Steam Cleaning", total: 175.00, status: "converted", date: new Date(Date.now() - 86400000 * 5).toISOString() }
+  { id: "est-1", customer: "Michael Chen", customerName: "Michael Chen", estimateNumber: "EST-6001", service: "Multi-Stage Paint Correction", services: [{ name: "Multi-Stage Paint Correction", price: 850.00 }], total: 850.00, status: "sent", date: new Date().toISOString() },
+  { id: "est-2", customer: "Linda Walker", customerName: "Linda Walker", estimateNumber: "EST-6002", service: "Interior Steam Cleaning", services: [{ name: "Interior Steam Cleaning", price: 175.00 }], total: 175.00, status: "converted", date: new Date(Date.now() - 86400000 * 5).toISOString() }
 ];
 
 export const MOCK_REPORTS = {
