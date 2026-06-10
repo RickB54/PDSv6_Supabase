@@ -30,7 +30,7 @@ import {
     X
 } from "lucide-react";
 import { FileText, CheckSquare } from "lucide-react";
-import { format, isToday, isThisWeek, isThisMonth, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, formatDistanceToNow } from 'date-fns';
+import { format, isToday, isThisWeek, isThisMonth, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Badge } from "@/components/ui/badge";
 import { HelpCircle } from "lucide-react";
@@ -145,7 +145,9 @@ const AVAILABLE_SHORTCUTS: Shortcut[] = [
 const DEFAULT_PINNED = ['reports', 'training', 'package-pricing', 'gallery'];
 
 export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction }) => {
-    const [timeScope, setTimeScope] = useState<'today' | 'week' | 'month'>('today');
+    const [timeScope, setTimeScope] = useState<'today' | 'week' | 'month' | 'year' | 'to-date' | 'custom'>('today');
+    const [customStartDate, setCustomStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [customEndDate, setCustomEndDate] = useState<string>(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
     const { items: bookings } = useBookingsStore();
     const { alerts } = useAlertsStore();
     const [invoices, setInvoices] = useState<any[]>([]);
@@ -313,7 +315,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     };
 
     // Filtered data based on scope
-    const scopedBookings = useMemo(() => {
+    const timeRange = useMemo(() => {
         const now = new Date();
         let start, end;
         if (timeScope === 'today') {
@@ -322,22 +324,38 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
         } else if (timeScope === 'week') {
             start = startOfWeek(now);
             end = endOfWeek(now);
-        } else {
+        } else if (timeScope === 'month') {
             start = startOfMonth(now);
             end = endOfMonth(now);
+        } else if (timeScope === 'year') {
+            start = startOfYear(now);
+            end = endOfYear(now);
+        } else if (timeScope === 'to-date') {
+            start = new Date(2000, 0, 1);
+            end = endOfToday();
+        } else {
+            start = customStartDate ? parseISO(customStartDate) : startOfMonth(now);
+            end = customEndDate ? parseISO(customEndDate) : endOfMonth(now);
+            if (!isNaN(end.getTime())) {
+                end.setHours(23, 59, 59, 999);
+            }
         }
+        return { start, end };
+    }, [timeScope, customStartDate, customEndDate]);
 
+    const scopedBookings = useMemo(() => {
+        const { start, end } = timeRange;
         return (activeBookings || []).filter(b => {
             if (!b) return false;
             // Exclude 'Generic Customer' and 'TEST Customer' from accounting/dashboard stats
             if (b.customer === 'Generic Customer' || b.customer === 'TEST Customer') return false;
             try {
                 const d = b.date ? parseISO(b.date) : new Date();
-                if (isNaN(d.getTime())) return false;
+                if (isNaN(d.getTime()) || isNaN(start.getTime()) || isNaN(end.getTime())) return false;
                 return isWithinInterval(d, { start, end });
             } catch { return false; }
         });
-    }, [activeBookings, timeScope]);
+    }, [activeBookings, timeRange]);
 
     const stats = useMemo(() => {
         const scheduled = scopedBookings.length;
@@ -405,14 +423,13 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     const summaryMetrics = useMemo(() => {
         try {
             const now = new Date();
-            const start = timeScope === 'today' ? startOfToday() : timeScope === 'week' ? startOfWeek(now) : startOfMonth(now);
-            const end = timeScope === 'today' ? endOfToday() : timeScope === 'week' ? endOfWeek(now) : endOfMonth(now);
+            const { start, end } = timeRange;
 
             const scopeBookings = (bookings || []).filter(b => {
                 if (!b) return false;
                 try {
                     const d = b.date ? parseISO(b.date) : null;
-                    return d && !isNaN(d.getTime()) && isWithinInterval(d, { start, end });
+                    return d && !isNaN(d.getTime()) && !isNaN(start.getTime()) && !isNaN(end.getTime()) && isWithinInterval(d, { start, end });
                 } catch { return false; }
             });
 
@@ -433,7 +450,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 if (inv.customerName === 'Generic Customer' || inv.customer_name === 'Generic Customer' || inv.customerName === 'TEST Customer' || inv.customer_name === 'TEST Customer') return false;
                 try {
                     const d = inv.createdAt ? parseISO(inv.createdAt) : null;
-                    return d && !isNaN(d.getTime()) && isWithinInterval(d, { start, end });
+                    return d && !isNaN(d.getTime()) && !isNaN(start.getTime()) && !isNaN(end.getTime()) && isWithinInterval(d, { start, end });
                 } catch { return false; }
             });
 
@@ -471,7 +488,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                 finance: { due: 0, balance: 0, collected: 0 }
             };
         }
-    }, [bookings, invoices, employees, timeScope]);
+    }, [bookings, invoices, employees, timeRange]);
 
     const weeklyDistribution = useMemo(() => {
         const now = new Date();
@@ -526,19 +543,38 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             {(stats?.scheduled || 0)} jobs scheduled · {(stats?.inProgress || 0)} in progress · ${(stats?.expectedRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} expected
                         </p>
                     </div>
-                    <div className="flex p-1 bg-zinc-900/50 rounded-lg border border-zinc-800">
-                        {(['today', 'week', 'month'] as const).map((scope) => (
-                            <button
-                                key={scope}
-                                onClick={() => setTimeScope(scope)}
-                                className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${timeScope === scope
-                                    ? 'bg-zinc-800 text-white shadow-sm'
-                                    : 'text-zinc-500 hover:text-zinc-300'
-                                    }`}
-                            >
-                                {scope.charAt(0).toUpperCase() + scope.slice(1)}
-                            </button>
-                        ))}
+                    <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-wrap p-1 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                            {(['today', 'week', 'month', 'year', 'to-date', 'custom'] as const).map((scope) => (
+                                <button
+                                    key={scope}
+                                    onClick={() => setTimeScope(scope)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${timeScope === scope
+                                        ? 'bg-zinc-800 text-white shadow-sm'
+                                        : 'text-zinc-500 hover:text-zinc-300'
+                                        }`}
+                                >
+                                    {scope === 'to-date' ? 'To Date' : scope.charAt(0).toUpperCase() + scope.slice(1)}
+                                </button>
+                            ))}
+                        </div>
+                        {timeScope === 'custom' && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                                <UIInput 
+                                    type="date" 
+                                    className="h-8 text-xs bg-zinc-900/50 border-zinc-800 text-zinc-300 w-auto" 
+                                    value={customStartDate} 
+                                    onChange={(e) => setCustomStartDate(e.target.value)} 
+                                />
+                                <span className="text-zinc-500 text-xs font-medium">to</span>
+                                <UIInput 
+                                    type="date" 
+                                    className="h-8 text-xs bg-zinc-900/50 border-zinc-800 text-zinc-300 w-auto" 
+                                    value={customEndDate} 
+                                    onChange={(e) => setCustomEndDate(e.target.value)} 
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
