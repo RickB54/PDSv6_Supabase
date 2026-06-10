@@ -1202,7 +1202,7 @@ export default function BookingsPage() {
         model: formData.vehicleModel,
         year: formData.vehicleYear,
         vehicleType: formData.vehicle,
-        type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done') ? 'customer' : 'prospect',
+        type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done' || formData.status === 'in_progress') ? 'customer' : 'prospect',
         updatedAt: new Date().toISOString()
       };
 

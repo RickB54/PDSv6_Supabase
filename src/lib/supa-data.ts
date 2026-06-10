@@ -789,7 +789,8 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,
         video_url: customer.videoUrl,
-        learning_center_url: customer.learningCenterUrl
+        learning_center_url: customer.learningCenterUrl,
+        updated_at: customer.updated_at || customer.updatedAt || new Date().toISOString()
     };
 
     // ONLY ADD THESE IF THEY WERE PASSED - AND WE'LL CATCH DB ERROR IF MISSING
