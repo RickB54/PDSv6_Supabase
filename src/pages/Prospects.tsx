@@ -942,7 +942,7 @@ export default function Prospects() {
 
                       <div>
                         <h3 className="font-bold text-zinc-200 text-lg flex items-center gap-2">
-                          {customer.name}
+                          {customer.accountType === 'Business' && customer.companyName ? customer.companyName : customer.name}
                           {customer.is_archived && (
                             <Badge variant="outline" className="h-5 bg-zinc-500/20 text-zinc-500 border-zinc-500/30 gap-1 px-1.5 ml-1">
                               <Archive className="h-3 w-3" />
@@ -987,6 +987,9 @@ export default function Prospects() {
                              );
                            })()}
                         </h3>
+                        {customer.accountType === 'Business' && customer.companyName && (
+                          <div className="text-xs font-medium text-zinc-500 mt-1 mb-0.5">Contact: {customer.name}</div>
+                        )}
                         <div className="flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-400 mt-1 items-center">
                           <span>{customer.phone || 'No phone'}</span>
                           {(customer.vehicle || customer.model) && (

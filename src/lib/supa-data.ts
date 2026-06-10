@@ -57,6 +57,8 @@ export interface Customer {
     email?: string;
     phone?: string;
     address?: string;
+    accountType?: string;
+    companyName?: string;
     vehicle_info?: any;
     vehicles?: Vehicle[]; // Support for multiple vehicles
     notes?: string;
@@ -355,7 +357,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                         } else if (yrE === yrV) {
                             const lenV = `${v.make} ${v.model}`.trim().length;
                             const lenE = `${existing.make} ${existing.model}`.trim().length;
-                            if (lenV > lenE) {
+                            if (lenV >= lenE) {
                                 allVehs[idx] = v; // Replace with the more detailed one
                             }
                         }
@@ -395,12 +397,14 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 },
                 notes: c.notes,
                 created_at: c.created_at,
+                accountType: c.account_type,
+                companyName: c.company_name,
                 type: c.type || 'customer',
                 is_archived: c.is_archived || false,
-                generalPhotos: c.general_photos && c.general_photos.length > 0 ? c.general_photos : (v.generalPhotos || []),
-                beforePhotos: c.before_photos && c.before_photos.length > 0 ? c.before_photos : (v.beforePhotos || []),
-                afterPhotos: c.after_photos && c.after_photos.length > 0 ? c.after_photos : (v.afterPhotos || []),
-                videoUrl: c.video_url || v.videoUrls?.[0] || '',
+                generalPhotos: c.general_photos || [],
+                beforePhotos: c.before_photos || [],
+                afterPhotos: c.after_photos || [],
+                videoUrl: c.video_url || '',
                 learningCenterUrl: c.learning_center_url || '',
                 videoNote: c.video_note || '',
                 howFound: c.how_found || '',
@@ -548,7 +552,7 @@ export const getCustomerDetailedHistory = async (customerId: string) => {
                             } else if (yrE === yrV) {
                                 const lenV = `${v.make} ${v.model}`.trim().length;
                                 const lenE = `${ex.make} ${ex.model}`.trim().length;
-                                if (lenV > lenE) {
+                                if (lenV >= lenE) {
                                     deduped[idx] = v;
                                 }
                             }
@@ -790,7 +794,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         after_photos: customer.afterPhotos,
         video_url: customer.videoUrl,
         learning_center_url: customer.learningCenterUrl,
-        updated_at: customer.updated_at || customer.updatedAt || new Date().toISOString()
+        updated_at: new Date().toISOString()
     };
 
     // ONLY ADD THESE IF THEY WERE PASSED - AND WE'LL CATCH DB ERROR IF MISSING
@@ -798,6 +802,8 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     if (customer.howFoundOther) payload.how_found_other = customer.howFoundOther;
     if (customer.conditionInside) payload.condition_inside = customer.conditionInside;
     if (customer.conditionOutside) payload.condition_outside = customer.conditionOutside;
+    if (customer.accountType) payload.account_type = customer.accountType;
+    if (customer.companyName) payload.company_name = customer.companyName;
 
     const customerId = (customer.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customer.id)) ? customer.id : undefined;
 
@@ -854,7 +860,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
                         } else if (yrE === yrV) {
                             const lenV = `${v.make} ${v.model}`.trim().length;
                             const lenE = `${ex.make} ${ex.model}`.trim().length;
-                            if (lenV > lenE) {
+                            if (lenV >= lenE) {
                                 uniqueIncoming[idx] = v;
                             }
                         }

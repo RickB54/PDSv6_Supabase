@@ -496,10 +496,29 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</h3>
                 <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Select value={form.accountType || 'Individual'} onValueChange={(val) => handleChange("accountType", val)}>
+                      <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                        <SelectValue placeholder="Account Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
+                        <SelectItem value="Individual">Individual</SelectItem>
+                        <SelectItem value="Business">Business</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.accountType === 'Business' && (
+                      <Input
+                        placeholder="Company / Business Name"
+                        className="bg-zinc-900 border-zinc-800 text-white"
+                        value={form.companyName || ''}
+                        onChange={(e) => handleChange("companyName", e.target.value)}
+                      />
+                    )}
+                  </div>
                   <Input
-                    placeholder="Full Name"
+                    placeholder="Full Name (Primary Contact)"
                     className="bg-zinc-900 border-zinc-800 text-white"
-                    value={form.name}
+                    value={form.name || ''}
                     onChange={(e) => handleChange("name", e.target.value)}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
