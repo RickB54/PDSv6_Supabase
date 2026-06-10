@@ -23,7 +23,7 @@ import { useFollowUpStore } from "@/store/followup";
 import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { getCurrentUser } from "@/lib/auth";
 import { auditEmployeeAction } from "@/lib/audit";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,7 +60,7 @@ const SearchCustomer = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<'latest'|'updated'|'alpha'|'status'>('latest');
+  const [sortBy, setSortBy] = useState<string>('latest');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const { items: allBookings, refresh: refreshBookings } = useBookingsStore();
   const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
@@ -359,7 +359,26 @@ const SearchCustomer = () => {
       (customer.vehicle || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (customer.year || '').includes(searchTerm);
-    return matchesSearch && filterByDate(customer);
+      
+    let matchesStatus = true;
+    if (sortBy.startsWith('filter_')) {
+      const targetStatus = sortBy.replace('filter_', '');
+      const custBookings = allBookings.filter(bk => 
+        (bk.customer && customer.name && bk.customer.toLowerCase() === customer.name.toLowerCase()) ||
+        (bk.customerEmail && customer.email && bk.customerEmail.toLowerCase() === customer.email.toLowerCase()) ||
+        (bk.customerPhone && customer.phone && bk.customerPhone === customer.phone)
+      );
+      if (targetStatus === 'new') {
+        matchesStatus = custBookings.length === 0;
+      } else {
+        const statuses = custBookings.map(bk => (bk.status || 'Pending').toLowerCase());
+        if (targetStatus === 'confirmed') matchesStatus = statuses.includes('confirmed booking') || statuses.includes('confirmed');
+        else if (targetStatus === 'tentative') matchesStatus = statuses.includes('tentative (hold)') || statuses.includes('tentative');
+        else matchesStatus = statuses.includes(targetStatus.replace('_', ' '));
+      }
+    }
+    
+    return matchesSearch && filterByDate(customer) && matchesStatus;
   });
 
   const handleDelete = async () => {
@@ -697,14 +716,28 @@ const SearchCustomer = () => {
               </Button>
             )}
             <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-              <SelectTrigger className="w-[140px] bg-zinc-950 border-zinc-800 text-zinc-300">
-                <SelectValue placeholder="Sort by..." />
+              <SelectTrigger className="w-[160px] bg-zinc-950 border-zinc-800 text-zinc-300">
+                <SelectValue placeholder="Sort or Filter..." />
               </SelectTrigger>
               <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-300">
-                <SelectItem value="latest">Latest</SelectItem>
-                <SelectItem value="updated">Last Updated</SelectItem>
-                <SelectItem value="alpha">Alphabetically</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
+                <SelectGroup>
+                  <SelectLabel className="text-zinc-500 font-black text-[9px] uppercase tracking-widest pl-2">Sort Options</SelectLabel>
+                  <SelectItem value="latest">Latest</SelectItem>
+                  <SelectItem value="updated">Last Updated</SelectItem>
+                  <SelectItem value="alpha">Alphabetically</SelectItem>
+                  <SelectItem value="status">Status Priority</SelectItem>
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel className="text-zinc-500 font-black text-[9px] uppercase tracking-widest pl-2 mt-2">Filter by Status</SelectLabel>
+                  <SelectItem value="filter_done">Done</SelectItem>
+                  <SelectItem value="filter_in progress">In Progress</SelectItem>
+                  <SelectItem value="filter_confirmed">Confirmed</SelectItem>
+                  <SelectItem value="filter_tentative">Tentative</SelectItem>
+                  <SelectItem value="filter_pending">Pending</SelectItem>
+                  <SelectItem value="filter_rescheduled">Rescheduled</SelectItem>
+                  <SelectItem value="filter_blocked">Blocked</SelectItem>
+                  <SelectItem value="filter_new">New (No Bookings)</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
             {filteredCustomers.length > 0 && (
