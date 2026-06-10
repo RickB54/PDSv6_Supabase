@@ -528,6 +528,67 @@ const procedures: ProcedurePage[] = [
       "A deletion is permanent and cannot be undone; use 'Archive' as your first course of action.",
       "Sharing Admin credentials is a violation of shop security policy and voids technical support."
     ]
+  },
+  {
+    id: "intake-workflows",
+    title: "09: Intake & Interactions",
+    icon: LayoutDashboard,
+    color: "from-blue-600 to-indigo-700",
+    summary: "The master workflows for taking in leads and creating bookings to ensure 100% database accuracy.",
+    sections: [
+      {
+        title: "1. Online Booking (Automatic)",
+        content: "When a customer books online, the system automatically checks Email, then Name, then Phone. If any match is found, it links to their existing record.",
+        subsections: [
+          {
+            title: "Your Actions",
+            content: "Check their customer card 'Booking Lifecycle' panel. If it shows the job, you're good. If it says 'No Booking Data Yet', edit the booking to select the correct customer profile.",
+            icon: CheckCircle2
+          }
+        ]
+      },
+      {
+        title: "2. Direct / Admin Booking",
+        content: "Never navigate to the Bookings page directly for a known customer. Always start by searching the Customer Profiles list.",
+        subsections: [
+          {
+            title: "The Workflow",
+            content: "Search Customer Profiles → Open Card → Click Green 'Book Job' button → Save → Log Activity.",
+            icon: Users
+          }
+        ]
+      },
+      {
+        title: "3. Website / Email Inquiry",
+        content: "Handle inquiries by creating a lead trail BEFORE booking.",
+        subsections: [
+          {
+            title: "The Workflow",
+            content: "Search → Log Activity (Inquiry) → Reply via Engagement Hub → On confirm, click 'Book Job' from their card.",
+            icon: Mail
+          }
+        ]
+      },
+      {
+        title: "4. Phone Call",
+        content: "Live phone calls require immediate search to prevent duplicate entry.",
+        subsections: [
+          {
+            title: "The Workflow",
+            content: "Search (or Create Profile) → Log Activity (Inbound Call) → Click 'Book Job' from their card → Save.",
+            icon: Search
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Always click the green 'Book Job' button on the customer's card to ensure their ID perfectly links to the booking.",
+      "Verify the link succeeded by looking at the 'Booking Lifecycle' panel on the right side of the customer card."
+    ],
+    warnings: [
+      "Never click the + button on the Bookings page unless it's a completely new customer.",
+      "Creating duplicate records is the #1 cause of lost service history and missing data."
+    ]
   }
 ];
 
