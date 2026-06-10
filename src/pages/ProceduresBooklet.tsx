@@ -531,7 +531,7 @@ const procedures: ProcedurePage[] = [
   },
   {
     id: "intake-workflows",
-    title: "09: Intake & Interactions",
+    title: "09: Intake & Interaction Workflows",
     icon: LayoutDashboard,
     color: "from-blue-600 to-indigo-700",
     summary: "The master workflows for taking in leads and creating bookings to ensure 100% database accuracy.",
