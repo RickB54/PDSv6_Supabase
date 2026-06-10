@@ -1174,29 +1174,6 @@ const SearchCustomer = () => {
                                        <span className="text-[9px] font-black uppercase tracking-tight">IDENTITY VERIFIED</span>
                                      </Badge>
                                    </div>
-                                   <div className="pt-2 pb-4">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full h-9 bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-blue-400 hover:bg-zinc-800 gap-2"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handlePreviewEmailForBooking({
-                                            customer: customer.name,
-                                            customerEmail: customer.email,
-                                            customerPhone: customer.phone,
-                                            address: customer.address,
-                                            vehicle: customer.vehicle,
-                                            vehicleYear: customer.year,
-                                            vehicleMake: customer.vehicle,
-                                            vehicleModel: customer.model,
-                                            service: 'Premium Detailing Service'
-                                          }, 'prospect');
-                                        }}
-                                      >
-                                        <Mail className="h-3.5 w-3.5" /> Preview Welcome Email
-                                      </Button>
-                                    </div>
                                    <div className="space-y-1.5">
                                       <div className="flex items-center justify-between">
                                         <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Profile Created:</span>

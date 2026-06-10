@@ -200,6 +200,7 @@ export default function BookingsPage() {
   const [engagements, setEngagements] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
+  const [selectedActivityLog, setSelectedActivityLog] = useState<any>(null);
   
   const handleSelectHistoryCustomer = (customerName: string | null) => {
     setSelectedHistoryCustomer(customerName);
@@ -3361,7 +3362,9 @@ export default function BookingsPage() {
                         No booking history yet. Create your first booking above!
                       </div>
                     ) : (
-                      uniqueCustomers.map((customer) => (
+                      uniqueCustomers
+                        .filter(customer => !selectedHistoryCustomer || selectedHistoryCustomer === customer.name)
+                        .map((customer) => (
                       <Collapsible
                         key={customer.name}
                         id={`history-customer-${customer.name.replace(/\s+/g, '-')}`}
@@ -3659,6 +3662,8 @@ export default function BookingsPage() {
                                           if (event.type === 'booking') {
                                             const original = items.find(i => i.id === event.id);
                                             if (original) handleBookingClick(e as any, original as any);
+                                          } else if (event.type === 'activity') {
+                                            setSelectedActivityLog(event);
                                           }
                                         }}
                                       >
@@ -4053,6 +4058,45 @@ export default function BookingsPage() {
         type={emailPreviewType}
         data={emailFormData}
       />
+
+      <Dialog open={!!selectedActivityLog} onOpenChange={(open) => !open && setSelectedActivityLog(null)}>
+        <DialogContent className="max-w-md bg-zinc-950 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              Activity Details
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col gap-1 border-b border-zinc-800 pb-4">
+              <div className="text-xs text-zinc-500 font-semibold tracking-wider uppercase">Source / Type</div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-purple-400 border-purple-900 bg-purple-500/10">
+                  {selectedActivityLog?.originalType || selectedActivityLog?.type}
+                </Badge>
+                <span className="text-sm text-zinc-400">{selectedActivityLog?.source}</span>
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-1 border-b border-zinc-800 pb-4">
+              <div className="text-xs text-zinc-500 font-semibold tracking-wider uppercase">Timestamp</div>
+              <div className="text-sm">
+                {selectedActivityLog?.date ? new Date(selectedActivityLog.date).toLocaleString() : 'N/A'}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-zinc-500 font-semibold tracking-wider uppercase">Content / Notes</div>
+              <div className="text-sm bg-zinc-900/50 p-3 rounded-md border border-zinc-800 whitespace-pre-wrap">
+                {selectedActivityLog?.content || selectedActivityLog?.notes || 'No content available.'}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedActivityLog(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
