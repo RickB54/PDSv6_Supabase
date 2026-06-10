@@ -599,6 +599,53 @@ export const manualBookingFlowTopic: HelpTopic = {
   section: 'system',
 };
 
+export const intakeWorkflowsTopic: HelpTopic = {
+  id: 'intake-workflows',
+  title: 'Intake & Interaction Workflows',
+  summary: 'The 4 correct methods for intaking new leads and bookings, ensuring perfect data linking and avoiding duplicates.',
+  content: [
+    '**The Golden Rule of Data Linking**: To prevent duplicates and keep customer histories complete, you must always follow the correct intake workflow based on how the customer contacted you.',
+    '',
+    '🌐 **1. ONLINE BOOKING — What happens automatically**',
+    'When a customer books online, the system runs a cascade automatically:',
+    '1. **Email match**',
+    '2. **Name match**',
+    '3. **Phone match** (strips formatting)',
+    '',
+    '*Your only action after an online booking arrives:*',
+    '1. **Confirm it appears in your calendar correctly.** Check service, date, vehicle. If the customer is recognized by any of the 3 fields, nothing else is needed. It is auto-linked.',
+    '2. **Open their customer card — check Booking Lifecycle panel.** If the panel shows the job, the link is confirmed. If it says "No Booking Data Yet", the booking landed on a duplicate.',
+    '3. **Optional — Log Activity.** "Online booking received — full interior, Thursday 9am." Keeps your interaction history complete.',
+    '',
+    '*If Booking Lifecycle still says "No Booking Data Yet" (Duplicate Fix):*',
+    'This only happens if they used a completely different email, name, AND phone than what is on file.',
+    '**Fix**: Open the booking → Edit → Select Customer dropdown → choose their correct master profile → save. Then go to Customer Profiles and delete the duplicate Prospect record.',
+    '',
+    '💼 **2. DIRECT / ADMIN BOOKING — Recommended flow**',
+    '1. **Always start in Customer Profiles — search first.** Even if you are certain who it is. This eliminates all duplicate problems.',
+    '2. **Open their card — tap the green "Book Job" button.** Never navigate to the Bookings page directly for a known customer.',
+    '3. **Fill in all job details — save the booking.** Add a booking note if anything unusual applies. Check the Booking Lifecycle panel to confirm the link is solid.',
+    '4. **Back to their card — Log Activity.** "Walk-in", "Repeat customer texted me". One line is enough.',
+    '',
+    '📧 **3. WEBSITE / EMAIL INQUIRY — Recommended flow**',
+    '1. **Read the inquiry fully before doing anything.** Keep the email open.',
+    '2. **Search Customer Profiles.** Check for existing record by name AND email.',
+    '3. **Open card (or create new) — tap Log Activity.** "Inbound email — wants full detail." Creates a lead trail.',
+    '4. **Reply via Engagement Hub.** Offer 1–2 time slots. Engagement Hub logs your reply automatically in the Correspondences tab.',
+    '5. **Once they confirm — tap "Book Job" from their card.**',
+    '6. **Log Activity again.** "Confirmed, booked for [date]". Full trail: inquiry → reply → confirmation → booking.',
+    '',
+    '📞 **4. PHONE CALL — Recommended flow**',
+    '1. **Go to Customer Profiles — search first.** Search by name, phone, or email before anything else. Even on a live call.',
+    '2. **Select existing — or create new.** If not found, click "+ Add" to create their profile first.',
+    '3. **Tap "Log Activity".** Quick note: "Inbound — wants full interior Thursday." This goes to the Activities tab.',
+    '4. **Tap the green "Book Job" button on their card.** Pre-fills their exact ID so it links perfectly.',
+    '5. **Fill in job details and save.** Verify Booking Lifecycle panel shows the job.',
+  ],
+  section: 'system',
+  relatedTopicIds: ['prospect-vs-customer', 'booking-flow'],
+};
+
 export const chemicalDescriptionTopic: HelpTopic = {
   id: 'chemical-description',
   title: 'Chemical Description & Tips',
@@ -632,6 +679,7 @@ export const chemicalDescriptionTopic: HelpTopic = {
 };
 
 export const adminMenuTopics: HelpTopic[] = [
+  intakeWorkflowsTopic,
   chemicalDescriptionTopic,
   vehicleManagementTopic,
   manualBookingFlowTopic,
