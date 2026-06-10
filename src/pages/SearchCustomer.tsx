@@ -895,6 +895,8 @@ const SearchCustomer = () => {
                                </Badge>
                              );
                            })()}
+                            </div>
+                          </div>
                         </div>
                         {customer.accountType === 'Business' && customer.companyName && (
                           <div className="text-xs font-medium text-zinc-500 mt-1.5 mb-0.5">Contact: {customer.name}</div>
@@ -1385,15 +1387,13 @@ const SearchCustomer = () => {
                           v.videoUrls?.forEach((url, idx) => addMedia(url, vLabel + ' - Video', 'video', { type: 'vehicle', field: 'videoUrls', vehicleIndex: vIdx, arrayIndex: idx, customerId: customer.id }, true));
                         });
                         
-                        if (allMedia.length === 0) return null;
-
                         const displayMedia = allMedia.slice(0, 12);
 
                         return (
                           <div className="mt-12 pt-8 border-t border-zinc-800/50">
                             <div className="flex items-center justify-between mb-6">
                               <h4 className="text-zinc-500 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                                <ImageIcon className="h-3 w-3" /> Media Archive ({allMedia.length} items)
+                                <ImageIcon className="h-3 w-3" /> Media Archive {allMedia.length > 0 ? `(${allMedia.length} items)` : ''}
                               </h4>
                                <div className="flex items-center gap-2">
                                 <Button 
@@ -1468,6 +1468,20 @@ const SearchCustomer = () => {
                                 </div>
                               )}
                             </div>
+                            
+                            {allMedia.length === 0 && (
+                              <div className="flex flex-col items-center justify-center p-8 border border-dashed border-zinc-800 rounded-2xl bg-zinc-950/30">
+                                <ImageIcon className="h-8 w-8 text-zinc-700 mb-3" />
+                                <p className="text-sm font-medium text-zinc-500 mb-4">No media uploaded yet</p>
+                                <Button 
+                                  variant="outline" 
+                                  className="h-8 text-xs font-bold border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                                  onClick={() => openEdit(customer, "media")}
+                                >
+                                  <Plus className="w-3 h-3 mr-1.5" /> UPLOAD PHOTO
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
