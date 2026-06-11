@@ -92,6 +92,7 @@ const Accounting = () => {
 
   const [deleteItemState, setDeleteItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string }>({ open: false, type: 'income', id: '' });
   const [editItemState, setEditItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string, amount: string }>({ open: false, type: 'income', id: '', amount: '' });
+  const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
   const [dateFilter, setDateFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
@@ -866,25 +867,43 @@ const Accounting = () => {
                     <div>
                       <h3 className="text-lg font-semibold text-green-600 mb-3">Credits (Income)</h3>
                       <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                        {filteredAndSortedInvoices.map(inv => (
-                          <div key={`inv-${inv.id}`} className="p-3 border rounded-lg bg-blue-50/50 flex justify-between items-center">
+                        {filteredAndSortedInvoices.map(inv => {
+                          const tipAmt = (inv as any).tipAmount || 0;
+                          const rawAmt = inv.paidAmount || inv.total;
+                          const serviceAmt = Math.max(0, rawAmt - tipAmt);
+                          return (
+                          <div
+                            key={`inv-${inv.id}`}
+                            className="p-3 border rounded-lg bg-blue-50/50 flex justify-between items-center cursor-pointer hover:bg-blue-100/60 transition-colors"
+                            onClick={() => setSelectedTransaction({ type: 'invoice', data: inv })}
+                          >
                             <div>
-                              <p className="font-semibold text-blue-700">+${(inv.paidAmount || inv.total).toFixed(2)}</p>
-                              <p className="text-sm">Paid Invoice #{String(inv.invoiceNumber || inv.id?.slice(0, 8))}</p>
+                              <p className="font-semibold text-blue-700">+${rawAmt.toFixed(2)}</p>
+                              <p className="text-sm">Paid Invoice #{String((inv as any).invoiceNumber || inv.id?.slice(0, 8))}</p>
+                              {tipAmt > 0 && (
+                                <p className="text-[11px] text-emerald-600 font-semibold">Includes ${tipAmt.toFixed(2)} Tip · Service: ${serviceAmt.toFixed(2)}</p>
+                              )}
                               <span className="text-[11px] font-black text-blue-500/80 mt-1 block uppercase tracking-widest">{new Date(inv.createdAt).toLocaleString()}</span>
                             </div>
+                            <span className="text-xs text-zinc-400 italic pr-1">tap for details</span>
                           </div>
-                        ))}
+                          );
+                        })}
                         {filteredAndSortedIncomes.map(income => (
-                          <div key={income.id} className="p-3 border rounded-lg bg-green-50/50 flex justify-between items-center">
+                          <div
+                            key={income.id}
+                            className="p-3 border rounded-lg bg-green-50/50 flex justify-between items-center cursor-pointer hover:bg-green-100/60 transition-colors"
+                            onClick={() => setSelectedTransaction({ type: 'income', data: income })}
+                          >
                             <div>
                               <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
                               <p className="text-sm">{income.description || 'Income'}</p>
                               <span className="text-[11px] font-black text-emerald-500/80 mt-1 block uppercase tracking-widest">{new Date(income.createdAt || income.date).toLocaleString()}</span>
                             </div>
-                            <div className="flex gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) })}><Pencil className="h-4 w-4" /></Button>
-                              <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteItemState({ open: true, type: 'income', id: income.id! })}><Trash2 className="h-4 w-4" /></Button>
+                            <div className="flex gap-1 items-center">
+                              <span className="text-xs text-zinc-400 italic pr-1">tap for details</span>
+                              <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditItemState({ open: true, type: 'income', id: income.id!, amount: String(income.amount || 0) }); }}><Pencil className="h-4 w-4" /></Button>
+                              <Button size="icon" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteItemState({ open: true, type: 'income', id: income.id! }); }}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           </div>
                         ))}
@@ -959,6 +978,60 @@ const Accounting = () => {
           <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="Category Name" />
           <DialogFooter>
             <Button onClick={handleCreateNewCategory}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction Breakdown Modal */}
+      <Dialog open={!!selectedTransaction} onOpenChange={(open) => !open && setSelectedTransaction(null)}>
+        <DialogContent className="sm:max-w-[480px] bg-zinc-950 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100 flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-emerald-400" />
+              Transaction Breakdown
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Full details for this {selectedTransaction?.type === 'invoice' ? 'invoice payment' : 'income entry'}.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTransaction?.type === 'invoice' && (() => {
+            const inv = selectedTransaction.data;
+            const tipAmt = inv.tipAmount || 0;
+            const rawAmt = inv.paidAmount || inv.total;
+            const serviceAmt = Math.max(0, rawAmt - tipAmt);
+            return (
+              <div className="py-2 space-y-2 text-sm">
+                <div className="rounded-lg bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800">
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Invoice #</span><span className="text-zinc-100 font-mono">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Customer</span><span className="text-zinc-100">{(inv as any).customerName || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Invoice Total</span><span className="text-zinc-100">${inv.total?.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Amount Paid (Total Received)</span><span className="text-zinc-100 font-bold">${rawAmt.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Service Revenue</span><span className="text-blue-400 font-semibold">${serviceAmt.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Tip (Internal)</span><span className="text-emerald-400 font-semibold">${tipAmt.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Payment Status</span><span className={`font-bold capitalize ${inv.paymentStatus === 'paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{inv.paymentStatus || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Date</span><span className="text-zinc-100">{new Date(inv.createdAt).toLocaleString()}</span></div>
+                </div>
+                <p className="text-[11px] text-zinc-600 italic text-center">Service Revenue = Amount Paid minus Tip. Tip is tracked separately in your budget.</p>
+              </div>
+            );
+          })()}
+          {selectedTransaction?.type === 'income' && (() => {
+            const inc = selectedTransaction.data;
+            return (
+              <div className="py-2 space-y-2 text-sm">
+                <div className="rounded-lg bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800">
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Description</span><span className="text-zinc-100">{inc.description || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Amount</span><span className="text-green-400 font-bold">${(inc.amount || 0).toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Category</span><span className="text-zinc-100">{inc.category || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Customer</span><span className="text-zinc-100">{inc.customerName || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Payment Method</span><span className="text-zinc-100 capitalize">{inc.paymentMethod || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Date</span><span className="text-zinc-100">{new Date(inc.date || inc.createdAt).toLocaleString()}</span></div>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSelectedTransaction(null)} className="text-zinc-400 hover:text-white">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
