@@ -647,17 +647,15 @@ const Invoicing = () => {
     } else if (cid && !eid && customers.length > 0) {
       setFilterCustomerId(cid);
       const cust = customers.find(c => c.id === cid);
-      if (cust && !isCustomerModalOpen && !isEditingInvoice) {
+      if (cust) {
         setSearchTerm(cust.name);
         setFilterVehicle("all");
-        setEditingCustomer(cust);
-        setIsCustomerModalOpen(true);
       }
     } else if (!cid) {
       setFilterCustomerId("");
       setFilterVehicle("all");
     }
-  }, [location.search, customers.length, invoices.length, isEditingInvoice, isCustomerModalOpen]);
+  }, [location.search, customers.length, invoices.length]);
 
   
   const buildCurrentEditedInvoice = (): Invoice => {
