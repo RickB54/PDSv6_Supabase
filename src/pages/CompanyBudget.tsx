@@ -279,23 +279,26 @@ const CompanyBudget = () => {
         };
 
         // 1. Invoices (Service Income) - Filter applied same as Chart
+        // NOTE: paidAmount may include tips - we subtract tipAmount to get true service revenue
         invoiceList.forEach(inv => {
-            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+            const tipAmt = (inv as any).tipAmount || 0;
+            const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
-            if (amt > 0 && filterByDate(inv.createdAt || inv.date)) {
+            const serviceAmt = Math.max(0, rawAmt - tipAmt);
+            if (serviceAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 addTx("Service Income", {
                     date: inv.createdAt || inv.date,
                     desc: `Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
-                    amount: amt,
+                    amount: serviceAmt,
                     cat: 'Invoice'
                 });
             }
-            if ((inv as any).tipAmount && (inv as any).tipAmount > 0 && filterByDate(inv.createdAt || inv.date)) {
+            if (tipAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 addTx("Tips", {
                     date: inv.createdAt || inv.date,
                     desc: `Tip on Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
-                    amount: (inv as any).tipAmount,
+                    amount: tipAmt,
                     cat: 'Invoice'
                 });
             }
@@ -338,18 +341,20 @@ const CompanyBudget = () => {
         const categoryMap = new Map<string, { amount: number; type: 'income' | 'expense' }>();
 
         // Process invoices (paid only)
+        // NOTE: paidAmount may include tips - subtract tipAmount for true service revenue
         invoices.forEach(inv => {
-            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+            const tipAmt = (inv as any).tipAmount || 0;
+            const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
+            const serviceAmt = Math.max(0, rawAmt - tipAmt);
 
-            if (amt > 0 && filterByDate(inv.createdAt || inv.date)) {
+            if (serviceAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 const cat = "Service Income";
                 const current = categoryMap.get(cat) || { amount: 0, type: 'income' as const };
-                categoryMap.set(cat, { amount: current.amount + amt, type: 'income' });
+                categoryMap.set(cat, { amount: current.amount + serviceAmt, type: 'income' });
             }
 
-            const tipAmt = (inv as any).tipAmount || 0;
             if (tipAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 const tipCat = "Tips";
                 const currentTip = categoryMap.get(tipCat) || { amount: 0, type: 'income' as const };
@@ -622,12 +627,36 @@ const CompanyBudget = () => {
         doc.text("Income Breakdown", 14, yPos);
         yPos += 8;
 
-        const incomeRows = incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).map(i => [
+        const manualIncomeRows = incomeList.filter(i => filterByDate(i.date || i.createdAt || '')).map(i => [
             (i.date || i.createdAt || '').slice(0, 10),
             i.category || 'General',
             i.description || '-',
             `$${i.amount.toFixed(2)}`
         ]);
+
+        const invoiceRows = invoiceList.filter(inv => {
+            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
+                : 0;
+            return amt > 0 && filterByDate(inv.createdAt || inv.date);
+        }).map(inv => [
+            (inv.createdAt || inv.date || '').slice(0, 10),
+            'Service Income',
+            `Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
+            `$${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}`
+        ]);
+
+        const tipRows = invoiceList.filter(inv => {
+            const tipAmt = (inv as any).tipAmount || 0;
+            return tipAmt > 0 && filterByDate(inv.createdAt || inv.date);
+        }).map(inv => [
+            (inv.createdAt || inv.date || '').slice(0, 10),
+            'Tips',
+            `Tip on Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
+            `$${((inv as any).tipAmount).toFixed(2)}`
+        ]);
+
+        const incomeRows = [...manualIncomeRows, ...invoiceRows, ...tipRows].sort((a, b) => new Date(b[0] as string).getTime() - new Date(a[0] as string).getTime());
 
         autoTable(doc, {
             startY: yPos,
@@ -1045,11 +1074,13 @@ const CompanyBudget = () => {
                                                         const incomeByCategory = new Map<string, any[]>();
                                                         const search = ledgerSearch.toLowerCase();
 
-                                                        // Add paid invoices
+                                                        // Add paid invoices (service income = paidAmount - tipAmount)
                                                         invoiceList.filter(inv => {
-                                                            const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                            const tipAmt = (inv as any).tipAmount || 0;
+                                                            const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                 : 0;
+                                                            const amt = Math.max(0, rawAmt - tipAmt);
                                                             if (amt <= 0 || !filterByDate(inv.createdAt || inv.date)) return false;
                                                             
                                                             if (search) {
@@ -1063,6 +1094,23 @@ const CompanyBudget = () => {
                                                             const category = 'Invoice';
                                                             if (!incomeByCategory.has(category)) incomeByCategory.set(category, []);
                                                             incomeByCategory.get(category)!.push({ type: 'invoice', data: inv });
+
+                                                            const tipAmt = (inv as any).tipAmount || 0;
+                                                            if (tipAmt > 0) {
+                                                                const tipCategory = 'Tips';
+                                                                if (!incomeByCategory.has(tipCategory)) incomeByCategory.set(tipCategory, []);
+                                                                incomeByCategory.get(tipCategory)!.push({
+                                                                    type: 'income',
+                                                                    data: {
+                                                                        id: `tip-${inv.id}`,
+                                                                        date: inv.createdAt || inv.date,
+                                                                        createdAt: inv.createdAt || inv.date,
+                                                                        amount: tipAmt,
+                                                                        category: 'Tips',
+                                                                        description: `Tip on Invoice #${inv.invoiceNumber || 'Paid'}`
+                                                                    }
+                                                                });
+                                                            }
                                                         });
 
                                                         // Add manual income
@@ -1112,9 +1160,11 @@ const CompanyBudget = () => {
                                                             const subtotal = items.reduce((sum, item) => {
                                                                 if (item.type === 'invoice') {
                                                                     const inv = item.data;
-                                                                    return sum + ((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                    const tipA = (inv as any).tipAmount || 0;
+                                                                    const rawA = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                         ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
-                                                                        : 0);
+                                                                        : 0;
+                                                                    return sum + Math.max(0, rawA - tipA);
                                                                 } else {
                                                                     return sum + (item.data.amount || 0);
                                                                 }
@@ -1125,12 +1175,15 @@ const CompanyBudget = () => {
                                                                     {items.map((item, idx) => {
                                                                         if (item.type === 'invoice') {
                                                                             const inv = item.data;
-                                                                            return (
+                                                                            const invTipAmt = (inv as any).tipAmount || 0;
+                                                                        const invRawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0;
+                                                                        const invServiceAmt = Math.max(0, invRawAmt - invTipAmt);
+                                                                        return (
                                                                                 <TableRow key={`inv-${inv.id}`}>
                                                                                     <TableCell className="text-xs sm:text-sm">{(inv.createdAt || inv.date || '').slice(5, 10)}</TableCell>
                                                                                     <TableCell className="hidden sm:table-cell"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Invoice</span></TableCell>
                                                                                     <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">Paid Invoice</TableCell>
-                                                                                    <TableCell className="text-xs sm:text-sm">${((inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0).toFixed(2)}</TableCell>
+                                                                                    <TableCell className="text-xs sm:text-sm">${invServiceAmt.toFixed(2)}</TableCell>
                                                                                     <TableCell>
                                                                                         {/* Invoices are read-only here */}
                                                                                     </TableCell>
@@ -1647,18 +1700,37 @@ const CompanyBudget = () => {
                                                                                 // Invoices logic for Service Income
                                                                                 if (catName === 'Service Income') {
                                                                                     const invs = invoiceList.filter(inv => {
-                                                                                        const amt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
+                                                                                        const tipA = (inv as any).tipAmount || 0;
+                                                                                        const rawA = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                                             ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                                             : 0;
+                                                                                        const serviceA = Math.max(0, rawA - tipA);
                                                                                         const d = inv.createdAt || inv.date || '';
-                                                                                        return amt > 0 && d.startsWith(relevantMonth);
+                                                                                        return serviceA > 0 && d.startsWith(relevantMonth);
+                                                                                    }).map(i => {
+                                                                                        const tipA = (i as any).tipAmount || 0;
+                                                                                        const rawA = i.paidAmount || (i.paymentStatus === 'paid' ? i.total : 0);
+                                                                                        return {
+                                                                                            date: i.createdAt || i.date,
+                                                                                            desc: `Invoice #${(i as any).invoiceNumber || 'Paid'}`,
+                                                                                            amount: Math.max(0, rawA - tipA),
+                                                                                            cat: 'Invoice'
+                                                                                        };
+                                                                                    });
+                                                                                    allTx = [...allTx, ...invs];
+                                                                                }
+                                                                                if (catName === 'Tips') {
+                                                                                    const tips = invoiceList.filter(inv => {
+                                                                                        const tipAmt = (inv as any).tipAmount || 0;
+                                                                                        const d = inv.createdAt || inv.date || '';
+                                                                                        return tipAmt > 0 && d.startsWith(relevantMonth);
                                                                                     }).map(i => ({
                                                                                         date: i.createdAt || i.date,
-                                                                                        desc: `Invoice #${(i as any).invoiceNumber || 'Paid'}`,
-                                                                                        amount: (i.paidAmount || (i.paymentStatus === 'paid' ? i.total : 0)),
+                                                                                        desc: `Tip on Invoice #${(i as any).invoiceNumber || 'Paid'}`,
+                                                                                        amount: (i as any).tipAmount,
                                                                                         cat: 'Invoice'
                                                                                     }));
-                                                                                    allTx = [...allTx, ...invs];
+                                                                                    allTx = [...allTx, ...tips];
                                                                                 }
                                                                                 // Manual Income for this cat
                                                                                 const incs = incomeList.filter(i => {
