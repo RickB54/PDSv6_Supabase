@@ -76,6 +76,7 @@ interface Invoice {
     amount: number;
     code?: string;
   };
+  adjustment?: number;
   notes?: string;
   isSent?: boolean;
   sentDate?: string;
@@ -604,11 +605,11 @@ const Invoicing = () => {
     const enrichedInv = { ...inv, vehicle: resolvedVehicle };
     setSelectedInvoice(enrichedInv);
     
-    // Extract adjustment amount from services
-    let adjAmount = 0;
+    // Extract adjustment amount from services (legacy) or property
+    let adjAmount = inv.adjustment || 0;
     const services = Array.isArray(inv.services) ? inv.services.filter(s => {
       if (s.name === "Adjusted") {
-        adjAmount = Math.abs(s.price);
+        if (!inv.adjustment) adjAmount = Math.abs(s.price);
         return false;
       }
       return true;
@@ -670,13 +671,9 @@ const Invoicing = () => {
     let newTotal = subtotal - finalDiscountAmount - editAdjustmentAmount;
     if (newTotal < 0) newTotal = 0;
 
-    const finalServices = editAdjustmentAmount > 0 
-      ? [...editServices, { name: "Adjusted", price: -Math.abs(editAdjustmentAmount) }] 
-      : editServices;
-
     const updated: Invoice = { 
       ...selectedInvoice, 
-      services: finalServices, 
+      services: editServices, 
       vehicle: editVehicle,
       notes: editNotes,
       isSent: editIsSent,
@@ -688,7 +685,8 @@ const Invoicing = () => {
         value: editDiscountValue,
         amount: finalDiscountAmount,
         code: editDiscountCode || undefined
-      } : undefined
+      } : undefined,
+      adjustment: editAdjustmentAmount > 0 ? editAdjustmentAmount : undefined
     };
 
     if (updated.paidAmount && updated.paidAmount >= newTotal) {
@@ -856,6 +854,16 @@ const Invoicing = () => {
       doc.setTextColor(0, 0, 0);
     }
 
+    if (invoice.adjustment && invoice.adjustment > 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Adjusted:", 165, y, { align: "right" });
+      doc.text(`-$${invoice.adjustment.toFixed(2)}`, 180, y, { align: "right" });
+      y += 7;
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+    }
+
     doc.text("Total Amount:", 125, y);
     doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
     y += 8;
@@ -962,9 +970,22 @@ const Invoicing = () => {
     const subtotal = inv.services.reduce((sum, s) => sum + s.price, 0);
 
     let summaryText = `Total: $${inv.total.toFixed(2)}`;
-    if (inv.discount && inv.discount.amount > 0) {
-      const discountSub = inv.total + inv.discount.amount;
-      summaryText = `Subtotal: $${discountSub.toFixed(2)}\nDiscount: -$${inv.discount.amount.toFixed(2)}\nTotal: $${inv.total.toFixed(2)}`;
+    if ((inv.discount && inv.discount.amount > 0) || (inv.adjustment && inv.adjustment > 0)) {
+      let baseSub = inv.total;
+      if (inv.discount) baseSub += inv.discount.amount;
+      if (inv.adjustment) baseSub += inv.adjustment;
+      
+      summaryText = `Subtotal: $${baseSub.toFixed(2)}\n`;
+      if (inv.discount && inv.discount.amount > 0) {
+        const dLabel = (inv.discount.code && inv.discount.code !== 'CUSTOM') 
+          ? `${inv.discount.code} (${inv.discount.type === 'percent' ? `${inv.discount.value}%` : `$${inv.discount.value}`} Off):`
+          : 'Discount:';
+        summaryText += `${dLabel} -$${inv.discount.amount.toFixed(2)}\n`;
+      }
+      if (inv.adjustment && inv.adjustment > 0) {
+        summaryText += `Adjustment: -$${inv.adjustment.toFixed(2)}\n`;
+      }
+      summaryText += `Total: $${inv.total.toFixed(2)}`;
     }
 
     let notesText = "";
