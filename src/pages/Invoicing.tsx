@@ -2243,54 +2243,26 @@ Precision. Protection. Perfection.`;
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-zinc-800 w-full">
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <Button variant="outline" className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10" onClick={() => {
-                      const currentInv = {
-                        ...selectedInvoice,
-                        services: editServices,
-                        vehicle: editVehicle,
-                        notes: editNotes,
-                        serviceDate: serviceDate,
-                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
-                      };
-                      generatePDF(currentInv as Invoice, false);
+                      const currentInv = buildCurrentEditedInvoice();
+                      generatePDF(currentInv, false);
                     }}>
                       <Eye className="h-4 w-4 mr-2" /> Preview
                     </Button>
                     <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
-                      const currentInv = {
-                        ...selectedInvoice,
-                        services: editServices,
-                        vehicle: editVehicle,
-                        notes: editNotes,
-                        serviceDate: serviceDate,
-                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
-                      };
-                      generatePDF(currentInv as Invoice, false);
+                      const currentInv = buildCurrentEditedInvoice();
+                      generatePDF(currentInv, false);
                     }}>
                       <Printer className="h-4 w-4 mr-2" /> Print
                     </Button>
                     <Button variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-300" onClick={() => {
-                      const currentInv = {
-                        ...selectedInvoice,
-                        services: editServices,
-                        vehicle: editVehicle,
-                        notes: editNotes,
-                        serviceDate: serviceDate,
-                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
-                      };
-                      generatePDF(currentInv as Invoice, true);
+                      const currentInv = buildCurrentEditedInvoice();
+                      generatePDF(currentInv, true);
                     }}>
                       <Save className="h-4 w-4 mr-2" /> Save to PDF
                     </Button>
                     <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:bg-zinc-900" onClick={() => {
-                       const currentInv = {
-                        ...selectedInvoice,
-                        services: editServices,
-                        vehicle: editVehicle,
-                        notes: editNotes,
-                        serviceDate: serviceDate,
-                        total: editServices.reduce((sum, s) => sum + s.price, 0) - (selectedInvoice.discount?.amount || 0)
-                      };
-                      openEmailModal(currentInv as Invoice);
+                       const currentInv = buildCurrentEditedInvoice();
+                      openEmailModal(currentInv);
                     }}>
                       <Mail className="h-4 w-4 mr-2" /> Preview Email
                     </Button>
