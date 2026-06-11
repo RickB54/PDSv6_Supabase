@@ -935,12 +935,12 @@ const SearchCustomer = () => {
                              let color = "bg-blue-500/10 text-blue-400 border-blue-500/30";
                              let StatusIcon = Clock;
                              
-                             if (statuses.includes('done')) { label = "DONE"; color = "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"; StatusIcon = Check; }
-                             else if (statuses.includes('in progress')) { label = "IN PROGRESS"; color = "bg-purple-500/10 text-purple-400 border-purple-500/30"; StatusIcon = Activity; }
+                             if (statuses.includes('in progress')) { label = "IN PROGRESS"; color = "bg-purple-500/10 text-purple-400 border-purple-500/30"; StatusIcon = Activity; }
                              else if (statuses.includes('confirmed booking') || statuses.includes('confirmed')) { label = "CONFIRMED"; color = "bg-green-500/10 text-green-400 border-green-500/30"; StatusIcon = CalendarCheck; }
                              else if (statuses.includes('tentative (hold)') || statuses.includes('tentative')) { label = "TENTATIVE"; color = "bg-amber-500/10 text-amber-500 border-amber-500/30"; StatusIcon = Clock; }
                              else if (statuses.includes('rescheduled')) { label = "RESCHEDULED"; color = "bg-blue-500/10 text-blue-400 border-blue-500/30"; StatusIcon = RefreshCw; }
                              else if (statuses.includes('blocked')) { label = "BLOCKED"; color = "bg-red-500/10 text-red-400 border-red-500/30"; StatusIcon = AlertCircle; }
+                             else if (statuses.includes('done') || statuses.includes('completed')) { label = "DONE"; color = "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"; StatusIcon = Check; }
 
                              return (
                                <Badge variant="outline" className={`h-5 ${color} gap-1 px-1.5 ml-2`}>

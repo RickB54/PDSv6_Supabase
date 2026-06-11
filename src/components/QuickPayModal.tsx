@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
 import { getUnifiedCustomers } from '@/lib/customers';
+import { upsertSupabaseCustomer, upsertSupabaseInvoice, upsertSupabaseIncome } from '@/lib/supa-data';
+import { generateInvoiceNumber } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * QuickPayModal
@@ -11,6 +14,7 @@ import { getUnifiedCustomers } from '@/lib/customers';
  */
 export default function QuickPayModal() {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
   
   // Phase 1: Enter Amount, Phase 2: Tip Selection
   const [phase, setPhase] = useState<1 | 2>(1);
@@ -96,6 +100,56 @@ export default function QuickPayModal() {
         customerId={selectedCustomerId || null}
         onCancel={handleClose}
         finalTime={(isExactSuggested && suggestedTime) ? suggestedTime : undefined}
+        onCashPayment={async (tip) => {
+          const baseAmount = parseFloat(amountStr) || 0;
+          const totalPaid = baseAmount + tip;
+          const customerName = customers.find(c => c.id === selectedCustomerId)?.name || "Walk-In Customer";
+
+          // Generate Invoice
+          const invoiceData = {
+            invoiceNumber: generateInvoiceNumber(),
+            customerId: selectedCustomerId,
+            customerName: customerName,
+            vehicle: "Various/Quick Pay",
+            services: [{ name: 'Quick Pay Service', price: baseAmount }],
+            total: baseAmount,
+            tipAmount: tip,
+            date: new Date().toLocaleDateString(),
+            createdAt: new Date().toISOString(),
+            paymentStatus: 'paid',
+            paidAmount: totalPaid
+          };
+
+          // Generate Income Record
+          const incomeData = {
+            amount: totalPaid,
+            date: new Date().toISOString().slice(0, 10),
+            category: "Quick Pay",
+            description: `Quick Pay (Base: $${baseAmount.toFixed(2)}, Tip: $${tip.toFixed(2)})`,
+            customerName: customerName,
+            paymentMethod: "Cash"
+          };
+
+          try {
+            await upsertSupabaseInvoice(invoiceData);
+            await upsertSupabaseIncome(incomeData);
+            toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Invoice & Accounting updated.` });
+          } catch (e) {
+            console.error("Failed to record cash payment:", e);
+            toast({ title: 'Error', description: 'Failed to record payment in accounting.', variant: 'destructive' });
+          }
+
+          handleClose();
+          if (selectedCustomerId) {
+            try {
+              await upsertSupabaseCustomer({
+                id: selectedCustomerId,
+                updated_at: new Date().toISOString()
+              });
+              window.dispatchEvent(new Event('bookings-updated'));
+            } catch(e) {}
+          }
+        }}
       />
     );
   }

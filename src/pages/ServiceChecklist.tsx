@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCouponsStore } from "@/store/coupons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ import {
   upsertSupabaseBooking,
   upsertSupabaseEstimate,
   deleteSupabaseBooking,
+  supabase,
   Customer as CustomerType
 } from "@/lib/supa-data";
 import { generateInvoiceNumber } from "@/lib/utils";
@@ -186,6 +189,14 @@ const ServiceChecklist = () => {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [discountType, setDiscountType] = useState<"percent" | "dollar">("percent");
   const [discountValue, setDiscountValue] = useState("");
+  const [discountMethod, setDiscountMethod] = useState<'coupon' | 'custom'>('custom');
+  const [discountCode, setDiscountCode] = useState("");
+  const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
+  
+  useEffect(() => {
+    refreshCoupons();
+  }, [refreshCoupons]);
+  
   const [destinationFee, setDestinationFee] = useState(0);
   const [notes, setNotes] = useState("");
   const [aiProcessing, setAiProcessing] = useState(false);
@@ -502,7 +513,7 @@ const ServiceChecklist = () => {
         setLiveNow(now);
         updateElapsedTime(now, jobStartTime, totalElapsedMs);
         // Sync to localStorage for Quick Pay
-        localStorage.setItem('recent_service_time', elapsedTime);
+        localStorage.setItem('recent_service_time', getAdjustedTime());
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -1568,6 +1579,19 @@ const ServiceChecklist = () => {
     return value;
   };
 
+  const getAdjustedTime = () => {
+    // If the timer has bare minimum progress, substitute it with fixed times
+    if (totalElapsedMs < 60000 || elapsedTime === '00:00:00' || elapsedTime.startsWith('00:00:')) {
+      const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 
+                     getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || '';
+      const lower = pkgName.toLowerCase();
+      if (lower.includes('full')) return '2 hr 30 min';
+      if (lower.includes('interior')) return '1 hr 30 min';
+      if (lower.includes('exterior')) return '1 hr';
+      return '1 hr'; // fallback
+    }
+    return elapsedTime;
+  };
   const calculateTotal = () => {
     return Math.max(0, calculateSubtotal() - calculateDiscount());
   };
@@ -1978,6 +2002,17 @@ const ServiceChecklist = () => {
       const idToUse = await saveGenericChecklist('completed');
       if (!idToUse) {
         throw new Error('Persistence Error: Checklist could not be saved to history. Check your connection.');
+      }
+
+      // Update Booking Status to 'done' if the id is a valid UUID
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idToUse)) {
+        try {
+          step = 'update_booking_status';
+          await supabase.from('bookings').update({ status: 'done' }).eq('id', idToUse);
+          window.dispatchEvent(new Event('bookings-updated'));
+        } catch (e) {
+          console.warn("Failed to update booking status to done:", e);
+        }
       }
 
       // Handle Mileage Logging
@@ -3704,29 +3739,111 @@ const ServiceChecklist = () => {
             {/* Collapsible Discount Controls */}
             {discountExpanded && (
               <div className="mb-4 p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg animate-in slide-in-from-top-2 duration-200">
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <Label className="text-zinc-400 mb-1.5 block">Discount Type</Label>
-                    <div className="relative">
-                      <select
-                        value={discountType}
-                        onChange={(e) => setDiscountType(e.target.value as "percent" | "dollar")}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm appearance-none"
-                      >
-                        <option value="percent">Percentage (%)</option>
-                        <option value="dollar">Dollar Amount ($)</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-zinc-400 mb-1.5 block">Discount Value</Label>
-                    <Input
-                      type="number"
-                      placeholder={discountType === "percent" ? "e.g., 10" : "e.g., 20"}
-                      value={discountValue}
-                      onChange={(e) => setDiscountValue(e.target.value)}
-                    />
+                <div className="space-y-4">
+                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Apply Discount</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <Select value={discountMethod} onValueChange={(val: 'coupon' | 'custom') => {
+                      setDiscountMethod(val);
+                      if (val === 'coupon') {
+                        const first = coupons.find(c => c.active)?.code || '';
+                        setDiscountCode(first);
+                        const matched = coupons.find(c => c.code === first);
+                        if (matched) {
+                          setDiscountType(matched.percent ? 'percent' : 'dollar');
+                          setDiscountValue(String(matched.percent || matched.amount || 0));
+                        }
+                      } else {
+                        setDiscountCode('');
+                        setDiscountType('dollar');
+                        setDiscountValue('');
+                      }
+                    }}>
+                      <SelectTrigger className="col-span-2 sm:col-span-1 bg-zinc-900 border-zinc-800 h-9 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="coupon">Coupon Code</SelectItem>
+                        <SelectItem value="custom">Manual Amount</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {discountMethod === 'coupon' ? (
+                      <div className="col-span-2 sm:col-span-4 flex flex-col gap-2">
+                        <Select
+                          value={(discountCode && coupons.some(c => c.code === discountCode)) ? discountCode : (discountCode ? 'CUSTOM_CODE' : '')}
+                          onValueChange={(val) => {
+                            if (val === 'CUSTOM_CODE') {
+                              setDiscountCode('CUSTOM');
+                              setDiscountType('dollar');
+                              setDiscountValue('');
+                            } else {
+                              setDiscountCode(val);
+                              const matched = coupons.find(c => c.code === val);
+                              if (matched) {
+                                setDiscountType(matched.percent ? 'percent' : 'dollar');
+                                setDiscountValue(String(matched.percent || matched.amount || 0));
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-xs">
+                            <SelectValue placeholder="Select Coupon..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {coupons.filter(c => c.active).map(c => (
+                              <SelectItem key={c.code} value={c.code}>
+                                {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="CUSTOM_CODE" className="text-zinc-500 italic">Enter Custom Code...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {((discountCode && !coupons.some(c => c.code === discountCode)) || discountCode === 'CUSTOM') && (
+                          <Input
+                            type="text"
+                            placeholder="Enter Custom Code..."
+                            value={discountCode === 'CUSTOM' ? '' : discountCode}
+                            onChange={(e) => {
+                              const codeVal = e.target.value.toUpperCase();
+                              setDiscountCode(codeVal);
+                              const matched = coupons.find(c => c.code === codeVal);
+                              if (matched) {
+                                setDiscountType(matched.percent ? 'percent' : 'dollar');
+                                setDiscountValue(String(matched.percent || matched.amount || 0));
+                              } else {
+                                setDiscountType('dollar');
+                                setDiscountValue('');
+                              }
+                            }}
+                            className="h-9 bg-zinc-900 border-zinc-800 text-zinc-200 uppercase text-xs"
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="col-span-2 sm:col-span-4 flex gap-2">
+                        <Select value={discountType} onValueChange={(val: 'percent' | 'dollar') => setDiscountType(val)}>
+                          <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-800 h-9 text-xs shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="percent">Percent (%)</SelectItem>
+                            <SelectItem value="dollar">Dollar ($)</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <div className="relative flex-1">
+                          {discountType === 'dollar' && <span className="absolute left-3 top-2 text-zinc-500 text-xs">$</span>}
+                          <Input
+                            type="number"
+                            placeholder={discountType === 'percent' ? "e.g. 10" : "e.g. 25"}
+                            className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-xs ${discountType === 'dollar' ? 'pl-7' : ''}`}
+                            value={discountValue}
+                            onChange={e => setDiscountValue(e.target.value)}
+                          />
+                          {discountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-xs">%</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3765,7 +3882,7 @@ const ServiceChecklist = () => {
                      try { 
                        localStorage.setItem('recent_service_amount', t.toFixed(2)); 
                        localStorage.setItem('recent_service_job_id', checklistId || '');
-                       localStorage.setItem('recent_service_time', elapsedTime);
+                       localStorage.setItem('recent_service_time', getAdjustedTime());
                      } catch(e) {}
                      return t.toFixed(2);
                   })()}
@@ -3964,7 +4081,7 @@ const ServiceChecklist = () => {
           remainingBalanceInCents={Math.round(calculateTotal() * 100)}
           clientUrl={window.location.origin}
           onCancel={() => setShowTipScreen(false)}
-          finalTime={elapsedTime}
+          finalTime={getAdjustedTime()}
           onCashPayment={async (tip) => {
             toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Job Complete!` });
             setShowTipScreen(false);
