@@ -76,10 +76,10 @@ export const PaymentDialog = ({ open, onOpenChange, invoice, paymentAmount, setP
           {/* Tip Amount — clearly separate */}
           <div>
             <Label htmlFor="tip" className="text-emerald-400 font-semibold">
-              Tip Amount (Internal Only — Never on Invoice)
+              Tip Amount (Not Printed on Customer Invoice)
             </Label>
             <p className="text-[11px] text-zinc-500 mb-2">
-              Tip is tracked separately for your records. It does NOT change the invoice total.
+              Tips <strong className="text-zinc-300">ARE counted</strong> in your income, budget (Tips category), and accounting totals. They just do not print on the customer&apos;s PDF invoice.
             </p>
             <Input
               id="tip"
