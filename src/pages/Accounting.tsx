@@ -141,6 +141,9 @@ const Accounting = () => {
       const now = new Date();
       const today = now.toDateString();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+      startOfWeek.setHours(0, 0, 0, 0);
 
       let daily = 0, weekly = 0, monthly = 0, totalRev = 0;
 
@@ -153,10 +156,15 @@ const Accounting = () => {
       });
       
       paidInvoices.forEach(inv => {
-        const amt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
+        // Subtract tipAmount so service revenue is accurate
+        const tipAmt = (inv as any).tipAmount || 0;
+        const rawAmt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
+        const serviceAmt = Math.max(0, rawAmt - tipAmt);
+        const tipA = tipAmt; // tips count as income too
+        const amt = serviceAmt + tipA; // total = service + tips (full paidAmount essentially)
         const d = new Date(inv.createdAt);
         if (d.toDateString() === today) daily += amt;
-        if (d >= weekAgo) weekly += amt;
+        if (d >= startOfWeek) weekly += amt;
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
         totalRev += amt;
       });
@@ -168,25 +176,42 @@ const Accounting = () => {
         
         const d = new Date(inc.date || inc.createdAt);
         if (d.toDateString() === today) daily += amt;
-        if (d >= weekAgo) weekly += amt;
+        if (d >= startOfWeek) weekly += amt;
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
         totalRev += amt;
       });
 
-      const yearly = incomes.filter(inc => {
-        const d = new Date(inc.date || inc.createdAt);
-        return d.getFullYear() === now.getFullYear();
-      }).reduce((sum, inc) => sum + (inc.amount || 0), 0) + 
-      invoices.filter(inv => {
-        const d = new Date(inv.createdAt);
-        const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
-        return isPaid && d.getFullYear() === now.getFullYear();
-      }).reduce((sum, inv) => sum + (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)), 0);
+      // Apply dateFilter to compute filtered totalRevenue for the break-even display
+      const filterInvoiceAmt = (inv: Invoice) => {
+        const tipA = (inv as any).tipAmount || 0;
+        const raw = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
+        return Math.max(0, raw - tipA) + tipA; // full paid = service + tip
+      };
+
+      let filteredTotal = 0;
+      if (dateFilter === 'all') {
+        filteredTotal = totalRev;
+      } else {
+        const filterDate = (d: Date) => {
+          if (dateFilter === 'daily') return d.toDateString() === today;
+          if (dateFilter === 'weekly') return d >= startOfWeek;
+          if (dateFilter === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          if (dateFilter === 'yearly') return d.getFullYear() === now.getFullYear();
+          return true;
+        };
+        paidInvoices.forEach(inv => {
+          if (filterDate(new Date(inv.createdAt))) filteredTotal += filterInvoiceAmt(inv);
+        });
+        incomes.forEach(inc => {
+          if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
+          if (filterDate(new Date(inc.date || inc.createdAt))) filteredTotal += (inc.amount || 0);
+        });
+      }
 
       setDailyRevenue(daily);
       setWeeklyRevenue(weekly);
       setMonthlyRevenue(monthly);
-      setTotalRevenue(totalRev);
+      setTotalRevenue(filteredTotal);
 
       const inventoryCategories = ["Supplies", "Equipment", "Chemicals", "Inventory"];
       const manualExpenses = expensesData.filter(e => {
