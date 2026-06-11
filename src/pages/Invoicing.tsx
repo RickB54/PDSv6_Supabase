@@ -105,6 +105,7 @@ const Invoicing = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isEditingPaid, setIsEditingPaid] = useState(false);
   const [editPaidValue, setEditPaidValue] = useState("");
+  const [editTipValue, setEditTipValue] = useState("");
   const [serviceCategory, setServiceCategory] = useState<"package" | "addon" | "custom">("custom");
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
   const [editServices, setEditServices] = useState<{ name: string; price: number }[]>([]);
@@ -589,6 +590,7 @@ const Invoicing = () => {
   const saveEditedPaid = async () => {
     if (!selectedInvoice) return;
     const amt = parseFloat(editPaidValue);
+    const tip = parseFloat(editTipValue);
     if (Number.isNaN(amt) || amt < 0) return; // Allow 0 to reset
 
     if (isDemoMode) {
@@ -600,7 +602,13 @@ const Invoicing = () => {
     // Determine status based on new amount
     const status = amt >= selectedInvoice.total ? "paid" : amt > 0 ? "partially-paid" : "unpaid";
 
-    const updated: Invoice = { ...selectedInvoice, paidAmount: amt, paymentStatus: status };
+    const updated: Invoice = { 
+      ...selectedInvoice, 
+      paidAmount: amt, 
+      paymentStatus: status,
+      tipAmount: (!Number.isNaN(tip) && tip > 0) ? tip : undefined
+    };
+    
     if (amt >= selectedInvoice.total) {
       updated.paidDate = new Date().toISOString();
     }
@@ -609,7 +617,7 @@ const Invoicing = () => {
     setSelectedInvoice(updated);
     setIsEditingPaid(false);
     loadData();
-    toast({ title: "Payment updated", description: `Payment amount manually updated to $${amt.toFixed(2)}` });
+    toast({ title: "Payment updated", description: `Payment and Tip amounts manually updated.` });
   };
 
   const handleEditInvoice = (inv: Invoice) => {
@@ -1908,6 +1916,51 @@ Precision. Protection. Perfection.`;
         onConfirm={updatePayment}
       />
 
+      <Dialog open={isEditingPaid} onOpenChange={setIsEditingPaid}>
+        <DialogContent className="sm:max-w-[400px] bg-zinc-950 border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100 flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-emerald-400" />
+              Edit Payment Allocation
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500">
+              Adjust the payment and tip amounts for this invoice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Invoice Payment Amount</Label>
+              <Input 
+                type="number"
+                step="0.01"
+                value={editPaidValue} 
+                onChange={e => setEditPaidValue(e.target.value)}
+                className="bg-zinc-900 border-zinc-800 text-zinc-100 font-medium"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-emerald-500 text-xs font-bold uppercase tracking-wider">Tip Amount (Internal)</Label>
+              <Input 
+                type="number"
+                step="0.01"
+                value={editTipValue} 
+                onChange={e => setEditTipValue(e.target.value)}
+                className="bg-zinc-900 border-emerald-900/50 text-zinc-100 font-medium focus-visible:ring-emerald-500/50"
+              />
+            </div>
+          </div>
+          <DialogFooter className="border-t border-zinc-800 pt-6">
+            <Button variant="ghost" onClick={() => setIsEditingPaid(false)} className="text-zinc-500 hover:text-white">Cancel</Button>
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              onClick={saveEditedPaid}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Modal */}
       {selectedInvoice && !paymentDialogOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)}>
@@ -2335,7 +2388,7 @@ Precision. Protection. Perfection.`;
                     <span>Amount Paid</span>
                     <div className="flex items-center gap-2 group">
                       <span>-${(selectedInvoice.paidAmount || 0).toFixed(2)}</span>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setIsEditingPaid(true); }}>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setEditTipValue(String(selectedInvoice.tipAmount || 0)); setIsEditingPaid(true); }}>
                         <Pencil className="h-3 w-3" />
                       </Button>
                     </div>
