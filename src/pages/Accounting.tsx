@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getInvoices, getExpenses, upsertExpense, deleteExpense } from "@/lib/db";
 import { getReceivables, upsertReceivable, deleteReceivable, Receivable } from "@/lib/receivables";
-import { getSupabaseCustomers, getSupabaseTaxExpenses } from "@/lib/supa-data";
+import { getSupabaseCustomers, getSupabaseTaxExpenses, getSupabaseInvoices } from "@/lib/supa-data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,9 +58,12 @@ interface Invoice {
   id: string;
   total: number;
   createdAt: string;
+  date?: string;
   invoiceNumber?: string;
   paidAmount?: number;
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
+  tipAmount?: number;
+  customerName?: string;
 }
 
 interface Expense {
@@ -129,7 +132,8 @@ const Accounting = () => {
 
   const loadData = async () => {
     try {
-      const invoices = await getInvoices<Invoice>();
+      // Use getSupabaseInvoices so tipAmount (from VIRTUAL_TIP) is parsed correctly
+      const invoices = await getSupabaseInvoices();
       const expensesData = await getExpenses<Expense>();
       const incomes = await getReceivables();
       const invTotals = await getInventoryTotals();
@@ -157,17 +161,16 @@ const Accounting = () => {
       });
       
       paidInvoices.forEach(inv => {
-        // Subtract tipAmount so service revenue is accurate
         const tipAmt = (inv as any).tipAmount || 0;
         const rawAmt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
-        const serviceAmt = Math.max(0, rawAmt - tipAmt);
-        const tipA = tipAmt; // tips count as income too
-        const amt = serviceAmt + tipA; // total = service + tips (full paidAmount essentially)
+        // If paidAmount already exceeds invoice total, tip is embedded in paidAmount.
+        // Otherwise, tip was stored separately and must be added to get true total received.
+        const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
         const d = new Date(inv.createdAt);
-        if (d.toDateString() === today) daily += amt;
-        if (d >= startOfWeek) weekly += amt;
-        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
-        totalRev += amt;
+        if (d.toDateString() === today) daily += totalReceived;
+        if (d >= startOfWeek) weekly += totalReceived;
+        if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += totalReceived;
+        totalRev += totalReceived;
       });
 
       incomes.forEach(inc => {
@@ -183,10 +186,12 @@ const Accounting = () => {
       });
 
       // Apply dateFilter to compute filtered totalRevenue for the break-even display
-      const filterInvoiceAmt = (inv: Invoice) => {
+      const getInvoiceTotalReceived = (inv: Invoice) => {
         const tipA = (inv as any).tipAmount || 0;
         const raw = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
-        return Math.max(0, raw - tipA) + tipA; // full paid = service + tip
+        // If paidAmount already exceeds invoice total, tip is embedded.
+        // Otherwise add the separately-stored tip to get true total received.
+        return raw + (raw <= inv.total && tipA > 0 ? tipA : 0);
       };
 
       let filteredTotal = 0;
@@ -201,7 +206,7 @@ const Accounting = () => {
           return true;
         };
         paidInvoices.forEach(inv => {
-          if (filterDate(new Date(inv.createdAt))) filteredTotal += filterInvoiceAmt(inv);
+          if (filterDate(new Date(inv.createdAt))) filteredTotal += getInvoiceTotalReceived(inv);
         });
         incomes.forEach(inc => {
           if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
@@ -998,20 +1003,22 @@ const Accounting = () => {
             const inv = selectedTransaction.data;
             const tipAmt = inv.tipAmount || 0;
             const rawAmt = inv.paidAmount || inv.total;
-            const serviceAmt = Math.max(0, rawAmt - tipAmt);
+            // If paidAmount already exceeds invoice total, tip is embedded. Otherwise add it.
+            const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
+            const serviceAmt = Math.max(0, totalReceived - tipAmt);
             return (
               <div className="py-2 space-y-2 text-sm">
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800">
                   <div className="flex justify-between p-3"><span className="text-zinc-400">Invoice #</span><span className="text-zinc-100 font-mono">{inv.invoiceNumber || inv.id?.slice(0, 8)}</span></div>
-                  <div className="flex justify-between p-3"><span className="text-zinc-400">Customer</span><span className="text-zinc-100">{(inv as any).customerName || '—'}</span></div>
-                  <div className="flex justify-between p-3"><span className="text-zinc-400">Invoice Total</span><span className="text-zinc-100">${inv.total?.toFixed(2)}</span></div>
-                  <div className="flex justify-between p-3"><span className="text-zinc-400">Amount Paid (Total Received)</span><span className="text-zinc-100 font-bold">${rawAmt.toFixed(2)}</span></div>
-                  <div className="flex justify-between p-3"><span className="text-zinc-400">Service Revenue</span><span className="text-blue-400 font-semibold">${serviceAmt.toFixed(2)}</span></div>
-                  <div className="flex justify-between p-3"><span className="text-zinc-400">Tip (Internal)</span><span className="text-emerald-400 font-semibold">${tipAmt.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Customer</span><span className="text-zinc-100">{inv.customerName || (inv as any).customer_name || '—'}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">Invoice Total (Service)</span><span className="text-zinc-100">${inv.total?.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3 bg-emerald-950/30"><span className="text-zinc-300 font-semibold">Total Received from Customer</span><span className="text-white font-bold text-base">${totalReceived.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">  ↳ Service Revenue</span><span className="text-blue-400 font-semibold">${serviceAmt.toFixed(2)}</span></div>
+                  <div className="flex justify-between p-3"><span className="text-zinc-400">  ↳ Tip (Your Income — Not on Customer PDF)</span><span className={`font-bold ${tipAmt > 0 ? 'text-emerald-400' : 'text-zinc-600'}`}>${tipAmt.toFixed(2)}</span></div>
                   <div className="flex justify-between p-3"><span className="text-zinc-400">Payment Status</span><span className={`font-bold capitalize ${inv.paymentStatus === 'paid' ? 'text-emerald-400' : 'text-amber-400'}`}>{inv.paymentStatus || '—'}</span></div>
                   <div className="flex justify-between p-3"><span className="text-zinc-400">Date</span><span className="text-zinc-100">{new Date(inv.createdAt).toLocaleString()}</span></div>
                 </div>
-                <p className="text-[11px] text-zinc-600 italic text-center">Service Revenue = Amount Paid minus Tip. Tip is tracked separately in your budget.</p>
+                <p className="text-[11px] text-zinc-600 italic text-center">Tip IS counted in your budget &amp; accounting totals — just not printed on the customer&apos;s PDF.</p>
               </div>
             );
           })()}

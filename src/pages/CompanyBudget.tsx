@@ -278,14 +278,15 @@ const CompanyBudget = () => {
             map.set(cat, [...current, tx]);
         };
 
-        // 1. Invoices (Service Income) - Filter applied same as Chart
-        // NOTE: paidAmount may include tips - we subtract tipAmount to get true service revenue
+        // 1. Invoices (Service Income + Tips)
+        // FORMULA: If paidAmount > invoiceTotal, tip is embedded. Otherwise tip stored separately must be added.
         invoiceList.forEach(inv => {
             const tipAmt = (inv as any).tipAmount || 0;
             const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
-            const serviceAmt = Math.max(0, rawAmt - tipAmt);
+            const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
+            const serviceAmt = Math.max(0, totalReceived - tipAmt);
             if (serviceAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 addTx("Service Income", {
                     date: inv.createdAt || inv.date,
@@ -341,13 +342,16 @@ const CompanyBudget = () => {
         const categoryMap = new Map<string, { amount: number; type: 'income' | 'expense' }>();
 
         // Process invoices (paid only)
-        // NOTE: paidAmount may include tips - subtract tipAmount for true service revenue
+        // FORMULA: If paidAmount > invoiceTotal, tip is embedded. Otherwise tip is stored separately and must be added.
         invoices.forEach(inv => {
             const tipAmt = (inv as any).tipAmount || 0;
             const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
-            const serviceAmt = Math.max(0, rawAmt - tipAmt);
+            // True total received from customer
+            const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
+            // Service revenue = total minus tip
+            const serviceAmt = Math.max(0, totalReceived - tipAmt);
 
             if (serviceAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
                 const cat = "Service Income";
@@ -1074,18 +1078,20 @@ const CompanyBudget = () => {
                                                         const incomeByCategory = new Map<string, any[]>();
                                                         const search = ledgerSearch.toLowerCase();
 
-                                                        // Add paid invoices (service income = paidAmount - tipAmount)
+                                                        // Add paid invoices (service income = totalReceived - tip)
                                                         invoiceList.filter(inv => {
                                                             const tipAmt = (inv as any).tipAmount || 0;
                                                             const rawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                 : 0;
-                                                            const amt = Math.max(0, rawAmt - tipAmt);
-                                                            if (amt <= 0 || !filterByDate(inv.createdAt || inv.date)) return false;
+                                                            const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
+                                                            const serviceAmt = Math.max(0, totalReceived - tipAmt);
+                                                            if (serviceAmt <= 0 || !filterByDate(inv.createdAt || inv.date)) return false;
                                                             
                                                             if (search) {
                                                                 const matches = String(inv.invoiceNumber || '').toLowerCase().includes(search) || 
-                                                                                String(amt).includes(search) || 
+                                                                                String(totalReceived).includes(search) ||
+                                                                                String(serviceAmt).includes(search) ||
                                                                                 "invoice".includes(search);
                                                                 if (!matches) return false;
                                                             }
@@ -1164,7 +1170,8 @@ const CompanyBudget = () => {
                                                                     const rawA = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                         ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                         : 0;
-                                                                    return sum + Math.max(0, rawA - tipA);
+                                                                    const totalRec = rawA + (rawA <= inv.total && tipA > 0 ? tipA : 0);
+                                                                    return sum + Math.max(0, totalRec - tipA);
                                                                 } else {
                                                                     return sum + (item.data.amount || 0);
                                                                 }
@@ -1177,7 +1184,8 @@ const CompanyBudget = () => {
                                                                             const inv = item.data;
                                                                             const invTipAmt = (inv as any).tipAmount || 0;
                                                                         const invRawAmt = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0) ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0)) : 0;
-                                                                        const invServiceAmt = Math.max(0, invRawAmt - invTipAmt);
+                                                                        const invTotalReceived = invRawAmt + (invRawAmt <= inv.total && invTipAmt > 0 ? invTipAmt : 0);
+                                                                        const invServiceAmt = Math.max(0, invTotalReceived - invTipAmt);
                                                                         return (
                                                                                 <TableRow key={`inv-${inv.id}`}>
                                                                                     <TableCell className="text-xs sm:text-sm">{(inv.createdAt || inv.date || '').slice(5, 10)}</TableCell>
@@ -1704,16 +1712,18 @@ const CompanyBudget = () => {
                                                                                         const rawA = (inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0)
                                                                                             ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                                                                                             : 0;
-                                                                                        const serviceA = Math.max(0, rawA - tipA);
+                                                                                        const totalRec = rawA + (rawA <= inv.total && tipA > 0 ? tipA : 0);
+                                                                                        const serviceA = Math.max(0, totalRec - tipA);
                                                                                         const d = inv.createdAt || inv.date || '';
                                                                                         return serviceA > 0 && d.startsWith(relevantMonth);
                                                                                     }).map(i => {
                                                                                         const tipA = (i as any).tipAmount || 0;
                                                                                         const rawA = i.paidAmount || (i.paymentStatus === 'paid' ? i.total : 0);
+                                                                                        const totalRec = rawA + (rawA <= i.total && tipA > 0 ? tipA : 0);
                                                                                         return {
                                                                                             date: i.createdAt || i.date,
                                                                                             desc: `Invoice #${(i as any).invoiceNumber || 'Paid'}`,
-                                                                                            amount: Math.max(0, rawA - tipA),
+                                                                                            amount: Math.max(0, totalRec - tipA),
                                                                                             cat: 'Invoice'
                                                                                         };
                                                                                     });
