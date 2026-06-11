@@ -104,6 +104,11 @@ const Invoicing = () => {
   const [serviceCategory, setServiceCategory] = useState<"package" | "addon" | "custom">("custom");
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
   const [editServices, setEditServices] = useState<{ name: string; price: number }[]>([]);
+  const [editDiscountMethod, setEditDiscountMethod] = useState<"coupon" | "custom">("custom");
+  const [editDiscountCode, setEditDiscountCode] = useState("");
+  const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed">("percent");
+  const [editDiscountValue, setEditDiscountValue] = useState<number>(0);
+  const [editAdjustmentAmount, setEditAdjustmentAmount] = useState<number>(0);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailInvoiceId, setEmailInvoiceId] = useState<string | null>(null);
   const [emailRecipient, setEmailRecipient] = useState("");
@@ -154,34 +159,7 @@ const Invoicing = () => {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const cid = params.get('customerId');
-    const eid = params.get('editId');
-
-    if (eid && invoices.length > 0) {
-      const inv = invoices.find(i => i.id === eid);
-      if (inv && !selectedInvoice) {
-        setSelectedInvoice(inv);
-        // Clear filter so all invoices are loaded in the background?
-        // Let's just return to stop here
-        return;
-      }
-    } else if (cid && customers.length > 0) {
-      setFilterCustomerId(cid);
-      const cust = customers.find(c => c.id === cid);
-      if (cust) {
-        setSearchTerm(cust.name);
-        setFilterVehicle("all");
-        // Automatically open the customer modal for review
-        setEditingCustomer(cust);
-        setIsCustomerModalOpen(true);
-      }
-    } else if (!cid) {
-      setFilterCustomerId("");
-      setFilterVehicle("all");
-    }
-  }, [location.search, customers.length]);
+  // URL routing logic moved below handleEditInvoice
 
   const toBuiltInVehKey = (key: string): LibVehicleType => {
     const k = key?.toLowerCase();
@@ -624,14 +602,62 @@ const Invoicing = () => {
 
     const enrichedInv = { ...inv, vehicle: resolvedVehicle };
     setSelectedInvoice(enrichedInv);
-    const services = Array.isArray(inv.services) ? [...inv.services] : [];
+    
+    // Extract adjustment amount from services
+    let adjAmount = 0;
+    const services = Array.isArray(inv.services) ? inv.services.filter(s => {
+      if (s.name === "Adjusted") {
+        adjAmount = Math.abs(s.price);
+        return false;
+      }
+      return true;
+    }) : [];
+    
     setEditServices(services);
+    setEditAdjustmentAmount(adjAmount);
+    
+    if (inv.discount) {
+      setEditDiscountMethod(inv.discount.type === 'percent' || inv.discount.type === 'fixed' ? 'custom' : 'custom'); 
+      setEditDiscountType(inv.discount.type);
+      setEditDiscountValue(inv.discount.value);
+    } else {
+      setEditDiscountMethod('custom');
+      setEditDiscountType('percent');
+      setEditDiscountValue(0);
+      setEditDiscountCode('');
+    }
+
     setEditVehicle(resolvedVehicle);
     setEditNotes(inv.notes || "");
     setEditIsSent(inv.isSent || false);
     setServiceDate(inv.serviceDate || inv.date || new Date().toISOString().split('T')[0]);
     setIsEditingInvoice(true);
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const cid = params.get('customerId');
+    const eid = params.get('editId');
+
+    if (eid && invoices.length > 0) {
+      const inv = invoices.find(i => i.id === eid);
+      if (inv && !isEditingInvoice) {
+        handleEditInvoice(inv);
+      }
+    } else if (cid && !eid && customers.length > 0) {
+      setFilterCustomerId(cid);
+      const cust = customers.find(c => c.id === cid);
+      if (cust && !isCustomerModalOpen && !isEditingInvoice) {
+        setSearchTerm(cust.name);
+        setFilterVehicle("all");
+        setEditingCustomer(cust);
+        setIsCustomerModalOpen(true);
+      }
+    } else if (!cid) {
+      setFilterCustomerId("");
+      setFilterVehicle("all");
+    }
+  }, [location.search, customers.length, invoices.length, isEditingInvoice, isCustomerModalOpen]);
 
   
   const buildCurrentEditedInvoice = (): Invoice => {
@@ -679,34 +705,7 @@ const Invoicing = () => {
 
   const saveEditedInvoice = async () => {
     if (!selectedInvoice) return;
-    const subtotal = editServices.reduce((sum, s) => sum + s.price, 0);
-    let newTotal = subtotal;
-    if (selectedInvoice.discount) {
-      newTotal -= selectedInvoice.discount.amount;
-    }
-    if (newTotal < 0) newTotal = 0;
-
-    const updated: Invoice = { 
-      ...selectedInvoice, 
-      services: editServices, 
-      vehicle: editVehicle,
-      notes: editNotes,
-      isSent: editIsSent,
-      sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
-      serviceDate: serviceDate,
-      total: newTotal 
-    };
-    
-    // Auto-update status if total changed
-    if (updated.paidAmount && updated.paidAmount >= newTotal) {
-      updated.paymentStatus = "paid";
-    } else if (updated.paidAmount && updated.paidAmount > 0) {
-      updated.paymentStatus = "partially-paid";
-    } else if (newTotal === 0) {
-      updated.paymentStatus = "paid";
-    } else {
-      updated.paymentStatus = "unpaid";
-    }
+    const updated = buildCurrentEditedInvoice();
 
     try {
       await upsertSupabaseInvoice(updated);
