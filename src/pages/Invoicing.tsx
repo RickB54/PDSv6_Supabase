@@ -2116,7 +2116,7 @@ Precision. Protection. Perfection.`;
 
                   {editDiscountValue > 0 && (
                     <div className="flex justify-between items-center px-2 text-sm text-red-400 font-medium">
-                      <span>Discount</span>
+                      <span>{editDiscountMethod === 'coupon' && editDiscountCode && editDiscountCode !== 'CUSTOM' ? `${editDiscountCode} (${editDiscountType === 'percent' ? `${editDiscountValue}%` : `$${editDiscountValue}`} Off)` : `Discount`}</span>
                       <span className="font-mono">
                         -${(editDiscountType === 'percent' 
                           ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) 
