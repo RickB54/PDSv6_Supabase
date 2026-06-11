@@ -350,14 +350,18 @@ export default function BookingsPage() {
         });
       }
       if (statusFilter) customerEvents = customerEvents.filter(e => ((e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending')) === statusFilter);
-      if (dateFilter.start) {
-        customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { 
-          start: startOfDay(dateFilter.start!), 
-          end: endOfDay(dateFilter.end || dateFilter.start!) 
-        }));
-      }
+        if (dateFilter.start) {
+          const start = startOfDay(dateFilter.start!);
+          const end = endOfDay(dateFilter.end || dateFilter.start!);
+          customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { start, end }));
+          
+          // Only show the customer if they have an actual booking or block in this timeframe,
+          // ignoring customers who only have an engagement/activity log in this timeframe.
+          const hasBookingOrBlock = customerEvents.some(e => e.type !== 'activity');
+          if (!hasBookingOrBlock) return null;
+        }
 
-      if (customerEvents.length === 0) return null;
+        if (customerEvents.length === 0) return null;
 
       // Analysis for sorting
       const sortedEvents = customerEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

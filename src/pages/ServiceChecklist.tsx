@@ -2040,6 +2040,17 @@ const ServiceChecklist = () => {
       pushAdminAlert('job_completed', `Job completed for ${customerName}`, 'system', { checklistId: idToUse, customerId: selectedCustomer });
       toast({ title: 'Job Finished', description: 'Materials posted, completion archived, and invoice generated.' });
       
+      if (selectedCustomer) {
+        try {
+          await import('@/lib/supa-data').then(m => m.upsertSupabaseCustomer({
+            id: selectedCustomer,
+            updated_at: new Date().toISOString()
+          }));
+        } catch (e) {
+          console.error("Failed to update customer timestamp", e);
+        }
+      }
+
       // Trigger tip and payment
       setFinishedJobId(idToUse);
       setShowTipScreen(true);
@@ -3954,6 +3965,17 @@ const ServiceChecklist = () => {
           clientUrl={window.location.origin}
           onCancel={() => setShowTipScreen(false)}
           finalTime={elapsedTime}
+          onCashPayment={async (tip) => {
+            toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Job Complete!` });
+            setShowTipScreen(false);
+            if (selectedCustomer) {
+              await import('@/lib/supa-data').then(m => m.upsertSupabaseCustomer({
+                id: selectedCustomer,
+                updated_at: new Date().toISOString()
+              }));
+            }
+            window.dispatchEvent(new Event('bookings-updated'));
+          }}
         />
       )}
 

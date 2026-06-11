@@ -11,6 +11,7 @@ interface TipSelectionScreenProps {
   clientUrl?: string; 
   customerId?: string | null;
   finalTime?: string;
+  onCashPayment?: (tipAmount: number) => void;
 }
 
 export default function TipSelectionScreen({ 
@@ -19,7 +20,8 @@ export default function TipSelectionScreen({
   onCancel,
   clientUrl,
   customerId,
-  finalTime
+  finalTime,
+  onCashPayment
 }: TipSelectionScreenProps) {
   const [loading, setLoading] = useState(false);
   
@@ -236,9 +238,29 @@ export default function TipSelectionScreen({
               <ArrowRight size={24} />
             </button>
 
+            {onCashPayment && (
+              <button
+                onClick={() => {
+                  let percent = 0;
+                  if (selectedTip === 'custom') {
+                    const parsed = parseFloat(customTip);
+                    if (!isNaN(parsed)) percent = parsed;
+                  } else if (selectedTip !== null && selectedTip !== undefined) {
+                    percent = selectedTip;
+                  }
+                  const tipAmount = (remainingBalanceInCents * (percent / 100)) / 100;
+                  onCashPayment(tipAmount);
+                }}
+                disabled={!canProceed}
+                className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                Pay with Cash (Local)
+              </button>
+            )}
+
             <button
               onClick={onCancel}
-              className="w-full py-3 text-gray-400 hover:text-gray-600 font-bold text-sm transition-colors"
+              className="w-full py-2 text-gray-400 hover:text-gray-600 font-bold text-xs transition-colors"
             >
               Cancel / Go Back
             </button>
