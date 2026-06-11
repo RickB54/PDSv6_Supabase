@@ -77,6 +77,7 @@ interface Invoice {
     code?: string;
   };
   adjustment?: number;
+  tipAmount?: number;
   notes?: string;
   isSent?: boolean;
   sentDate?: string;
@@ -97,6 +98,7 @@ const Invoicing = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [tipAmount, setTipAmount] = useState<string>("");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterCustomerId, setFilterCustomerId] = useState("");
   const [filterVehicle, setFilterVehicle] = useState("all");
@@ -540,25 +542,44 @@ const Invoicing = () => {
   const updatePayment = async () => {
     if (!selectedInvoice) return;
     const amt = parseFloat(paymentAmount);
-    if (Number.isNaN(amt) || amt <= 0) return;
+    const tip = parseFloat(tipAmount);
+    if ((Number.isNaN(amt) || amt <= 0) && (Number.isNaN(tip) || tip <= 0)) return;
 
     try {
       if (isDemoMode) {
         toast({ title: "Simulation Mode", description: "Payment recorded in local state." });
         setPaymentDialogOpen(false);
         setPaymentAmount("");
+        setTipAmount("");
         return;
       }
 
-      const newPaid = (selectedInvoice.paidAmount || 0) + amt;
+      const currentPaid = selectedInvoice.paidAmount || 0;
+      const currentTip = selectedInvoice.tipAmount || 0;
+      
+      const newPaid = !Number.isNaN(amt) ? currentPaid + amt : currentPaid;
+      const newTip = !Number.isNaN(tip) ? currentTip + tip : currentTip;
+      
       const status = newPaid >= selectedInvoice.total ? "paid" : "partially-paid";
-      const updated: Invoice = { ...selectedInvoice, paidAmount: newPaid, paymentStatus: status, paidDate: new Date().toISOString() };
+      const updated: Invoice = { 
+        ...selectedInvoice, 
+        paidAmount: newPaid, 
+        paymentStatus: status, 
+        paidDate: new Date().toISOString(),
+        tipAmount: newTip > 0 ? newTip : undefined
+      };
+      
       await upsertSupabaseInvoice(updated);
       setPaymentDialogOpen(false);
       setPaymentAmount("");
+      setTipAmount("");
       setSelectedInvoice(updated);
       await loadData();
-      toast({ title: "Payment recorded", description: `Added $${amt.toFixed(2)} to invoice #${updated.invoiceNumber}` });
+      
+      let toastDesc = `Added $${(!Number.isNaN(amt) ? amt : 0).toFixed(2)} to invoice #${updated.invoiceNumber}`;
+      if (!Number.isNaN(tip) && tip > 0) toastDesc += ` (Includes $${tip.toFixed(2)} Tip)`;
+      
+      toast({ title: "Payment recorded", description: toastDesc });
     } catch (err: any) {
       console.error("Payment Error:", err);
       toast({ title: "Failed to record payment", description: err.message, variant: "destructive" });
@@ -1882,6 +1903,8 @@ Precision. Protection. Perfection.`;
         invoice={selectedInvoice}
         paymentAmount={paymentAmount}
         setPaymentAmount={setPaymentAmount}
+        tipAmount={tipAmount}
+        setTipAmount={setTipAmount}
         onConfirm={updatePayment}
       />
 
@@ -2326,13 +2349,12 @@ Precision. Protection. Perfection.`;
                 </div>
               )}
 
-              {(selectedInvoice.paymentStatus || 'unpaid') !== 'paid' && (
-                <div className="mt-6">
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6" onClick={() => { setPaymentAmount((selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
-                    <CreditCard className="h-4 w-4 mr-2" /> Record Payment
-                  </Button>
-                </div>
-              )}
+              <div className="mt-6">
+                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6" onClick={() => { setPaymentAmount(Math.max(0, selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
+                  <CreditCard className="h-4 w-4 mr-2" /> 
+                  {(selectedInvoice.paymentStatus === 'paid' || selectedInvoice.total - (selectedInvoice.paidAmount || 0) <= 0) ? 'Record Additional Payment / Tip' : 'Record Payment'}
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

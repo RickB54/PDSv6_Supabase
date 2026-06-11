@@ -88,6 +88,7 @@ const DEFAULT_CATEGORIES = {
         "Service Income",
         "Product Sales",
         "Consulting",
+        "Tips",
         "Other Income"
     ],
     expense: [
@@ -290,6 +291,14 @@ const CompanyBudget = () => {
                     cat: 'Invoice'
                 });
             }
+            if ((inv as any).tipAmount && (inv as any).tipAmount > 0 && filterByDate(inv.createdAt || inv.date)) {
+                addTx("Tips", {
+                    date: inv.createdAt || inv.date,
+                    desc: `Tip on Invoice #${(inv as any).invoiceNumber || 'Paid'}`,
+                    amount: (inv as any).tipAmount,
+                    cat: 'Invoice'
+                });
+            }
         });
 
         // 2. Incomes
@@ -334,12 +343,18 @@ const CompanyBudget = () => {
                 ? (inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0))
                 : 0;
 
-            if (amt <= 0) return;
-            if (!filterByDate(inv.createdAt || inv.date)) return;
+            if (amt > 0 && filterByDate(inv.createdAt || inv.date)) {
+                const cat = "Service Income";
+                const current = categoryMap.get(cat) || { amount: 0, type: 'income' as const };
+                categoryMap.set(cat, { amount: current.amount + amt, type: 'income' });
+            }
 
-            const cat = "Service Income";
-            const current = categoryMap.get(cat) || { amount: 0, type: 'income' as const };
-            categoryMap.set(cat, { amount: current.amount + amt, type: 'income' });
+            const tipAmt = (inv as any).tipAmount || 0;
+            if (tipAmt > 0 && filterByDate(inv.createdAt || inv.date)) {
+                const tipCat = "Tips";
+                const currentTip = categoryMap.get(tipCat) || { amount: 0, type: 'income' as const };
+                categoryMap.set(tipCat, { amount: currentTip.amount + tipAmt, type: 'income' });
+            }
         });
 
         // Process income

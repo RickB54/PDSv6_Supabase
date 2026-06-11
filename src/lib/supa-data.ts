@@ -1470,6 +1470,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
             let discount = i.discount || null;
             let adjustment = i.adjustment || null;
+            let tipAmount = i.tipAmount || null;
             let isSent = false;
             let sentDate = "";
             let serviceDate = "";
@@ -1492,6 +1493,10 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
               }
               if (s.name.startsWith("VIRTUAL_ADJUSTMENT:")) {
                 adjustment = parseFloat(s.name.replace("VIRTUAL_ADJUSTMENT:", "").trim());
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_TIP:")) {
+                tipAmount = parseFloat(s.name.replace("VIRTUAL_TIP:", "").trim());
                 return false;
               }
               if (s.name.startsWith("VIRTUAL_SENT:")) {
@@ -1525,6 +1530,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
               notes: notes || "",
               discount: discount,
               adjustment: adjustment,
+              tipAmount: tipAmount,
               isSent: isSent,
               sentDate: sentDate,
               createdAt: i.created_at
@@ -1565,6 +1571,7 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     if (invoice.notes) virtualServices.push({ name: `VIRTUAL_NOTES:${invoice.notes}`, price: 0 });
     if (invoice.discount) virtualServices.push({ name: `VIRTUAL_DISCOUNT:${JSON.stringify(invoice.discount)}`, price: 0 });
     if (invoice.adjustment) virtualServices.push({ name: `VIRTUAL_ADJUSTMENT:${invoice.adjustment}`, price: 0 });
+    if (invoice.tipAmount) virtualServices.push({ name: `VIRTUAL_TIP:${invoice.tipAmount}`, price: 0 });
     if (invoice.isSent !== undefined) virtualServices.push({ name: `VIRTUAL_SENT:${invoice.isSent}`, price: 0 });
     if (invoice.sentDate) virtualServices.push({ name: `VIRTUAL_SENT_DATE:${invoice.sentDate}`, price: 0 });
     if (invoice.serviceDate) virtualServices.push({ name: `VIRTUAL_SERVICE_DATE:${invoice.serviceDate}`, price: 0 });
