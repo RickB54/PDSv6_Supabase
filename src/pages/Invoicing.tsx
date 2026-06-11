@@ -74,6 +74,7 @@ interface Invoice {
     type: "fixed" | "percent";
     value: number;
     amount: number;
+    code?: string;
   };
   notes?: string;
   isSent?: boolean;
@@ -617,7 +618,8 @@ const Invoicing = () => {
     setEditAdjustmentAmount(adjAmount);
     
     if (inv.discount) {
-      setEditDiscountMethod(inv.discount.type === 'percent' || inv.discount.type === 'fixed' ? 'custom' : 'custom'); 
+      setEditDiscountMethod(inv.discount.code && inv.discount.code !== 'CUSTOM' ? 'coupon' : 'custom'); 
+      setEditDiscountCode(inv.discount.code || '');
       setEditDiscountType(inv.discount.type);
       setEditDiscountValue(inv.discount.value);
     } else {
@@ -684,7 +686,8 @@ const Invoicing = () => {
       discount: finalDiscountAmount > 0 ? {
         type: editDiscountType,
         value: editDiscountValue,
-        amount: finalDiscountAmount
+        amount: finalDiscountAmount,
+        code: editDiscountCode || undefined
       } : undefined
     };
 
@@ -837,9 +840,15 @@ const Invoicing = () => {
     if (invoice.discount && invoice.discount.amount > 0) {
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
-      const discountLabel = invoice.discount.type === 'percent' 
-        ? `Discount (${invoice.discount.value}%):` 
-        : `Discount (Fixed):`;
+      let discountLabel = "";
+      if (invoice.discount.code && invoice.discount.code !== 'CUSTOM') {
+        const symbol = invoice.discount.type === 'percent' ? '%' : '$';
+        discountLabel = `${invoice.discount.code} (${invoice.discount.value}${symbol} Off):`;
+      } else {
+        discountLabel = invoice.discount.type === 'percent' 
+          ? `Discount (${invoice.discount.value}%):` 
+          : `Discount (Fixed):`;
+      }
       doc.text(discountLabel, 140, y);
       doc.text(`-$${invoice.discount.amount.toFixed(2)}`, 180, y, { align: "right" });
       y += 7;
