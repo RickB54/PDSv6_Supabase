@@ -849,7 +849,7 @@ const Invoicing = () => {
           ? `Discount (${invoice.discount.value}%):` 
           : `Discount (Fixed):`;
       }
-      doc.text(discountLabel, 140, y);
+      doc.text(discountLabel, 165, y, { align: "right" });
       doc.text(`-$${invoice.discount.amount.toFixed(2)}`, 180, y, { align: "right" });
       y += 7;
       doc.setFontSize(12);
