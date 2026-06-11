@@ -633,6 +633,50 @@ const Invoicing = () => {
     setIsEditingInvoice(true);
   };
 
+  
+  const buildCurrentEditedInvoice = (): Invoice => {
+    if (!selectedInvoice) return {} as Invoice;
+    const subtotal = editServices.reduce((sum, s) => sum + s.price, 0);
+    const finalDiscountAmount = editDiscountType === 'percent'
+      ? subtotal * (editDiscountValue / 100)
+      : editDiscountValue;
+
+    let newTotal = subtotal - finalDiscountAmount - editAdjustmentAmount;
+    if (newTotal < 0) newTotal = 0;
+
+    const finalServices = editAdjustmentAmount > 0 
+      ? [...editServices, { name: "Adjusted", price: -Math.abs(editAdjustmentAmount) }] 
+      : editServices;
+
+    const updated: Invoice = { 
+      ...selectedInvoice, 
+      services: finalServices, 
+      vehicle: editVehicle,
+      notes: editNotes,
+      isSent: editIsSent,
+      sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
+      serviceDate: serviceDate,
+      total: newTotal,
+      discount: finalDiscountAmount > 0 ? {
+        type: editDiscountType,
+        value: editDiscountValue,
+        amount: finalDiscountAmount
+      } : undefined
+    };
+
+    if (updated.paidAmount && updated.paidAmount >= newTotal) {
+      updated.paymentStatus = "paid";
+    } else if (updated.paidAmount && updated.paidAmount > 0) {
+      updated.paymentStatus = "partially-paid";
+    } else if (newTotal === 0) {
+      updated.paymentStatus = "paid";
+    } else {
+      updated.paymentStatus = "unpaid";
+    }
+    
+    return updated;
+  };
+
   const saveEditedInvoice = async () => {
     if (!selectedInvoice) return;
     const subtotal = editServices.reduce((sum, s) => sum + s.price, 0);
@@ -1974,9 +2018,133 @@ Precision. Protection. Perfection.`;
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center px-2">
-                     <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Subtotal Owed</span>
+                                    <div className="flex justify-between items-center px-2">
+                     <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Subtotal</span>
                      <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="space-y-4 pt-4 border-t border-zinc-800">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Apply Discount</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Select 
+                        value={editDiscountMethod} 
+                        onValueChange={(val: 'coupon' | 'custom') => {
+                          setEditDiscountMethod(val);
+                          if (val === 'coupon') {
+                            const first = coupons.find(c => c.active)?.code || '';
+                            setEditDiscountCode(first);
+                            const matched = coupons.find(c => c.code === first);
+                            if (matched) {
+                              setEditDiscountType(matched.percent ? 'percent' : 'fixed');
+                              setEditDiscountValue(matched.percent || matched.amount || 0);
+                            }
+                          } else {
+                            setEditDiscountCode('');
+                            setEditDiscountType('fixed');
+                            setEditDiscountValue(0);
+                          }
+                        }}>
+                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="coupon">Coupon</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {editDiscountMethod === 'coupon' ? (
+                        <div className="col-span-2">
+                          <Select
+                            value={(editDiscountCode && coupons.some(c => c.code === editDiscountCode)) ? editDiscountCode : (editDiscountCode ? 'CUSTOM_CODE' : '')}
+                            onValueChange={(val) => {
+                              if (val === 'CUSTOM_CODE') {
+                                setEditDiscountCode('CUSTOM');
+                                setEditDiscountType('fixed');
+                                setEditDiscountValue(0);
+                              } else {
+                                setEditDiscountCode(val);
+                                const matched = coupons.find(c => c.code === val);
+                                if (matched) {
+                                  setEditDiscountType(matched.percent ? 'percent' : 'fixed');
+                                  setEditDiscountValue(matched.percent || matched.amount || 0);
+                                }
+                              }
+                            }}>
+                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-9">
+                              <SelectValue placeholder="Select Coupon..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coupons.filter(c => c.active).map(c => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.code} ({c.percent ? `${c.percent}% Off` : `${c.amount} Off`})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="col-span-2 flex gap-2">
+                          <Select 
+                            value={editDiscountType} 
+                            onValueChange={(val: 'percent' | 'fixed') => setEditDiscountType(val)}>
+                            <SelectTrigger className="w-24 bg-zinc-950 border-zinc-800 h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percent">%</SelectItem>
+                              <SelectItem value="fixed">$</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            type="number"
+                            className="bg-zinc-950 border-zinc-800 h-9 text-right font-mono"
+                            placeholder="0.00"
+                            value={editDiscountValue || ''}
+                            onChange={e => setEditDiscountValue(parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {editDiscountValue > 0 && (
+                    <div className="flex justify-between items-center px-2 text-sm text-red-400 font-medium">
+                      <span>Discount</span>
+                      <span className="font-mono">
+                        -${(editDiscountType === 'percent' 
+                          ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) 
+                          : editDiscountValue).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="space-y-4 pt-4 border-t border-zinc-800">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Adjustment</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-500 text-xs">-$</span>
+                      <Input
+                        type="number"
+                        value={editAdjustmentAmount || ''}
+                        onChange={e => setEditAdjustmentAmount(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-zinc-900 border-zinc-800 text-sm h-9 text-right font-mono focus-visible:ring-0 px-2"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  {editAdjustmentAmount > 0 && (
+                    <div className="flex justify-between items-center px-2 text-sm text-red-400 font-medium">
+                      <span>Adjusted</span>
+                      <span className="font-mono">
+                        -${editAdjustmentAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center px-2 mt-2 pt-2 border-t border-zinc-800/50">
+                     <span className="text-sm text-zinc-200 font-bold uppercase tracking-wider">TOTAL OWED</span>
+                     <span className="text-2xl font-black text-emerald-400">${Math.max(0, editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount).toFixed(2)}</span>
                   </div>
                 </div>
 
