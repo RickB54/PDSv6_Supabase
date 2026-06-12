@@ -29,7 +29,7 @@ import { LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import localforage from "localforage";
-import { startOfMonth, endOfMonth } from "date-fns";
+
 import { CustomerIntelligence360Modal } from "./CustomerIntelligence360Modal";
 
 interface BookingsAnalyticsProps {
