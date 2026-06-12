@@ -125,6 +125,7 @@ const Invoicing = () => {
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [customVehicle, setCustomVehicle] = useState("");
+  const [customVehicleClass, setCustomVehicleClass] = useState("midsize");
   const [invoiceDiscount, setInvoiceDiscount] = useState<number>(0);
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<"percent" | "fixed">("percent");
   const [invoiceDiscountCode, setInvoiceDiscountCode] = useState<string>("");
@@ -1387,7 +1388,19 @@ Precision. Protection. Perfection.`;
                             return label === customVehicle;
                           }) ? customVehicle : "custom"} 
                           onValueChange={(val) => {
-                            if (val !== "custom") setCustomVehicle(val);
+                            if (val !== "custom") {
+                              setCustomVehicle(val);
+                              const cust = customers.find(c => c.id === selectedCustomer);
+                              if (cust && cust.vehicles) {
+                                const matched = cust.vehicles.find(v => {
+                                  const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
+                                  return label === val;
+                                });
+                                if (matched && matched.type) {
+                                  setCustomVehicleClass(matched.type.toLowerCase());
+                                }
+                              }
+                            }
                             else setCustomVehicle("");
                           }}
                         >
@@ -1416,6 +1429,22 @@ Precision. Protection. Perfection.`;
                     />
                   )}
                   <p className="text-[10px] text-zinc-500 italic">Select from customer's vehicles or enter manually.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-400">Vehicle Classification (Pricing Tier)</Label>
+                  <Select value={customVehicleClass} onValueChange={setCustomVehicleClass}>
+                    <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-200">
+                      <SelectValue placeholder="Select Vehicle Size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="compact">Compact / Sedan</SelectItem>
+                      <SelectItem value="midsize">Mid-Size / SUV</SelectItem>
+                      <SelectItem value="truck">Truck / Van / Large SUV</SelectItem>
+                      <SelectItem value="luxury">Luxury / Specialty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-zinc-500 italic">This will accurately calculate the base prices below.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -1456,19 +1485,7 @@ Precision. Protection. Perfection.`;
                             onValueChange={(val) => {
                               const pkg = servicePackages.find(p => p.id === val) || (getCustomPackages().find(p => p.id === val) as any);
                               if (pkg) {
-                                // Attempt to get price based on customer vehicle type
-                                const customer = customers.find(c => c.id === selectedCustomer);
-                                let vTypeStr = customer?.vehicleType || 'midsize';
-                                if (customer && customer.vehicles && customVehicle) {
-                                  const matchedVehicle = customer.vehicles.find(v => {
-                                    const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
-                                    return label === customVehicle;
-                                  });
-                                  if (matchedVehicle && matchedVehicle.type) {
-                                    vTypeStr = matchedVehicle.type;
-                                  }
-                                }
-                                const vType = toBuiltInVehKey(vTypeStr);
+                                const vType = toBuiltInVehKey(customVehicleClass);
                                 const price = getServicePrice(pkg.id, vType) || pkg.basePrice || 0;
                                 setNewService({ name: pkg.name, price: price.toString() });
                               }
@@ -1498,18 +1515,7 @@ Precision. Protection. Perfection.`;
                             onValueChange={(val) => {
                               const addon = addOns.find(a => a.id === val);
                               if (addon) {
-                                const customer = customers.find(c => c.id === selectedCustomer);
-                                let vTypeStr = customer?.vehicleType || 'midsize';
-                                if (customer && customer.vehicles && customVehicle) {
-                                  const matchedVehicle = customer.vehicles.find(v => {
-                                    const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
-                                    return label === customVehicle;
-                                  });
-                                  if (matchedVehicle && matchedVehicle.type) {
-                                    vTypeStr = matchedVehicle.type;
-                                  }
-                                }
-                                const vType = toBuiltInVehKey(vTypeStr);
+                                const vType = toBuiltInVehKey(customVehicleClass);
                                 const price = getAddOnPrice(addon.id, vType);
                                 setNewService({ name: addon.name, price: price.toString() });
                               }
