@@ -227,7 +227,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
   const DEFAULT_SUPPLY_UNITS = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg"];
   const DEFAULT_EQUIPMENT_UNITS = ["Units", "Pieces", "Sets"];
-  const DEFAULT_PURCHASED = ["Amazon", "Home Depot", "Harbor Freight", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com"];
+  const DEFAULT_PURCHASED = ["Amazon", "Home Depot", "Harbor Freight", "Lowe's", "Vevor", "Walmart", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com"];
   const DEFAULT_CATEGORIES = {
     supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE"],
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other"]
@@ -1678,15 +1678,101 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Where Purchased</Label>
-                          <Input
-                            value={purchase.wherePurchased || ""}
-                            onChange={(e) => {
-                              const newP = [...equipmentPurchases];
-                              newP[index].wherePurchased = e.target.value;
-                              setEquipmentPurchases(newP);
-                            }}
-                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          />
+                          {!customPurchased ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                                >
+                                  <span className="truncate">{purchase.wherePurchased || "Select source..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  {availablePurchased.map(source => (
+                                    <div key={source} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newP = [...equipmentPurchases];
+                                          newP[index].wherePurchased = source;
+                                          setEquipmentPurchases(newP);
+                                        }}
+                                      >
+                                        {source}
+                                      </span>
+                                      {purchase.wherePurchased === source && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updatePurchased(availablePurchased.filter(s => s !== source));
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                        title="Remove from presets"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomPurchased(true);
+                                      const newP = [...equipmentPurchases];
+                                      newP[index].wherePurchased = "";
+                                      setEquipmentPurchases(newP);
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add Custom Source
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                value={purchase.wherePurchased || ""}
+                                autoFocus
+                                onChange={(e) => {
+                                  const newP = [...equipmentPurchases];
+                                  newP[index].wherePurchased = e.target.value;
+                                  setEquipmentPurchases(newP);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (purchase.wherePurchased && !availablePurchased.includes(purchase.wherePurchased)) {
+                                      updatePurchased([...availablePurchased, purchase.wherePurchased].sort());
+                                    }
+                                    setCustomPurchased(false);
+                                  }
+                                }}
+                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                                placeholder="Enter store name..."
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (purchase.wherePurchased && !availablePurchased.includes(purchase.wherePurchased)) {
+                                    updatePurchased([...availablePurchased, purchase.wherePurchased].sort());
+                                  }
+                                  setCustomPurchased(false);
+                                }}
+                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                                title="Save and Return"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Purchase Date</Label>

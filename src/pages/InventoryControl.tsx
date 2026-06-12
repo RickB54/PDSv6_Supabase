@@ -651,8 +651,8 @@ const InventoryControl = () => {
 
   const getSortedChemicals = () => {
     let baseFiltered = (chemicals || []).filter(c =>
-      c && (c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
-      (c.brand && c.brand.toLowerCase().includes(chemicalSearch.toLowerCase())))
+      c && ((c.name || '').toLowerCase().includes((chemicalSearch || '').toLowerCase()) ||
+      (c.brand && c.brand.toLowerCase().includes((chemicalSearch || '').toLowerCase())))
     );
 
     // BRAND FILTER: If a specific brand is selected from the Jump-to list
@@ -706,8 +706,8 @@ const InventoryControl = () => {
 
   const getSortedSupplies = () => {
     let filtered = (supplies || []).filter(s =>
-      s && (s.name.toLowerCase().includes(supplySearch.toLowerCase()) ||
-      (s.category && s.category.toLowerCase().includes(supplySearch.toLowerCase())))
+      s && ((s.name || '').toLowerCase().includes((supplySearch || '').toLowerCase()) ||
+      (s.category && s.category.toLowerCase().includes((supplySearch || '').toLowerCase())))
     );
     
     // Vendor filtering (Jump to Vendor)
@@ -743,7 +743,7 @@ const InventoryControl = () => {
 
   const getSortedEquipment = () => {
     let filtered = (equipment || []).filter(e =>
-      e && e.name.toLowerCase().includes(equipmentSearch.toLowerCase())
+      e && (e.name || '').toLowerCase().includes((equipmentSearch || '').toLowerCase())
     );
 
     // Vendor filtering (Jump to Vendor)
@@ -801,15 +801,14 @@ const InventoryControl = () => {
       effectiveBrand = libMatch.brand || '';
     }
 
-    const key = `${effectiveName.trim().toLowerCase()}_${effectiveBrand.trim().toLowerCase()}`;
+    const key = `${(effectiveName || '').trim().toLowerCase()}_${(effectiveBrand || '').trim().toLowerCase()}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(chem);
     return acc;
   }, {} as Record<string, Chemical[]>));
 
-  // Group supplies by name so multiple purchases of the same item show on one card
   const supplyGroups = Object.values(filteredSupplies.reduce((acc, m) => {
-    const key = m.name.trim().toLowerCase();
+    const key = (m.name || '').trim().toLowerCase();
     if (!acc[key]) acc[key] = [];
     acc[key].push(m);
     return acc;
@@ -1313,7 +1312,7 @@ const InventoryControl = () => {
     if (!chem) return;
 
     let updatedRatios = [...(chem.dilutionRatios || [])];
-    const index = updatedRatios.findIndex(r => r.soil_level.toLowerCase().includes(soilLevel.toLowerCase()));
+    const index = updatedRatios.findIndex(r => (r.soil_level || '').toLowerCase().includes((soilLevel || '').toLowerCase()));
     
     let targetRatio = index >= 0 ? updatedRatios[index] : { method: soilLevel, ratio: 'RTU', soil_level: soilLevel };
     
@@ -1393,9 +1392,9 @@ const InventoryControl = () => {
           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
           return pA - pB;
       });
-      const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-      const more = sorted.find(r => r.soil_level.toLowerCase().includes('heavy'));
-      const less = sorted.find(r => r.soil_level.toLowerCase().includes('light'));
+      const standard = sorted.find(r => (r.soil_level || '').toLowerCase().includes('standard')) || sorted[0];
+      const more = sorted.find(r => (r.soil_level || '').toLowerCase().includes('heavy'));
+      const less = sorted.find(r => (r.soil_level || '').toLowerCase().includes('light'));
 
       const s16 = calculateAmounts(standard?.ratio || '', 16);
       const s24 = calculateAmounts(standard?.ratio || '', 24);
@@ -1522,9 +1521,9 @@ const InventoryControl = () => {
                   const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                   return pA - pB;
                });
-               const s = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
-               const h = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : null);
-               const m = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : null);
+               const s = sorted.find(r => (r.soil_level || '').toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
+               const h = sorted.find(r => (r.soil_level || '').toLowerCase().includes('heavy duty') || (r.soil_level || '').toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : null);
+               const m = sorted.find(r => (r.soil_level || '').toLowerCase().includes('maintenance') || (r.soil_level || '').toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : null);
 
                const renderCellHtml = (r: any, oz: number, isLast: boolean = false) => {
                   const amts = r ? calculateAmounts(r.ratio, oz) : null;
@@ -1664,15 +1663,15 @@ const InventoryControl = () => {
     let libMatch = chem.chemicalLibraryId ? libMap[chem.chemicalLibraryId] : null;
     if (!libMatch) {
       libMatch = Object.values(libMap).find(l => 
-        (l.name || '').toLowerCase().trim() === effectiveName.toLowerCase().trim() &&
-        (l.brand || '').toLowerCase().trim() === effectiveBrand.toLowerCase().trim()
+        (l.name || '').toLowerCase().trim() === (effectiveName || '').toLowerCase().trim() &&
+        (l.brand || '').toLowerCase().trim() === (effectiveBrand || '').toLowerCase().trim()
       ) || null;
     }
     if (libMatch) {
       effectiveName = libMatch.name || '';
       effectiveBrand = libMatch.brand || '';
     }
-    return `${effectiveName.trim().toLowerCase()}_${effectiveBrand.trim().toLowerCase()}`;
+    return `${(effectiveName || '').trim().toLowerCase()}_${(effectiveBrand || '').trim().toLowerCase()}`;
   })).size;
   const totalItems = uniqueChemicalCount + materials.length + tools.length;
   const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
@@ -1698,7 +1697,7 @@ const InventoryControl = () => {
 
   const renderChemicalRow = (group: Chemical[]) => {
     const c = group[0];
-    const isRTU = group.some(x => x.name.toLowerCase().includes('rtu') || x.brand?.toLowerCase().includes('rtu') || x.bottleSize.toLowerCase().includes('rtu'));
+    const isRTU = group.some(x => (x.name || '').toLowerCase().includes('rtu') || (x.brand || '').toLowerCase().includes('rtu') || (x.bottleSize || '').toLowerCase().includes('rtu'));
     
     // Combine bottle sizes
     const sizesStr = Array.from(new Set(group.map(x => x.bottleSize || 'N/A'))).join(', ');
@@ -1839,7 +1838,7 @@ const InventoryControl = () => {
 
   const renderChemicalCard = (group: Chemical[]) => {
     const c = group[0];
-    const isRTU = group.some(x => x.name.toLowerCase().includes('rtu') || x.brand?.toLowerCase().includes('rtu') || x.bottleSize.toLowerCase().includes('rtu'));
+    const isRTU = group.some(x => (x.name || '').toLowerCase().includes('rtu') || (x.brand || '').toLowerCase().includes('rtu') || (x.bottleSize || '').toLowerCase().includes('rtu'));
     
     const sizesStr = group.map(x => `${x.bottleSize || 'N/A'}`).join(' / ');
     const itemizedPricesStr = group.map(x => `${x.bottleSize || 'N/A'}: $${(x.costPerBottle || 0).toFixed(2)}`).join(' • ');
@@ -3359,9 +3358,9 @@ const InventoryControl = () => {
                           const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                           return pA - pB;
                        });
-                       const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
-                       const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : (sorted.length > 0 ? sorted[0] : null));
-                       const light = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : (sorted.length > 0 ? sorted[0] : null));
+                       const standard = sorted.find(r => (r.soil_level || '').toLowerCase().includes('standard')) || (sorted.length > 0 ? sorted[0] : null);
+                       const heavy = sorted.find(r => (r.soil_level || '').toLowerCase().includes('heavy duty') || (r.soil_level || '').toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length-1] : (sorted.length > 0 ? sorted[0] : null));
+                       const light = sorted.find(r => (r.soil_level || '').toLowerCase().includes('maintenance') || (r.soil_level || '').toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : (sorted.length > 0 ? sorted[0] : null));
 
                        const renderEditableCell = (r: any, soilLevel: string, field: 'ratio' | 'chem' | 'water', ozSize?: number, extraClass: string = '') => {
                           const amts = r ? calculateAmounts(r.ratio, ozSize || 0) : null;
