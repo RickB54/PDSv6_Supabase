@@ -1382,7 +1382,10 @@ Precision. Protection. Perfection.`;
                     if (vels.length > 0) {
                       return (
                         <Select 
-                          value={vels.some(v => `${v.year || ''} ${v.make} ${v.model}`.trim() === customVehicle) ? customVehicle : "custom"} 
+                          value={vels.some(v => {
+                            const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
+                            return label === customVehicle;
+                          }) ? customVehicle : "custom"} 
                           onValueChange={(val) => {
                             if (val !== "custom") setCustomVehicle(val);
                             else setCustomVehicle("");
@@ -1455,7 +1458,17 @@ Precision. Protection. Perfection.`;
                               if (pkg) {
                                 // Attempt to get price based on customer vehicle type
                                 const customer = customers.find(c => c.id === selectedCustomer);
-                                const vType = toBuiltInVehKey(customer?.vehicleType || 'midsize');
+                                let vTypeStr = customer?.vehicleType || 'midsize';
+                                if (customer && customer.vehicles && customVehicle) {
+                                  const matchedVehicle = customer.vehicles.find(v => {
+                                    const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
+                                    return label === customVehicle;
+                                  });
+                                  if (matchedVehicle && matchedVehicle.type) {
+                                    vTypeStr = matchedVehicle.type;
+                                  }
+                                }
+                                const vType = toBuiltInVehKey(vTypeStr);
                                 const price = getServicePrice(pkg.id, vType) || pkg.basePrice || 0;
                                 setNewService({ name: pkg.name, price: price.toString() });
                               }
@@ -1486,7 +1499,17 @@ Precision. Protection. Perfection.`;
                               const addon = addOns.find(a => a.id === val);
                               if (addon) {
                                 const customer = customers.find(c => c.id === selectedCustomer);
-                                const vType = toBuiltInVehKey(customer?.vehicleType || 'midsize');
+                                let vTypeStr = customer?.vehicleType || 'midsize';
+                                if (customer && customer.vehicles && customVehicle) {
+                                  const matchedVehicle = customer.vehicles.find(v => {
+                                    const label = `${v.year || ''} ${v.make} ${v.model} ${v.color ? `[Color: ${v.color}]` : ''}`.replace(/\s+/g, ' ').trim();
+                                    return label === customVehicle;
+                                  });
+                                  if (matchedVehicle && matchedVehicle.type) {
+                                    vTypeStr = matchedVehicle.type;
+                                  }
+                                }
+                                const vType = toBuiltInVehKey(vTypeStr);
                                 const price = getAddOnPrice(addon.id, vType);
                                 setNewService({ name: addon.name, price: price.toString() });
                               }

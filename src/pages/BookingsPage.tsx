@@ -1213,12 +1213,15 @@ export default function BookingsPage() {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        make: formData.vehicleMake,
-        model: formData.vehicleModel,
-        year: formData.vehicleYear,
-        vehicleType: formData.vehicle,
         type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done' || formData.status === 'in_progress') ? 'customer' : 'prospect',
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        vehicles: [{
+          make: formData.vehicleMake,
+          model: formData.vehicleModel,
+          year: formData.vehicleYear,
+          type: formData.vehicle,
+          color: formData.vehicleColor
+        }]
       };
 
       if (!isDemoMode) {
