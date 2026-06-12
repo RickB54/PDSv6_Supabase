@@ -89,7 +89,9 @@ const Accounting = () => {
   const [dailyRevenue, setDailyRevenue] = useState(0);
   const [weeklyRevenue, setWeeklyRevenue] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [yearlyRevenue, setYearlyRevenue] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [filteredRevenue, setFilteredRevenue] = useState(0);
   const [showDeleteExpense, setShowDeleteExpense] = useState(false);
   const [showDeleteNotes, setShowDeleteNotes] = useState(false);
 
@@ -150,7 +152,7 @@ const Accounting = () => {
       startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
       startOfWeek.setHours(0, 0, 0, 0);
 
-      let daily = 0, weekly = 0, monthly = 0, totalRev = 0;
+      let daily = 0, weekly = 0, monthly = 0, yearly = 0, allTimeRev = 0;
 
       const paidInvoices = invoices.filter(inv => {
         const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
@@ -170,7 +172,8 @@ const Accounting = () => {
         if (d.toDateString() === today) daily += totalReceived;
         if (d >= startOfWeek) weekly += totalReceived;
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += totalReceived;
-        totalRev += totalReceived;
+        if (d.getFullYear() === now.getFullYear()) yearly += totalReceived;
+        allTimeRev += totalReceived;
       });
 
       incomes.forEach(inc => {
@@ -182,7 +185,8 @@ const Accounting = () => {
         if (d.toDateString() === today) daily += amt;
         if (d >= startOfWeek) weekly += amt;
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += amt;
-        totalRev += amt;
+        if (d.getFullYear() === now.getFullYear()) yearly += amt;
+        allTimeRev += amt;
       });
 
       // Apply dateFilter to compute filtered totalRevenue for the break-even display
@@ -196,7 +200,7 @@ const Accounting = () => {
 
       let filteredTotal = 0;
       if (dateFilter === 'all') {
-        filteredTotal = totalRev;
+        filteredTotal = allTimeRev;
       } else {
         const filterDate = (d: Date) => {
           if (dateFilter === 'daily') return d.toDateString() === today;
@@ -217,7 +221,9 @@ const Accounting = () => {
       setDailyRevenue(daily);
       setWeeklyRevenue(weekly);
       setMonthlyRevenue(monthly);
-      setTotalRevenue(filteredTotal);
+      setYearlyRevenue(yearly);
+      setFilteredRevenue(filteredTotal);
+      setTotalRevenue(allTimeRev);
 
       const inventoryCategories = ["Supplies", "Equipment", "Chemicals", "Inventory"];
       const manualExpenses = expensesData.filter(e => {
@@ -547,17 +553,6 @@ const Accounting = () => {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <h1 className="text-3xl font-bold text-foreground">Accounting</h1>
             <div className="flex gap-2 items-center flex-wrap">
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="daily">Today</SelectItem>
-                  <SelectItem value="weekly">This Week</SelectItem>
-                  <SelectItem value="monthly">This Month</SelectItem>
-                  <SelectItem value="yearly">This Year</SelectItem>
-                </SelectContent>
-              </Select>
-              <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
               <Button variant="outline" onClick={() => generatePDF('save')}>
                 <Save className="h-4 w-4 mr-2" />
                 Save PDF
@@ -567,7 +562,7 @@ const Accounting = () => {
 
           <Card className={`p-6 border-none text-white ${profit >= 0 ? "bg-emerald-600 shadow-xl shadow-emerald-900/20" : "bg-red-600 shadow-xl shadow-red-900/20"}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold opacity-90">Profit/Loss Summary</h2>
+              <h2 className="text-xl font-bold opacity-90">Profit/Loss Summary (All-Time)</h2>
               <button 
                 className="opacity-70 hover:opacity-100 transition-opacity"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'net-profit-explanation' }))}
@@ -584,41 +579,72 @@ const Accounting = () => {
                 {profit > 0 ? 'Profit' : profit < 0 ? 'Loss' : 'Break-Even'}
               </span>
             </div>
-            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
+            <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (All-Time Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
           </Card>
 
           <Card className="p-6 bg-gradient-card border-border relative overflow-hidden">
             <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-emerald-500 font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
               <CheckCircle className="h-3 w-3" /> Auto-Sync Active
             </div>
-            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="h-6 w-6 text-primary" />
-              Revenue Tracking (Invoices + Income)
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 mt-2">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary" />
+                Revenue Tracking (Invoices + Income)
+              </h2>
+              
+              <div className="flex gap-2 items-center flex-wrap bg-background/50 p-1.5 rounded-lg border border-border/50">
+                <span className="text-xs font-semibold text-muted-foreground mr-1 ml-2">LEDGER FILTER:</span>
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="daily">Today</SelectItem>
+                    <SelectItem value="weekly">This Week</SelectItem>
+                    <SelectItem value="monthly">This Month</SelectItem>
+                    <SelectItem value="yearly">This Year</SelectItem>
+                  </SelectContent>
+                </Select>
+                <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Daily Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">${dailyRevenue.toFixed(2)}</p>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">Today</Label>
+                <p className="text-2xl font-bold text-foreground mt-1">${dailyRevenue.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Weekly Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">${weeklyRevenue.toFixed(2)}</p>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">This Week</Label>
+                <p className="text-2xl font-bold text-foreground mt-1">${weeklyRevenue.toFixed(2)}</p>
               </div>
               <div className="p-4 bg-background/50 rounded-lg border border-border">
-                <Label className="text-muted-foreground">Monthly Revenue</Label>
-                <p className="text-3xl font-bold text-foreground mt-2">${monthlyRevenue.toFixed(2)}</p>
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">This Month</Label>
+                <p className="text-2xl font-bold text-foreground mt-1">${monthlyRevenue.toFixed(2)}</p>
+              </div>
+              <div className="p-4 bg-background/50 rounded-lg border border-border">
+                <Label className="text-muted-foreground text-xs uppercase tracking-wider">This Year</Label>
+                <p className="text-2xl font-bold text-foreground mt-1">${yearlyRevenue.toFixed(2)}</p>
+              </div>
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <Label className="text-primary text-xs uppercase tracking-wider font-semibold">Filtered Range</Label>
+                <p className="text-2xl font-bold text-primary mt-1">${filteredRevenue.toFixed(2)}</p>
               </div>
             </div>
             <p className="mt-4 text-[10px] text-zinc-500 flex items-center gap-2 italic">
               <HelpCircle className="h-3 w-3 text-emerald-500" />
               Tip: Payments recorded in the "Invoicing" page are added here automatically. Do not manually add them as income to avoid double-counting.
             </p>
+            <p className="mt-1 text-[10px] text-blue-400 flex items-center gap-2 italic">
+              <HelpCircle className="h-3 w-3 text-blue-400" />
+              Note: The filter above applies to the "Filtered Range" box and all Ledgers below. Break-Even and Profit/Loss always show All-Time totals.
+            </p>
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/20">
             <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-blue-500" />
-              Break-Even Analysis
+              Break-Even Analysis (All-Time)
               <button 
                 className="text-blue-400 hover:text-blue-600 transition-colors"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'break-even-analysis' }))}
