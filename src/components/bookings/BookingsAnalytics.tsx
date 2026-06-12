@@ -51,6 +51,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [reminderNote, setReminderNote] = useState("");
     const [reminderFrequency, setReminderFrequency] = useState<string>("3"); // Default 3 months
     const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+    const [selectedChartJobs, setSelectedChartJobs] = useState<any[]>([]);
+    const [isChartJobsModalOpen, setIsChartJobsModalOpen] = useState(false);
+    const [chartJobsModalTitle, setChartJobsModalTitle] = useState("");
 
     // Operational Review State
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -847,6 +850,40 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             .sort((a, b) => b.value - a.value);
     }, [filteredPerfBookings]);
 
+    const handleChartClick = (data: any, type: string) => {
+        if (!data || (!data.name && !data.activePayload)) return;
+        
+        let title = data.name;
+        // Recharts BarChart passes an event with activePayload when clicking a bar
+        if (!title && data.activePayload && data.activePayload.length > 0) {
+            title = data.activePayload[0].payload.name;
+        }
+
+        setChartJobsModalTitle(`Jobs: ${title} (${type})`);
+        
+        let jobs: any[] = [];
+        if (type === 'Service') {
+            jobs = filteredPerfBookings.filter(b => (b.title || "Unknown") === title);
+        } else if (type === 'Location') {
+            jobs = filteredPerfBookings.filter(b => {
+                const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+                const address = b.address || customer?.address || "N/A";
+                const pos = b.placeOfService || "";
+                const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
+                return title === 'Onsite' ? isShop : !isShop;
+            });
+        } else if (type === 'Volume') {
+            const thisYear = new Date().getFullYear();
+            jobs = filteredPerfBookings.filter(b => {
+                const d = parseISO(b.date);
+                return format(d, "MMM") === title && d.getFullYear() === thisYear;
+            });
+        }
+        
+        setSelectedChartJobs(jobs);
+        setIsChartJobsModalOpen(true);
+    };
+
     const locationPieData = useMemo(() => {
         let mobile = 0;
         let onsite = 0;
@@ -1211,6 +1248,104 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
 
+            {/* Global Charts Filter */}
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Performance Graphs</h3>
+                <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
+                            <Filter className="h-3.5 w-3.5" />
+                            Filter Graphs
+                            {(!perfShowArchived) && (
+                                <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
+                                    Active Only
+                                </Badge>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-0 overflow-hidden shadow-2xl" align="end">
+                        <div className="p-4 bg-red-600 flex items-center justify-between shadow-lg">
+                            <span className="text-xs font-black uppercase tracking-widest text-white antialiased">Filter Graphs</span>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20 rounded-full" onClick={() => setIsFilterOpen(false)}>
+                                <span className="sr-only">Close</span>
+                                ✕
+                            </Button>
+                        </div>
+
+                        <div className="p-4 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-white">Show Archived</span>
+                                </div>
+                                <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
+                            </div>
+
+                            <div className="space-y-3">
+                                <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Quick Filters</span>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (!perfDateFilter.start && !perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                    >
+                                        ALL TIME
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                    >
+                                        TODAY
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                                    >
+                                        THIS WEEK
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                                    >
+                                        THIS MONTH
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-2 border-t border-zinc-800/50">
+                                <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Custom Range</span>
+                                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/40">
+                                    <Calendar
+                                        mode="range"
+                                        selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
+                                        onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
+                                        initialFocus
+                                        className="bg-transparent text-white"
+                                    />
+                                </div>
+                                {(perfDateFilter.start || perfDateFilter.end) && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full text-[10px] font-black uppercase text-zinc-500 hover:text-red-500 transition-colors"
+                                        onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                    >
+                                        <RotateCcw className="h-3 w-3 mr-2" />
+                                        Clear Date Filter
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Booking Volume Chart */}
@@ -1232,7 +1367,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
                                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                                 />
-                                <Bar dataKey="bookings" fill="url(#violetGradient)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="bookings" fill="url(#violetGradient)" radius={[4, 4, 0, 0]} onClick={(data) => handleChartClick(data, 'Volume')} cursor="pointer" />
                                 <defs>
                                     <linearGradient id="violetGradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
@@ -1266,6 +1401,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         paddingAngle={5}
                                         dataKey="value"
                                         stroke="none"
+                                        onClick={(data) => handleChartClick(data, 'Service')}
+                                        cursor="pointer"
                                     >
                                         {pieData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -1301,6 +1438,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         paddingAngle={5}
                                         dataKey="value"
                                         stroke="none"
+                                        onClick={(data) => handleChartClick(data, 'Location')}
+                                        cursor="pointer"
                                     >
                                         {locationPieData.map((entry, index) => (
                                             <Cell key={`cell-loc-${index}`} fill={['#3b82f6', '#10b981'][index % 2]} />
@@ -2523,6 +2662,49 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <Button onClick={saveReview} className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 shadow-lg shadow-violet-600/20 active:scale-95 transition-transform">
                             Save Operational Review
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Chart Jobs Modal */}
+            <Dialog open={isChartJobsModalOpen} onOpenChange={setIsChartJobsModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">{chartJobsModalTitle} ({selectedChartJobs.length} Jobs)</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                        {selectedChartJobs.length === 0 ? (
+                            <p className="text-zinc-400">No jobs found for this category.</p>
+                        ) : (
+                            selectedChartJobs.map((b, i) => (
+                                <div key={i} className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg flex justify-between items-center shadow-md">
+                                    <div>
+                                        <h4 className="font-bold text-lg text-zinc-100">{b.customer}</h4>
+                                        <div className="text-sm text-zinc-400 flex items-center gap-2 mt-1">
+                                            <CalendarIcon className="w-3.5 h-3.5 text-zinc-500" />
+                                            {b.date ? format(parseISO(b.date), "MMMM d, yyyy 'at' h:mm a") : 'Unknown Date'}
+                                        </div>
+                                        <div className="text-sm text-zinc-400 mt-2">
+                                            <span className="font-semibold text-zinc-300">Service:</span> {b.title || 'Unknown'}
+                                        </div>
+                                        <div className="text-sm text-zinc-400">
+                                            <span className="font-semibold text-zinc-300">Location:</span> {b.placeOfService || b.address || "Customer's address"}
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700 hover:text-white"
+                                        onClick={() => {
+                                            setIsChartJobsModalOpen(false);
+                                            navigate(`/database?customer=${encodeURIComponent(b.customer)}`);
+                                        }}
+                                    >
+                                        View Profile
+                                    </Button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
