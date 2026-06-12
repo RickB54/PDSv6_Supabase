@@ -853,7 +853,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         filteredPerfBookings.forEach(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const address = b.address || customer?.address || "N/A";
-            const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
+            const pos = b.placeOfService || "";
+            const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
             if (isShop) {
                 onsite++;
             } else {
@@ -870,7 +871,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return filteredPerfBookings.map(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const address = b.address || customer?.address || "N/A";
-            const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
+            const pos = b.placeOfService || "";
+            const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
             
             // Cross-reference revenue from invoices if booking price is 0
             let revenue = Number(b.price || 0);

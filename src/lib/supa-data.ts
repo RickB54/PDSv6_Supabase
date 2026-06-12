@@ -2318,7 +2318,8 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 isArchived: b.is_archived || meta.is_archived || false,
                 source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
                 discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
-                discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0)
+                discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
+                placeOfService: b.place_of_service || meta.placeOfService || meta.place_of_service || ''
             };
         });
     } catch (err) {
@@ -2352,7 +2353,8 @@ export const upsertSupabaseBooking = async (booking: any) => {
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate,
               discountCode: booking.discountCode || '',
-              discountAmount: Number(booking.discountAmount || 0)
+              discountAmount: Number(booking.discountAmount || 0),
+              placeOfService: booking.placeOfService || ''
             },
             end_time: booking.endTime || booking.end_time || null,
             is_archived: booking.isArchived || false,

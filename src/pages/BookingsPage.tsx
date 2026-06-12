@@ -147,7 +147,8 @@ export default function BookingsPage() {
     vehicleId: undefined as string | undefined,
     discountType: "coupon" as "coupon" | "custom",
     discountCode: "",
-    customDiscount: ""
+    customDiscount: "",
+    placeOfService: "Customer's address"
   });
 
   const [cancelReason, setCancelReason] = useState("");
@@ -776,7 +777,8 @@ export default function BookingsPage() {
             vehicleId: booking.vehicleId,
             discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
             discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
-            customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
+            customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
+            placeOfService: booking.placeOfService || "Customer's address"
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -993,7 +995,8 @@ export default function BookingsPage() {
       vehicleId: undefined,
       discountType: "coupon",
       discountCode: defaultCoupon,
-      customDiscount: ""
+      customDiscount: "",
+      placeOfService: "Customer's address"
     });
     setIsAddModalOpen(true);
   };
@@ -1052,7 +1055,8 @@ export default function BookingsPage() {
       vehicleId: booking.vehicleId,
       discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
-      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
+      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
+      placeOfService: booking.placeOfService || "Customer's address"
     });
     
     if (booking.date) {
@@ -1308,7 +1312,8 @@ export default function BookingsPage() {
           customerPhone: formData.phone,
           price: calculatedPrice,
           discountCode: finalDiscountCode,
-          discountAmount: discountAmount
+          discountAmount: discountAmount,
+          placeOfService: formData.placeOfService
         };
 
         // Reschedule Tracking Logic
@@ -1399,7 +1404,8 @@ export default function BookingsPage() {
           price: calculatedPrice,
           createdAt: new Date().toISOString(),
           discountCode: finalDiscountCode,
-          discountAmount: discountAmount
+          discountAmount: discountAmount,
+          placeOfService: formData.placeOfService
         };
         
         await add(newBooking as any);
@@ -1479,7 +1485,8 @@ export default function BookingsPage() {
           vehicleId: undefined,
           discountType: "coupon",
           discountCode: "",
-          customDiscount: ""
+          customDiscount: "",
+          placeOfService: "Customer's address"
         });
       }, 300);
 
@@ -1546,7 +1553,8 @@ export default function BookingsPage() {
       vehicleId: booking.vehicleId,
       discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
-      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : ''
+      customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
+      placeOfService: booking.placeOfService || "Customer's address"
     });
 
     // Reset validation/selection states for "New" mode
@@ -2576,6 +2584,20 @@ export default function BookingsPage() {
                         </Button>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Place of Service</label>
+                  <div className="col-span-3">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:ring-purple-500/20"
+                      value={formData.placeOfService}
+                      onChange={(e) => setFormData({ ...formData, placeOfService: e.target.value })}
+                    >
+                      <option value="Customer's address">Mobile / Onsite (Customer's address)</option>
+                      <option value="Shop in Methuen">Shop in Methuen</option>
+                    </select>
                   </div>
                 </div>
 

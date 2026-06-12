@@ -43,6 +43,7 @@ export interface Booking {
   last_email_sent_at?: string;
   discountCode?: string;
   discountAmount?: number;
+  placeOfService?: string;
 }
 
 const STORAGE_KEY = "bookings";
