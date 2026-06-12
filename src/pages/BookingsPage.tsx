@@ -3753,8 +3753,18 @@ export default function BookingsPage() {
                                                 );
                                               })()}
                                             </div>
-                                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                                            <div className="text-xs text-muted-foreground flex items-center flex-wrap gap-1.5 mt-1">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
+                                              {event.type === 'booking' && (
+                                                <>
+                                                  <span className="text-zinc-700">•</span>
+                                                  <span className="text-amber-400/80 font-bold uppercase text-[10px] flex items-center gap-1">
+                                                    <MapPinIcon className="w-3 h-3" />
+                                                    {event.placeOfService || event.address || "Customer's Address"}
+                                                  </span>
+                                                </>
+                                              )}
+
                                               {event.type === 'booking' && (event.vehicleYear || event.vehicleMake) && (
                                                 <>
                                                   <span className="text-zinc-700">•</span>

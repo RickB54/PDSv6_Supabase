@@ -257,7 +257,7 @@ const Contact = () => {
               beforePhotos: fileUrls
             }
           ],
-          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleColor ? ` (Color: ${formData.vehicleColor})` : ''}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
+          notes: `[Inquiry] Preferred Timing: ${formData.preferredTiming}\nPlace of Service: ${formData.placeOfService}\n\nVehicle Details: ${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}${formData.vehicleColor ? ` (Color: ${formData.vehicleColor})` : ''}${formData.vehicleCondition ? ` (Condition: ${formData.vehicleCondition})` : ''}\nClass: ${formData.vehicleType}\n\nClient Message: ${formData.message}${fileUrls.length > 0 ? `\n\nAttached Photos:\n${fileUrls.join('\n')}` : ''}`
         });
 
         // Also create a contact record for redundancy and history
@@ -295,6 +295,10 @@ const Contact = () => {
                   <tr>
                     <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Location:</td>
                     <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.address ? `${formData.address}, ` : ''}${formData.city}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Place of Service:</td>
+                    <td style="padding: 10px 0; color: #18181b; font-weight: 700; font-size: 14px;">${formData.placeOfService}</td>
                   </tr>
                   <tr>
                     <td style="padding: 10px 0; color: #71717a; font-weight: 600; font-size: 14px;">Vehicle Spec:</td>
@@ -386,8 +390,9 @@ const Contact = () => {
     doc.text(`Vehicle Condition: ${formData.vehicleCondition || 'Not Specified'}`, 20, 110);
     doc.text(`Service: ${formData.serviceInterested}`, 20, 120);
     doc.text(`Desired Timing: ${formData.preferredTiming}`, 20, 130);
+    doc.text(`Place of Service: ${formData.placeOfService}`, 20, 140);
     
-    let yPos = 145;
+    let yPos = 155;
     if (fileUrls.length > 0) {
       doc.text("Files Attached:", 20, yPos);
       yPos += 10;
