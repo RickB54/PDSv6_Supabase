@@ -582,6 +582,23 @@ const Accounting = () => {
             <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (All-Time Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
           </Card>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-green-50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Total Revenue</p>
+              <p className="text-2xl font-bold text-green-600">+${totalRevenue.toFixed(2)}</p>
+            </div>
+            <div className="p-4 bg-red-50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Total Expenses</p>
+              <p className="text-2xl font-bold text-red-600">-${(totalSpent + inventoryTotals.total).toFixed(2)}</p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Net Balance</p>
+              <p className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {profit >= 0 ? '+' : ''} ${profit.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
           <Card className="p-6 bg-gradient-card border-border relative overflow-hidden">
             <div className="absolute top-2 right-2 flex items-center gap-1 text-[10px] text-emerald-500 font-bold uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
               <CheckCircle className="h-3 w-3" /> Auto-Sync Active
