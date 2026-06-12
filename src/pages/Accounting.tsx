@@ -126,7 +126,8 @@ const Accounting = () => {
     materials: 0,
     tools: 0,
     total: 0,
-    itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 }
+    itemCount: { chemicals: 0, materials: 0, tools: 0, total: 0 },
+    totalSavings: 0
   });
 
   const { isDemoMode } = useDemoMode();

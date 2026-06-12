@@ -40,6 +40,7 @@ export interface CalendarEvent {
     customerId?: string;
     discountCode?: string;
     discountAmount?: number;
+    placeOfService?: string;
 }
 
 /**
@@ -85,7 +86,8 @@ export async function getUnifiedCalendarEvents(
                 vehicleId: booking.vehicleId,
                 customerId: booking.customerId,
                 discountCode: booking.discountCode,
-                discountAmount: booking.discountAmount
+                discountAmount: booking.discountAmount,
+                placeOfService: booking.placeOfService
             });
         }
     });
