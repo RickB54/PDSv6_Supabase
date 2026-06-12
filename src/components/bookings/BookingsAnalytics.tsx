@@ -847,6 +847,25 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             .sort((a, b) => b.value - a.value);
     }, [filteredPerfBookings]);
 
+    const locationPieData = useMemo(() => {
+        let mobile = 0;
+        let onsite = 0;
+        filteredPerfBookings.forEach(b => {
+            const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+            const address = b.address || customer?.address || "N/A";
+            const isShop = !address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail");
+            if (isShop) {
+                onsite++;
+            } else {
+                mobile++;
+            }
+        });
+        return [
+            { name: "Mobile", value: mobile },
+            { name: "Onsite", value: onsite }
+        ].filter(d => d.value > 0);
+    }, [filteredPerfBookings, customers]);
+
     const serviceDetailsData = useMemo(() => {
         return filteredPerfBookings.map(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
@@ -1221,41 +1240,78 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </CardContent>
                 </Card>
 
-                {/* Service Distribution Pie Chart */}
-                <Card ref={serviceChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
-                    <CardHeader>
-                        <CardTitle className="text-zinc-100 flex items-center gap-2">
-                            <Package className="w-4 h-4 text-emerald-400" />
-                            Service Distribution
-                        </CardTitle>
-                        <CardDescription>Most popular service packages</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
-                                />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                {/* Service & Location Distribution */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Service Distribution Pie Chart */}
+                    <Card ref={serviceChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-zinc-100 flex items-center gap-2 text-sm">
+                                <Package className="w-4 h-4 text-emerald-400" />
+                                Service Distribution
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[260px] pb-4 px-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={45}
+                                        outerRadius={65}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={40} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    {/* Location Distribution Pie Chart */}
+                    <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-zinc-100 flex items-center gap-2 text-sm">
+                                <Sparkles className="w-4 h-4 text-amber-400" />
+                                Location Distribution
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[260px] pb-4 px-2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={locationPieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={45}
+                                        outerRadius={65}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {locationPieData.map((entry, index) => (
+                                            <Cell key={`cell-loc-${index}`} fill={['#3b82f6', '#10b981'][index % 2]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={40} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {/* Active Reminders List */}
