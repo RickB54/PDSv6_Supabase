@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
-import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send } from "lucide-react";
+import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -138,8 +138,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             monthRevenue: monthBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0),
             weekServices: weekBookings.length,
             monthServices: monthBookings.length,
-            weekAddons: weekBookings.reduce((sum, b) => sum + (b.addOns?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0),
-            monthAddons: monthBookings.reduce((sum, b) => sum + (b.addOns?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0)
+            weekAddons: weekBookings.reduce((sum, b) => sum + (b.addons?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0),
+            monthAddons: monthBookings.reduce((sum, b) => sum + (b.addons?.length || 0) + (b.title?.toLowerCase().includes('+') ? 1 : 0), 0)
         };
 
         // Clean Header (No gray backgrounds)
@@ -709,6 +709,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     // --- Persistent Filter States ---
     
     // Performance Filter
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [perfShowArchived, setPerfShowArchived] = useState(() => localStorage.getItem('analytics_perf_showArchived') === 'true');
     const [perfDateFilter, setPerfDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
         try {
@@ -1162,7 +1163,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         // 4. Missing Invoices for Completed Jobs
         doneServices.forEach(b => {
             const hasInvoice = invoices.some(inv => {
-                const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
+                const isCustMatch = inv.customerId === (b as any).customerId || inv.customerName === b.customer;
                 const invDate = inv.date || inv.createdAt?.split('T')[0];
                 const bDate = b.date?.split('T')[0];
                 return isCustMatch && (invDate === bDate || Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000);
@@ -1176,7 +1177,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     title: 'Invoice Needed',
                     description: `Job completed on ${format(parseISO(b.date), "MMM d")} but no invoice found.`,
                     actionText: 'Create Invoice',
-                    actionUrl: `/invoicing?customerId=${b.customerId || ''}`, // Assuming the invoicing page handles missing customerId or we can search
+                    actionUrl: `/invoicing?customerId=${(b as any).customerId || ''}`, // Assuming the invoicing page handles missing customerId or we can search
                     icon: <FilePlus className="w-4 h-4" />,
                     color: 'emerald'
                 });
