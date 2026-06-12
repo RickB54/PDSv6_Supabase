@@ -850,8 +850,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const locationPieData = useMemo(() => {
         let mobile = 0;
         let onsite = 0;
+        const accountedCustomerIds = new Set<string>();
+        
         filteredPerfBookings.forEach(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+            if (customer?.id) accountedCustomerIds.add(customer.id);
             const address = b.address || customer?.address || "N/A";
             const pos = b.placeOfService || "";
             const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
@@ -859,6 +862,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 onsite++;
             } else {
                 mobile++;
+            }
+        });
+
+        // Also include Prospects that haven't booked yet
+        customers.forEach(c => {
+            if (c.type === 'prospect' && c.id && !accountedCustomerIds.has(c.id)) {
+                const address = c.address || "N/A";
+                let pos = "";
+                if (c.vehicles && c.vehicles.length > 0) {
+                    pos = (c.vehicles[0] as any).placeOfService || "";
+                }
+                const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
+                if (isShop) {
+                    onsite++;
+                } else {
+                    mobile++;
+                }
             }
         });
         return [

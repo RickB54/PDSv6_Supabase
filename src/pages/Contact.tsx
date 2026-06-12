@@ -119,7 +119,8 @@ const Contact = () => {
       serviceInterested: matchedService,
       preferredTiming: "Flexible",
       howFound: "google",
-      message: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify real-time notifications, PDF archiving, bucket photo uploads, and display within the Prospects and Customer CRM galleries."
+      message: "This is a pre-filled test inquiry submitted by Rick Berube (Admin) to verify real-time notifications, PDF archiving, bucket photo uploads, and display within the Prospects and Customer CRM galleries.",
+      placeOfService: "Shop in Methuen"
     });
     setAttachments([]); // No photos are pre-uploaded
     setErrors({});
@@ -248,6 +249,7 @@ const Contact = () => {
               make: formData.vehicleMake,
               model: formData.vehicleModel,
               year: formData.vehicleYear,
+              placeOfService: formData.placeOfService,
               type: formData.vehicleType,
               color: formData.vehicleColor || 'Black',
               conditionOutside: formData.vehicleCondition,
@@ -452,7 +454,8 @@ const Contact = () => {
       serviceInterested: "",
       preferredTiming: "",
       howFound: "",
-      message: ""
+      message: "",
+      placeOfService: "Customer's address"
     });
     setAttachments([]);
     setErrors({});

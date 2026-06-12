@@ -44,6 +44,7 @@ export interface Booking {
   discountCode?: string;
   discountAmount?: number;
   placeOfService?: string;
+  booking_vehicle?: any;
 }
 
 const STORAGE_KEY = "bookings";

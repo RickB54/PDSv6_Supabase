@@ -2319,7 +2319,8 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
                 discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
                 discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
-                placeOfService: b.place_of_service || meta.placeOfService || meta.place_of_service || ''
+                placeOfService: meta.placeOfService || meta.place_of_service || b.place_of_service || '',
+                booking_vehicle: meta
             };
         });
     } catch (err) {
