@@ -2698,7 +2698,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700 hover:text-white"
                                         onClick={() => {
                                             setIsChartJobsModalOpen(false);
-                                            navigate(`/database?customer=${encodeURIComponent(b.customer)}`);
+                                            navigate(`/search-customer?customerId=${b.customerId || ''}&search=${encodeURIComponent(b.customer)}`);
                                         }}
                                     >
                                         View Profile
