@@ -223,6 +223,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
   const [isFullscreenImage, setIsFullscreenImage] = useState(false);
 
+  useEffect(() => {
+    if (!open) {
+      setIsFullscreenImage(false);
+    }
+  }, [open]);
+
   const DEFAULT_SIZES = ["1 unit", "1 gallon", "14 oz", "16 oz", "24 oz", "32 oz", "64 oz", "128 oz", "256 oz"];
   const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
   const DEFAULT_SUPPLY_UNITS = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg"];
@@ -2316,7 +2322,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     {isFullscreenImage && form.imageUrl && (
       <div 
         className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4 md:p-8 cursor-zoom-out animate-in fade-in duration-200"
-        onClick={() => setIsFullscreenImage(false)}
+        onClick={(e) => { e.stopPropagation(); setIsFullscreenImage(false); }}
       >
         <img 
           src={form.imageUrl} 
@@ -2325,7 +2331,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         />
         <button 
           className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 border border-white/20 rounded-full p-3 text-white transition-all hover:scale-110 active:scale-95"
-          onClick={() => setIsFullscreenImage(false)}
+          onClick={(e) => { e.stopPropagation(); setIsFullscreenImage(false); }}
         >
           <X className="h-6 w-6" />
         </button>
