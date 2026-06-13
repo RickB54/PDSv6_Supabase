@@ -873,13 +873,24 @@ const Invoicing = () => {
     y += 6;
 
     doc.setFontSize(10);
-    invoice.services.forEach((s) => {
-            const serviceName = s.name || 'Service';
-      const lines = doc.splitTextToSize(serviceName, 140);
-      doc.text(lines, 25, y);
-      doc.text(`$${s.price.toFixed(2)}`, 180, y, { align: "right" });
-      y += (lines.length * 7);
-    });
+    if (invoice.services && invoice.services.length > 0) {
+      invoice.services.forEach((s) => {
+        const serviceName = s.name || 'Service';
+        const lines = doc.splitTextToSize(serviceName, 140);
+        doc.text(lines, 25, y);
+        doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
+        y += (lines.length * 7);
+      });
+    } else {
+      // Gracefully handle empty services (e.g., if it was only added to notes)
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "italic");
+      doc.text("Custom Detail Package - See Notes", 25, y);
+      doc.text("$0.00", 180, y, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      y += 7;
+    }
 
     y += 3;
     doc.line(20, y, 190, y);
