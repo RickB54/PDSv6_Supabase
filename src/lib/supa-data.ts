@@ -987,12 +987,32 @@ export const deleteSupabaseCustomer = async (id: string) => {
 
         const isRickBerube = customer?.full_name?.toLowerCase().trim() === 'rick berube';
 
+        // 2. PRE-CALCULATE COUNTS to guarantee accurate reporting
+        const [{ count: iCount }, { count: eCount }, { count: bCount }] = await Promise.all([
+            supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+            supabase.from('estimates').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+            supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id)
+        ]);
+
+        let vCount = 0;
+        if (vehicleIds.length > 0) {
+            const { count } = await supabase.from('vehicles').select('*', { count: 'exact', head: true }).in('id', vehicleIds);
+            vCount = count || 0;
+        }
+
+        const affectedData = {
+            bookings: bCount || 0,
+            estimates: eCount || 0,
+            invoices: iCount || 0,
+            vehicles: vCount || 0,
+            type: isRickBerube ? 'deleted automatically' : 'detached (requires manual deletion)'
+        };
+
         if (isRickBerube) {
             console.log(`[DeleteCustomer] Special wipe triggered for Rick Berube. Cascading deletions...`);
             await supabase.from('invoices').delete().eq('customer_id', id);
             await supabase.from('estimates').delete().eq('customer_id', id);
             await supabase.from('bookings').delete().eq('customer_id', id);
-            // Vehicles might also need manual deletion if they don't cascade automatically.
             if (vehicleIds.length > 0) {
                 await supabase.from('vehicles').delete().in('id', vehicleIds);
             }
@@ -1001,8 +1021,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
 
             // Nullify vehicle links in Bookings (fixes the FK violation)
             if (vehicleIds.length > 0) {
-                const { error: vehBookError } = await supabase.from('bookings').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
-                if (vehBookError) console.warn('[DeleteCustomer] Bookings vehicle detach warning:', vehBookError);
+                await supabase.from('bookings').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
             }
             // Nullify customer link in Bookings
             const { error: custBookError } = await supabase.from('bookings').update({ customer_id: null }).eq('customer_id', id);
@@ -1010,8 +1029,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
 
             // Nullify vehicle and customer links in Estimates
             if (vehicleIds.length > 0) {
-                const { error: vehEstError } = await supabase.from('estimates').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
-                if (vehEstError) console.warn('[DeleteCustomer] Estimates vehicle detach warning:', vehEstError);
+                await supabase.from('estimates').update({ vehicle_id: null }).in('vehicle_id', vehicleIds);
             }
             const { error: custEstError } = await supabase.from('estimates').update({ customer_id: null }).eq('customer_id', id);
             if (custEstError) console.warn('[DeleteCustomer] Estimates customer detach warning:', custEstError);
@@ -1039,7 +1057,8 @@ export const deleteSupabaseCustomer = async (id: string) => {
         return {
             success: true,
             crmCount: crmCount || 0,
-            authCount: authCount || 0
+            authCount: authCount || 0,
+            affectedData
         };
     } catch (err: any) {
         console.error('[DeleteCustomer] Processing error:', err);

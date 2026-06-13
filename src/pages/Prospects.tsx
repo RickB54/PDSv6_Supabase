@@ -471,12 +471,27 @@ export default function Prospects() {
     if (!deleteCustomerId) return;
     try {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let res: any = null;
       if (uuidRegex.test(deleteCustomerId)) {
-        await deleteSupabaseCustomer(deleteCustomerId);
+        res = await deleteSupabaseCustomer(deleteCustomerId);
       }
       await removeCustomer(deleteCustomerId).catch(() => { });
       await refresh();
-      toast({ title: "Deleted", description: "Prospect permanently removed." });
+
+      let msg = "Prospect permanently removed.";
+      if (res?.affectedData) {
+        const { bookings, estimates, invoices, vehicles, type } = res.affectedData;
+        const parts = [];
+        if (bookings > 0) parts.push(`${bookings} bookings`);
+        if (estimates > 0) parts.push(`${estimates} estimates`);
+        if (invoices > 0) parts.push(`${invoices} invoices`);
+        if (vehicles > 0) parts.push(`${vehicles} vehicles`);
+        if (parts.length > 0) {
+            msg += ` The following were ${type}: ${parts.join(', ')}.`;
+        }
+      }
+
+      toast({ title: "Deleted", description: msg });
     } catch (error: any) {
       toast({ title: "Delete Failed", description: error?.message || "Could not delete prospect.", variant: "destructive" });
     }

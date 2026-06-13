@@ -1006,8 +1006,21 @@ const Settings = () => {
                           const { data } = await supabase.from('customers').select('id').ilike('full_name', '%Rick Berube%').limit(1).maybeSingle();
                           if (data?.id) {
                             const { deleteSupabaseCustomer } = await import('@/lib/supa-data');
-                            await deleteSupabaseCustomer(data.id);
-                            toast({ title: "Success", description: "All test data successfully wiped. Analytics restored." });
+                            const res = await deleteSupabaseCustomer(data.id);
+                            
+                            let msg = "All test data successfully wiped. Analytics restored.";
+                            if (res?.affectedData) {
+                              const { bookings, estimates, invoices, vehicles, type } = res.affectedData;
+                              const parts = [];
+                              if (bookings > 0) parts.push(`${bookings} bookings`);
+                              if (estimates > 0) parts.push(`${estimates} estimates`);
+                              if (invoices > 0) parts.push(`${invoices} invoices`);
+                              if (vehicles > 0) parts.push(`${vehicles} vehicles`);
+                              if (parts.length > 0) {
+                                  msg += ` The following test data were ${type}: ${parts.join(', ')}.`;
+                              }
+                            }
+                            toast({ title: "Success", description: msg });
                           } else {
                             toast({ title: "Notice", description: "No active test data found to wipe." });
                           }

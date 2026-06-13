@@ -269,11 +269,24 @@ export default function AdminUsers() {
         const realId = id.replace('crm_', '').replace('pending_', '');
 
         // Use unified deletion logic
-        await deleteSupabaseCustomer(realId);
+        const res = await deleteSupabaseCustomer(realId);
+        
+        let msg = "User deleted.";
+        if (res?.affectedData) {
+          const { bookings, estimates, invoices, vehicles, type } = res.affectedData;
+          const parts = [];
+          if (bookings > 0) parts.push(`${bookings} bookings`);
+          if (estimates > 0) parts.push(`${estimates} estimates`);
+          if (invoices > 0) parts.push(`${invoices} invoices`);
+          if (vehicles > 0) parts.push(`${vehicles} vehicles`);
+          if (parts.length > 0) {
+              msg += ` The following were ${type}: ${parts.join(', ')}.`;
+          }
+        }
+        toast({ title: "User deleted", description: msg });
       }
 
       await fetchUsers();
-      toast({ title: "User deleted" });
     } catch (e: any) {
       console.error("Delete failed:", e);
       toast({ title: "Delete failed", description: String(e?.message || e), variant: "destructive" });
