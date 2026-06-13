@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import { cn } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import {
     Select,
     SelectContent,
@@ -905,6 +906,9 @@ const Estimates = () => {
                                             else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
                                             else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
                                             else setSelectedVehicleType('midsize');
+                                         } else if (v) {
+                                            const guessed = normalizeVehicleType(`${v.year || ''} ${v.make || ''} ${v.model || ''}`);
+                                            if (guessed) setSelectedVehicleType(guessed);
                                          }
                                      }}>
                                          <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1">

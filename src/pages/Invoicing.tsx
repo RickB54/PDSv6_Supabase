@@ -14,6 +14,7 @@ import {
   upsertSupabaseCustomer,
   Customer
 } from "@/lib/supa-data";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
@@ -1397,7 +1398,10 @@ Precision. Protection. Perfection.`;
                                   return label === val;
                                 });
                                 if (matched && matched.type) {
-                                  setCustomVehicleClass(matched.type.toLowerCase());
+                                  setCustomVehicleClass(matched.type.toLowerCase() as any);
+                                } else {
+                                  const guessed = normalizeVehicleType(val);
+                                  if (guessed) setCustomVehicleClass(guessed);
                                 }
                               }
                             }
@@ -1424,7 +1428,11 @@ Precision. Protection. Perfection.`;
                     <Input 
                       placeholder="e.g. 2023 Tesla Model 3"
                       value={customVehicle}
-                      onChange={(e) => setCustomVehicle(e.target.value)}
+                      onChange={(e) => {
+                        setCustomVehicle(e.target.value);
+                        const guessed = normalizeVehicleType(e.target.value);
+                        if (guessed) setCustomVehicleClass(guessed);
+                      }}
                       className="bg-zinc-950 border-zinc-800 mt-2"
                     />
                   )}
