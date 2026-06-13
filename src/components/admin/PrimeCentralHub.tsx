@@ -27,7 +27,9 @@ import {
     LayoutDashboard,
     Trash2,
     Maximize2,
-    X
+    X,
+    Pencil,
+    PinOff
 } from "lucide-react";
 import { FileText, CheckSquare } from "lucide-react";
 import { format, isToday, isThisWeek, isThisMonth, startOfToday, endOfToday, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, formatDistanceToNow } from 'date-fns';
@@ -37,6 +39,16 @@ import { HelpCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input as UIInput } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -158,8 +170,11 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
     const [isManaging, setIsManaging] = useState(false);
     const [isActionsExpanded, setIsActionsExpanded] = useState(true);
     const [isNotesSelectorOpen, setIsNotesSelectorOpen] = useState(false);
-    const [attachedNoteId, setAttachedNoteId] = useState<string | null>(null);
+    const [attachedNoteIds, setAttachedNoteIds] = useState<string[]>([]);
     const [isNoteViewerOpen, setIsNoteViewerOpen] = useState(false);
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
     const notesStore = useNotesStore();
 
@@ -189,11 +204,11 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
         Promise.all([
             localforage.getItem<string[]>('prime-pinned-shortcuts'),
             localforage.getItem<Shortcut[]>('prime-custom-shortcuts'),
-            localforage.getItem<string>('prime-attached-note-id')
-        ]).then(([p, cs, an]) => {
+            localforage.getItem<string[]>('prime-attached-note-ids')
+        ]).then(([p, cs, anIds]) => {
             setPinnedIds(p || DEFAULT_PINNED);
             setCustomShortcuts(cs || []);
-            setAttachedNoteId(an || null);
+            setAttachedNoteIds(anIds || []);
         });
         notesStore.refresh();
     }, [isDemoMode]);
@@ -298,20 +313,37 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
         localforage.setItem('prime-pinned-shortcuts', pinnedIds.filter(p => p !== id));
     };
 
-    const attachedNote = useMemo(() => {
-        if (!attachedNoteId) return null;
-        return notesStore.notes.find(n => n.id === attachedNoteId);
-    }, [attachedNoteId, notesStore.notes]);
+    const attachedNotes = useMemo(() => {
+        if (!attachedNoteIds || attachedNoteIds.length === 0) return [];
+        return attachedNoteIds.map(id => notesStore.notes.find(n => n.id === id)).filter(Boolean) as any[];
+    }, [attachedNoteIds, notesStore.notes]);
 
     const handleAttachNote = (noteId: string) => {
-        setAttachedNoteId(noteId);
-        localforage.setItem('prime-attached-note-id', noteId);
+        if (!attachedNoteIds.includes(noteId)) {
+            const newIds = [...attachedNoteIds, noteId];
+            setAttachedNoteIds(newIds);
+            localforage.setItem('prime-attached-note-ids', newIds);
+        }
         setIsNotesSelectorOpen(false);
     };
 
-    const handleDetachNote = () => {
-        setAttachedNoteId(null);
-        localforage.setItem('prime-attached-note-id', null);
+    const handleDetachNote = (noteId: string) => {
+        const newIds = attachedNoteIds.filter(id => id !== noteId);
+        setAttachedNoteIds(newIds);
+        localforage.setItem('prime-attached-note-ids', newIds);
+    };
+
+    const handleDeleteNotePermanently = async () => {
+        if (!noteToDelete) return;
+        try {
+            await notesStore.deleteNote(noteToDelete);
+            handleDetachNote(noteToDelete);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setNoteToDelete(null);
+        }
     };
 
     // Filtered data based on scope
@@ -751,34 +783,67 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                         </Button>
                     </div>
 
-                    {attachedNote && (
-                        <Card className="p-4 bg-blue-500/5 border-blue-500/20 border-dashed relative group">
-                            <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <Star className="w-3.5 h-3.5 text-blue-400 fill-blue-400" />
-                                    <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Attached Note</span>
+                    <div className="relative p-6 rounded-xl shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] border-[8px] border-[#5c4033] bg-[#8b5a2b] mb-6 min-h-[400px]">
+                        {/* faint texture overlay */}
+                        <div className="absolute inset-0 opacity-30 mix-blend-multiply" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
+                        
+                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {attachedNotes.map((note, idx) => (
+                                <Card 
+                                    key={note.id} 
+                                    className="p-5 bg-[#fef08a] border-[#facc15] shadow-[2px_4px_10px_rgba(0,0,0,0.4)] relative group hover:shadow-[4px_8px_16px_rgba(0,0,0,0.5)] transition-all cursor-default" 
+                                    style={{ 
+                                        minHeight: '160px', 
+                                        transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (1 + (idx % 3))}deg)` 
+                                    }}
+                                >
+                                    {/* Pin design element */}
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-red-600 rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.5)] z-10 border border-red-800" />
+                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white/40 rounded-full z-20" />
+                                    
+                                    <div className="flex items-start justify-between mb-2">
+                                        <h3 className="text-sm font-bold text-yellow-900 pr-6 underline decoration-yellow-600/30 underline-offset-4">{note.title || 'Untitled Note'}</h3>
+                                        
+                                        {/* Hover Actions */}
+                                        <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 bg-yellow-400/90 rounded-md p-1 shadow-sm border border-yellow-500/50">
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-blue-500" title="Edit Note" onClick={() => {
+                                                setEditingNoteId(note.id);
+                                                setIsNoteViewerOpen(true);
+                                            }}>
+                                                <Pencil className="w-3 h-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-orange-500" title="Unpin Note" onClick={() => handleDetachNote(note.id)}>
+                                                <PinOff className="w-3 h-3" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-red-500" title="Delete Permanently" onClick={() => {
+                                                setNoteToDelete(note.id);
+                                                setIsDeleteDialogOpen(true);
+                                            }}>
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-yellow-900/80 line-clamp-4 leading-relaxed font-medium italic mt-2 whitespace-pre-wrap">
+                                        {note.content || 'No content provided.'}
+                                    </p>
+                                    <div className="absolute bottom-3 left-5 right-5 flex items-center justify-between">
+                                        <span className="text-[10px] text-yellow-700/60 font-mono font-semibold">{format(parseISO(note.updated_at), 'MMM d, h:mm a')}</span>
+                                    </div>
+                                </Card>
+                            ))}
+                            
+                            {/* Add Sticky Note button on the board */}
+                            <button 
+                                onClick={() => setIsNotesSelectorOpen(true)}
+                                className="border-2 border-dashed border-white/20 rounded-xl bg-black/10 hover:bg-black/20 hover:border-white/40 transition-all flex flex-col items-center justify-center gap-3 min-h-[160px] text-white/50 hover:text-white/80"
+                            >
+                                <div className="p-3 bg-white/10 rounded-full">
+                                    <Plus className="w-6 h-6" />
                                 </div>
-                                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-white" onClick={() => setIsNoteViewerOpen(true)}>
-                                        <Maximize2 className="w-3 h-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-red-400" onClick={handleDetachNote}>
-                                        <X className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                            </div>
-                            <h3 className="text-sm font-semibold text-zinc-200 mb-1">{attachedNote.title || 'Untitled Note'}</h3>
-                            <p className="text-xs text-zinc-500 line-clamp-3 leading-relaxed">
-                                {attachedNote.content || 'No content provided.'}
-                            </p>
-                            <div className="mt-3 flex items-center justify-between">
-                                <span className="text-[10px] text-zinc-600">Last updated {format(parseISO(attachedNote.updated_at), 'MMM d, h:mm a')}</span>
-                                <Button variant="link" size="sm" className="h-auto p-0 text-[11px] text-blue-400" onClick={() => setIsNoteViewerOpen(true)}>
-                                    Edit Note
-                                </Button>
-                            </div>
-                        </Card>
-                    )}
+                                <span className="text-sm font-medium tracking-wide">Add Sticky Note</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <Card className="p-6 bg-zinc-900/40 border-zinc-800">
                         {timeScope === 'today' && (
@@ -1198,8 +1263,8 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                     </div>
 
                     <DialogFooter className="flex-col sm:flex-row gap-2">
-                        <Link to="/personal-notes" className="w-full sm:w-auto">
-                            <Button variant="outline" className="w-full border-zinc-800 hover:bg-zinc-900">
+                        <Link to="/notes?returnTo=/admin-dashboard" className="w-full sm:w-auto">
+                            <Button variant="outline" className="w-full border-zinc-700 bg-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-700">
                                 Open Notes App
                             </Button>
                         </Link>
@@ -1218,24 +1283,24 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             <DialogTitle>View Note</DialogTitle>
                             <DialogDescription>Quickly edit or view your attached note.</DialogDescription>
                         </div>
-                        <Link to="/personal-notes">
+                        <Link to="/notes?returnTo=/admin-dashboard">
                             <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white flex items-center gap-2">
                                 <ArrowRight className="w-4 h-4" /> Go to Notes App
                             </Button>
                         </Link>
                     </DialogHeader>
 
-                    {attachedNote ? (
+                    {editingNoteId && notesStore.notes.find(n => n.id === editingNoteId) ? (
                         <div className="flex-1 flex flex-col overflow-hidden py-4 space-y-4">
                             <UIInput
                                 className="bg-transparent border-none text-2xl font-bold p-0 focus-visible:ring-0 placeholder:text-zinc-700"
-                                value={attachedNote.title}
-                                onChange={(e) => notesStore.updateNote(attachedNote.id, { title: e.target.value })}
+                                value={notesStore.notes.find(n => n.id === editingNoteId)!.title}
+                                onChange={(e) => notesStore.updateNote(editingNoteId, { title: e.target.value })}
                             />
                             <Textarea
                                 className="flex-1 bg-transparent border-none p-0 focus-visible:ring-0 resize-none text-zinc-300 leading-relaxed placeholder:text-zinc-700"
-                                value={attachedNote.content}
-                                onChange={(e) => notesStore.updateNote(attachedNote.id, { content: e.target.value })}
+                                value={notesStore.notes.find(n => n.id === editingNoteId)!.content}
+                                onChange={(e) => notesStore.updateNote(editingNoteId, { content: e.target.value })}
                             />
                         </div>
                     ) : (
@@ -1251,6 +1316,21 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Sticky Note</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            Are you sure you want to permanently delete this note? This will remove it from your dashboard and your personal notes app entirely. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-800 hover:bg-zinc-700 hover:text-white border-zinc-700 text-zinc-300">Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteNotePermanently}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
