@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, Check, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -1895,9 +1895,14 @@ Precision. Protection. Perfection.`;
                       <div className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Amount</div>
                       <div className="flex flex-col items-end">
                         {invoice.discount && invoice.discount.amount > 0 && (
-                          <span className="text-[10px] text-zinc-500 line-through decoration-zinc-700">
-                            ${(invoice.total + invoice.discount.amount).toFixed(2)}
-                          </span>
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <span className="text-[10px] text-zinc-500 line-through decoration-zinc-700">
+                              ${(invoice.services?.reduce((sum, s) => sum + s.price, 0) || (invoice.total + invoice.discount.amount)).toFixed(2)}
+                            </span>
+                            <span className="text-[9px] font-bold text-red-400/90 bg-red-400/10 px-1 py-0.5 rounded-sm">
+                              -{invoice.discount.type === 'percent' ? `${invoice.discount.value}%` : `$${invoice.discount.amount.toFixed(2)}`}
+                            </span>
+                          </div>
                         )}
                         <div className="text-lg sm:text-xl font-bold text-white">${invoice.total.toFixed(2)}</div>
                       </div>
@@ -2371,7 +2376,7 @@ Precision. Protection. Perfection.`;
                       "h-4 w-4 rounded border flex items-center justify-center transition-colors",
                       editIsSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
                     )}>
-                      {editIsSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
+                      {editIsSent && <Check className="h-3 w-3 text-white" strokeWidth={4} />}
                     </div>
                     I have sent this invoice to the customer
                   </Button>
