@@ -116,6 +116,13 @@ export const TestCustomerBanner = () => {
 
   return (
     <>
+      {isDeleting && (
+        <div className="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+          <RefreshCw className="h-12 w-12 animate-spin text-red-500 mb-4" />
+          <h2 className="text-2xl font-black uppercase tracking-widest text-red-400">Wiping Test Data</h2>
+          <p className="text-zinc-400 mt-2 font-medium">Please wait while the sandbox is completely cleared...</p>
+        </div>
+      )}
       <style>
       {`
         @keyframes slow-glow {
