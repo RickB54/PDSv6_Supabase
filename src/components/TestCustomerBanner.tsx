@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import supabase from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Trash2, AlertTriangle, RefreshCw, HelpCircle } from 'lucide-react';
+import { Trash2, AlertTriangle, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { deleteSupabaseCustomer } from '@/lib/supa-data';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +20,7 @@ import {
 export const TestCustomerBanner = () => {
   const [rickId, setRickId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [wipeResult, setWipeResult] = useState<{ msg: string; details: string | null } | null>(null);
   const navigate = useNavigate();
 
   // Dragging state
@@ -87,10 +88,23 @@ export const TestCustomerBanner = () => {
     setIsDeleting(true);
     toast({ title: "Wiping Test Data", description: "Executing specialized wipeout sequence..." });
     try {
-      await deleteSupabaseCustomer(rickId);
+      const res = await deleteSupabaseCustomer(rickId);
       setRickId(null);
-      toast({ title: "Success", description: "All test data successfully wiped. Analytics restored.", variant: "default" });
-      navigate(0); // Refresh the page to reset analytics visually
+      
+      let msg = "All test data successfully wiped. Analytics restored.";
+      let details = null;
+      if (res?.affectedData) {
+        const { bookings, estimates, invoices, vehicles, type } = res.affectedData;
+        const parts = [];
+        if (bookings > 0) parts.push(`${bookings} bookings`);
+        if (estimates > 0) parts.push(`${estimates} estimates`);
+        if (invoices > 0) parts.push(`${invoices} invoices`);
+        if (vehicles > 0) parts.push(`${vehicles} vehicles`);
+        if (parts.length > 0) {
+            details = `The following test data were ${type}: ${parts.join(', ')}.`;
+        }
+      }
+      setWipeResult({ msg, details });
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to wipe data", variant: "destructive" });
     } finally {
@@ -178,6 +192,38 @@ export const TestCustomerBanner = () => {
           </AlertDialog>
         </div>
       </div>
+
+      {/* Wipe Result Dialog */}
+      <AlertDialog open={wipeResult !== null} onOpenChange={() => {
+        setWipeResult(null);
+        navigate(0); // Refresh after acknowledgement
+      }}>
+        <AlertDialogContent className="bg-zinc-950 border border-blue-500/30 shadow-2xl z-[10000]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-emerald-400 flex items-center gap-2 text-xl">
+              <CheckCircle2 className="h-6 w-6" />
+              Test Data Wiped
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-300 text-base mt-2">
+              {wipeResult?.msg}
+            </AlertDialogDescription>
+            {wipeResult?.details && (
+              <div className="mt-4 bg-blue-900/20 border border-blue-800/30 p-4 rounded-lg text-blue-200">
+                <strong>Impact Report:</strong><br />
+                {wipeResult.details}
+              </div>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogAction onClick={() => {
+              setWipeResult(null);
+              navigate(0); // Refresh after acknowledgement
+            }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold w-full">
+              Acknowledge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
