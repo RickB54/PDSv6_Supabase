@@ -38,6 +38,7 @@ import InventoryControl from "./pages/InventoryControl";
 import Invoicing from "./pages/Invoicing";
 import Estimates from "./pages/Estimates";
 import Accounting from "./pages/Accounting";
+import Payments from "./pages/Payments";
 import CompanyBudget from "./pages/CompanyBudget";
 import Reports from "./pages/Reports";
 import TrainingManual from "./pages/TrainingManual";
@@ -372,6 +373,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/estimates" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
           <Route path="/demo/estimates" element={<ProtectedRoute user={user} allowedRoles={[]}><Estimates /></ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
+          <Route path="/payments" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Payments /></ProtectedRoute>} />
           <Route path="/demo/accounting" element={<ProtectedRoute user={user} allowedRoles={[]}><Accounting /></ProtectedRoute>} />
           <Route path="/payroll" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
           <Route path="/demo/payroll" element={<ProtectedRoute user={user} allowedRoles={[]}><Payroll /></ProtectedRoute>} />

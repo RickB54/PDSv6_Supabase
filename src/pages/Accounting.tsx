@@ -169,7 +169,8 @@ const Accounting = () => {
         // If paidAmount already exceeds invoice total, tip is embedded in paidAmount.
         // Otherwise, tip was stored separately and must be added to get true total received.
         const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
-        const d = new Date(inv.createdAt);
+        // Use paidDate if available, otherwise fallback to date or createdAt
+        const d = new Date((inv as any).paidDate || inv.date || inv.createdAt);
         if (d.toDateString() === today) daily += totalReceived;
         if (d >= startOfWeek) weekly += totalReceived;
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) monthly += totalReceived;
@@ -211,11 +212,13 @@ const Accounting = () => {
           return true;
         };
         paidInvoices.forEach(inv => {
-          if (filterDate(new Date(inv.createdAt))) filteredTotal += getInvoiceTotalReceived(inv);
+          const d = new Date((inv as any).paidDate || inv.date || inv.createdAt);
+          if (filterDate(d)) filteredTotal += getInvoiceTotalReceived(inv);
         });
         incomes.forEach(inc => {
           if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
-          if (filterDate(new Date(inc.date || inc.createdAt))) filteredTotal += (inc.amount || 0);
+          const d = new Date(inc.date || inc.createdAt);
+          if (filterDate(d)) filteredTotal += (inc.amount || 0);
         });
       }
 

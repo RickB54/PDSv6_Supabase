@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -268,6 +268,11 @@ const Payroll = () => {
           {renderTabButton('current', 'Current Payroll', <Wallet className="h-4 w-4" />)}
           {renderTabButton('history', 'History', <Clock className="h-4 w-4" />)}
           {renderTabButton('checks', 'Process Payment', <CreditCard className="h-4 w-4" />)}
+          <Button variant="ghost" className="rounded-full px-6 text-zinc-400 hover:text-white hover:bg-zinc-800" asChild>
+            <Link to="/payments">
+              <DollarSign className="h-4 w-4 mr-2" /> All Payments
+            </Link>
+          </Button>
         </div>
 
         {tab === 'current' && (

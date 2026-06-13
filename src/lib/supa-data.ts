@@ -988,10 +988,13 @@ export const deleteSupabaseCustomer = async (id: string) => {
         const isRickBerube = customer?.full_name?.toLowerCase().trim() === 'rick berube';
 
         // 2. PRE-CALCULATE COUNTS to guarantee accurate reporting
-        const [{ count: iCount }, { count: eCount }, { count: bCount }] = await Promise.all([
+        const [{ count: iCount }, { count: eCount }, { count: bCount }, { count: engCount }, { count: miCount }, { count: teCount }] = await Promise.all([
             supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('customer_id', id),
             supabase.from('estimates').select('*', { count: 'exact', head: true }).eq('customer_id', id),
-            supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id)
+            supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+            supabase.from('engagements').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+            supabase.from('manual_income').select('*', { count: 'exact', head: true }).ilike('customer_name', '%Rick Berube%'),
+            supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('payee', '%Rick Berube%')
         ]);
 
         let vCount = 0;
@@ -1000,18 +1003,47 @@ export const deleteSupabaseCustomer = async (id: string) => {
             vCount = count || 0;
         }
 
+        let pCount = 0;
+        const { data: bDataForCount } = await supabase.from('bookings').select('id').eq('customer_id', id);
+        if (bDataForCount && bDataForCount.length > 0) {
+            const bIds = bDataForCount.map(b => b.id);
+            const { count } = await supabase.from('payments').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
+            pCount = count || 0;
+        }
+
         const affectedData = {
             bookings: bCount || 0,
             estimates: eCount || 0,
             invoices: iCount || 0,
             vehicles: vCount || 0,
+            engagements: engCount || 0,
+            manual_income: miCount || 0,
+            expenses: teCount || 0,
+            payments: pCount || 0,
             type: isRickBerube ? 'deleted automatically' : 'detached (requires manual deletion)'
         };
 
         if (isRickBerube) {
             console.log(`[DeleteCustomer] Special wipe triggered for Rick Berube. Cascading deletions...`);
+            // Delete engagements
+            await supabase.from('engagements').delete().eq('customer_id', id);
+            
+            // Delete manual income with name match
+            await supabase.from('manual_income').delete().ilike('customer_name', '%Rick Berube%');
+            
+            // Delete expenses with payee match
+            await supabase.from('tax_expenses').delete().ilike('payee', '%Rick Berube%');
+
             await supabase.from('invoices').delete().eq('customer_id', id);
             await supabase.from('estimates').delete().eq('customer_id', id);
+            
+            // Get booking IDs to delete payments
+            const { data: bData } = await supabase.from('bookings').select('id').eq('customer_id', id);
+            if (bData && bData.length > 0) {
+                const bIds = bData.map(b => b.id);
+                await supabase.from('payments').delete().in('booking_id', bIds);
+            }
+            
             await supabase.from('bookings').delete().eq('customer_id', id);
             if (vehicleIds.length > 0) {
                 await supabase.from('vehicles').delete().in('id', vehicleIds);
