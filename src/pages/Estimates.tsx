@@ -114,6 +114,7 @@ const Estimates = () => {
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
     const [filterCustomerId, setFilterCustomerId] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
     const [selectedPackage, setSelectedPackage] = useState("");
     const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
     const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
@@ -480,9 +481,14 @@ const Estimates = () => {
         }
 
         const newStatus = !estimate.isSent;
+        const newStatusText = newStatus && estimate.status !== 'accepted' && estimate.status !== 'declined' 
+            ? 'sent' 
+            : (!newStatus && estimate.status === 'sent' ? 'open' : estimate.status);
+
         const updatedEstimate = {
             ...estimate,
             isSent: newStatus,
+            status: newStatusText,
             sentDate: newStatus ? new Date().toISOString() : undefined
         };
 
@@ -664,6 +670,18 @@ const Estimates = () => {
         return estimates.filter(e => {
             if (filterCustomerId && e.customerId !== filterCustomerId) return false;
 
+            if (statusFilter !== "all") {
+                const s = (e.status || '').toLowerCase();
+                const isSent = e.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+                
+                let outcomeDisplay = 'pending';
+                if (s === 'accepted') outcomeDisplay = 'accepted';
+                else if (s === 'denied' || s === 'declined') outcomeDisplay = 'declined';
+                else if (isSent) outcomeDisplay = 'no_answer';
+                
+                if (statusFilter !== outcomeDisplay) return false;
+            }
+
             const estDate = new Date(e.created_at || e.date);
             let passQuick = true;
             if (dateFilter === "daily") passQuick = estDate.toDateString() === now.toDateString();
@@ -751,6 +769,18 @@ const Estimates = () => {
                             <SelectContent>
                                 <SelectItem value="all">All Customers</SelectItem>
                                 {customers.map(c => <SelectItem key={c.id} value={c.id!}>{c.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[140px] bg-zinc-950 border-zinc-800">
+                                <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="accepted">Accepted</SelectItem>
+                                <SelectItem value="declined">Declined</SelectItem>
+                                <SelectItem value="no_answer">No Answer</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -1493,9 +1523,14 @@ const Estimates = () => {
                                         setEditIsSent(newIsSent);
                                         // Auto-save the sent status when toggled from the detail modal
                                         if (selectedEstimate) {
+                                            const newStatusText = newIsSent && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' 
+                                                ? 'sent' 
+                                                : (!newIsSent && selectedEstimate.status === 'sent' ? 'open' : selectedEstimate.status);
+
                                             const updated = {
                                                 ...selectedEstimate,
                                                 isSent: newIsSent,
+                                                status: newStatusText,
                                                 sentDate: newIsSent ? new Date().toISOString() : undefined
                                             };
                                             try {

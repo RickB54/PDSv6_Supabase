@@ -791,7 +791,11 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                             {attachedNotes.map((note, idx) => (
                                 <Card 
                                     key={note.id} 
-                                    className="p-5 bg-[#fef08a] border-[#facc15] shadow-[2px_4px_10px_rgba(0,0,0,0.4)] relative group hover:shadow-[4px_8px_16px_rgba(0,0,0,0.5)] transition-all cursor-default" 
+                                    onClick={() => {
+                                        setEditingNoteId(note.id);
+                                        setIsNoteViewerOpen(true);
+                                    }}
+                                    className="p-5 bg-[#fef08a] border-[#facc15] shadow-[2px_4px_10px_rgba(0,0,0,0.4)] relative group hover:shadow-[4px_8px_16px_rgba(0,0,0,0.5)] transition-all cursor-pointer" 
                                     style={{ 
                                         minHeight: '160px', 
                                         transform: `rotate(${(idx % 2 === 0 ? 1 : -1) * (1 + (idx % 3))}deg)` 
@@ -806,16 +810,21 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                                         
                                         {/* Hover Actions */}
                                         <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-2 bg-yellow-400/90 rounded-md p-1 shadow-sm border border-yellow-500/50">
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-blue-500" title="Edit Note" onClick={() => {
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-blue-500" title="Edit Note" onClick={(e) => {
+                                                e.stopPropagation();
                                                 setEditingNoteId(note.id);
                                                 setIsNoteViewerOpen(true);
                                             }}>
                                                 <Pencil className="w-3 h-3" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-orange-500" title="Unpin Note" onClick={() => handleDetachNote(note.id)}>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-orange-500" title="Unpin Note" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDetachNote(note.id);
+                                            }}>
                                                 <PinOff className="w-3 h-3" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-red-500" title="Delete Permanently" onClick={() => {
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-800 hover:text-white hover:bg-red-500" title="Delete Permanently" onClick={(e) => {
+                                                e.stopPropagation();
                                                 setNoteToDelete(note.id);
                                                 setIsDeleteDialogOpen(true);
                                             }}>
@@ -1277,7 +1286,7 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
             {/* Note Viewer/Editor Modal */}
             <Dialog open={isNoteViewerOpen} onOpenChange={setIsNoteViewerOpen}>
-                <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white h-[80vh] flex flex-col">
+                <DialogContent className="max-w-[95vw] w-full bg-zinc-950 border-zinc-800 text-white h-[95vh] flex flex-col p-6 md:p-10">
                     <DialogHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b border-zinc-800">
                         <div>
                             <DialogTitle>View Note</DialogTitle>

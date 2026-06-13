@@ -29,6 +29,7 @@ const Payments = () => {
   const [dateFilter, setDateFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   
   const { isDemoMode } = useDemoMode();
@@ -45,21 +46,23 @@ const Payments = () => {
 
         const unified: UnifiedPayment[] = [];
 
-        // 1. Paid Invoices
+        // 1. All Invoices (Paid and Unpaid/Owed)
         invoices.forEach(inv => {
           const rawAmt = inv.paidAmount || (inv.paymentStatus === 'paid' ? inv.total : 0);
           const tipAmt = inv.tipAmount || 0;
           const totalReceived = rawAmt + (rawAmt <= inv.total && tipAmt > 0 ? tipAmt : 0);
+          const amountOwed = (inv.total || 0) - totalReceived;
+          const isPaid = inv.paymentStatus === 'paid' || totalReceived >= (inv.total || 0);
           
-          if (totalReceived > 0) {
+          if (totalReceived > 0 || amountOwed > 0) {
             unified.push({
               id: inv.id || `inv-${inv.invoiceNumber}`,
               source: 'Invoice',
               customerName: inv.customerName || 'Unknown',
-              amount: totalReceived,
+              amount: isPaid ? totalReceived : (totalReceived > 0 ? totalReceived : amountOwed),
               date: inv.paidDate || inv.date || inv.createdAt || new Date().toISOString(),
-              status: inv.paymentStatus || 'paid',
-              reference: `INV #${inv.invoiceNumber}`
+              status: isPaid ? 'paid' : (totalReceived > 0 ? 'partial' : 'owed'),
+              reference: `INV #${inv.invoiceNumber}${!isPaid && totalReceived === 0 ? ' (Owed)' : ''}`
             });
           }
         });
@@ -112,6 +115,10 @@ const Payments = () => {
     }
     // Source
     if (sourceFilter !== "all" && p.source !== sourceFilter) {
+      return false;
+    }
+    // Status
+    if (paymentStatusFilter !== "all" && p.status !== paymentStatusFilter) {
       return false;
     }
     // Date
@@ -189,6 +196,21 @@ const Payments = () => {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="w-[150px]">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Status</label>
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+              <SelectTrigger className="bg-zinc-950 border-zinc-800 text-white">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="owed">Amt Owed</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           <div className="w-full md:w-auto">
              <DateRangeFilter value={dateFilter} onChange={setDateFilter} dateRange={dateRange} onDateRangeChange={setDateRange} />
@@ -247,7 +269,11 @@ const Payments = () => {
                         {p.reference || '—'}
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border-none">
+                        <Badge className={
+                          p.status === 'paid' ? "bg-emerald-500/10 text-emerald-400 border-none" : 
+                          p.status === 'partial' ? "bg-blue-500/10 text-blue-400 border-none" :
+                          "bg-amber-500/10 text-amber-400 border-none"
+                        }>
                           {p.status.toUpperCase()}
                         </Badge>
                       </TableCell>

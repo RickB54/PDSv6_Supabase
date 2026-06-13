@@ -811,22 +811,46 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
     const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
 
-    const estimatesPieData = useMemo(() => {
-        let accepted = 0;
-        let denied = 0;
+    const deliveryPieData = useMemo(() => {
+        let sent = 0;
         let notReceived = 0;
         
         filteredQuotes.forEach((q: any) => {
+            if (q.isSent || q.status === 'sent' || q.status === 'accepted' || q.status === 'declined' || q.status === 'denied') {
+                sent++;
+            } else {
+                notReceived++;
+            }
+        });
+
+        const data = [
+            { name: 'Sent', value: sent, color: '#3b82f6' },
+            { name: 'Not Received', value: notReceived, color: '#f59e0b' },
+        ].filter(d => d.value > 0);
+        return data.length > 0 ? data : [{ name: 'No Data', value: 1, color: '#3f3f46' }];
+    }, [filteredQuotes]);
+
+    const outcomePieData = useMemo(() => {
+        let accepted = 0;
+        let denied = 0;
+        let noAnswer = 0;
+        let pending = 0;
+        
+        filteredQuotes.forEach((q: any) => {
             const s = (q.status || '').toLowerCase();
+            const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+
             if (s === 'accepted') accepted++;
             else if (s === 'denied' || s === 'declined') denied++;
-            else notReceived++;
+            else if (isSent) noAnswer++;
+            else pending++;
         });
 
         const data = [
             { name: 'Accepted', value: accepted, color: '#10b981' },
-            { name: 'Not Received', value: notReceived, color: '#f59e0b' },
-            { name: 'Denied', value: denied, color: '#ef4444' }
+            { name: 'Declined', value: denied, color: '#ef4444' },
+            { name: 'No Answer', value: noAnswer, color: '#8b5cf6' },
+            { name: 'Pending', value: pending, color: '#a1a1aa' }
         ].filter(d => d.value > 0);
         return data.length > 0 ? data : [{ name: 'No Data', value: 1, color: '#3f3f46' }];
     }, [filteredQuotes]);
@@ -1863,7 +1887,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <FileBarChart className="w-5 h-5 text-emerald-400" />
                         <div>
                             <CardTitle>Estimates</CardTitle>
-                            <CardDescription>Track estimates statuses (Not Received, Accepted, Denied)</CardDescription>
+                            <CardDescription>Track estimates statuses (Not Received, Sent, Accepted, Denied)</CardDescription>
                         </div>
                     </div>
                     <Popover>
@@ -1963,27 +1987,33 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <TableHead>Customer</TableHead>
                                         <TableHead>Service</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead className="text-right">Status</TableHead>
+                                        <TableHead className="text-center">Delivery</TableHead>
+                                        <TableHead className="text-right">Outcome</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredQuotes.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                            <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
                                                 No estimates found for the selected period.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         filteredQuotes.map((q) => {
                                             let s = (q.status || '').toLowerCase();
-                                            let displayStatus = 'Not Received';
-                                            let colorClass = "bg-amber-500/10 text-amber-500 border-amber-500/20";
+                                            const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+                                            
+                                            let outcomeDisplay = 'Pending';
+                                            let outcomeClass = "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
                                             if (s === 'accepted') {
-                                                displayStatus = 'Accepted';
-                                                colorClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                                outcomeDisplay = 'Accepted';
+                                                outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
                                             } else if (s === 'denied' || s === 'declined') {
-                                                displayStatus = 'Denied';
-                                                colorClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                                outcomeDisplay = 'Declined';
+                                                outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                            } else if (isSent) {
+                                                outcomeDisplay = 'No Answer';
+                                                outcomeClass = "bg-purple-500/10 text-purple-400 border-purple-500/20";
                                             }
 
                                             return (
@@ -1994,9 +2024,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
                                                     <TableCell className="text-zinc-300">{Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}</TableCell>
                                                     <TableCell className="text-emerald-400 font-mono font-bold">${(q.total || 0).toFixed(2)}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
+                                                            {isSent ? 'Sent' : 'Not Received'}
+                                                        </Badge>
+                                                    </TableCell>
                                                     <TableCell className="text-right">
-                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", colorClass)}>
-                                                            {displayStatus}
+                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
+                                                            {outcomeDisplay}
                                                         </Badge>
                                                     </TableCell>
                                                 </TableRow>
@@ -2006,32 +2041,62 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-center">
-                            <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Estimate Outcomes</h4>
-                            <div className="h-[200px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={estimatesPieData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={40}
-                                            outerRadius={65}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {estimatesPieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
-                                            itemStyle={{ color: '#fff' }}
-                                        />
-                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8 overflow-y-auto max-h-[500px]">
+                            <div className="w-full flex flex-col items-center">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={deliveryPieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={40}
+                                                outerRadius={65}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {deliveryPieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="w-full flex flex-col items-center">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Estimate Outcomes</h4>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={outcomePieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={40}
+                                                outerRadius={65}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {outcomePieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                         </div>
                     </div>
