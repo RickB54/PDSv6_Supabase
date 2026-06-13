@@ -121,19 +121,8 @@ export default function QuickPayModal() {
             paidAmount: totalPaid
           };
 
-          // Generate Income Record
-          const incomeData = {
-            amount: totalPaid,
-            date: new Date().toISOString().slice(0, 10),
-            category: "Quick Pay",
-            description: `Quick Pay (Base: $${baseAmount.toFixed(2)}, Tip: $${tip.toFixed(2)})`,
-            customerName: customerName,
-            paymentMethod: "Cash"
-          };
-
           try {
             await upsertSupabaseInvoice(invoiceData);
-            await upsertReceivable(incomeData);
             toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Invoice & Accounting updated.` });
           } catch (e) {
             console.error("Failed to record cash payment:", e);
