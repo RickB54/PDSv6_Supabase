@@ -1009,6 +1009,7 @@ const Settings = () => {
                             const res = await deleteSupabaseCustomer(data.id);
                             
                             let msg = "All test data successfully wiped. Analytics restored.";
+                            let details = null;
                             if (res?.affectedData) {
                               const { bookings, estimates, invoices, vehicles, type } = res.affectedData;
                               const parts = [];
@@ -1017,10 +1018,10 @@ const Settings = () => {
                               if (invoices > 0) parts.push(`${invoices} invoices`);
                               if (vehicles > 0) parts.push(`${vehicles} vehicles`);
                               if (parts.length > 0) {
-                                  msg += ` The following test data were ${type}: ${parts.join(', ')}.`;
+                                  details = `The following test data were ${type}: ${parts.join(', ')}.`;
                               }
                             }
-                            toast({ title: "Success", description: msg });
+                            setWipeResult({ msg, details });
                           } else {
                             toast({ title: "Notice", description: "No active test data found to wipe." });
                           }
@@ -1029,6 +1030,32 @@ const Settings = () => {
                         }
                       }} className="bg-red-600 text-white hover:bg-red-500">
                         Yes, Wipe Test Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                {/* Wipe Result Dialog */}
+                <AlertDialog open={wipeResult !== null} onOpenChange={() => setWipeResult(null)}>
+                  <AlertDialogContent className="bg-zinc-950 border border-blue-500/30 shadow-2xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-emerald-400 flex items-center gap-2 text-xl">
+                        <CheckCircle2 className="h-6 w-6" />
+                        Test Data Wiped
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-zinc-300 text-base mt-2">
+                        {wipeResult?.msg}
+                      </AlertDialogDescription>
+                      {wipeResult?.details && (
+                        <div className="mt-4 bg-blue-900/20 border border-blue-800/30 p-4 rounded-lg text-blue-200">
+                          <strong>Impact Report:</strong><br />
+                          {wipeResult.details}
+                        </div>
+                      )}
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4">
+                      <AlertDialogAction onClick={() => setWipeResult(null)} className="bg-blue-600 hover:bg-blue-500 text-white font-bold w-full">
+                        Acknowledge
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
