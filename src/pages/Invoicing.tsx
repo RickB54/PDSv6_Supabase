@@ -1483,7 +1483,7 @@ Precision. Protection. Perfection.`;
                           <Select 
                             value={newService.name} 
                             onValueChange={(val) => {
-                              const pkg = servicePackages.find(p => p.id === val) || (getCustomPackages().find(p => p.id === val) as any);
+                              const pkg = servicePackages.find(p => p.name === val) || (getCustomPackages().find(p => p.name === val) as any);
                               if (pkg) {
                                 const vType = toBuiltInVehKey(customVehicleClass);
                                 const price = getServicePrice(pkg.id, vType) || pkg.basePrice || 0;
@@ -1496,14 +1496,14 @@ Precision. Protection. Perfection.`;
                             </SelectTrigger>
                             <SelectContent>
                               {servicePackages.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                               ))}
                               {getCustomPackages().length > 0 && (
                                 <>
                                   <div className="h-px bg-zinc-800 my-1 mx-2" />
                                   <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Custom Packages</div>
                                   {getCustomPackages().map(p => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                                   ))}
                                 </>
                               )}
@@ -1513,7 +1513,7 @@ Precision. Protection. Perfection.`;
                           <Select 
                             value={newService.name} 
                             onValueChange={(val) => {
-                              const addon = addOns.find(a => a.id === val);
+                              const addon = addOns.find(a => a.name === val);
                               if (addon) {
                                 const vType = toBuiltInVehKey(customVehicleClass);
                                 const price = getAddOnPrice(addon.id, vType);
@@ -1526,7 +1526,7 @@ Precision. Protection. Perfection.`;
                             </SelectTrigger>
                             <SelectContent>
                               {addOns.map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                <SelectItem key={a.id} value={a.name}>{a.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
