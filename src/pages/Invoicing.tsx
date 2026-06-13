@@ -72,6 +72,7 @@ interface Invoice {
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
   paidAmount?: number;
   paidDate?: string;
+  priceLocked?: boolean;
   discount?: {
     type: "fixed" | "percent";
     value: number;
@@ -116,6 +117,8 @@ const Invoicing = () => {
   const [editDiscountType, setEditDiscountType] = useState<"percent" | "fixed">("percent");
   const [editDiscountValue, setEditDiscountValue] = useState<number>(0);
   const [editAdjustmentAmount, setEditAdjustmentAmount] = useState<number>(0);
+  const [editPriceLocked, setEditPriceLocked] = useState<boolean>(false);
+  const [editLockedTotal, setEditLockedTotal] = useState<number>(0);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [emailInvoiceId, setEmailInvoiceId] = useState<string | null>(null);
   const [emailRecipient, setEmailRecipient] = useState("");
@@ -131,6 +134,8 @@ const Invoicing = () => {
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<"percent" | "fixed">("percent");
   const [invoiceDiscountCode, setInvoiceDiscountCode] = useState<string>("");
   const [invoiceDiscountMethod, setInvoiceDiscountMethod] = useState<"coupon" | "manual">("manual");
+  const [isPriceLocked, setIsPriceLocked] = useState(false);
+  const [lockedTotal, setLockedTotal] = useState(0);
   const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<number>(0);
   const [serviceDate, setServiceDate] = useState<string>("");
   
@@ -245,6 +250,7 @@ const Invoicing = () => {
   const calculateSubtotal = () => services.reduce((sum, s) => sum + s.price, 0);
 
   const calculateTotal = () => {
+    if (isPriceLocked) return lockedTotal;
     const subtotal = calculateSubtotal();
     if (invoiceDiscountType === 'percent') {
       return Math.max(0, subtotal * (1 - (invoiceDiscount / 100)));
@@ -415,6 +421,7 @@ const Invoicing = () => {
         createdAt: new Date().toISOString(),
         paymentStatus: calculateTotal() === 0 ? "paid" : "unpaid",
         paidAmount: 0,
+        priceLocked: isPriceLocked,
         notes: customNotes,
         isSent: false,
         discount: finalDiscountAmount > 0 ? {
@@ -647,14 +654,23 @@ const Invoicing = () => {
       return true;
     }) : [];
     
-    setEditServices(services);
     setEditAdjustmentAmount(adjAmount);
+    setEditPriceLocked(inv.priceLocked || false);
+    setEditLockedTotal(inv.priceLocked ? inv.total : 0);
     
-    if (inv.discount) {
+    const baseTotal = services.reduce((sum, s) => sum + (s.price || 0), 0);
+    
+    if (inv.discount && typeof inv.discount.amount === 'number') {
       setEditDiscountMethod(inv.discount.code && inv.discount.code !== 'CUSTOM' ? 'coupon' : 'custom'); 
       setEditDiscountCode(inv.discount.code || '');
       setEditDiscountType(inv.discount.type);
       setEditDiscountValue(inv.discount.value);
+    } else if (inv.total < baseTotal) {
+      const impliedDiscount = baseTotal - inv.total;
+      setEditDiscountMethod('custom');
+      setEditDiscountType('amount');
+      setEditDiscountValue(impliedDiscount);
+      setEditDiscountCode('CUSTOM');
     } else {
       setEditDiscountMethod('custom');
       setEditDiscountType('percent');
@@ -700,7 +716,9 @@ const Invoicing = () => {
       ? subtotal * (editDiscountValue / 100)
       : editDiscountValue;
 
-    let newTotal = subtotal - finalDiscountAmount - editAdjustmentAmount;
+    let newTotal = editPriceLocked 
+      ? editLockedTotal 
+      : subtotal - finalDiscountAmount - editAdjustmentAmount;
     if (newTotal < 0) newTotal = 0;
 
     const updated: Invoice = { 
@@ -712,6 +730,7 @@ const Invoicing = () => {
       sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
       serviceDate: serviceDate,
       total: newTotal,
+      priceLocked: editPriceLocked,
       discount: finalDiscountAmount > 0 ? {
         type: editDiscountType,
         value: editDiscountValue,
@@ -1726,8 +1745,29 @@ Precision. Protection. Perfection.`;
                       </div>
 
                       <div className="pt-3 mt-3 border-t border-zinc-800 flex justify-between items-center">
-                        <span className="font-bold text-zinc-400">Total</span>
-                        <span className="font-bold text-xl text-white">${calculateTotal().toFixed(2)}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-bold text-zinc-400">Total</span>
+                          <div className="flex items-center gap-2">
+                            <Switch checked={isPriceLocked} onCheckedChange={(v) => {
+                              setIsPriceLocked(v);
+                              if (v) setLockedTotal(calculateTotal());
+                            }} id="lock-price-new" className="data-[state=checked]:bg-amber-500 scale-75" />
+                            <Label htmlFor="lock-price-new" className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Lock Price</Label>
+                          </div>
+                        </div>
+                        {isPriceLocked ? (
+                          <div className="relative w-32">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+                            <Input 
+                              type="number" 
+                              value={lockedTotal} 
+                              onChange={e => setLockedTotal(parseFloat(e.target.value) || 0)} 
+                              className="pl-7 bg-zinc-900 border-amber-500/50 text-amber-400 font-bold text-lg h-10 text-right focus-visible:ring-amber-500/50"
+                            />
+                          </div>
+                        ) : (
+                          <span className="font-bold text-xl text-white">${calculateTotal().toFixed(2)}</span>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -1759,6 +1799,7 @@ Precision. Protection. Perfection.`;
                           vehicle: customVehicle || "Current Vehicle",
                           services,
                           total: calculateTotal(),
+                          priceLocked: isPriceLocked,
                           date: new Date().toLocaleDateString(),
                           serviceDate: serviceDate || new Date().toISOString().split('T')[0],
                           notes: customNotes,
@@ -2284,8 +2325,32 @@ Precision. Protection. Perfection.`;
                   )}
 
                   <div className="flex justify-between items-center px-2 mt-2 pt-2 border-t border-zinc-800/50">
-                     <span className="text-sm text-zinc-200 font-bold uppercase tracking-wider">TOTAL OWED</span>
-                     <span className="text-2xl font-black text-emerald-400">${Math.max(0, editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount).toFixed(2)}</span>
+                     <div className="flex flex-col gap-1">
+                       <span className="text-sm text-zinc-200 font-bold uppercase tracking-wider">TOTAL OWED</span>
+                       <div className="flex items-center gap-2 mt-1">
+                          <Switch checked={editPriceLocked} onCheckedChange={(v) => {
+                            setEditPriceLocked(v);
+                            if (v) {
+                               const dynTotal = editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount;
+                               setEditLockedTotal(Math.max(0, dynTotal));
+                            }
+                          }} id="lock-price-edit" className="data-[state=checked]:bg-amber-500 scale-75" />
+                          <Label htmlFor="lock-price-edit" className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Lock Price</Label>
+                       </div>
+                     </div>
+                     {editPriceLocked ? (
+                        <div className="relative w-32">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500/50 font-bold">$</span>
+                          <Input 
+                            type="number" 
+                            value={editLockedTotal} 
+                            onChange={e => setEditLockedTotal(parseFloat(e.target.value) || 0)} 
+                            className="pl-7 bg-zinc-900 border-amber-500/50 text-amber-400 font-bold text-xl h-10 text-right focus-visible:ring-amber-500/50"
+                          />
+                        </div>
+                     ) : (
+                       <span className="text-2xl font-black text-emerald-400">${Math.max(0, editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount).toFixed(2)}</span>
+                     )}
                   </div>
                 </div>
 

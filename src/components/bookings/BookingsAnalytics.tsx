@@ -764,6 +764,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_quotes_dateFilter', JSON.stringify(quotesDateFilter));
     }, [quotesShowArchived, quotesDateFilter]);
 
+    const [showTestData, setShowTestData] = useState(() => localStorage.getItem('analytics_showTestData') === 'true');
+    useEffect(() => {
+        localStorage.setItem('analytics_showTestData', String(showTestData));
+    }, [showTestData]);
+
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
         update(bookingId, { isArchived: !currentStatus });
         toast.success(currentStatus ? "Booking restored" : "Booking archived");
@@ -774,6 +779,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         let result = data;
         if (!showArchived) {
             result = result.filter(b => !b.isArchived && !b.archived);
+        }
+        if (!showTestData) {
+            result = result.filter(b => {
+                const customerName = (b.customer || b.customerName || b.customer_name || '').toLowerCase().trim();
+                const isTestUser = customerName.includes('rick berube') || customerName === 'demo' || customerName === 'test';
+                const hasMockNote = (b.notes || '').includes('[MOCK_DATA]') || (b.notes || '').includes('Test booking');
+                return !isTestUser && !hasMockNote;
+            });
         }
         if (dateFilter.start && dateFilter.end) {
             result = result.filter(b => {
@@ -1279,6 +1292,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     <span className="text-sm font-bold text-white">Show Archived</span>
                                 </div>
                                 <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-white">Show Test Data</span>
+                                    <span className="text-[10px] text-zinc-500">Include 'Rick Berube' demo accounts</span>
+                                </div>
+                                <Switch checked={showTestData} onCheckedChange={setShowTestData} className="border border-zinc-700 data-[state=checked]:bg-amber-500" />
                             </div>
 
                             <div className="space-y-3">

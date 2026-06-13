@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 
 export interface UnifiedPayment {
   id: string;
-  source: 'Invoice' | 'Manual Income' | 'Online/Stripe';
+  source: 'Invoice' | 'Manual Income' | 'Online/Stripe' | 'Quick Pay';
   customerName: string;
   amount: number;
   date: string;
@@ -64,16 +64,17 @@ const Payments = () => {
           }
         });
 
-        // 2. Manual Income
+        // 2. Manual Income & Quick Pay
         manualIncome.forEach((inc: Receivable) => {
+          const isQuickPay = inc.category === 'Quick Pay';
           unified.push({
-            id: inc.id,
-            source: 'Manual Income',
+            id: inc.id || `mi-${Date.now()}-${Math.random()}`,
+            source: isQuickPay ? 'Quick Pay' : 'Manual Income',
             customerName: inc.customerName || 'Unknown',
             amount: inc.amount || 0,
             date: inc.date || inc.createdAt || new Date().toISOString(),
             status: 'paid',
-            reference: inc.description || 'Manual Entry'
+            reference: inc.description || (isQuickPay ? 'Quick Pay Transaction' : 'Manual Entry')
           });
         });
 
@@ -183,6 +184,7 @@ const Payments = () => {
                 <SelectItem value="all">All Sources</SelectItem>
                 <SelectItem value="Invoice">Invoices</SelectItem>
                 <SelectItem value="Manual Income">Manual Income</SelectItem>
+                <SelectItem value="Quick Pay">Quick Pay</SelectItem>
                 <SelectItem value="Online/Stripe">Online/Stripe</SelectItem>
               </SelectContent>
             </Select>
@@ -235,6 +237,7 @@ const Payments = () => {
                           whitespace-nowrap 
                           ${p.source === 'Invoice' ? 'border-blue-500/30 text-blue-400 bg-blue-500/10' : ''}
                           ${p.source === 'Manual Income' ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' : ''}
+                          ${p.source === 'Quick Pay' ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : ''}
                           ${p.source === 'Online/Stripe' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : ''}
                         `}>
                           {p.source}

@@ -158,8 +158,13 @@ const Accounting = () => {
       const paidInvoices = invoices.filter(inv => {
         const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
         if (!isPaid) return false;
-        // Exclude Generic Customer test data
-        if ((inv as any).customerName === 'Generic Customer' || (inv as any).customer_name === 'Generic Customer' || (inv as any).customerName === 'TEST Customer' || (inv as any).customer_name === 'TEST Customer') return false;
+        // Exclude Test Data
+        const cName = ((inv as any).customerName || '').toLowerCase();
+        const scName = ((inv as any).customer_name || '').toLowerCase();
+        if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube') ||
+            scName.includes('generic customer') || scName.includes('test customer') || scName.includes('rick berube')) {
+          return false;
+        }
         return true;
       });
       
@@ -180,8 +185,9 @@ const Accounting = () => {
 
       incomes.forEach(inc => {
         const amt = inc.amount || 0;
-        // Exclude Generic Customer test data
-        if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
+        // Exclude Test Data
+        const cName = (inc.customerName || '').toLowerCase();
+        if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube')) return;
         
         const d = new Date(inc.date || inc.createdAt);
         if (d.toDateString() === today) daily += amt;
@@ -216,7 +222,8 @@ const Accounting = () => {
           if (filterDate(d)) filteredTotal += getInvoiceTotalReceived(inv);
         });
         incomes.forEach(inc => {
-          if (inc.customerName === 'Generic Customer' || inc.customerName === 'TEST Customer') return;
+          const cName = (inc.customerName || '').toLowerCase();
+          if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube')) return;
           const d = new Date(inc.date || inc.createdAt);
           if (filterDate(d)) filteredTotal += (inc.amount || 0);
         });

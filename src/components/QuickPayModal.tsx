@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
 import { getUnifiedCustomers } from '@/lib/customers';
-import { upsertSupabaseCustomer, upsertSupabaseInvoice, upsertSupabaseIncome } from '@/lib/supa-data';
+import { upsertSupabaseCustomer, upsertSupabaseInvoice } from '@/lib/supa-data';
+import { upsertReceivable } from '@/lib/receivables';
 import { generateInvoiceNumber } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -108,7 +109,7 @@ export default function QuickPayModal() {
           // Generate Invoice
           const invoiceData = {
             invoiceNumber: generateInvoiceNumber(),
-            customerId: selectedCustomerId,
+            customerId: selectedCustomerId || null,
             customerName: customerName,
             vehicle: "Various/Quick Pay",
             services: [{ name: 'Quick Pay Service', price: baseAmount }],
@@ -132,7 +133,7 @@ export default function QuickPayModal() {
 
           try {
             await upsertSupabaseInvoice(invoiceData);
-            await upsertSupabaseIncome(incomeData);
+            await upsertReceivable(incomeData);
             toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Invoice & Accounting updated.` });
           } catch (e) {
             console.error("Failed to record cash payment:", e);
