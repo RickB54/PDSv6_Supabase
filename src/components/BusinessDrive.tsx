@@ -32,6 +32,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage-utils";
@@ -795,93 +800,167 @@ export default function BusinessDrive() {
                         {/* Render Folders First */}
                         {currentItems.folders.map(folder => {
                             const containsFiles = folderHasFiles(folder);
+                            const targetPath = [...folder.path, folder.name];
+                            const folderFiles = files.filter(f => {
+                                if (f.path.length < targetPath.length) return false;
+                                return targetPath.every((segment, idx) => f.path[idx] === segment);
+                            }).sort((a, b) => {
+                                const valA = a.modified ? new Date(a.modified).getTime() : 0;
+                                const valB = b.modified ? new Date(b.modified).getTime() : 0;
+                                return valB - valA;
+                            });
+
                             return viewMode === 'grid' ? (
-                                <Card 
-                                    key={folder.id}
-                                    className={cn(
-                                        "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
-                                        containsFiles 
-                                            ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
-                                            : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
-                                    )}
-                                    onClick={() => setCurrentPath([...currentPath, folder.name])}
-                                >
-                                    <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
-                                        <div className={cn(
-                                            "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
-                                            containsFiles
-                                                ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
-                                                : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
-                                        )}>
-                                            <Folder className="w-10 h-10" />
+                                <HoverCard key={folder.id} openDelay={400}>
+                                  <HoverCardTrigger asChild>
+                                    <Card 
+                                        className={cn(
+                                            "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
+                                            containsFiles 
+                                                ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
+                                                : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
+                                        )}
+                                        onClick={() => setCurrentPath([...currentPath, folder.name])}
+                                    >
+                                        <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
+                                            <div className={cn(
+                                                "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
+                                                containsFiles
+                                                    ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
+                                                    : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
+                                            )}>
+                                                <Folder className="w-10 h-10" />
+                                            </div>
+                                            <span className={cn(
+                                                "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
+                                                containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                            )}>{folder.name}</span>
                                         </div>
-                                        <span className={cn(
-                                            "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
-                                            containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
-                                        )}>{folder.name}</span>
-                                    </div>
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-white">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
-                                                    <Eye className="w-4 h-4 mr-2" /> Open
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
-                                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </Card>
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-white">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
+                                                        <Eye className="w-4 h-4 mr-2" /> Open
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </Card>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
+                                      <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
+                                          <div className="flex items-center gap-2">
+                                              <Folder className="w-4 h-4 text-emerald-400" />
+                                              <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
+                                          </div>
+                                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{folderFiles.length} file{folderFiles.length !== 1 ? 's' : ''}</span>
+                                      </div>
+                                      <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
+                                          {folderFiles.length === 0 ? (
+                                              <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
+                                          ) : (
+                                              folderFiles.slice(0, 10).map(ff => (
+                                                  <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
+                                                      <div className="flex items-center gap-2 overflow-hidden">
+                                                          <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
+                                                          <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
+                                                      </div>
+                                                      <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
+                                                  </div>
+                                              ))
+                                          )}
+                                          {folderFiles.length > 10 && (
+                                              <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-3 bg-[#0d1117]/50 rounded border border-zinc-800 mt-2">
+                                                  + {folderFiles.length - 10} more
+                                              </div>
+                                          )}
+                                      </div>
+                                  </HoverCardContent>
+                                </HoverCard>
                             ) : (
-                                <div 
-                                    key={folder.id} 
-                                    className={cn(
-                                        "flex items-center justify-between p-4 bg-[#0d1117] rounded-xl transition-all group shadow-sm cursor-pointer border",
-                                        containsFiles
-                                            ? "border-emerald-500/50 bg-emerald-950/5 hover:bg-emerald-950/15"
-                                            : "border-zinc-800 hover:bg-[#161b22]"
-                                    )}
-                                    onClick={() => setCurrentPath([...currentPath, folder.name])}
-                                >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={cn(
-                                            "p-2 rounded-lg transition-all",
+                                <HoverCard key={folder.id} openDelay={400}>
+                                  <HoverCardTrigger asChild>
+                                    <div 
+                                        className={cn(
+                                            "flex items-center justify-between p-4 bg-[#0d1117] rounded-xl transition-all group shadow-sm cursor-pointer border",
                                             containsFiles
-                                                ? "bg-emerald-500/20 text-emerald-400 group-hover:text-emerald-300"
-                                                : "bg-zinc-800/50 text-zinc-400 group-hover:text-blue-400"
-                                        )}>
-                                            <Folder className="w-5 h-5" />
+                                                ? "border-emerald-500/50 bg-emerald-950/5 hover:bg-emerald-950/15"
+                                                : "border-zinc-800 hover:bg-[#161b22]"
+                                        )}
+                                        onClick={() => setCurrentPath([...currentPath, folder.name])}
+                                    >
+                                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className={cn(
+                                                "p-2 rounded-lg transition-all",
+                                                containsFiles
+                                                    ? "bg-emerald-500/20 text-emerald-400 group-hover:text-emerald-300"
+                                                    : "bg-zinc-800/50 text-zinc-400 group-hover:text-blue-400"
+                                            )}>
+                                                <Folder className="w-5 h-5" />
+                                            </div>
+                                            <span className={cn(
+                                                "text-sm font-bold truncate transition-colors",
+                                                containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                            )}>{folder.name}</span>
                                         </div>
-                                        <span className={cn(
-                                            "text-sm font-bold truncate transition-colors",
-                                            containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
-                                        )}>{folder.name}</span>
+                                        <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
+                                            <div className="w-40 text-right uppercase tracking-widest font-black text-zinc-600">Folder</div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800 text-white">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
+                                                        <Eye className="w-4 h-4 mr-2" /> Open
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
-                                        <div className="w-40 text-right uppercase tracking-widest font-black text-zinc-600">Folder</div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800 text-white">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
-                                                    <Eye className="w-4 h-4 mr-2" /> Open
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
-                                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
+                                      <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
+                                          <div className="flex items-center gap-2">
+                                              <Folder className="w-4 h-4 text-emerald-400" />
+                                              <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
+                                          </div>
+                                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{folderFiles.length} file{folderFiles.length !== 1 ? 's' : ''}</span>
+                                      </div>
+                                      <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
+                                          {folderFiles.length === 0 ? (
+                                              <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
+                                          ) : (
+                                              folderFiles.slice(0, 10).map(ff => (
+                                                  <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
+                                                      <div className="flex items-center gap-2 overflow-hidden">
+                                                          <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
+                                                          <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
+                                                      </div>
+                                                      <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
+                                                  </div>
+                                              ))
+                                          )}
+                                          {folderFiles.length > 10 && (
+                                              <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-3 bg-[#0d1117]/50 rounded border border-zinc-800 mt-2">
+                                                  + {folderFiles.length - 10} more
+                                              </div>
+                                          )}
+                                      </div>
+                                  </HoverCardContent>
+                                </HoverCard>
                             );
                         })}
 
