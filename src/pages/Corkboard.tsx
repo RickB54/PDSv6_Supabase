@@ -43,6 +43,20 @@ const STICKY_COLORS = [
   { id: 'orange', bg: 'bg-orange-500', border: 'border-orange-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'gray', bg: 'bg-zinc-700', border: 'border-zinc-600', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'teal', bg: 'bg-teal-600', border: 'border-teal-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'indigo', bg: 'bg-indigo-500', border: 'border-indigo-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'pink', bg: 'bg-pink-400', border: 'border-pink-300', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'cyan', bg: 'bg-cyan-500', border: 'border-cyan-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'amber', bg: 'bg-amber-400', border: 'border-amber-300', text: 'text-amber-950', tagBg: 'bg-amber-900/20', tagText: 'text-amber-950' },
+  { id: 'lime', bg: 'bg-lime-400', border: 'border-lime-300', text: 'text-lime-950', tagBg: 'bg-lime-900/20', tagText: 'text-lime-950' },
+  { id: 'fuchsia', bg: 'bg-fuchsia-500', border: 'border-fuchsia-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'violet', bg: 'bg-violet-600', border: 'border-violet-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'red', bg: 'bg-red-500', border: 'border-red-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'green', bg: 'bg-green-600', border: 'border-green-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'slate', bg: 'bg-slate-600', border: 'border-slate-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'sky', bg: 'bg-sky-400', border: 'border-sky-300', text: 'text-sky-950', tagBg: 'bg-sky-900/20', tagText: 'text-sky-950' },
+  { id: 'stone', bg: 'bg-stone-500', border: 'border-stone-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'brown', bg: 'bg-[#8B4513]', border: 'border-[#A0522D]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'mint', bg: 'bg-[#98FF98]', border: 'border-[#7FFFD4]', text: 'text-[#004d00]', tagBg: 'bg-[#004d00]/20', tagText: 'text-[#004d00]' },
 ];
 
 const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, showTags?: boolean, showToolbar?: boolean }) => {
@@ -258,7 +272,11 @@ export default function Corkboard() {
     const headers = [];
     let match;
     while ((match = regex.exec(editingNote.content)) !== null) {
-      headers.push({ full: match[0], text: match[2], index: match.index });
+      let text = match[2];
+      if (text.startsWith('New Section (')) {
+        text = text.replace('New Section (', '').replace(/\)$/, '');
+      }
+      headers.push({ full: match[0], text, index: match.index });
     }
     return headers;
   }, [editingNote?.content]);
@@ -277,7 +295,15 @@ export default function Corkboard() {
     if (textareaRef.current) {
       textareaRef.current.scrollTop = 0;
       textareaRef.current.setSelectionRange(0, 0);
+      textareaRef.current.setSelectionRange(0, 0);
       textareaRef.current.focus();
+    }
+  };
+
+  const handleCategorySelect = (action: () => void) => {
+    action();
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
     }
   };
 
@@ -448,7 +474,7 @@ export default function Corkboard() {
           <ScrollArea className="flex-1 min-w-[16rem]">
             <div className="p-3 space-y-2">
               <button 
-                onClick={() => { setSelectedSection(null); setSelectedNotebook(null); setExpandedNotebook(null); }}
+                onClick={() => handleCategorySelect(() => { setSelectedSection(null); setSelectedNotebook(null); setExpandedNotebook(null); })}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedSection && !selectedNotebook ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
               >
                 <LayoutDashboard className="w-4 h-4" /> All Stickies
@@ -456,26 +482,26 @@ export default function Corkboard() {
               
               {notesStore.notebooks.map(nb => (
                 <div key={nb.id} className="space-y-1">
-                  <button 
-                    onClick={() => {
-                      setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id);
-                      setSelectedNotebook(nb.id);
-                      setSelectedSection(null);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold transition-colors ${selectedNotebook === nb.id && !selectedSection ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-300 hover:bg-zinc-900'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Folder className="w-4 h-4 text-emerald-500" /> {nb.name}
-                    </div>
-                    {expandedNotebook === nb.id ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
-                  </button>
-
+                  <div className="flex items-center group">
+                    <button 
+                      onClick={() => handleCategorySelect(() => { setSelectedNotebook(nb.id); setSelectedSection(null); setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id); })}
+                      className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedNotebook === nb.id && !selectedSection ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
+                    >
+                      <Folder className="w-4 h-4" /> <span className="truncate">{nb.name}</span>
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id); }}
+                      className="p-2 text-zinc-500 hover:text-zinc-300"
+                    >
+                      {expandedNotebook === nb.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    </button>
+                  </div>
                   {expandedNotebook === nb.id && (
-                    <div className="pl-6 pr-2 space-y-1 border-l border-zinc-800 ml-5 my-1">
+                    <div className="pl-6 pr-2 space-y-1">
                       {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => (
                         <button 
                           key={sec.id}
-                          onClick={() => setSelectedSection(sec.id)}
+                          onClick={() => handleCategorySelect(() => setSelectedSection(sec.id))}
                           className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
                         >
                           <FileText className="w-3.5 h-3.5" /> {sec.name}
@@ -560,7 +586,7 @@ export default function Corkboard() {
             </div>
             
             {noteHeaders.length > 0 && (
-              <div className={`px-6 py-3 border-b border-black/10 ${editColor.bg} flex gap-2 overflow-x-auto`}>
+              <div className={`px-6 py-3 border-b border-black/10 ${editColor.bg} flex flex-wrap gap-2`}>
                 <span className={`text-xs font-bold ${editColor.text} uppercase py-1.5 shrink-0`}>Sections:</span>
                 {noteHeaders.map((header, i) => (
                   <Button 
@@ -767,7 +793,34 @@ export default function Corkboard() {
                   <div className="font-bold text-white text-sm">Show Toolbar</div>
                   <div className="text-xs text-zinc-500">Display quick-action menu options on hover</div>
                 </div>
-                <input type="checkbox" checked={prefs.toolbar} onChange={e => updatePref('toolbar', e.target.checked)} className="w-4 h-4 accent-yellow-500" />
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={prefs.toolbar} onChange={e => setPrefs({...prefs, toolbar: e.target.checked})} />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+              <div className="pt-4 border-t border-zinc-800">
+                <Button 
+                  variant="destructive" 
+                  onClick={async () => {
+                    if (activeNotes.length === 0) {
+                      toast({ title: "Nothing to clean up!" });
+                      return;
+                    }
+                    const message = selectedSection ? "Delete ALL stickies in this specific category?" 
+                                  : selectedNotebook ? "Delete ALL stickies in this entire folder?" 
+                                  : "WARNING: Delete ALL stickies currently visible on the board?";
+                    if (confirm(message)) {
+                      for (const note of activeNotes) {
+                        await notesStore.deleteNote(note.id);
+                      }
+                      toast({ title: "Cleaned up successfully" });
+                    }
+                  }}
+                  className="w-full bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-800"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Clean Up Category
+                </Button>
+                <p className="text-[10px] text-zinc-500 mt-2 text-center">Deletes all stickies currently visible on the board. This action cannot be undone.</p>
               </div>
             </div>
           </div>
