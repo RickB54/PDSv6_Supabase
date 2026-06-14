@@ -113,6 +113,14 @@ const LetterMaker = () => {
     const [body, setBody] = useState(initialBody);
     const [isRefining, setIsRefining] = useState(false);
 
+    const handleCancel = () => {
+        if (window.history.state && window.history.state.idx > 0) {
+            navigate(-1);
+        } else {
+            navigate('/admin-dashboard');
+        }
+    };
+
     useEffect(() => {
         const loadCustomers = async () => {
             const custs = await getUnifiedCustomers();
@@ -434,7 +442,7 @@ const LetterMaker = () => {
                             <Button 
                                 type="button"
                                 variant="outline"
-                                onClick={() => navigate(-1)}
+                                onClick={handleCancel}
                                 className="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 px-6 font-bold"
                             >
                                 Cancel
