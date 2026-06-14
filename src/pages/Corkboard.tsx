@@ -445,30 +445,30 @@ export default function Corkboard() {
     <div className={`fixed inset-0 z-[200] bg-zinc-950 flex flex-col ${enableAnim ? 'transition-all duration-500 ease-in-out' : ''} ${isExiting && enableAnim ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} ${!isExiting && enableAnim ? 'animate-in zoom-in-95' : ''}`}>
       
       {/* Header */}
-      <div className="flex-none flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white">
-            <X className="w-6 h-6" />
+      <div className="flex-none flex items-center justify-between p-2 sm:p-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-10">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10">
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
-              <CheckSquare className="w-5 h-5 text-yellow-500" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30 shrink-0">
+              <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
             </div>
-            <div>
-              <h1 className="text-xl font-black text-white uppercase tracking-wider">Corkboard App</h1>
-              <p className="text-xs text-zinc-400">Organize your thoughts and tasks</p>
+            <div className="hidden min-[380px]:block">
+              <h1 className="text-sm sm:text-xl font-black text-white uppercase tracking-wider leading-none mt-1 sm:mt-0">Corkboard</h1>
+              <p className="text-[10px] sm:text-xs text-zinc-400 hidden sm:block">Organize your thoughts and tasks</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3 shrink-0">
           <div className="relative hidden md:block">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
             <Input 
               placeholder="Search stickies..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9 bg-zinc-900 border-zinc-700 text-white w-64 focus-visible:ring-yellow-500"
+              className="pl-9 bg-zinc-900 border-zinc-700 text-white w-64 focus-visible:ring-yellow-500 h-9 sm:h-10"
             />
             {searchQuery && (
               <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-7 w-7 text-zinc-400 hover:text-white" onClick={() => setSearchQuery("")}>
@@ -476,23 +476,23 @@ export default function Corkboard() {
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800" title="Sync Stickies">
-            <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
+          <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
+            <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800" title="Settings">
-            <Settings className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button 
             onClick={() => {
               setEditingNote({ id: 'new', title: '', content: '', section_id: selectedSection, user_id: '', is_pinned: false, is_locked: false, tags: [], versions: [], created_at: '', updated_at: '' });
               setIsNoteModalOpen(true);
             }}
-            className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)]"
+            className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] h-8 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm"
           >
-            <Plus className="w-4 h-4 mr-2" /> New Sticky
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">New Sticky</span><span className="sm:hidden">New</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-zinc-400 hover:text-white lg:hidden">
-            <PanelLeft className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-zinc-400 hover:text-white lg:hidden h-8 w-8 sm:h-10 sm:w-10">
+            <PanelLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </div>
@@ -507,7 +507,12 @@ export default function Corkboard() {
           ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full lg:w-0'}
         `}>
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between min-w-[16rem]">
-            <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Categories</h2>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+              <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Categories</h2>
+            </div>
             <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Category">
               <Plus className="w-4 h-4" />
             </Button>
