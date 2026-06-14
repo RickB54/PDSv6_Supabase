@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, FileText, Folder, ChevronDown, ChevronRight,
-  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin
+  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -222,6 +222,7 @@ export default function Corkboard() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Prefs state for live updates
   const [prefs, setPrefs] = useState({
@@ -322,6 +323,18 @@ export default function Corkboard() {
     action();
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await notesStore.refresh();
+      toast({ title: "Corkboard Synced!" });
+    } catch (e) {
+      toast({ title: "Sync failed. Try again.", variant: "destructive" });
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -461,6 +474,9 @@ export default function Corkboard() {
               </Button>
             )}
           </div>
+          <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800" title="Sync Stickies">
+            <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800" title="Settings">
             <Settings className="w-5 h-5" />
           </Button>
