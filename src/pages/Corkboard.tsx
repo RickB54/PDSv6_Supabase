@@ -127,11 +127,13 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       </Button>
 
       <div className="flex-1 mt-4">
-        <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{note.title}</h3>
+        <h3 className="font-bold text-lg leading-tight mb-2">
+          <span className="line-clamp-2 inline">{note.title}</span>
+          <span className="text-[10px] opacity-50 font-normal ml-2 tracking-widest whitespace-nowrap align-middle">
+            {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+          </span>
+        </h3>
         <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-6">{note.content}</p>
-      </div>
-      <div className="mt-3 text-[10px] opacity-60 uppercase tracking-widest font-bold">
-        {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
       </div>
       {showTags && (
         <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
@@ -514,19 +516,23 @@ export default function Corkboard() {
             <div className="p-3 space-y-2">
               <button 
                 onClick={() => handleCategorySelect(() => { setSelectedSection(null); setSelectedNotebook(null); setExpandedNotebook(null); })}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedSection && !selectedNotebook ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedSection && !selectedNotebook ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
               >
-                <LayoutDashboard className="w-4 h-4" /> All Stickies
+                <div className="flex items-center gap-3"><LayoutDashboard className="w-4 h-4 shrink-0" /> All Stickies</div>
+                <span className="text-xs opacity-50 ml-2">{notesStore.notes.filter(n => !prefs.isolate || n.tags?.includes('__corkboard__')).length}</span>
               </button>
               
-              {notesStore.notebooks.map(nb => (
+              {notesStore.notebooks.map(nb => {
+                const nbStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id && notesStore.sections.find(s => s.id === n.section_id)?.notebook_id === nb.id).length;
+                return (
                 <div key={nb.id} className="space-y-1">
                   <div className="flex items-center group">
                     <button 
                       onClick={() => handleCategorySelect(() => { setSelectedNotebook(nb.id); setSelectedSection(null); setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id); })}
-                      className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedNotebook === nb.id && !selectedSection ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
+                      className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedNotebook === nb.id && !selectedSection ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
                     >
-                      <Folder className="w-4 h-4" /> <span className="truncate">{nb.name}</span>
+                      <div className="flex items-center gap-3 truncate"><Folder className="w-4 h-4 shrink-0" /> <span className="truncate">{nb.name}</span></div>
+                      <span className="text-xs opacity-50 ml-2">{nbStickies}</span>
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id); }}
@@ -537,15 +543,18 @@ export default function Corkboard() {
                   </div>
                   {expandedNotebook === nb.id && (
                     <div className="pl-6 pr-2 space-y-1">
-                      {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => (
+                      {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => {
+                        const secStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
+                        return (
                         <button 
                           key={sec.id}
                           onClick={() => handleCategorySelect(() => setSelectedSection(sec.id))}
-                          className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
+                          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
                         >
-                          <FileText className="w-3.5 h-3.5" /> {sec.name}
+                          <div className="flex items-center gap-3 truncate"><FileText className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{sec.name}</span></div>
+                          <span className="text-xs opacity-50 ml-2">{secStickies}</span>
                         </button>
-                      ))}
+                      )})}
                       <button 
                         onClick={() => { setSelectedNbForNewSection(nb.id); setIsSectionModalOpen(true); }}
                         className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-zinc-600 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors mt-1"
@@ -555,7 +564,7 @@ export default function Corkboard() {
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
             </div>
           </ScrollArea>
         </div>
