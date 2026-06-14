@@ -37,6 +37,7 @@ import SearchCustomer from "./pages/SearchCustomer";
 import InventoryControl from "./pages/InventoryControl";
 import Invoicing from "./pages/Invoicing";
 import Estimates from "./pages/Estimates";
+import MyEstimates from "./pages/MyEstimates";
 import Accounting from "./pages/Accounting";
 import Payments from "./pages/Payments";
 import CompanyBudget from "./pages/CompanyBudget";
@@ -432,6 +433,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/active-jobs" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
           <Route path="/job-history" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
           <Route path="/my-invoices" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><MyInvoices /></ProtectedRoute>} />
+          <Route path="/my-estimates" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><MyEstimates /></ProtectedRoute>} />
           <Route path="/payments-cart" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><PaymentsAndCart /></ProtectedRoute>} />
           <Route path="/customer-account" element={<ProtectedRoute user={user} allowedRoles={['customer']}><CustomerAccount /></ProtectedRoute>} />
           <Route path="/customer-profile" element={<ProtectedRoute user={user} allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />

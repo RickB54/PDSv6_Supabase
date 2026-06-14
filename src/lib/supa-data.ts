@@ -1034,8 +1034,8 @@ export const deleteSupabaseCustomer = async (id: string) => {
             // Delete expenses with payee match
             await supabase.from('tax_expenses').delete().ilike('payee', '%Rick Berube%');
 
-            await supabase.from('invoices').delete().eq('customer_id', id);
-            await supabase.from('estimates').delete().eq('customer_id', id);
+            await supabase.from('invoices').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
+            await supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             
             // Get booking IDs to delete payments
             const { data: bData } = await supabase.from('bookings').select('id').eq('customer_id', id);
@@ -1044,7 +1044,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
                 await supabase.from('payments').delete().in('booking_id', bIds);
             }
             
-            await supabase.from('bookings').delete().eq('customer_id', id);
+            await supabase.from('bookings').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             if (vehicleIds.length > 0) {
                 await supabase.from('vehicles').delete().in('id', vehicleIds);
             }

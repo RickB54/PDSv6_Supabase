@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle } from "lucide-react";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle, FileBarChart } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
 const CustomerDashboard = () => {
@@ -81,6 +81,14 @@ const CustomerDashboard = () => {
               to="/my-invoices"
               color="text-purple-500"
               gradient="bg-gradient-to-br from-purple-500 to-pink-500"
+            />
+            <DashboardCard
+              title="My Estimates"
+              description="View your service estimates."
+              icon={FileBarChart}
+              to="/my-estimates"
+              color="text-blue-500"
+              gradient="bg-gradient-to-br from-blue-500 to-cyan-500"
             />
             <DashboardCard
               title="User Settings"

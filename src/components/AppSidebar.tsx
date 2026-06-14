@@ -414,6 +414,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     { title: "Job History", url: "/job-history", icon: History },
     { title: "Payments & Cart", url: "/payments-cart", icon: ShoppingCart },
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
+    { title: "My Estimates", url: "/my-estimates", icon: FileBarChart },
     { title: "Personal Notes", url: "/notes", icon: BookOpen },
     { title: "Prime Blog", url: "/blog", icon: Newspaper },
     { title: "User Settings", url: "/user-settings", icon: Settings },
