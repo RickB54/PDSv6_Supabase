@@ -913,17 +913,18 @@ const Accounting = () => {
                         </div>
                         <div className="flex gap-2 items-center">
                           <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>
-                        <Select value={ledgerSortBy} onValueChange={(v: any) => setLedgerSortBy(v)}>
-                          <SelectTrigger className="w-[140px] h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="date">Date (Newest)</SelectItem>
-                            <SelectItem value="amount">Amount (Highest)</SelectItem>
-                            <SelectItem value="category">Category</SelectItem>
-                            <SelectItem value="updated">Last Updated</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Select value={ledgerSortBy} onValueChange={(v: any) => setLedgerSortBy(v)}>
+                            <SelectTrigger className="w-[140px] h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="date">Date (Newest)</SelectItem>
+                              <SelectItem value="amount">Amount (Highest)</SelectItem>
+                              <SelectItem value="category">Category</SelectItem>
+                              <SelectItem value="updated">Last Updated</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
 
