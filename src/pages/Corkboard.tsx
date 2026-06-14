@@ -340,6 +340,31 @@ export default function Corkboard() {
     }
   };
 
+  const handleNewStickyClick = () => {
+    let targetSection = selectedSection;
+    let sectionName = "";
+    if (!targetSection && selectedNotebook) {
+      const sections = notesStore.sections.filter(s => s.notebook_id === selectedNotebook);
+      if (sections.length > 0) {
+        targetSection = sections[0].id;
+        sectionName = sections[0].name;
+      } else {
+        alert("Please add a Category Folder first! (Click the + next to the Folders in the sidebar)");
+        return;
+      }
+    }
+    
+    if (targetSection) {
+      if (!sectionName) sectionName = notesStore.sections.find(s => s.id === targetSection)?.name || "";
+      const notebookId = notesStore.sections.find(s => s.id === targetSection)?.notebook_id;
+      const notebookName = notesStore.notebooks.find(nb => nb.id === notebookId)?.name || "";
+      toast({ title: `Sticky will be created in ${notebookName ? notebookName + ' -> ' : ''}${sectionName}` });
+    }
+    
+    setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: [], versions: [], created_at: '', updated_at: '' });
+    setIsNoteModalOpen(true);
+  };
+
   const handleSaveNote = async () => {
     if (editingNote) {
       const sectionId = editingNote.section_id || null;
@@ -483,10 +508,7 @@ export default function Corkboard() {
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button 
-            onClick={() => {
-              setEditingNote({ id: 'new', title: '', content: '', section_id: selectedSection, user_id: '', is_pinned: false, is_locked: false, tags: [], versions: [], created_at: '', updated_at: '' });
-              setIsNoteModalOpen(true);
-            }}
+            onClick={handleNewStickyClick}
             className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] h-8 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm"
           >
             <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">New Sticky</span><span className="sm:hidden">New</span>
@@ -584,6 +606,20 @@ export default function Corkboard() {
           >
             <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
           </Button>
+
+          {/* Quick Note Bar */}
+          <div className="mb-8 max-w-2xl mx-auto mt-2">
+            <div 
+              onClick={handleNewStickyClick}
+              className="w-full bg-zinc-900 border border-zinc-700 hover:border-zinc-500 rounded-xl shadow-lg p-3 sm:p-4 flex items-center justify-between cursor-text transition-colors group"
+            >
+              <span className="text-zinc-400 font-medium ml-2">Take a note...</span>
+              <div className="flex gap-1 sm:gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><CheckSquare className="w-4 h-4 text-zinc-300" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><Palette className="w-4 h-4 text-zinc-300" /></Button>
+              </div>
+            </div>
+          </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={activeNotes.map(n => n.id)} strategy={rectSortingStrategy}>
