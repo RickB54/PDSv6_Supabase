@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useNotesStore, Note, Section } from "@/store/notes";
+import { useNotesStore, Note, Section, Notebook } from "@/store/notes";
 import { PageHeader } from "@/components/PageHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -127,6 +127,19 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       </Button>
 
       <div className="flex-1 mt-4">
+        {(() => {
+          const images = note.tags?.filter(t => t.startsWith('__img:')).map(t => t.replace('__img:', '')) || [];
+          if (images.length > 0) {
+            return (
+              <div className={`grid gap-1 mb-3 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {images.map((img, i) => (
+                  <img key={i} src={img} alt="attachment" className="w-full h-24 object-cover rounded shadow-sm bg-white/20" />
+                ))}
+              </div>
+            );
+          }
+          return null;
+        })()}
         <h3 className="font-bold text-lg leading-tight mb-2">
           <span className="line-clamp-2 inline">{note.title}</span>
           <span className="text-[10px] opacity-50 font-normal ml-2 tracking-widest whitespace-nowrap align-middle">
@@ -340,7 +353,7 @@ export default function Corkboard() {
     }
   };
 
-  const handleNewStickyClick = () => {
+  const handleNewStickyClick = (extraTags: string[] = []) => {
     let targetSection = selectedSection;
     let sectionName = "";
     if (!targetSection && selectedNotebook) {
@@ -361,7 +374,7 @@ export default function Corkboard() {
       toast({ title: `Sticky will be created in ${notebookName ? notebookName + ' -> ' : ''}${sectionName}` });
     }
     
-    setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: [], versions: [], created_at: '', updated_at: '' });
+    setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: extraTags, versions: [], created_at: '', updated_at: '' });
     setIsNoteModalOpen(true);
   };
 
@@ -453,6 +466,32 @@ export default function Corkboard() {
     }
   };
 
+  const handleDeleteNotebook = async (id: string) => {
+    if (confirm("Are you sure you want to delete this Category Folder and ALL of its stickies?")) {
+      await notesStore.deleteNotebook(id);
+    }
+  };
+
+  const handleEditNotebook = async (nb: Notebook) => {
+    const newName = prompt("Edit Category Name:", nb.name);
+    if (newName && newName.trim()) {
+      await notesStore.updateNotebook(nb.id, newName.trim());
+    }
+  };
+
+  const handleDeleteSection = async (id: string) => {
+    if (confirm("Are you sure you want to delete this Submenu and ALL of its stickies?")) {
+      await notesStore.deleteSection(id);
+    }
+  };
+
+  const handleEditSection = async (sec: Section) => {
+    const newName = prompt("Edit Submenu Name:", sec.name);
+    if (newName && newName.trim()) {
+      await notesStore.updateSection(sec.id, newName.trim());
+    }
+  };
+
   const handleCreateSection = async () => {
     if (newSectionName.trim() && selectedNbForNewSection) {
       await notesStore.createSection(selectedNbForNewSection, newSectionName);
@@ -508,7 +547,7 @@ export default function Corkboard() {
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <Button 
-            onClick={handleNewStickyClick}
+            onClick={() => handleNewStickyClick()}
             className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] h-8 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm"
           >
             <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">New Sticky</span><span className="sm:hidden">New</span>
@@ -610,11 +649,12 @@ export default function Corkboard() {
           {/* Quick Note Bar */}
           <div className="mb-8 max-w-2xl mx-auto mt-2">
             <div 
-              onClick={handleNewStickyClick}
+              onClick={() => handleNewStickyClick()}
               className="w-full bg-zinc-900 border border-zinc-700 hover:border-zinc-500 rounded-xl shadow-lg p-3 sm:p-4 flex items-center justify-between cursor-text transition-colors group"
             >
               <span className="text-zinc-400 font-medium ml-2">Take a note...</span>
               <div className="flex gap-1 sm:gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); const url = prompt("Enter Image URL:"); if (url && url.trim()) handleNewStickyClick([`__img:${url.trim()}`]); }} className="h-8 w-8 hover:bg-zinc-800"><ImageIcon className="w-4 h-4 text-zinc-300" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><CheckSquare className="w-4 h-4 text-zinc-300" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><Palette className="w-4 h-4 text-zinc-300" /></Button>
               </div>
@@ -622,29 +662,63 @@ export default function Corkboard() {
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={activeNotes.map(n => n.id)} strategy={rectSortingStrategy}>
-              <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
-                {activeNotes.map(note => {
-                  const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                  return (
-                    <SortableSticky 
-                      key={note.id} 
-                      note={note} 
-                      sectionName={sectionName}
-                      onEdit={handleEditNote} 
-                      onDelete={handleDeleteNote} 
-                      onSendToNotes={handleSendToNotes} 
-                      onDuplicate={handleDuplicateNote}
-                      onChangeColor={handleChangeColor}
-                      onToggleCheckboxes={handleToggleCheckboxes}
-                      onTogglePin={handleTogglePin}
-                      showTags={true}
-                      showToolbar={prefs.toolbar}
-                    />
-                  );
-                })}
+            {activeNotes.filter(n => n.is_pinned).length > 0 && (
+              <div className="mb-12">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2">Pinned</h3>
+                <SortableContext items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    {activeNotes.filter(n => n.is_pinned).map(note => {
+                      const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                      return (
+                        <SortableSticky 
+                          key={note.id} 
+                          note={note} 
+                          sectionName={sectionName}
+                          onEdit={handleEditNote} 
+                          onDelete={handleDeleteNote} 
+                          onSendToNotes={handleSendToNotes} 
+                          onDuplicate={handleDuplicateNote}
+                          onChangeColor={handleChangeColor}
+                          onToggleCheckboxes={handleToggleCheckboxes}
+                          onTogglePin={handleTogglePin}
+                          showTags={true}
+                          showToolbar={prefs.toolbar}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
               </div>
-            </SortableContext>
+            )}
+            
+            {activeNotes.filter(n => !n.is_pinned).length > 0 && (
+              <div>
+                {activeNotes.filter(n => n.is_pinned).length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
+                <SortableContext items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    {activeNotes.filter(n => !n.is_pinned).map(note => {
+                      const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                      return (
+                        <SortableSticky 
+                          key={note.id} 
+                          note={note} 
+                          sectionName={sectionName}
+                          onEdit={handleEditNote} 
+                          onDelete={handleDeleteNote} 
+                          onSendToNotes={handleSendToNotes} 
+                          onDuplicate={handleDuplicateNote}
+                          onChangeColor={handleChangeColor}
+                          onToggleCheckboxes={handleToggleCheckboxes}
+                          onTogglePin={handleTogglePin}
+                          showTags={true}
+                          showToolbar={prefs.toolbar}
+                        />
+                      );
+                    })}
+                  </div>
+                </SortableContext>
+              </div>
+            )}
           </DndContext>
 
           {activeNotes.length === 0 && (
@@ -696,6 +770,35 @@ export default function Corkboard() {
             )}
 
             <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
+              {(() => {
+                const images = editingNote.tags?.filter(t => t.startsWith('__img:')).map(t => t.replace('__img:', '')) || [];
+                if (images.length > 0) {
+                  return (
+                    <div className="shrink-0">
+                      <div className={`grid gap-2 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                        {images.map((img, i) => (
+                          <div key={i} className="relative group">
+                            <img src={img} alt="attachment" className="w-full h-32 sm:h-48 object-cover rounded shadow-sm bg-white/20" />
+                            <Button 
+                              variant="destructive" 
+                              size="icon" 
+                              className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => {
+                                const newTags = editingNote.tags?.filter(t => t !== `__img:${img}`);
+                                setEditingNote({ ...editingNote, tags: newTags });
+                              }}
+                              title="Remove Image"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               <div className="shrink-0">
                 <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Title</label>
                 <Input 
@@ -736,11 +839,11 @@ export default function Corkboard() {
                   onChange={e => setEditingNote({...editingNote, section_id: e.target.value || null})}
                   className={`w-full p-2 bg-black/5 border ${editColor.border} ${editColor.text} rounded focus-visible:ring-black/20 outline-none`}
                 >
-                  <option value="">No Category</option>
+                  <option className="bg-zinc-900 text-white" value="">No Category</option>
                   {notesStore.notebooks.map(nb => (
-                    <optgroup key={nb.id} label={nb.name}>
+                    <optgroup className="bg-zinc-900 text-zinc-400 font-bold" key={nb.id} label={nb.name}>
                       {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => (
-                        <option key={sec.id} value={sec.id}>{sec.name}</option>
+                        <option className="bg-zinc-800 text-white" key={sec.id} value={sec.id}>{sec.name}</option>
                       ))}
                     </optgroup>
                   ))}
