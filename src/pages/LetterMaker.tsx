@@ -114,8 +114,15 @@ const LetterMaker = () => {
     const [isRefining, setIsRefining] = useState(false);
 
     const handleCancel = () => {
-        if (window.history.state && window.history.state.idx > 0) {
+        if (window.history.length > 1) {
             navigate(-1);
+        } else if (selectedCustomer) {
+            const customer = customers.find(c => c.id === selectedCustomer);
+            if (customer) {
+                navigate(`/search?search=${encodeURIComponent(customer.name)}`);
+            } else {
+                navigate('/search');
+            }
         } else {
             navigate('/admin-dashboard');
         }
