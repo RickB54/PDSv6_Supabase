@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, FileText, Folder, ChevronDown, ChevronRight,
-  Search, Settings, Palette, MoreVertical, Copy
+  Search, Settings, Palette, MoreVertical, Copy, ArrowUp
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -250,6 +250,37 @@ export default function Corkboard() {
     return true; // All Stickies
   });
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const noteHeaders = useMemo(() => {
+    if (!editingNote?.content) return [];
+    const regex = /^(#{1,6})\s+(.+)$/gm;
+    const headers = [];
+    let match;
+    while ((match = regex.exec(editingNote.content)) !== null) {
+      headers.push({ full: match[0], text: match[2], index: match.index });
+    }
+    return headers;
+  }, [editingNote?.content]);
+
+  const scrollToHeader = (index: number, length: number) => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      textarea.focus();
+      textarea.setSelectionRange(index, index + length);
+      textarea.blur();
+      textarea.focus();
+    }
+  };
+
+  const scrollToTop = () => {
+    if (textareaRef.current) {
+      textareaRef.current.scrollTop = 0;
+      textareaRef.current.setSelectionRange(0, 0);
+      textareaRef.current.focus();
+    }
+  };
+
   const handleSaveNote = async () => {
     if (editingNote) {
       const sectionId = editingNote.section_id || null;
@@ -489,15 +520,33 @@ export default function Corkboard() {
       {/* Edit Note Modal */}
       {editingNote && isNoteModalOpen && (
         <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#fef08a] w-full max-w-lg rounded-lg shadow-2xl overflow-hidden border-2 border-[#facc15] flex flex-col max-h-[90vh]">
+          <div className="bg-[#fef08a] w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 border-[#facc15] flex flex-col h-[95vh]">
             <div className="p-4 border-b border-[#facc15]/50 flex justify-between items-center bg-[#fde047]">
               <h2 className="font-bold text-[#5c4033]">{editingNote.id === 'new' ? 'New Sticky' : 'Edit Sticky'}</h2>
               <Button variant="ghost" size="icon" onClick={() => setIsNoteModalOpen(false)} className="text-[#5c4033] hover:bg-[#facc15]">
                 <X className="w-5 h-5" />
               </Button>
             </div>
-            <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-              <div>
+            
+            {noteHeaders.length > 0 && (
+              <div className="px-6 py-3 border-b border-[#facc15]/30 bg-[#fef08a]/80 flex gap-2 overflow-x-auto">
+                <span className="text-xs font-bold text-[#5c4033] uppercase py-1.5 shrink-0">Sections:</span>
+                {noteHeaders.map((header, i) => (
+                  <Button 
+                    key={i} 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => scrollToHeader(header.index, header.full.length)}
+                    className="shrink-0 h-7 text-xs border-[#facc15] text-[#5c4033] hover:bg-[#fde047]"
+                  >
+                    {header.text}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
+              <div className="shrink-0">
                 <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Title</label>
                 <Input 
                   value={editingNote.title} 
@@ -506,16 +555,26 @@ export default function Corkboard() {
                   placeholder="Sticky title..."
                 />
               </div>
-              <div>
+              <div className="flex-1 flex flex-col relative">
                 <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Content</label>
                 <Textarea 
+                  ref={textareaRef}
                   value={editingNote.content} 
                   onChange={e => setEditingNote({...editingNote, content: e.target.value})}
-                  className="bg-white/50 border-[#facc15] text-[#5c4033] placeholder:text-[#5c4033]/50 min-h-[160px] focus-visible:ring-[#eab308]"
-                  placeholder="Write something..."
+                  className="flex-1 resize-none bg-white/50 border-[#facc15] text-[#5c4033] placeholder:text-[#5c4033]/50 focus-visible:ring-[#eab308] p-4 text-base leading-relaxed"
+                  placeholder="Write something (use # headers to create section links)..."
                 />
+                <Button 
+                  size="icon" 
+                  variant="outline" 
+                  className="absolute bottom-4 left-4 rounded-full shadow-lg border-[#facc15] bg-[#fde047] text-[#5c4033] hover:bg-[#facc15]"
+                  onClick={scrollToTop}
+                  title="Scroll to Top"
+                >
+                  <ArrowUp className="w-5 h-5" />
+                </Button>
               </div>
-              <div>
+              <div className="shrink-0">
                 <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Category</label>
                 <select 
                   value={editingNote.section_id || ''} 
