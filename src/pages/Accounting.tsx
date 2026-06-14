@@ -161,8 +161,7 @@ const Accounting = () => {
         // Exclude Test Data
         const cName = ((inv as any).customerName || '').toLowerCase();
         const scName = ((inv as any).customer_name || '').toLowerCase();
-        if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube') ||
-            scName.includes('generic customer') || scName.includes('test customer') || scName.includes('rick berube')) {
+        if (cName.includes('generic customer') || scName.includes('generic customer')) {
           return false;
         }
         return true;
@@ -187,7 +186,7 @@ const Accounting = () => {
         const amt = inc.amount || 0;
         // Exclude Test Data
         const cName = (inc.customerName || '').toLowerCase();
-        if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube')) return;
+        if (cName.includes('generic customer')) return;
         
         const d = new Date(inc.date || inc.createdAt);
         if (d.toDateString() === today) daily += amt;
@@ -223,7 +222,7 @@ const Accounting = () => {
         });
         incomes.forEach(inc => {
           const cName = (inc.customerName || '').toLowerCase();
-          if (cName.includes('generic customer') || cName.includes('test customer') || cName.includes('rick berube')) return;
+          if (cName.includes('generic customer')) return;
           const d = new Date(inc.date || inc.createdAt);
           if (filterDate(d)) filteredTotal += (inc.amount || 0);
         });

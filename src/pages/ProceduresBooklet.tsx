@@ -528,6 +528,61 @@ const procedures: ProcedurePage[] = [
       "A deletion is permanent and cannot be undone; use 'Archive' as your first course of action.",
       "Sharing Admin credentials is a violation of shop security policy and voids technical support."
     ]
+  },
+  {
+    id: "test-sandbox",
+    title: "09: Test Customer & Sandbox Workflow",
+    icon: Beaker,
+    color: "from-amber-500 to-yellow-700",
+    summary: "Simulating the complete customer lifecycle. Auto-fill tools, live testing in Accounting, and the 1-click Wipeout protocol.",
+    sections: [
+      {
+        title: "Creating the Test Data",
+        content: "To accurately verify the customer portal and your shop's communication logic, you must generate realistic data. The system provides an 'Auto-Fill Rick Berube Test' button on all public-facing forms (Contact, Book Now). Clicking this generates a standardized test lead/booking linked to your developer email.",
+        subsections: [
+          {
+            title: "The Test Banner",
+            content: "Once a Rick Berube test profile is created, a persistent red 'Test Data Active' banner will appear at the bottom of the screen to warn you that your numbers are currently skewed.",
+            icon: AlertTriangle
+          }
+        ]
+      },
+      {
+        title: "Live Analytics & Accounting Impact",
+        content: "We do NOT hide test data from your financial dashboards. When you convert a Rick Berube Estimate to an Invoice and mark it 'Paid', your Accounting and Analytics totals will immediately increase. This is intentional: it allows you to verify with 100% certainty that your revenue formulas, tax calculations, and conversion metrics are functioning correctly under load.",
+        subsections: [
+          {
+            title: "True Simulation",
+            content: "Test invoices behave exactly like real invoices, providing a perfect sandbox for verifying new pricing models or discount logic.",
+            icon: DollarSign
+          }
+        ]
+      },
+      {
+        title: "The 1-Click Wipeout Protocol",
+        content: "Once you have finished your testing and verified your numbers, you must clean the database to restore your true business metrics. Click the 'Wipe Test Data Now' button located inside the red warning banner.",
+        subsections: [
+          {
+            title: "Cascading Deletion",
+            content: "The wipeout protocol is surgical. It cascades through the entire database, deleting all Rick Berube Invoices, Estimates, Bookings, Vehicles, and Customer Records—leaving your real data untouched.",
+            icon: Zap
+          },
+          {
+            title: "Instant Recalculation",
+            content: "Immediately after wiping, your Accounting and Analytics pages will automatically recalculate and revert to their true, live business totals.",
+            icon: BarChart3
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Use an Incognito window to log into the Customer Portal as the test customer, while keeping your Admin session open in your main window.",
+      "Send a test Estimate to verify the PDF layout and email delivery before quoting a real client."
+    ],
+    warnings: [
+      "Do NOT leave test data active overnight; always hit the Wipe Test Data button when your testing session is complete.",
+      "Because Gmail ignores the '+test' modifier, test emails will arrive safely in your main inbox."
+    ]
   }
 ];
 

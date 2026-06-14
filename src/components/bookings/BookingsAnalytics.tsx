@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -43,7 +43,7 @@ interface BookingsAnalyticsProps {
 export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion }: BookingsAnalyticsProps) {
     const navigate = useNavigate();
     const { add } = useTasksStore();
-    const { update } = useBookingsStore();
+    const { update, remove } = useBookingsStore();
     const user = getCurrentUser();
     const [reminderOpen, setReminderOpen] = useState(false);
     const [selectedCustomerForReminder, setSelectedCustomerForReminder] = useState<any>(null);
@@ -62,6 +62,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     useEffect(() => {
         setPriceHistory(getPriceChangeHistory());
     }, []);
+
+    const handleDeleteCustomerBooking = async (bookingId: string) => {
+        if (window.confirm("Are you sure you want to delete this booking record? This removes the interaction from the insights history.")) {
+            try {
+                await remove(bookingId);
+                toast.success("Booking record deleted successfully");
+            } catch (error) {
+                toast.error("Failed to delete booking");
+            }
+        }
+    };
 
     const { isDemoMode, isAdminPreview, setAdminPreview, canAccess, visibleSections } = useDemoMode();
     const [searchQuery, setSearchQuery] = useState("");
@@ -764,10 +775,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_quotes_dateFilter', JSON.stringify(quotesDateFilter));
     }, [quotesShowArchived, quotesDateFilter]);
 
-    const [showTestData, setShowTestData] = useState(() => localStorage.getItem('analytics_showTestData') === 'true');
-    useEffect(() => {
-        localStorage.setItem('analytics_showTestData', String(showTestData));
-    }, [showTestData]);
+    const [showTestData, setShowTestData] = useState(true);
 
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
         update(bookingId, { isArchived: !currentStatus });
@@ -2318,15 +2326,35 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 const lastBooking = bookings.find(b => b.id === cust.lastBookingId);
                                                 if (!lastBooking) return null;
                                                 return (
-                                                    <Button
-                                                        size="icon"
-                                                        variant="ghost"
-                                                        className={lastBooking.isArchived ? "text-yellow-500 hover:text-yellow-400" : "text-zinc-500 hover:text-zinc-300"}
-                                                        onClick={() => handleArchiveToggle(cust.lastBookingId, !!lastBooking.isArchived)}
-                                                        title={lastBooking.isArchived ? "Restore" : "Archive"}
-                                                    >
-                                                        <Archive className="h-4 w-4" />
-                                                    </Button>
+                                                    <div className="flex justify-end gap-1">
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                                            onClick={() => navigate(`/search-customer?customerId=${cust.id || ''}&search=${encodeURIComponent(cust.name)}`)}
+                                                            title="Edit Customer Profile"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className={lastBooking.isArchived ? "text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10" : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}
+                                                            onClick={() => handleArchiveToggle(cust.lastBookingId, !!lastBooking.isArchived)}
+                                                            title={lastBooking.isArchived ? "Restore" : "Archive"}
+                                                        >
+                                                            <Archive className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10"
+                                                            onClick={() => handleDeleteCustomerBooking(cust.lastBookingId)}
+                                                            title="Delete Booking Record"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 );
                                             })()}
                                         </TableCell>
