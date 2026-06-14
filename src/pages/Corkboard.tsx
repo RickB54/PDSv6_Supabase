@@ -216,6 +216,7 @@ export default function Corkboard() {
   const [selectedNotebook, setSelectedNotebook] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
+  const [expandAll, setExpandAll] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -376,6 +377,33 @@ export default function Corkboard() {
     
     setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: extraTags, versions: [], created_at: '', updated_at: '' });
     setIsNoteModalOpen(true);
+  };
+
+  const handleImageSelect = (isQuickNote = false) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files) return;
+      
+      const base64s = await Promise.all(Array.from(files).map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+      }));
+      
+      const imgTags = base64s.map(b => `__img:${b}`);
+      if (isQuickNote) {
+        handleNewStickyClick(imgTags);
+      } else {
+        setEditingNote(prev => prev ? ({ ...prev, tags: [...(prev.tags || []), ...imgTags] }) : null);
+      }
+    };
+    input.click();
   };
 
   const handleSaveNote = async () => {
@@ -573,6 +601,7 @@ export default function Corkboard() {
                 <PanelLeftClose className="w-4 h-4" />
               </Button>
               <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Categories</h2>
+              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Category">
               <Plus className="w-4 h-4" />
@@ -618,7 +647,7 @@ export default function Corkboard() {
                       {expandedNotebook === nb.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     </button>
                   </div>
-                  {expandedNotebook === nb.id && (
+                  {(expandedNotebook === nb.id || expandAll) && (
                     <div className="pl-6 pr-2 space-y-1">
                       {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => {
                         const secStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
@@ -677,7 +706,7 @@ export default function Corkboard() {
             >
               <span className="text-zinc-400 font-medium ml-2">Take a note...</span>
               <div className="flex gap-1 sm:gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); const url = prompt("Enter Image URL:"); if (url && url.trim()) handleNewStickyClick([`__img:${url.trim()}`]); }} className="h-8 w-8 hover:bg-zinc-800"><ImageIcon className="w-4 h-4 text-zinc-300" /></Button>
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleImageSelect(true); }} className="h-8 w-8 hover:bg-zinc-800"><ImageIcon className="w-4 h-4 text-zinc-300" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><CheckSquare className="w-4 h-4 text-zinc-300" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800"><Palette className="w-4 h-4 text-zinc-300" /></Button>
               </div>
@@ -694,7 +723,7 @@ export default function Corkboard() {
                       const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                       return (
                         <SortableSticky 
-                          key={note.id} 
+                          key={`${note.id}-${note.is_pinned}`} 
                           note={note} 
                           sectionName={sectionName}
                           onEdit={handleEditNote} 
@@ -723,7 +752,7 @@ export default function Corkboard() {
                       const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                       return (
                         <SortableSticky 
-                          key={note.id} 
+                          key={`${note.id}-${note.is_pinned}`} 
                           note={note} 
                           sectionName={sectionName}
                           onEdit={handleEditNote} 
@@ -792,7 +821,27 @@ export default function Corkboard() {
               </div>
             )}
 
-            <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
+            <div 
+              className="p-6 flex-1 flex flex-col gap-4 overflow-hidden"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                  const newTags = [...(editingNote.tags || [])];
+                  Array.from(files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const base64 = ev.target?.result as string;
+                        setEditingNote(prev => prev ? ({ ...prev, tags: [...(prev.tags || []), `__img:${base64}`] }) : null);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  });
+                }
+              }}
+            >
               {(() => {
                 const images = editingNote.tags?.filter(t => t.startsWith('__img:')).map(t => t.replace('__img:', '')) || [];
                 if (images.length > 0) {
@@ -877,6 +926,9 @@ export default function Corkboard() {
               <div className="flex gap-2">
                 {editingNote.id !== 'new' && (
                   <>
+                    <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
+                      <ImageIcon className="w-5 h-5" />
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
