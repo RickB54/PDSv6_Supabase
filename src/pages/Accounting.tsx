@@ -52,6 +52,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import localforage from "localforage";
 import { getAllCategoryColors } from "@/lib/categoryColors";
 import { getInventoryTotals, InventoryTotals } from "@/lib/inventory-totals";
+import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 
 interface Invoice {
@@ -141,7 +142,42 @@ const Accounting = () => {
       const incomes = await getReceivables();
       const invTotals = await getInventoryTotals();
       
-      setExpenseList(expensesData);
+      const [chemicals, materials, tools] = await Promise.all([
+          getChemicals(),
+          getMaterials(),
+          getTools()
+      ]);
+
+      const virtualExpenses: Expense[] = [
+          ...chemicals.filter(c => (c.costPerBottle || c.actualPrice) && (c.costPerBottle || c.actualPrice) > 0).map(c => ({
+              id: c.id,
+              amount: c.costPerBottle || c.actualPrice || 0,
+              category: 'Chemicals',
+              description: `Inventory: ${c.name} ${c.brand ? `(${c.brand})` : ''}`,
+              createdAt: c.purchaseDate || c.createdAt || new Date().toISOString()
+          })),
+          ...materials.filter(m => (m.costPerItem || m.actualPrice) && (m.costPerItem || m.actualPrice) > 0).map(m => ({
+              id: m.id,
+              amount: m.costPerItem || m.actualPrice || 0,
+              category: 'Supplies',
+              description: `Inventory: ${m.name}`,
+              createdAt: m.purchaseDate || m.createdAt || new Date().toISOString()
+          })),
+          ...tools.filter(t => (t.price || t.actualPrice) && (t.price || t.actualPrice) > 0).map(t => ({
+              id: t.id,
+              amount: t.price || t.actualPrice || 0,
+              category: 'Equipment',
+              description: `Inventory: ${t.name}`,
+              createdAt: t.purchaseDate || t.createdAt || new Date().toISOString()
+          }))
+      ];
+
+      const originalExpensesFiltered = (expensesData as Expense[]).filter(e => {
+          const desc = (e.description || '').toUpperCase();
+          return !desc.includes('INVENTORY PURCHASE');
+      });
+
+      setExpenseList([...originalExpensesFiltered, ...virtualExpenses]);
       setInvoiceList(invoices);
       setIncomeList(incomes as Receivable[]);
       setInventoryTotals(invTotals);

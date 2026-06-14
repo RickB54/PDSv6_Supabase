@@ -51,6 +51,7 @@ import { getSupabaseTaxExpenses } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_BUDGET, MOCK_ACCOUNTING } from "@/lib/demoMockData";
 import { getInventoryTotals } from "@/lib/inventory-totals";
+import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
 
 interface Expense {
     id: string;
@@ -214,6 +215,37 @@ const CompanyBudget = () => {
         const expenses = await getExpenses<Expense>();
         const invoices = await getInvoices() as Invoice[];
         const invTotals = await getInventoryTotals();
+        
+        // Fetch specific inventory items for detailed ledger rows
+        const [chemicals, materials, tools] = await Promise.all([
+            getChemicals(),
+            getMaterials(),
+            getTools()
+        ]);
+
+        const virtualExpenses: Expense[] = [
+            ...chemicals.filter(c => (c.costPerBottle || c.actualPrice) && (c.costPerBottle || c.actualPrice) > 0).map(c => ({
+                id: c.id,
+                amount: c.costPerBottle || c.actualPrice || 0,
+                category: 'Chemicals',
+                description: `Inventory: ${c.name} ${c.brand ? `(${c.brand})` : ''}`,
+                createdAt: c.purchaseDate || c.createdAt || new Date().toISOString()
+            })),
+            ...materials.filter(m => (m.costPerItem || m.actualPrice) && (m.costPerItem || m.actualPrice) > 0).map(m => ({
+                id: m.id,
+                amount: m.costPerItem || m.actualPrice || 0,
+                category: 'Supplies',
+                description: `Inventory: ${m.name}`,
+                createdAt: m.purchaseDate || m.createdAt || new Date().toISOString()
+            })),
+            ...tools.filter(t => (t.price || t.actualPrice) && (t.price || t.actualPrice) > 0).map(t => ({
+                id: t.id,
+                amount: t.price || t.actualPrice || 0,
+                category: 'Equipment',
+                description: `Inventory: ${t.name}`,
+                createdAt: t.purchaseDate || t.createdAt || new Date().toISOString()
+            }))
+        ];
 
         // Filter out [TAX] items and inventory-category items because we are adding the live inventory total separately
         const inventoryCategories = ["supplies", "equipment", "chemicals", "inventory", "materials", "tools"];
@@ -225,8 +257,14 @@ const CompanyBudget = () => {
             return !isTaxPrefix && !isInventoryCategory;
         });
 
+        // Filter out manually added Inventory Purchases from the ledger to prevent double-counting
+        const originalExpensesFiltered = (expenses as Expense[]).filter(e => {
+            const desc = (e.description || '').toUpperCase();
+            return !desc.includes('INVENTORY PURCHASE');
+        });
+
         setIncomeList(incomes as Receivable[]);
-        setExpenseList(expenses); // Keep full list for visibility if needed
+        setExpenseList([...originalExpensesFiltered, ...virtualExpenses]); // Keep full list for visibility if needed
         setInvoiceList(invoices);
         setInventoryTotalsData(invTotals);
         processCategoryData(incomes as Receivable[], manualExpenses, invoices, invTotals);
@@ -1298,20 +1336,22 @@ const CompanyBudget = () => {
                                                                             <TableCell className="text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{exp.description || '-'}</TableCell>
                                                                             <TableCell className="text-xs sm:text-sm">${(exp.amount || 0).toFixed(2)}</TableCell>
                                                                             <TableCell>
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                                                    onClick={async () => {
-                                                                                        if (confirm('Delete this expense entry?')) {
-                                                                                            if (exp.id) await deleteExpense(exp.id);
-                                                                                            loadData();
-                                                                                            toast.success("Expense deleted");
-                                                                                        }
-                                                                                    }}
-                                                                                >
-                                                                                    <Trash2 className="h-4 w-4" />
-                                                                                </Button>
+                                                                                {!(exp.description || '').startsWith('Inventory:') && (
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                        onClick={async () => {
+                                                                                            if (confirm('Delete this expense entry?')) {
+                                                                                                if (exp.id) await deleteExpense(exp.id);
+                                                                                                loadData();
+                                                                                                toast.success("Expense deleted");
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        <Trash2 className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                )}
                                                                             </TableCell>
                                                                         </TableRow>
                                                                     ))}

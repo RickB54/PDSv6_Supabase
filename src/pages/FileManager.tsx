@@ -825,18 +825,19 @@ const FileManager = () => {
       }}>
         <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] p-0 bg-black/95 border-none outline-none overflow-hidden flex flex-col items-stretch z-[9999]">
           {/* Header Controls */}
-          <div className="absolute top-0 left-0 right-0 z-50 p-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
-            <div className="flex items-center gap-4 text-white">
-              <Button variant="ghost" size="icon" className="hover:bg-white/10" onClick={() => setSelectedRecord(null)}>
+          {/* Header Controls */}
+          <div className="flex-none w-full z-50 p-4 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
+            <div className="flex items-center gap-4 text-white min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0 hover:bg-white/10" onClick={() => setSelectedRecord(null)}>
                 <X className="w-6 h-6" />
               </Button>
-              <div className="flex flex-col">
-                <span className="text-sm font-black truncate max-w-[250px] sm:max-w-[400px]">{selectedRecord?.fileName}</span>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase">{selectedRecord?.recordType} • {selectedRecord?.date}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-black truncate max-w-[200px] sm:max-w-[400px] lg:max-w-[600px] block" title={selectedRecord?.fileName}>{selectedRecord?.fileName}</span>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase block truncate">{selectedRecord?.recordType} • {selectedRecord?.date}</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hidden sm:flex" onClick={() => selectedRecord && downloadPDF(selectedRecord)}>
                 <Download className="w-5 h-5" />
               </Button>
@@ -851,7 +852,7 @@ const FileManager = () => {
           </div>
 
           {/* Main Viewer Area */}
-          <div className="flex-1 relative flex items-center justify-center overflow-auto p-2 sm:p-4 pt-20 pb-20 sm:pb-4">
+          <div className="flex-1 relative flex items-center justify-center overflow-auto p-2 sm:p-4 pb-20 sm:pb-4 bg-zinc-900/50">
             {selectedRecord && (
               <div className="w-full h-full flex flex-col items-center justify-center animate-in zoom-in-95 duration-300">
                 {viewerLoading && (

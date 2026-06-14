@@ -33,7 +33,7 @@ export default function Login() {
 
         if (wasJustAdmin) {
             setEmail("rberube54+test@gmail.com");
-            setPassword("test1234");
+            setPassword("Test123");
             
             // Clear the flag so it only auto-fills once after logout
             localStorage.removeItem('wasJustAdmin');

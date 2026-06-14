@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -775,6 +775,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_quotes_dateFilter', JSON.stringify(quotesDateFilter));
     }, [quotesShowArchived, quotesDateFilter]);
 
+    // Quality Review Filter
+    const [qualShowArchived, setQualShowArchived] = useState(() => localStorage.getItem('analytics_qual_showArchived') === 'true');
+    const [qualDateFilter, setQualDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_qual_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    useEffect(() => {
+        localStorage.setItem('analytics_qual_showArchived', String(qualShowArchived));
+        localStorage.setItem('analytics_qual_dateFilter', JSON.stringify(qualDateFilter));
+    }, [qualShowArchived, qualDateFilter]);
+
     const [showTestData, setShowTestData] = useState(true);
 
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
@@ -818,6 +836,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredPerfBookings = useMemo(() => getFiltered(bookings, perfShowArchived, perfDateFilter), [bookings, perfShowArchived, perfDateFilter]);
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
     const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
+    const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
 
     const deliveryPieData = useMemo(() => {
         let sent = 0;
@@ -985,9 +1004,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [filteredPerfBookings, customers, invoices]);
 
-    const doneServices = useMemo(() => 
-        serviceDetailsData.filter(s => s.status === 'done' || s.status === 'completed'),
-    [serviceDetailsData]);
+    const doneServices = useMemo(() => {
+        const qualMap = filteredQualBookings.map(b => b.id);
+        return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed') && qualMap.includes(s.id));
+    }, [serviceDetailsData, filteredQualBookings]);
 
     const toDoServices = useMemo(() => 
         serviceDetailsData.filter(s => s.status !== 'done' && s.status !== 'completed'),
@@ -1250,31 +1270,54 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
-            {/* Global Actions Bar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50 backdrop-blur-md">
-                <div>
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
-                    <p className="text-xs text-zinc-500">Comprehensive overview of operational performance and revenue goals.</p>
+            {/* Global Actions Bar & Bookmarks */}
+            <div className="flex flex-col gap-4 mb-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50 backdrop-blur-md">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
+                        <p className="text-xs text-zinc-500">Comprehensive overview of operational performance and revenue goals.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <CustomerIntelligence360Modal customers={customers} />
+                        <Button 
+                            onClick={generateAnalyticsPDF}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-6 gap-2 shadow-lg shadow-blue-900/20 w-full sm:w-auto"
+                        >
+                            <Printer className="w-4 h-4" />
+                            Print Performance Report
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            onClick={generatePriceHistoryPDF}
+                            className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-10 gap-2 w-full sm:w-auto"
+                        >
+                            <FileBarChart className="w-4 h-4" />
+                            Price Audit
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <CustomerIntelligence360Modal customers={customers} />
-                    <Button 
-                        onClick={generateAnalyticsPDF}
-                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-6 gap-2 shadow-lg shadow-blue-900/20 w-full sm:w-auto"
-                    >
-                        <Printer className="w-4 h-4" />
-                        Print Performance Report
-                    </Button>
-                    <Button 
-                        variant="outline"
-                        onClick={generatePriceHistoryPDF}
-                        className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-10 gap-2 w-full sm:w-auto"
-                    >
-                        <FileBarChart className="w-4 h-4" />
-                        Price Audit
-                    </Button>
+                
+                {/* Bookmarks Bar */}
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800/50">
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mr-2 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Jump To:</span>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Estimates & Quotes</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
                 </div>
             </div>
+
+            {/* Scroll To Top Button */}
+            <Button
+                variant="default"
+                size="icon"
+                className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-2xl bg-zinc-100 text-zinc-900 hover:bg-white hover:scale-110 transition-all border border-zinc-300"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                title="Back to Top"
+            >
+                <ArrowUp className="h-6 w-6" />
+            </Button>
 
             {/* KPI Cards - Mobile Optimized (Single Line) */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4">
@@ -1401,7 +1444,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="revenue-performance" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-24">
                 {/* Booking Volume Chart */}
                 <Card ref={volumeChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
                     <CardHeader>
@@ -1593,7 +1636,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Service Performance Detail Log - COMPLETED ONLY */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl">
+            <Card id="service-detail" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl scroll-mt-24">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-emerald-400" />
@@ -1889,7 +1932,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Estimates Tracker */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6">
+            <Card id="estimates-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6 scroll-mt-24">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <FileBarChart className="w-5 h-5 text-emerald-400" />
@@ -2163,7 +2206,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
             {/* CRM Customer List */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
+            <Card id="customer-insights" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden scroll-mt-24">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Customer Insights & Follow-up</CardTitle>
@@ -2369,7 +2412,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
             {/* Post-Service Performance Review Section - NEW AT BOTTOM */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group">
+            <Card id="operational-quality" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group scroll-mt-24">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
                 <CardHeader className="bg-zinc-950/20 relative">
                     <div className="flex items-center justify-between">
@@ -2382,6 +2425,51 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <CardDescription className="text-zinc-400">Log internal notes, mistakes, and customer sentiment for continuous improvement</CardDescription>
                             </div>
                         </div>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                    <Filter className="h-4 w-4" />
+                                    Filter
+                                    {(qualShowArchived || qualDateFilter.start) && (
+                                        <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
+                                            !
+                                        </Badge>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-zinc-200">Show Archived</span>
+                                        <Switch checked={qualShowArchived} onCheckedChange={setQualShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => setQualDateFilter({ start: undefined, end: undefined })}>All Time</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}>Today</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) }); }}>This Week</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); }}>This Month</Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                        <div className="grid gap-2 text-zinc-200">
+                                            <Calendar
+                                                mode="range"
+                                                selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
+                                                onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
+                                                initialFocus
+                                                className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                            />
+                                        </div>
+                                        {(qualDateFilter.start || qualDateFilter.end) && (
+                                            <Button variant="ghost" size="sm" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="w-full text-zinc-400 hover:text-white mt-2">Clear Range</Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 relative">
