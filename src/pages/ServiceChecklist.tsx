@@ -3883,6 +3883,7 @@ const ServiceChecklist = () => {
                        localStorage.setItem('recent_service_amount', t.toFixed(2)); 
                        localStorage.setItem('recent_service_job_id', checklistId || '');
                        localStorage.setItem('recent_service_time', getAdjustedTime());
+                       localStorage.setItem('recent_service_timestamp', Date.now().toString());
                      } catch(e) {}
                      return t.toFixed(2);
                   })()}

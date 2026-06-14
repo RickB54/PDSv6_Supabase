@@ -906,8 +906,13 @@ const Accounting = () => {
                           </button>
                         )}
                       </div>
-                      <div className="flex gap-2 items-center">
-                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>
+                      <div className="flex gap-4 items-center">
+                        <div className="flex gap-2 items-center">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">Date Range:</Label>
+                          <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Sort By:</Label>
                         <Select value={ledgerSortBy} onValueChange={(v: any) => setLedgerSortBy(v)}>
                           <SelectTrigger className="w-[140px] h-9">
                             <SelectValue />

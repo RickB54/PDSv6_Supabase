@@ -36,8 +36,17 @@ export default function QuickPayModal() {
       try {
         const storedAmt = localStorage.getItem('recent_service_amount');
         const storedId = localStorage.getItem('recent_service_job_id');
+        const storedTimestamp = localStorage.getItem('recent_service_timestamp');
         
-        if (storedAmt && !isNaN(parseFloat(storedAmt)) && parseFloat(storedAmt) > 0) {
+        let isRecent = false;
+        if (storedTimestamp) {
+          const age = Date.now() - parseInt(storedTimestamp, 10);
+          if (age < 60 * 60 * 1000) { // 60 minutes
+            isRecent = true;
+          }
+        }
+        
+        if (isRecent && storedAmt && !isNaN(parseFloat(storedAmt)) && parseFloat(storedAmt) > 0) {
           setSuggestedAmount(parseFloat(storedAmt));
         } else {
           setSuggestedAmount(null);
