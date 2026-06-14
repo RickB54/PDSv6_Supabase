@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, FileText, Folder, ChevronDown, ChevronRight,
-  Search, Settings, Palette, MoreVertical, Copy, ArrowUp
+  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -40,6 +40,7 @@ const STICKY_COLORS = [
   { id: 'emerald', bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'rose', bg: 'bg-rose-500', border: 'border-rose-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'purple', bg: 'bg-purple-500', border: 'border-purple-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
+  { id: 'deepblue', bg: 'bg-[#1e3a8a]', border: 'border-[#1e40af]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'orange', bg: 'bg-orange-500', border: 'border-orange-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'gray', bg: 'bg-zinc-700', border: 'border-zinc-600', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
   { id: 'teal', bg: 'bg-teal-600', border: 'border-teal-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
@@ -59,7 +60,7 @@ const STICKY_COLORS = [
   { id: 'mint', bg: 'bg-[#98FF98]', border: 'border-[#7FFFD4]', text: 'text-[#004d00]', tagBg: 'bg-[#004d00]/20', tagText: 'text-[#004d00]' },
 ];
 
-const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, showTags?: boolean, showToolbar?: boolean }) => {
+const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, showTags?: boolean, showToolbar?: boolean }) => {
   const {
     attributes,
     listeners,
@@ -114,6 +115,16 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       >
          <div className="w-12 h-3 bg-black/10 rounded-full mt-2" />
       </div>
+
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={(e) => { e.stopPropagation(); onTogglePin(note); }} 
+        className={`absolute top-2 right-2 h-7 w-7 rounded-full hover:bg-black/10 ${color.text} z-10`}
+        title="Pin to Top"
+      >
+        <Pin className={`w-4 h-4 ${note.is_pinned ? 'fill-current' : ''} ${note.is_pinned ? 'rotate-45' : ''} transition-transform`} />
+      </Button>
 
       <div className="flex-1 mt-4">
         <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{note.title}</h3>
@@ -262,6 +273,10 @@ export default function Corkboard() {
       return n.section_id && sectionIds.includes(n.section_id);
     }
     return true; // All Stickies
+  }).sort((a, b) => {
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+    return 0; // The original array is already sorted by updated_at descending
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -352,6 +367,11 @@ export default function Corkboard() {
       await notesStore.updateNote(note.id, { content: newContent });
     }
     toast({ title: "Checkboxes Toggled" });
+  };
+
+  const handleTogglePin = async (note: Note) => {
+    await notesStore.updateNote(note.id, { is_pinned: !note.is_pinned });
+    toast({ title: note.is_pinned ? "Sticky Unpinned" : "Sticky Pinned to Top" });
   };
 
   const handleAddSection = () => {
@@ -545,7 +565,8 @@ export default function Corkboard() {
                       onDuplicate={handleDuplicateNote}
                       onChangeColor={handleChangeColor}
                       onToggleCheckboxes={handleToggleCheckboxes}
-                      showTags={prefs.tags} 
+                      onTogglePin={handleTogglePin}
+                      showTags={true}
                       showToolbar={prefs.toolbar}
                     />
                   );
@@ -565,8 +586,8 @@ export default function Corkboard() {
 
       {/* Edit Note Modal */}
       {editingNote && isNoteModalOpen && (() => {
-        const editColorId = editingNote.tags?.find(t => t.startsWith('__color:'))?.split(':')[1]?.replace('__', '') || 'yellow';
-        const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS[0];
+        const editColorId = editingNote.tags?.find(t => t.startsWith('__inside_color:'))?.split(':')[1]?.replace('__', '') || 'gray';
+        const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
         return (
         <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
@@ -667,11 +688,11 @@ export default function Corkboard() {
                       <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
                         {STICKY_COLORS.map(c => (
                           <div key={c.id} onClick={() => {
-                            const newTags = editingNote.tags?.filter(t => !t.startsWith('__color:')) || [];
-                            newTags.push(`__color:${c.id}__`);
+                            const newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
+                            newTags.push(`__inside_color:${c.id}__`);
                             setEditingNote({...editingNote, tags: newTags});
                             // We don't automatically save to db here, it gets saved when they click Save Sticky
-                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${editingNote.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
+                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${editingNote.tags?.includes(`__inside_color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
