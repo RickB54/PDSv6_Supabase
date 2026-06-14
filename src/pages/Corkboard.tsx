@@ -571,11 +571,14 @@ export default function Corkboard() {
 
         {/* Main Board */}
         <div className="flex-1 overflow-y-auto p-8 relative z-10">
-          {!isSidebarOpen && (
-            <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(true)} className="fixed bottom-6 left-6 z-50 rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800">
-              <PanelLeftClose className="w-5 h-5 rotate-180" />
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`fixed bottom-6 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800 ${isSidebarOpen ? 'lg:hidden' : ''}`}
+          >
+            <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
+          </Button>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={activeNotes.map(n => n.id)} strategy={rectSortingStrategy}>
