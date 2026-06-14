@@ -130,6 +130,9 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
         <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{note.title}</h3>
         <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-6">{note.content}</p>
       </div>
+      <div className="mt-3 text-[10px] opacity-60 uppercase tracking-widest font-bold">
+        {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+      </div>
       {showTags && (
         <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
           {note.tags && note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).length > 0 ? note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).map(t => (
@@ -482,7 +485,7 @@ export default function Corkboard() {
 
         {/* Sidebar Categories */}
         <div className={`
-          absolute lg:relative z-20 h-full bg-zinc-950 border-r border-zinc-800 transition-all duration-300 ease-in-out flex flex-col
+          absolute lg:relative z-20 h-full bg-zinc-950 border-r border-zinc-800 transition-all duration-300 ease-in-out flex flex-col overflow-hidden
           ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full lg:w-0'}
         `}>
           <div className="p-4 border-b border-zinc-800 flex items-center justify-between min-w-[16rem]">
