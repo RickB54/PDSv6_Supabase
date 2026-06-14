@@ -317,12 +317,32 @@ export default function Corkboard() {
   };
 
   const handleToggleCheckboxes = async (note: Note) => {
-    // Simple mock logic for checkboxes. Replaces bullet points with md checkboxes.
-    const newContent = note.content.includes('[ ]') || note.content.includes('[x]')
-      ? note.content.replace(/\[[ x]\] /g, '- ')
-      : note.content.replace(/^- /gm, '- [ ] ');
-    await notesStore.updateNote(note.id, { content: newContent });
+    const hasCheckboxes = note.content.includes('[ ]') || note.content.includes('[x]');
+    if (hasCheckboxes) {
+      const newContent = note.content.replace(/^(\s*)-\s+\[[ x]\]\s+/gm, '$1- ');
+      await notesStore.updateNote(note.id, { content: newContent });
+    } else {
+      const newContent = note.content.replace(/^(\s*)-\s+/gm, '$1- [ ] ');
+      await notesStore.updateNote(note.id, { content: newContent });
+    }
     toast({ title: "Checkboxes Toggled" });
+  };
+
+  const handleAddSection = () => {
+    if (editingNote && textareaRef.current) {
+      const textarea = textareaRef.current;
+      const cursorPos = textarea.selectionStart || editingNote.content.length;
+      const timestamp = new Date().toLocaleString([], { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' });
+      const newSectionText = `\n\n---\n# New Section (${timestamp})\n\n`;
+      
+      const newContent = editingNote.content.slice(0, cursorPos) + newSectionText + editingNote.content.slice(cursorPos);
+      setEditingNote({ ...editingNote, content: newContent });
+      
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(cursorPos + newSectionText.length, cursorPos + newSectionText.length);
+      }, 0);
+    }
   };
 
   const handleDeleteNote = async (id: string) => {
@@ -518,26 +538,37 @@ export default function Corkboard() {
       </div>
 
       {/* Edit Note Modal */}
-      {editingNote && isNoteModalOpen && (
+      {editingNote && isNoteModalOpen && (() => {
+        const editColorId = editingNote.tags?.find(t => t.startsWith('__color:'))?.split(':')[1]?.replace('__', '') || 'yellow';
+        const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS[0];
+        
+        return (
         <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#fef08a] w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 border-[#facc15] flex flex-col h-[95vh]">
-            <div className="p-4 border-b border-[#facc15]/50 flex justify-between items-center bg-[#fde047]">
-              <h2 className="font-bold text-[#5c4033]">{editingNote.id === 'new' ? 'New Sticky' : 'Edit Sticky'}</h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsNoteModalOpen(false)} className="text-[#5c4033] hover:bg-[#facc15]">
+          <div className={`${editColor.bg} w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 ${editColor.border} flex flex-col h-[95vh]`}>
+            <div className={`p-4 border-b border-black/10 flex justify-between items-start ${editColor.bg} brightness-95`}>
+              <div className="flex flex-col gap-1">
+                <h2 className={`font-bold ${editColor.text}`}>{editingNote.id === 'new' ? 'New Sticky' : 'Edit Sticky'}</h2>
+                {editingNote.id !== 'new' && (
+                  <div className={`text-[10px] ${editColor.text} opacity-70 uppercase font-bold tracking-wider`}>
+                    Created: {new Date(editingNote.created_at || '').toLocaleString()} | Updated: {new Date(editingNote.updated_at || '').toLocaleString()}
+                  </div>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsNoteModalOpen(false)} className={`${editColor.text} hover:bg-black/10`}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
             
             {noteHeaders.length > 0 && (
-              <div className="px-6 py-3 border-b border-[#facc15]/30 bg-[#fef08a]/80 flex gap-2 overflow-x-auto">
-                <span className="text-xs font-bold text-[#5c4033] uppercase py-1.5 shrink-0">Sections:</span>
+              <div className={`px-6 py-3 border-b border-black/10 ${editColor.bg} flex gap-2 overflow-x-auto`}>
+                <span className={`text-xs font-bold ${editColor.text} uppercase py-1.5 shrink-0`}>Sections:</span>
                 {noteHeaders.map((header, i) => (
                   <Button 
                     key={i} 
                     variant="outline" 
                     size="sm" 
                     onClick={() => scrollToHeader(header.index, header.full.length)}
-                    className="shrink-0 h-7 text-xs border-[#facc15] text-[#5c4033] hover:bg-[#fde047]"
+                    className={`shrink-0 h-7 text-xs ${editColor.border} ${editColor.text} hover:bg-black/10 bg-transparent`}
                   >
                     {header.text}
                   </Button>
@@ -547,27 +578,32 @@ export default function Corkboard() {
 
             <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
               <div className="shrink-0">
-                <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Title</label>
+                <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Title</label>
                 <Input 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
-                  className="bg-white/50 border-[#facc15] text-[#5c4033] placeholder:text-[#5c4033]/50 focus-visible:ring-[#eab308]"
+                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20`}
                   placeholder="Sticky title..."
                 />
               </div>
               <div className="flex-1 flex flex-col relative">
-                <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Content</label>
+                <div className="flex justify-between items-end mb-1">
+                  <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
+                  <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
+                    <Plus className="w-3 h-3 mr-1" /> Add New Section Here
+                  </Button>
+                </div>
                 <Textarea 
                   ref={textareaRef}
                   value={editingNote.content} 
                   onChange={e => setEditingNote({...editingNote, content: e.target.value})}
-                  className="flex-1 resize-none bg-white/50 border-[#facc15] text-[#5c4033] placeholder:text-[#5c4033]/50 focus-visible:ring-[#eab308] p-4 text-base leading-relaxed"
+                  className={`flex-1 resize-none bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 p-4 text-base leading-relaxed`}
                   placeholder="Write something (use # headers to create section links)..."
                 />
                 <Button 
                   size="icon" 
                   variant="outline" 
-                  className="absolute bottom-4 left-4 rounded-full shadow-lg border-[#facc15] bg-[#fde047] text-[#5c4033] hover:bg-[#facc15]"
+                  className={`absolute bottom-4 left-4 rounded-full shadow-lg ${editColor.border} ${editColor.bg} ${editColor.text} hover:brightness-95`}
                   onClick={scrollToTop}
                   title="Scroll to Top"
                 >
@@ -575,11 +611,11 @@ export default function Corkboard() {
                 </Button>
               </div>
               <div className="shrink-0">
-                <label className="text-xs font-bold text-[#5c4033] uppercase mb-1 block">Category</label>
+                <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Category</label>
                 <select 
                   value={editingNote.section_id || ''} 
                   onChange={e => setEditingNote({...editingNote, section_id: e.target.value || null})}
-                  className="w-full p-2 bg-white/50 border border-[#facc15] text-[#5c4033] rounded focus-visible:ring-[#eab308] outline-none"
+                  className={`w-full p-2 bg-black/5 border ${editColor.border} ${editColor.text} rounded focus-visible:ring-black/20 outline-none`}
                 >
                   <option value="">No Category</option>
                   {notesStore.notebooks.map(nb => (
@@ -592,15 +628,60 @@ export default function Corkboard() {
                 </select>
               </div>
             </div>
-            <div className="p-4 border-t border-[#facc15]/50 flex justify-end gap-2 bg-[#fde047]/50">
-              <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className="border-[#5c4033] text-[#5c4033] hover:bg-[#facc15]">Cancel</Button>
-              <Button onClick={handleSaveNote} className="bg-[#5c4033] text-[#fef08a] hover:bg-[#5c4033]/90">
-                <Save className="w-4 h-4 mr-2" /> Save Sticky
-              </Button>
+            <div className={`p-4 border-t border-black/10 flex justify-between items-center ${editColor.bg} brightness-95`}>
+              <div className="flex gap-2">
+                {editingNote.id !== 'new' && (
+                  <>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
+                          <Palette className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
+                        {STICKY_COLORS.map(c => (
+                          <div key={c.id} onClick={() => {
+                            const newTags = editingNote.tags?.filter(t => !t.startsWith('__color:')) || [];
+                            newTags.push(`__color:${c.id}__`);
+                            setEditingNote({...editingNote, tags: newTags});
+                            // We don't automatically save to db here, it gets saved when they click Save Sticky
+                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${editingNote.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { 
+                      const tags = editingNote.tags?.filter(t => t !== '__corkboard__') || [];
+                      setEditingNote({...editingNote, tags});
+                      toast({ title: "Will be sent to Personal Notes on save" });
+                    }}>
+                      <FileText className="w-5 h-5" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
+                        <DropdownMenuItem onClick={() => { handleDeleteNote(editingNote.id); setIsNoteModalOpen(false); }}>Delete note</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(editingNote.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent`}>Cancel</Button>
+                <Button onClick={handleSaveNote} className={`bg-black/20 ${editColor.text} hover:bg-black/30 border border-black/10`}>
+                  <Save className="w-4 h-4 mr-2" /> Save Sticky
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* New Notebook Modal */}
       {isNotebookModalOpen && (
