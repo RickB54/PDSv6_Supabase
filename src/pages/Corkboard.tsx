@@ -600,6 +600,17 @@ export default function Corkboard() {
                       <div className="flex items-center gap-3 truncate"><Folder className="w-4 h-4 shrink-0" /> <span className="truncate">{nb.name}</span></div>
                       <span className="text-xs opacity-50 ml-2">{nbStickies}</span>
                     </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-2 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditNotebook(nb); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Category</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteNotebook(nb.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Category</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <button 
                       onClick={(e) => { e.stopPropagation(); setExpandedNotebook(expandedNotebook === nb.id ? null : nb.id); }}
                       className="p-2 text-zinc-500 hover:text-zinc-300"
@@ -612,14 +623,26 @@ export default function Corkboard() {
                       {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => {
                         const secStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
                         return (
-                        <button 
-                          key={sec.id}
-                          onClick={() => handleCategorySelect(() => setSelectedSection(sec.id))}
-                          className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
-                        >
-                          <div className="flex items-center gap-3 truncate"><FileText className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{sec.name}</span></div>
-                          <span className="text-xs opacity-50 ml-2">{secStickies}</span>
-                        </button>
+                        <div key={sec.id} className="flex items-center group">
+                          <button 
+                            onClick={() => handleCategorySelect(() => setSelectedSection(sec.id))}
+                            className={`flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
+                          >
+                            <div className="flex items-center gap-3 truncate"><FileText className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{sec.name}</span></div>
+                            <span className="text-xs opacity-50 ml-2">{secStickies}</span>
+                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="p-1.5 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                                <MoreVertical className="w-3 h-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSection(sec); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Submenu</DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Submenu</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       )})}
                       <button 
                         onClick={() => { setSelectedNbForNewSection(nb.id); setIsSectionModalOpen(true); }}
