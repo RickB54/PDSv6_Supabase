@@ -45,7 +45,7 @@ const STICKY_COLORS = [
   { id: 'teal', bg: 'bg-teal-600', border: 'border-teal-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
 ];
 
-const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, showTags }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, showTags?: boolean }) => {
+const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, showTags?: boolean, showToolbar?: boolean }) => {
   const {
     attributes,
     listeners,
@@ -105,7 +105,7 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
         <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{note.title}</h3>
         <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-6">{note.content}</p>
       </div>
-
+      {showTags && (
         <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
           {note.tags && note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).length > 0 ? note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).map(t => (
             <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
@@ -119,46 +119,48 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
         <div className="mt-3 text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
       )}
 
-      <div className="flex justify-between items-center mt-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-        <div className="flex gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`}>
-                <Palette className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
-              {STICKY_COLORS.map(c => (
-                <div key={c.id} onClick={() => onChangeColor(note, c.id)} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${note.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { e.stopPropagation(); onSendToNotes(note); }}>
-            <FileText className="w-4 h-4" />
-          </Button>
+      {showToolbar && (
+        <div className="flex justify-between items-center mt-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+          <div className="flex gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`}>
+                  <Palette className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
+                {STICKY_COLORS.map(c => (
+                  <div key={c.id} onClick={() => onChangeColor(note, c.id)} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${note.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { e.stopPropagation(); onSendToNotes(note); }}>
+              <FileText className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex gap-1">
+            <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} onClick={(e) => { e.stopPropagation(); onEdit(note); }}>
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`}>
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
+                <DropdownMenuItem onClick={() => onDelete(note.id)}>Delete note</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(note)}>Change labels / Category</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast({ title: "Drawing Canvas", description: "This feature will be enabled in a future update." })}>Add drawing</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDuplicate(note)}>Make a copy</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onToggleCheckboxes(note)}>Show checkboxes</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(note.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast({ title: "Version History", description: `This note has ${note.versions?.length || 0} previous versions.` })}>Version history</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} onClick={(e) => { e.stopPropagation(); onEdit(note); }}>
-            <Edit2 className="w-4 h-4" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`}>
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
-              <DropdownMenuItem onClick={() => onDelete(note.id)}>Delete note</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(note)}>Change labels / Category</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast({ title: "Drawing Canvas", description: "This feature will be enabled in a future update." })}>Add drawing</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate(note)}>Make a copy</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleCheckboxes(note)}>Show checkboxes</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(note.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast({ title: "Version History", description: `This note has ${note.versions?.length || 0} previous versions.` })}>Version history</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
@@ -197,10 +199,12 @@ export default function Corkboard() {
   const [prefs, setPrefs] = useState({
     anim: localStorage.getItem('corkboard_anim') !== 'false',
     tags: localStorage.getItem('corkboard_tags') !== 'false',
-    masonry: localStorage.getItem('corkboard_masonry') === 'true'
+    masonry: localStorage.getItem('corkboard_masonry') === 'true',
+    isolate: localStorage.getItem('corkboard_isolate') !== 'false',
+    toolbar: localStorage.getItem('corkboard_toolbar') !== 'false'
   });
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry', val: boolean) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar', val: boolean) => {
     localStorage.setItem(`corkboard_${key}`, String(val));
     setPrefs(p => ({ ...p, [key]: val }));
   };
@@ -234,7 +238,7 @@ export default function Corkboard() {
   };
 
   const activeNotes = notesStore.notes.filter(n => {
-    if (!n.tags?.includes('__corkboard__')) return false;
+    if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
     if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     
     if (selectedSection) {
@@ -461,7 +465,8 @@ export default function Corkboard() {
                       onDuplicate={handleDuplicateNote}
                       onChangeColor={handleChangeColor}
                       onToggleCheckboxes={handleToggleCheckboxes}
-                      showTags={showTags} 
+                      showTags={prefs.tags} 
+                      showToolbar={prefs.toolbar}
                     />
                   );
                 })}
@@ -606,6 +611,20 @@ export default function Corkboard() {
                   <div className="text-xs text-zinc-500">Display labels on the bottom of stickies</div>
                 </div>
                 <input type="checkbox" checked={prefs.tags} onChange={e => updatePref('tags', e.target.checked)} className="w-4 h-4 accent-yellow-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-sm">Isolate Stickies</div>
+                  <div className="text-xs text-zinc-500">Only show items with the corkboard tag (hides them from Notes app)</div>
+                </div>
+                <input type="checkbox" checked={prefs.isolate} onChange={e => updatePref('isolate', e.target.checked)} className="w-4 h-4 accent-yellow-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-sm">Show Toolbar</div>
+                  <div className="text-xs text-zinc-500">Display quick-action menu options on hover</div>
+                </div>
+                <input type="checkbox" checked={prefs.toolbar} onChange={e => updatePref('toolbar', e.target.checked)} className="w-4 h-4 accent-yellow-500" />
               </div>
             </div>
           </div>
