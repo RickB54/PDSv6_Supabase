@@ -1198,13 +1198,15 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                 const { data: customerData } = await supabase
                     .from('customers')
                     .select('id')
-                    .eq('user_id', user.id)
-                    .single();
+                    .eq('email', user.email)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
                 if (customerData) {
                     query = query.eq('customer_id', customerData.id);
                 } else {
-                    return [];
+                    query = query.eq('customer_id', 'none');
                 }
             } else {
                 return [];
@@ -1499,12 +1501,16 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             const { data: customerData } = await supabase
                 .from('customers')
                 .select('id')
-                .eq('user_id', user.id)
-                .single();
+                .eq('email', user.email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (!customerData) return [];
-
-            query = query.eq('customer_id', customerData.id);
+            if (customerData) {
+                query = query.eq('customer_id', customerData.id);
+            } else {
+                query = query.eq('customer_id', 'none');
+            }
         }
 
         const { data, error } = await query;
@@ -1684,21 +1690,27 @@ export const getSupabasePayments = async (filterByCurrentUser = false): Promise<
             const { data: customerData } = await supabase
                 .from('customers')
                 .select('id')
-                .eq('user_id', user.id)
-                .single();
+                .eq('email', user.email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (!customerData) return [];
+            if (customerData) {
+                // Get all bookings for this customer
+                const { data: bookings } = await supabase
+                    .from('bookings')
+                    .select('id')
+                    .eq('customer_id', customerData.id);
 
-            // Get all bookings for this customer
-            const { data: bookings } = await supabase
-                .from('bookings')
-                .select('id')
-                .eq('customer_id', customerData.id);
-
-            if (!bookings || bookings.length === 0) return [];
-
-            const bookingIds = bookings.map(b => b.id);
-            query = query.in('booking_id', bookingIds);
+                if (!bookings || bookings.length === 0) {
+                    query = query.eq('booking_id', 'none');
+                } else {
+                    const bookingIds = bookings.map(b => b.id);
+                    query = query.in('booking_id', bookingIds);
+                }
+            } else {
+                query = query.eq('booking_id', 'none');
+            }
         }
 
         const { data, error } = await query;
@@ -2291,12 +2303,16 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
             const { data: customerData } = await supabase
                 .from('customers')
                 .select('id')
-                .eq('user_id', user.id)
-                .single();
+                .eq('email', user.email)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-            if (!customerData) return [];
-
-            query = query.eq('customer_id', customerData.id);
+            if (customerData) {
+                query = query.eq('customer_id', customerData.id);
+            } else {
+                query = query.eq('customer_id', 'none');
+            }
         }
 
         const { data, error } = await query;
