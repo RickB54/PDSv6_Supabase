@@ -54,7 +54,7 @@ interface NotesState {
     refresh: () => Promise<void>;
 
     // Hierarchy
-    createNotebook: (name: string) => Promise<void>;
+    createNotebook: (name: string) => Promise<string>;
     updateNotebook: (id: string, name: string) => Promise<void>;
     deleteNotebook: (id: string) => Promise<void>;
     createSection: (notebookId: string, name: string) => Promise<void>;
@@ -142,13 +142,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             data.notebooks.push(nb);
             await saveDemoData(data);
             get().refresh();
-            return;
+            return nb.id;
         }
 
         const user = getCurrentUser();
-        if (!user) return;
-        const { error } = await supabase.from('personal_notebooks').insert({ name, user_id: user.id });
-        if (!error) get().refresh();
+        if (!user) return '';
+        const { data, error } = await supabase.from('personal_notebooks').insert({ name, user_id: user.id }).select().single();
+        if (!error && data) {
+            await get().refresh();
+            return data.id;
+        }
+        return '';
     },
 
     updateNotebook: async (id, name) => {

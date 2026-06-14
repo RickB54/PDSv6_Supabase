@@ -303,7 +303,10 @@ export default function Corkboard() {
 
   const handleCreateNotebook = async () => {
     if (newNotebookName.trim()) {
-      await notesStore.createNotebook(newNotebookName);
+      const nbId = await notesStore.createNotebook(newNotebookName);
+      if (nbId) {
+        await notesStore.createSection(nbId, "General");
+      }
       setNewNotebookName("");
       setIsNotebookModalOpen(false);
       toast({ title: "Category Created" });
