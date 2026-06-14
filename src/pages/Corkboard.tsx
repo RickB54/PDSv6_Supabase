@@ -252,12 +252,12 @@ export default function Corkboard() {
 
   const handleSaveNote = async () => {
     if (editingNote) {
+      const sectionId = editingNote.section_id || null;
       if (editingNote.id === 'new') {
-        const id = await notesStore.createNote(selectedSection || null, editingNote.title, editingNote.content);
-        await notesStore.updateNote(id, { tags: ['__corkboard__'] });
+        await notesStore.createNote(sectionId, editingNote.title, editingNote.content, ['__corkboard__']);
         toast({ title: "Note Created" });
       } else {
-        await notesStore.updateNote(editingNote.id, { title: editingNote.title, content: editingNote.content });
+        await notesStore.updateNote(editingNote.id, { section_id: sectionId, title: editingNote.title, content: editingNote.content });
         toast({ title: "Note Updated" });
       }
       setIsNoteModalOpen(false);

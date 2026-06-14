@@ -62,7 +62,7 @@ interface NotesState {
     deleteSection: (id: string) => Promise<void>;
 
     // Notes
-    createNote: (sectionId: string | null, title?: string, content?: string) => Promise<string>;
+    createNote: (sectionId: string | null, title?: string, content?: string, tags?: string[]) => Promise<string>;
     updateNote: (id: string, patch: Partial<Note>) => Promise<void>;
     deleteNote: (id: string) => Promise<void>;
     moveNote: (noteId: string, newSectionId: string | null) => Promise<void>;
@@ -229,7 +229,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         get().refresh();
     },
 
-    createNote: async (sectionId, title = '', content = '') => {
+    createNote: async (sectionId, title = '', content = '', tags = []) => {
         if (isDemo()) {
             const data = await loadDemoData();
             const n: Note = {
@@ -240,7 +240,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 content,
                 is_pinned: false,
                 is_locked: false,
-                tags: [],
+                tags,
                 versions: [],
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -259,7 +259,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             user_id: user.id,
             title,
             content,
-            tags: []
+            tags
         }).select().single();
 
         if (error) {
