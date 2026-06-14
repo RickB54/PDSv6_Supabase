@@ -77,6 +77,7 @@ import ExamPage from "./pages/ExamPage";
 import ExamAdmin from "./pages/ExamAdmin";
 import CheatSheet from "./pages/CheatSheet";
 import PersonalNotes from "./pages/PersonalNotes";
+import Corkboard from "./pages/Corkboard";
 import Tasks from "./pages/Tasks";
 import VehicleClassification from "./pages/VehicleClassification";
 import ClientEvaluation from "./pages/ClientEvaluation";
@@ -415,6 +416,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/website-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
           <Route path="/section/:sectionId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
+          <Route path="/corkboard" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Corkboard /></ProtectedRoute>} />
           <Route path="/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
           <Route path="/demo/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={[]}><VehicleGallery /></ProtectedRoute>} />
           <Route path="/app-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />

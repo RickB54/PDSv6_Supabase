@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Plus, Search, Trash2, Folder, Inbox, Briefcase, User, Menu, ArrowLeft,
     MoreVertical, FileText, Lock, Unlock, Star, Tag, ChevronRight, ChevronDown, Edit2, Image as ImageIcon, X, Maximize2,
-    ChevronLeft, Link as LinkIcon, ArrowRight
+    ChevronLeft, Link as LinkIcon, ArrowRight, StickyNote
 } from "lucide-react";
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -67,7 +67,7 @@ export default function PersonalNotes() {
 
     // Filter Logic
     const filteredNotes = useMemo(() => {
-        let list = store.notes;
+        let list = store.notes.filter(n => !n.tags?.includes('__corkboard__'));
 
         // 1. Search (Global across all notes)
         if (store.searchQuery) {
@@ -457,6 +457,14 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-5 h-5 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
                                             </Button>
+                                            <Button variant="ghost" size="icon" className="rounded-full" title="Send to Corkboard" onClick={() => {
+                                                const tags = activeNote.tags || [];
+                                                store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
+                                                toast.success("Sent to Corkboard App");
+                                                setMobileView('notes');
+                                            }}>
+                                                <StickyNote className="w-5 h-5 text-yellow-500" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-5 h-5 text-red-500" /> : <Unlock className="w-5 h-5 text-zinc-500" />}
                                             </Button>
@@ -794,6 +802,13 @@ export default function PersonalNotes() {
                                             </div>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-4 h-4 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-600'}`} />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title="Send to Corkboard App" onClick={() => {
+                                                const tags = activeNote.tags || [];
+                                                store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
+                                                toast.success("Sent to Corkboard App");
+                                            }}>
+                                                <StickyNote className="w-4 h-4 text-yellow-500" />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-zinc-600" />}

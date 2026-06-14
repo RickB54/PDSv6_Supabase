@@ -113,8 +113,12 @@ const Settings = () => {
   const [nukeLoading, setNukeLoading] = useState(false);
   const [nukeStatus, setNukeStatus] = useState("");
   const [nukeError, setNukeError] = useState<string | null>(null);
+  const [wipeResult, setWipeResult] = useState<{ msg: string; details: string | null } | null>(null);
 
   const [hideChatBot, setHideChatBot] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
+  const [cbAnim, setCbAnim] = useState(() => localStorage.getItem('corkboard_anim') !== 'false');
+  const [cbMasonry, setCbMasonry] = useState(() => localStorage.getItem('corkboard_masonry') === 'true');
+  const [cbTags, setCbTags] = useState(() => localStorage.getItem('corkboard_tags') !== 'false');
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -774,6 +778,47 @@ const Settings = () => {
                 className="data-[state=checked]:bg-blue-600"
               />
             </div>
+
+            {/* Corkboard Preferences */}
+            <div className="mt-6 border-t border-zinc-800/50 pt-4">
+              <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Plan & Review Corkboard Settings</h3>
+              <div className="space-y-4 px-2">
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="cb-anim" 
+                    checked={cbAnim} 
+                    onCheckedChange={(val) => { setCbAnim(!!val); localStorage.setItem('corkboard_anim', String(!!val)); }} 
+                  />
+                  <div className="flex flex-col">
+                    <Label htmlFor="cb-anim" className="text-white cursor-pointer text-sm">Enable Transitions & Animations</Label>
+                    <p className="text-[10px] text-zinc-500">Toggle cool entrance and exit animations</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="cb-masonry" 
+                    checked={cbMasonry} 
+                    onCheckedChange={(val) => { setCbMasonry(!!val); localStorage.setItem('corkboard_masonry', String(!!val)); }} 
+                  />
+                  <div className="flex flex-col">
+                    <Label htmlFor="cb-masonry" className="text-white cursor-pointer text-sm">Masonry Organization Layout</Label>
+                    <p className="text-[10px] text-zinc-500">Organize stickies dynamically based on varying heights</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="cb-tags" 
+                    checked={cbTags} 
+                    onCheckedChange={(val) => { setCbTags(!!val); localStorage.setItem('corkboard_tags', String(!!val)); }} 
+                  />
+                  <div className="flex flex-col">
+                    <Label htmlFor="cb-tags" className="text-white cursor-pointer text-sm">Extended Functions & Badges</Label>
+                    <p className="text-[10px] text-zinc-500">Display additional organization items and tags on stickies</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </CardContent>
         </Card>
 

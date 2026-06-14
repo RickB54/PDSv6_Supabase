@@ -784,6 +784,18 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
                     </div>
 
                     <div className="relative p-6 rounded-xl shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] border-[8px] border-[#5c4033] bg-[#8b5a2b] mb-6 min-h-[400px]">
+                        
+                        <Link to="/corkboard" className="absolute top-4 right-4 z-30">
+                            <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="bg-black/40 hover:bg-black/60 border-black/50 text-white/70 hover:text-white transition-all shadow-xl"
+                                title="Expand to Full Screen Corkboard App"
+                            >
+                                <ArrowRight className="w-4 h-4 -rotate-45" />
+                            </Button>
+                        </Link>
+
                         {/* faint texture overlay */}
                         <div className="absolute inset-0 opacity-30 mix-blend-multiply" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
                         
