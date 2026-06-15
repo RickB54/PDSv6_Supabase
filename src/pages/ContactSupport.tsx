@@ -143,12 +143,16 @@ const ContactSupport = () => {
 
             // Store to Supabase
             if (isSupabaseEnabled()) {
-                await contactSvc.create({
-                    name: formData.name,
-                    email: formData.email,
-                    phone: formData.phone,
-                    message: formData.message,
-                });
+                try {
+                    await contactSvc.create({
+                        name: formData.name,
+                        email: formData.email,
+                        phone: formData.phone,
+                        message: formData.message,
+                    });
+                } catch (e) {
+                    console.warn("Could not save to contact_messages table (likely does not exist). Email & alert were sent successfully.", e);
+                }
             }
 
             toast({ title: "Request Sent!", description: "We'll get back to you shortly." });
