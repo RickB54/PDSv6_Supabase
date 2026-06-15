@@ -1195,18 +1195,32 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
         if (filterByCurrentUser) {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { data: customerData } = await supabase
+                // Strategy 1: Lookup by email (case-insensitive)
+                let { data: customerData } = await supabase
                     .from('customers')
                     .select('id')
-                    .eq('email', user.email)
+                    .ilike('email', user.email ?? '')
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
 
+                // Strategy 2: Fallback - lookup by user_id stored in customers table
+                if (!customerData) {
+                    const { data: byUserId } = await supabase
+                        .from('customers')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    customerData = byUserId;
+                }
+
                 if (customerData) {
                     query = query.eq('customer_id', customerData.id);
                 } else {
-                    query = query.eq('customer_id', 'none');
+                    console.warn(`[MyEstimates] No customer record found for auth user: ${user.email} (${user.id})`);
+                    return [];
                 }
             } else {
                 return [];
@@ -1497,19 +1511,33 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return [];
 
-            // Get customer record for this auth user
-            const { data: customerData } = await supabase
+            // Strategy 1: Lookup by email (case-insensitive)
+            let { data: customerData } = await supabase
                 .from('customers')
                 .select('id')
-                .eq('email', user.email)
+                .ilike('email', user.email ?? '')
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
+            // Strategy 2: Fallback - lookup by user_id stored in customers table
+            if (!customerData) {
+                const { data: byUserId } = await supabase
+                    .from('customers')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                customerData = byUserId;
+            }
+
             if (customerData) {
                 query = query.eq('customer_id', customerData.id);
             } else {
-                query = query.eq('customer_id', 'none');
+                // No customer record found - return empty with console info
+                console.warn(`[MyInvoices] No customer record found for auth user: ${user.email} (${user.id})`);
+                return [];
             }
         }
 
