@@ -1040,11 +1040,17 @@ export default function Corkboard() {
                       <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
                         {STICKY_COLORS.map(c => (
                           <div key={c.id} onClick={() => {
-                            const newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
+                            let newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
                             newTags.push(`__inside_color:${c.id}__`);
+                            if (prefs.matchColor) {
+                              newTags = newTags.filter(t => !t.startsWith('__color:'));
+                              newTags.push(`__color:${c.id}__`);
+                            }
                             setEditingNote({...editingNote, tags: newTags});
-                            // We don't automatically save to db here, it gets saved when they click Save Sticky
-                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${editingNote.tags?.includes(`__inside_color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
+                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
+                            (prefs.matchColor ? editingNote.tags?.includes(`__color:${c.id}__`) : editingNote.tags?.includes(`__inside_color:${c.id}__`)) 
+                              ? 'border-white' : 'border-transparent'
+                          } ${c.bg}`} />
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
