@@ -12,6 +12,8 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import * as contactSvc from "@/services/supabase/contact";
 import SuccessMessage from "@/components/SuccessMessage";
+import supabase from "@/lib/supabase";
+import { pushAdminAlert } from "@/lib/adminAlerts";
 
 const ContactSupport = () => {
     const user = getCurrentUser();
@@ -96,11 +98,48 @@ const ContactSupport = () => {
             // Save to File Manager
             savePDFToArchive("Customer", formData.name, `support_${Date.now()}`, pdfDataUrl);
 
-            // Open Gmail compose
             const subject = `Support Request: ${formData.name}`;
-            const body = `Support Request Details\n\nName: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone || 'N/A'}\nVehicle: ${formData.vehicle || 'N/A'}\n\nMessage:\n${formData.message}`;
-            const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            window.open(gmailLink, "_blank");
+            const emailHtml = `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">New Support Request</h2>
+                <p><strong>Name:</strong> ${formData.name}</p>
+                <p><strong>Email:</strong> ${formData.email}</p>
+                <p><strong>Phone:</strong> ${formData.phone || 'N/A'}</p>
+                <p><strong>Vehicle:</strong> ${formData.vehicle || 'N/A'}</p>
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+                <p><strong>Message:</strong></p>
+                <p style="white-space: pre-wrap; background: #f8fafc; padding: 15px; border-radius: 8px;">${formData.message}</p>
+              </div>
+            `;
+
+            if (isSupabaseEnabled()) {
+                try {
+                    await supabase.functions.invoke('send-booking-email', {
+                        body: {
+                            to: contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com',
+                            customerEmail: formData.email,
+                            subject: subject,
+                            html: emailHtml
+                        }
+                    });
+                } catch (emailErr) {
+                    console.error("Failed to send email via edge function:", emailErr);
+                }
+            }
+
+            // Alert the admin dashboard
+            pushAdminAlert(
+                "admin_message",
+                `New support message from ${formData.name}`,
+                "Customer Portal",
+                {
+                    customerName: formData.name,
+                    email: formData.email,
+                    phone: formData.phone,
+                    vehicle: formData.vehicle,
+                    message: formData.message
+                }
+            );
 
             // Store to Supabase
             if (isSupabaseEnabled()) {
@@ -134,7 +173,7 @@ const ContactSupport = () => {
     return (
         <div className="min-h-screen bg-background">
             <PageHeader title="Contact Support" />
-            <main className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in">
+            <main className="container mx-auto px-4 pt-24 pb-8 max-w-6xl animate-fade-in">
                 {/* Business Information Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <Card className="p-4 bg-gradient-card border-border flex items-center gap-3">
