@@ -147,19 +147,35 @@ async function getSupabaseUserProfile(userId: string): Promise<{ role: 'admin' |
   }
 }
 
-async function getSupabaseCustomerProfile(userId: string): Promise<any | null> {
+async function getSupabaseCustomerProfile(userId: string, email?: string): Promise<any | null> {
   try {
+    // Strategy 1: Look up by auth user ID (works if customer was created from this account)
     const res: any = await timeoutPromise(
       supabase.from('customers').select('*').eq('id', userId).maybeSingle() as any,
       3000,
       "getSupabaseCustomerProfile"
     );
-    if (res.error) return null;
-    if (res.data) {
+    if (!res.error && res.data) {
       try { localStorage.setItem('customerProfile', JSON.stringify(res.data)); } catch { }
       try { window.dispatchEvent(new CustomEvent('customer-profile-changed', { detail: res.data })); } catch { }
+      return res.data;
     }
-    return res.data || null;
+
+    // Strategy 2: Look up by email (handles cases where CRM record was created separately)
+    if (email) {
+      const res2: any = await timeoutPromise(
+        supabase.from('customers').select('*').ilike('email', email).order('created_at', { ascending: false }).limit(1).maybeSingle() as any,
+        3000,
+        "getSupabaseCustomerProfile-email"
+      );
+      if (!res2.error && res2.data) {
+        try { localStorage.setItem('customerProfile', JSON.stringify(res2.data)); } catch { }
+        try { window.dispatchEvent(new CustomEvent('customer-profile-changed', { detail: res2.data })); } catch { }
+        return res2.data;
+      }
+    }
+
+    return null;
   } catch { return null; }
 }
 
@@ -294,32 +310,29 @@ export async function finalizeSupabaseSession(u: any): Promise<User | null> {
     try { localStorage.setItem('session_user_id', u.id); } catch { }
     setCurrentUser(mapped);
 
-    // Background Consistency Sync for Customers/Prospects
-    // If they don't have a CRM record yet, create them as a 'prospect'
+    // Background Consistency Sync for Customers
+    // Check if they have a CRM record via both user.id AND email
     if (finalRole === 'customer') {
       (async () => {
         try {
-          const customer = await getSupabaseCustomerProfile(u.id);
+          const customer = await getSupabaseCustomerProfile(u.id, email);
           if (!customer) {
-            // New user signed in - create a Prospect record in CRM
+            // Truly new user - create a Prospect record
             console.log(`[Auth] Creating prospect record for new user: ${email}`);
             await supabase.from('customers').upsert({
-              id: u.id,
               full_name: finalName,
               email: email,
               type: 'prospect',
               how_found: 'Online Blog',
               notes: 'Auto-created from blog/portal sign-in'
-            }, { onConflict: 'id' });
+            }, { onConflict: 'email' });
 
-            // Re-fetch to populate local storage
-            await getSupabaseCustomerProfile(u.id);
+            await getSupabaseCustomerProfile(u.id, email);
           }
         } catch (e) { console.warn("Background customer sync failed", e); }
       })();
     } else {
-      // Non-blocking background fetch
-      getSupabaseCustomerProfile(u.id).catch(() => { });
+      getSupabaseCustomerProfile(u.id, email).catch(() => { });
     }
 
     return mapped;
@@ -360,23 +373,9 @@ export async function loginSupabase(email: string, password: string): Promise<Us
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // Seamlessly auto-register the test account if it doesn't exist in Supabase Auth yet
-      if (email === 'rberube54+test@gmail.com' && password === 'Test123') {
-        console.log("Test account auth not found, auto-registering...");
-        const signUpRes = await supabase.auth.signUp({ 
-          email, 
-          password, 
-          options: { data: { full_name: 'Rick Berube (Test)' } } 
-        });
-        if (signUpRes.data?.user && !signUpRes.error) {
-          return await finalizeSupabaseSession(signUpRes.data.user);
-        }
-      }
       console.error("loginSupabase error:", error);
       throw error;
     }
-    // console.log("loginSupabase: auth successful, finalizing...");
-    // Pass the user we just got - DO NOT fetch it again
     return await finalizeSupabaseSession(data.user);
   } catch (err) {
     console.error("loginSupabase: exception", err);
