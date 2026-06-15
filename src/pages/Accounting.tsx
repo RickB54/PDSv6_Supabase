@@ -506,13 +506,16 @@ const Accounting = () => {
       doc.text("Revenue Breakdown", 14, currentY);
       currentY += 6;
 
-      const revenueData = filteredAndSortedInvoices.map(inv => [
-        new Date(inv.createdAt).toLocaleDateString(),
-        inv.customerName || 'Walk-in',
-        inv.vehicle || 'Unknown',
-        inv.services?.map((s: any) => s.name).join(", ") || "",
-        `$${(inv.paidAmount || inv.total).toFixed(2)}`
-      ]);
+      const revenueData = filteredAndSortedInvoices.map(inv => {
+        const d = (inv as any).paidDate || inv.date || inv.createdAt;
+        return [
+          d ? new Date(d).toLocaleDateString() : 'N/A',
+          inv.customerName || 'Walk-in',
+          inv.vehicle || 'Unknown',
+          inv.services?.map((s: any) => s.name).join(", ") || "",
+          `$${(inv.paidAmount || inv.total || 0).toFixed(2)}`
+        ];
+      });
 
       autoTable(doc, {
         startY: currentY,
@@ -534,10 +537,10 @@ const Accounting = () => {
       currentY += 6;
 
       const expenseData = expenseList.map(exp => [
-        new Date(exp.date).toLocaleDateString(),
-        exp.category,
-        exp.description,
-        `$${exp.amount.toFixed(2)}`
+        exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A',
+        exp.category || 'N/A',
+        exp.description || 'N/A',
+        `$${(exp.amount || 0).toFixed(2)}`
       ]);
 
       autoTable(doc, {
@@ -560,10 +563,10 @@ const Accounting = () => {
       currentY += 6;
 
       const ledgerData = ledger.map(l => [
-        new Date(l.date).toLocaleDateString(),
-        l.type.toUpperCase(),
-        l.source,
-        l.type === 'income' ? `+$${l.amount.toFixed(2)}` : `-$${l.amount.toFixed(2)}`
+        l.date ? new Date(l.date).toLocaleDateString() : 'N/A',
+        (l.type || 'unknown').toUpperCase(),
+        l.source || 'N/A',
+        l.type === 'income' ? `+$${(l.amount || 0).toFixed(2)}` : `-$${(l.amount || 0).toFixed(2)}`
       ]);
 
       autoTable(doc, {
