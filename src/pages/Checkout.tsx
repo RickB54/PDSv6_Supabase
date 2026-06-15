@@ -23,6 +23,8 @@ interface Invoice {
   date?: string;
   paymentStatus?: "unpaid" | "partially-paid" | "paid";
   paidAmount?: number;
+  services?: any[];
+  tipAmount?: number;
 }
 
 const Checkout = () => {
@@ -55,6 +57,10 @@ const Checkout = () => {
   const [showCouponField, setShowCouponField] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
 
+  // Tip states
+  const [tipSelection, setTipSelection] = useState<number>(0); // percent or -1 for custom, 0 for none
+  const [customTipValue, setCustomTipValue] = useState<string>("");
+
   useEffect(() => {
     (async () => {
       const invs = await getInvoices<Invoice>();
@@ -74,7 +80,31 @@ const Checkout = () => {
   const appliedDiscount = matchedCoupon
     ? (matchedCoupon.percent ? (totalBeforeDiscount * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
     : 0;
-  const grandTotal = Math.max(0, totalBeforeDiscount - appliedDiscount);
+
+  const totalBeforeTip = Math.max(0, totalBeforeDiscount - appliedDiscount);
+
+  // Smart Tip Logic
+  const hasExistingTip = invoices.filter(i => selectedInvoiceIds.includes(String(i.id))).some(inv => {
+    if (inv.tipAmount && inv.tipAmount > 0) return true;
+    if (Array.isArray(inv.services)) {
+      return inv.services.some(s => 
+        s.name && (
+          s.name.includes("VIRTUAL_TIP") || 
+          s.name.toLowerCase().includes("tip") || 
+          s.name.toLowerCase().includes("gratuity")
+        )
+      );
+    }
+    return false;
+  });
+
+  const showTipSection = !hasExistingTip && (items.length > 0 || selectedInvoiceIds.length > 0);
+
+  const tipAmount = tipSelection === -1 
+    ? (parseFloat(customTipValue) || 0) 
+    : (tipSelection > 0 ? (totalBeforeTip * tipSelection) / 100 : 0);
+
+  const grandTotal = totalBeforeTip + tipAmount;
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -132,6 +162,11 @@ const Checkout = () => {
       // Prepayment
       if (prepay > 0) {
         lineItems.push({ name: "Prepayment", amount: prepay, quantity: 1 });
+      }
+      
+      // Gratuity
+      if (tipAmount > 0) {
+        lineItems.push({ name: "Gratuity", amount: tipAmount, quantity: 1 });
       }
 
       // Read search params for guest tracking
@@ -303,6 +338,48 @@ const Checkout = () => {
               </div>
             )}
           </Card>
+
+          {/* Gratuity Section */}
+          {showTipSection && (
+            <Card className="p-6 bg-gradient-card border-border animate-in fade-in slide-in-from-bottom-4">
+              <h2 className="text-xl font-bold text-foreground mb-2">Add a Gratuity (Optional)</h2>
+              <p className="text-sm text-muted-foreground mb-5">100% of tips go directly to your detailer. Thank you for your support!</p>
+              <div className="flex flex-wrap gap-3 mb-4">
+                {[15, 20, 25].map(pct => (
+                  <Button
+                    key={pct}
+                    variant={tipSelection === pct ? "default" : "outline"}
+                    onClick={() => setTipSelection(pct === tipSelection ? 0 : pct)}
+                    className={tipSelection === pct ? "bg-primary text-primary-foreground font-bold" : ""}
+                  >
+                    {pct}% (${((totalBeforeTip * pct) / 100).toFixed(2)})
+                  </Button>
+                ))}
+                <Button
+                  variant={tipSelection === -1 ? "default" : "outline"}
+                  onClick={() => setTipSelection(tipSelection === -1 ? 0 : -1)}
+                  className={tipSelection === -1 ? "bg-primary text-primary-foreground font-bold" : ""}
+                >
+                  Custom
+                </Button>
+              </div>
+              
+              {tipSelection === -1 && (
+                <div className="flex items-center gap-2 max-w-xs animate-in fade-in slide-in-from-top-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      className="pl-7"
+                      value={customTipValue}
+                      onChange={(e) => setCustomTipValue(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           <Card className="p-6 bg-gradient-card border-border">
             <div className="flex items-center justify-between">
