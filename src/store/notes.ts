@@ -292,7 +292,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             ].slice(0, 20);
         }
 
-        const nextNote = { ...note, ...patch, versions, updated_at: new Date().toISOString() };
+        const isOnlyPinToggle = Object.keys(patch).length === 1 && 'is_pinned' in patch;
+        const newUpdatedAt = isOnlyPinToggle ? note.updated_at : new Date().toISOString();
+
+        const nextNote = { ...note, ...patch, versions, updated_at: newUpdatedAt };
         const nextNotes = notes.map(n => n.id === id ? nextNote : n);
         set({ notes: nextNotes });
 
@@ -306,7 +309,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         await supabase.from('personal_notes').update({
             ...patch,
             versions,
-            updated_at: new Date().toISOString()
+            updated_at: newUpdatedAt
         }).eq('id', id);
     },
 
