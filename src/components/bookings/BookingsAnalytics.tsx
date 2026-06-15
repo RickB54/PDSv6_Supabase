@@ -746,6 +746,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return { start: undefined, end: undefined };
     });
 
+    // Invoices Filter
+    const [invShowArchived, setInvShowArchived] = useState(() => localStorage.getItem('analytics_inv_showArchived') === 'true');
+    const [invDateFilter, setInvDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_inv_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
     // Quotes Filter
     const [quotesShowArchived, setQuotesShowArchived] = useState(() => localStorage.getItem('analytics_quotes_showArchived') === 'true');
     const [quotesDateFilter, setQuotesDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
@@ -769,6 +782,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_ins_showArchived', String(insShowArchived));
         localStorage.setItem('analytics_ins_dateFilter', JSON.stringify(insDateFilter));
     }, [insShowArchived, insDateFilter]);
+
+    useEffect(() => {
+        localStorage.setItem('analytics_inv_showArchived', String(invShowArchived));
+        localStorage.setItem('analytics_inv_dateFilter', JSON.stringify(invDateFilter));
+    }, [invShowArchived, invDateFilter]);
 
     useEffect(() => {
         localStorage.setItem('analytics_quotes_showArchived', String(quotesShowArchived));
@@ -837,6 +855,50 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
     const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
+    const filteredInvoices = useMemo(() => getFiltered(invoices, invShowArchived, invDateFilter, 'createdAt'), [invoices, invShowArchived, invDateFilter]);
+
+    const invDeliveryPieData = useMemo(() => {
+        let sent = 0;
+        let notSent = 0;
+        
+        filteredInvoices.forEach((inv: any) => {
+            if (inv.isSent) {
+                sent++;
+            } else {
+                notSent++;
+            }
+        });
+
+        const data = [
+            { name: 'Sent', value: sent, color: '#6366f1' },
+            { name: 'Not Sent', value: notSent, color: '#f59e0b' },
+        ].filter(d => d.value > 0);
+        return data.length > 0 ? data : [{ name: 'No Data', value: 1, color: '#3f3f46' }];
+    }, [filteredInvoices]);
+
+    const invOutcomePieData = useMemo(() => {
+        let paid = 0;
+        let partiallyPaid = 0;
+        let unpaid = 0;
+        
+        filteredInvoices.forEach((inv: any) => {
+            const status = inv.paymentStatus || 'unpaid';
+            if (status === 'paid' || (inv.paidAmount && inv.total && inv.paidAmount >= inv.total)) {
+                paid++;
+            } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
+                partiallyPaid++;
+            } else {
+                unpaid++;
+            }
+        });
+
+        const data = [
+            { name: 'Paid', value: paid, color: '#10b981' },
+            { name: 'Partially Paid', value: partiallyPaid, color: '#3b82f6' },
+            { name: 'Unpaid', value: unpaid, color: '#ef4444' }
+        ].filter(d => d.value > 0);
+        return data.length > 0 ? data : [{ name: 'No Data', value: 1, color: '#3f3f46' }];
+    }, [filteredInvoices]);
 
     const deliveryPieData = useMemo(() => {
         let sent = 0;
@@ -1853,80 +1915,224 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardContent>
             </Card>
 
-            {/* Invoices To Be Sent - NOT SENT YET */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30">
-                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Send className="w-5 h-5 text-indigo-400" />
-                            <div>
-                                <CardTitle>Invoices To Be Sent</CardTitle>
-                                <CardDescription>Invoices generated but not yet marked as sent</CardDescription>
-                            </div>
+            {/* Invoices Tracker */}
+            <Card id="invoices-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30 mt-6 scroll-mt-24">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Send className="w-5 h-5 text-indigo-400" />
+                        <div>
+                            <CardTitle>Invoices</CardTitle>
+                            <CardDescription>Track invoice statuses (Not Sent, Sent, Unpaid, Paid)</CardDescription>
                         </div>
-                        <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                            {invoices.filter(inv => !inv.isSent).length} PENDING
-                        </Badge>
                     </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                <Filter className="h-4 w-4" />
+                                Filter
+                                {(invShowArchived || invDateFilter.start) && (
+                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
+                                        !
+                                    </Badge>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-zinc-200">Show Archived</span>
+                                    <Switch checked={invShowArchived} onCheckedChange={setInvShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setInvDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => setInvDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setInvDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setInvDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                            }}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                    <div className="grid gap-2 text-zinc-200">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: invDateFilter.start, to: invDateFilter.end }}
+                                            onSelect={(range) => setInvDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                        />
+                                    </div>
+                                    {(invDateFilter.start || invDateFilter.end) && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setInvDateFilter({ start: undefined, end: undefined })}
+                                            className="w-full text-zinc-400 hover:text-white mt-2"
+                                        >
+                                            Clear Range
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-zinc-950/50">
-                                <TableRow className="hover:bg-transparent border-zinc-800">
-                                    <TableHead className="w-[120px]">Date</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Vehicle</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {invoices.filter(inv => !inv.isSent).length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-10 italic">
-                                            All invoices have been sent! Excellent work.
-                                        </TableCell>
+                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                            <Table>
+                                <TableHeader className="bg-zinc-950/50">
+                                    <TableRow className="hover:bg-transparent border-zinc-800">
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Vehicle</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead className="text-center">Delivery</TableHead>
+                                        <TableHead className="text-right">Outcome</TableHead>
                                     </TableRow>
-                                ) : (
-                                    invoices.filter(inv => !inv.isSent).map((inv) => (
-                                        <TableRow key={inv.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors group">
-                                            <TableCell className="text-zinc-400 text-xs font-mono">
-                                                {inv.date}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-zinc-300">{inv.customerName}</TableCell>
-                                            <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
-                                            <TableCell className="font-bold text-zinc-300">
-                                                ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="h-8 text-[9px] uppercase font-bold tracking-widest text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText("https://g.page/r/CUaXyAfwdcv1EBM/review");
-                                                            toast.success("Review link copied to clipboard!");
-                                                        }}
-                                                    >
-                                                        Review Link
-                                                    </Button>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="h-8 text-[9px] uppercase font-black tracking-widest text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
-                                                        onClick={() => navigate(`/invoicing?editId=${inv.id}`)}
-                                                    >
-                                                        View Invoice
-                                                    </Button>
-                                                </div>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredInvoices.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
+                                                No invoices found for the selected period.
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
+                                    ) : (
+                                        filteredInvoices.map((inv) => {
+                                            const isSent = inv.isSent;
+                                            const status = inv.paymentStatus || 'unpaid';
+                                            
+                                            let outcomeDisplay = 'Unpaid';
+                                            let outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                            if (status === 'paid' || (inv.paidAmount && inv.total && inv.paidAmount >= inv.total)) {
+                                                outcomeDisplay = 'Paid';
+                                                outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                            } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
+                                                outcomeDisplay = 'Partially Paid';
+                                                outcomeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                                            }
+
+                                            return (
+                                                <TableRow key={inv.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors cursor-pointer" onClick={() => navigate(`/invoicing?editId=${inv.id}`)}>
+                                                    <TableCell className="text-zinc-400 text-xs font-mono">
+                                                        {inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}
+                                                    </TableCell>
+                                                    <TableCell className="font-semibold text-zinc-200">{inv.customerName}</TableCell>
+                                                    <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
+                                                    <TableCell className="font-bold text-zinc-300">
+                                                        ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
+                                                            {isSent ? 'Sent' : 'Not Sent'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
+                                                            {outcomeDisplay}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8 overflow-y-auto max-h-[500px]">
+                            <div className="w-full flex flex-col items-center">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={invDeliveryPieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={40}
+                                                outerRadius={65}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {invDeliveryPieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="w-full flex flex-col items-center">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Invoice Outcomes</h4>
+                                <div className="h-[200px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={invOutcomePieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={40}
+                                                outerRadius={65}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {invOutcomePieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
