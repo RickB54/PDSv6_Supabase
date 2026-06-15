@@ -241,16 +241,20 @@ export default function Corkboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const [sortBy, setSortBy] = useState<string>("manual");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+
   // Prefs state for live updates
   const [prefs, setPrefs] = useState({
     anim: localStorage.getItem('corkboard_anim') !== 'false',
     tags: localStorage.getItem('corkboard_tags') !== 'false',
     masonry: localStorage.getItem('corkboard_masonry') === 'true',
     isolate: localStorage.getItem('corkboard_isolate') !== 'false',
-    toolbar: localStorage.getItem('corkboard_toolbar') !== 'false'
+    toolbar: localStorage.getItem('corkboard_toolbar') !== 'false',
+    matchColor: localStorage.getItem('corkboard_match_color') === 'true'
   });
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar', val: boolean) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor', val: boolean) => {
     localStorage.setItem(`corkboard_${key}`, String(val));
     setPrefs(p => ({ ...p, [key]: val }));
   };
@@ -298,20 +302,51 @@ export default function Corkboard() {
     });
   }, [notesStore.notes, localNoteOrder]);
 
-  const activeNotes = useMemo(() => orderedAllNotes.filter(n => {
-    if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
-    if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (selectedSection) return n.section_id === selectedSection;
-    if (selectedNotebook) {
-      const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
-      return n.section_id && sectionIds.includes(n.section_id);
+  const activeNotes = useMemo(() => {
+    let filtered = orderedAllNotes.filter(n => {
+      if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
+      if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (selectedSection) return n.section_id === selectedSection;
+      if (selectedNotebook) {
+        const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
+        return n.section_id && sectionIds.includes(n.section_id);
+      }
+
+      if (dateFilter !== "all") {
+        const dateStr = n.updated_at || n.created_at;
+        if (!dateStr) return false;
+        const d = new Date(dateStr);
+        const now = new Date();
+        if (dateFilter === "today") {
+          if (d.toDateString() !== now.toDateString()) return false;
+        } else if (dateFilter === "this-week") {
+          const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+          if (d < firstDay) return false;
+        } else if (dateFilter === "this-month") {
+          if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === "this-year") {
+          if (d.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
+      return true;
+    });
+
+    if (sortBy !== "manual") {
+      filtered = [...filtered].sort((a, b) => {
+        const d1 = new Date(sortBy.startsWith("created") ? (a.created_at || 0) : (a.updated_at || a.created_at || 0)).getTime();
+        const d2 = new Date(sortBy.startsWith("created") ? (b.created_at || 0) : (b.updated_at || b.created_at || 0)).getTime();
+        return sortBy.endsWith("asc") ? d1 - d2 : d2 - d1;
+      });
     }
-    return true;
-  }).sort((a, b) => {
-    if (a.is_pinned && !b.is_pinned) return -1;
-    if (!a.is_pinned && b.is_pinned) return 1;
-    return 0;
-  }), [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections]);
+
+    // Always sort pinned to top
+    return filtered.sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return 0;
+    });
+  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -605,6 +640,21 @@ export default function Corkboard() {
               </Button>
             )}
           </div>
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <select className="bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-9 sm:h-10 px-2 outline-none focus:ring-1 focus:ring-yellow-500" value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="this-week">This Week</option>
+              <option value="this-month">This Month</option>
+              <option value="this-year">This Year</option>
+            </select>
+            <select className="bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-9 sm:h-10 px-2 outline-none focus:ring-1 focus:ring-yellow-500" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="manual">Manual Order</option>
+              <option value="updated-desc">Recently Updated</option>
+              <option value="created-desc">Newest First</option>
+              <option value="created-asc">Oldest First</option>
+            </select>
+          </div>
           <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
             <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
           </Button>
@@ -821,7 +871,9 @@ export default function Corkboard() {
 
       {/* Edit Note Modal */}
       {editingNote && isNoteModalOpen && (() => {
-        const editColorId = editingNote.tags?.find(t => t.startsWith('__inside_color:'))?.split(':')[1]?.replace('__', '') || 'gray';
+        const outsideColorId = editingNote.tags?.find(t => t.startsWith('__color:'))?.split(':')[1]?.replace('__', '') || STICKY_COLORS[(editingNote.id === 'new' ? 'A' : editingNote.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 6]?.id || 'yellow';
+        const insideColorTagId = editingNote.tags?.find(t => t.startsWith('__inside_color:'))?.split(':')[1]?.replace('__', '') || 'gray';
+        const editColorId = prefs.matchColor ? outsideColorId : insideColorTagId;
         const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
         return (
@@ -963,6 +1015,19 @@ export default function Corkboard() {
               <div className="flex gap-2">
                 {editingNote.id !== 'new' && (
                   <>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className={`h-9 w-9 ${editColor.text} ${editingNote.is_pinned ? 'bg-black/20' : ''} hover:bg-black/10`} 
+                      title={editingNote.is_pinned ? "Unpin" : "Pin to Top"}
+                      onClick={async () => {
+                        const newPinned = !editingNote.is_pinned;
+                        setEditingNote({ ...editingNote, is_pinned: newPinned });
+                        await handleTogglePin(editingNote);
+                      }}
+                    >
+                      <Pin className={`w-5 h-5 ${editingNote.is_pinned ? 'fill-current' : ''}`} />
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
                       <ImageIcon className="w-5 h-5" />
                     </Button>
@@ -1098,11 +1163,21 @@ export default function Corkboard() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
+                  <div className="font-bold text-white text-sm">Match Interior Color</div>
+                  <div className="text-xs text-zinc-500">Make the open sticky note match its outside color</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={prefs.matchColor} onChange={e => updatePref('matchColor', e.target.checked)} />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
                   <div className="font-bold text-white text-sm">Show Toolbar</div>
                   <div className="text-xs text-zinc-500">Display quick-action menu options on hover</div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={prefs.toolbar} onChange={e => setPrefs({...prefs, toolbar: e.target.checked})} />
+                  <input type="checkbox" className="sr-only peer" checked={prefs.toolbar} onChange={e => updatePref('toolbar', e.target.checked)} />
                   <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
               </div>
