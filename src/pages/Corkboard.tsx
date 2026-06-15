@@ -217,6 +217,7 @@ export default function Corkboard() {
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
+  const [localNoteOrder, setLocalNoteOrder] = useState<string[]>([]);
   const [isExiting, setIsExiting] = useState(false);
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -273,31 +274,44 @@ export default function Corkboard() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (active.id !== over?.id) {
-      // In a real scenario, you'd save the order to the database.
-      // For now, since useNotesStore doesn't natively support arbitrary reordering 
-      // without an order field, we will just update local state if we had one.
-      // To properly do this, we'd add an `order` field to Note.
-      toast({ title: "Order Updated", description: "Sticky position saved temporarily." });
-    }
+    if (!over || active.id === over.id) return;
+
+    setLocalNoteOrder(prev => {
+      // Use whichever order list is current
+      const base = prev.length > 0 ? prev : notesStore.notes.map(n => n.id);
+      const oldIdx = base.indexOf(String(active.id));
+      const newIdx = base.indexOf(String(over.id));
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      return arrayMove(base, oldIdx, newIdx);
+    });
   };
 
-  const activeNotes = notesStore.notes.filter(n => {
+  // Build the ordered list of ALL notes, respecting localNoteOrder if set
+  const orderedAllNotes = useMemo(() => {
+    const storeNotes = notesStore.notes;
+    if (localNoteOrder.length === 0) return storeNotes;
+    const orderMap = new Map(localNoteOrder.map((id, i) => [id, i]));
+    return [...storeNotes].sort((a, b) => {
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 99999;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 99999;
+      return ai - bi;
+    });
+  }, [notesStore.notes, localNoteOrder]);
+
+  const activeNotes = useMemo(() => orderedAllNotes.filter(n => {
     if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
     if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
-    if (selectedSection) {
-      return n.section_id === selectedSection;
-    } else if (selectedNotebook) {
+    if (selectedSection) return n.section_id === selectedSection;
+    if (selectedNotebook) {
       const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
       return n.section_id && sectionIds.includes(n.section_id);
     }
-    return true; // All Stickies
+    return true;
   }).sort((a, b) => {
     if (a.is_pinned && !b.is_pinned) return -1;
     if (!a.is_pinned && b.is_pinned) return 1;
-    return 0; // The original array is already sorted by updated_at descending
-  });
+    return 0;
+  }), [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
