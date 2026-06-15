@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -1042,15 +1042,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             
             // Cross-reference revenue from invoices if booking price is 0
             let revenue = Number(b.price || 0);
-            if (revenue === 0) {
+            let value = Number(b.price || 0);
+            
+            if (revenue === 0 || value === 0) {
                 const bDate = b.date?.split('T')[0];
                 const match = invoices.find(inv => {
                     const invDate = inv.date || inv.createdAt?.split('T')[0];
                     const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
                     // Match by customer and date (some wiggle room for date sync)
-                    return isCustMatch && (invDate === bDate || (inv.total > 0 && Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000));
+                    return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000));
                 });
-                if (match) revenue = match.total;
+                if (match) {
+                    revenue = match.total || 0;
+                    value = match.services?.reduce((acc: number, s: any) => acc + (Number(s.price) || 0), 0) || revenue;
+                }
             }
 
             return {
@@ -1061,7 +1066,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 locationType: isShop ? "Shop" : "Onsite",
                 service: b.title,
                 status: (b.status || 'pending').toLowerCase(),
-                revenue: revenue
+                revenue: revenue,
+                value: value > 0 ? value : revenue
             };
         }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [filteredPerfBookings, customers, invoices]);
@@ -1070,6 +1076,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const qualMap = filteredQualBookings.map(b => b.id);
         return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed') && qualMap.includes(s.id));
     }, [serviceDetailsData, filteredQualBookings]);
+
+    const probonoJobs = useMemo(() => {
+        return doneServices.filter(s => s.revenue === 0);
+    }, [doneServices]);
+
+    const freeVsPaidPieData = useMemo(() => {
+        const free = probonoJobs.length;
+        const paid = doneServices.length - free;
+        return [
+            { name: 'Paid Jobs', value: paid, color: '#10b981' },
+            { name: 'Probono Jobs', value: free, color: '#ec4899' }
+        ].filter(d => d.value > 0);
+    }, [doneServices, probonoJobs]);
 
     const toDoServices = useMemo(() => 
         serviceDetailsData.filter(s => s.status !== 'done' && s.status !== 'completed'),
@@ -1364,7 +1383,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mr-2 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Jump To:</span>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Invoices</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Estimates & Quotes</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Probono Jobs</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
                 </div>
@@ -2405,6 +2426,96 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+
+
+            {/* Probono Jobs Tracker */}
+            <Card id="probono-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-pink-500/30 mt-6 scroll-mt-24">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Gift className="w-5 h-5 text-pink-400" />
+                            <div>
+                                <CardTitle>Probono Jobs</CardTitle>
+                                <CardDescription>Track jobs and estimates executed with $0.00 collected revenue</CardDescription>
+                            </div>
+                        </div>
+                        <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20">
+                            {probonoJobs.length} FREE JOBS
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3">
+                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                            <Table>
+                                <TableHeader className="bg-zinc-950/50">
+                                    <TableRow className="hover:bg-transparent border-zinc-800">
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead className="text-right">Job Value</TableHead>
+                                        <TableHead className="text-right">Revenue</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {probonoJobs.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                                No probono jobs found for the selected period.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        probonoJobs.map((job) => (
+                                            <TableRow key={job.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                                <TableCell className="text-zinc-400 text-xs font-mono">
+                                                    {format(parseISO(job.date), "MMM d, yyyy")}
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
+                                                <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
+                                                <TableCell className="text-right text-emerald-400 font-mono">
+                                                    {job.value > 0 ? `$${job.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "N/A"}
+                                                </TableCell>
+                                                <TableCell className="text-right text-pink-400 font-mono font-bold">
+                                                    $0.00
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-center border-l border-zinc-800">
+                            <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Paid vs Free Comparison</h4>
+                            <div className="h-[250px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={freeVsPaidPieData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={85}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {freeVsPaidPieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip 
+                                            contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

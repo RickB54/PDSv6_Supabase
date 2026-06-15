@@ -454,9 +454,10 @@ const Accounting = () => {
   };
 
   const generatePDF = (action: 'save' | 'print') => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let currentY = 20;
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let currentY = 20;
 
     doc.setFontSize(24);
     doc.setTextColor(30, 41, 59);
@@ -600,12 +601,16 @@ const Accounting = () => {
       doc.text(splitNotes, 14, currentY);
     }
 
-    if (action === 'save') {
-      doc.save(`accounting-report-${new Date().toISOString().slice(0, 10)}.pdf`);
-      toast({ title: "PDF Saved", description: "Report downloaded successfully." });
-    } else {
-      doc.autoPrint();
-      window.open(doc.output('bloburl'), '_blank');
+      if (action === 'save') {
+        doc.save(`accounting-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+        toast({ title: "PDF Saved", description: "Report downloaded successfully." });
+      } else {
+        doc.autoPrint();
+        window.open(doc.output('bloburl'), '_blank');
+      }
+    } catch (error: any) {
+      console.error("PDF generation failed:", error);
+      toast({ title: "PDF Generation Failed", description: "An error occurred while generating the PDF. Check console for details.", variant: "destructive" });
     }
   };
 
