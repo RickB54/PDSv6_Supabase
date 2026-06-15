@@ -349,6 +349,46 @@ export default function Corkboard() {
   }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mirrorRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [lineTops, setLineTops] = useState<{index: number, top: number, isList: boolean, status: string, height: number}[]>([]);
+
+  useEffect(() => {
+    if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
+    const ta = textareaRef.current;
+    const mirror = mirrorRef.current;
+    
+    mirror.style.width = `${ta.clientWidth}px`;
+
+    const lines = editingNote.content.split('\n');
+    const tops: any[] = [];
+    
+    Array.from(mirror.children).forEach((child: any, i) => {
+      const lineText = lines[i] || '';
+      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌]\s*/, ''));
+      let status = 'none';
+      const trimmed = lineText.trim();
+      if (trimmed.startsWith('✅')) status = 'done';
+      else if (trimmed.startsWith('⏳')) status = 'waiting';
+      else if (trimmed.startsWith('❌')) status = 'cancelled';
+      else if (trimmed.startsWith('⬜')) status = 'todo';
+      
+      tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
+    });
+    setLineTops(tops);
+  }, [editingNote?.content, isNoteModalOpen]);
+
+  const handleSetStatus = (index: number, newStatusIcon: string) => {
+    if (!editingNote) return;
+    const lines = editingNote.content.split('\n');
+    let line = lines[index];
+    line = line.replace(/^[✅⏳⬜❌]\s*/, '');
+    if (newStatusIcon !== 'none') {
+      line = `${newStatusIcon} ${line}`;
+    }
+    lines[index] = line;
+    setEditingNote({ ...editingNote, content: lines.join('\n') });
+  };
 
   const noteHeaders = useMemo(() => {
     if (!editingNote?.content) return [];
@@ -983,13 +1023,66 @@ export default function Corkboard() {
                     <Plus className="w-3 h-3 mr-1" /> Add New Section Here
                   </Button>
                 </div>
-                <Textarea 
-                  ref={textareaRef}
-                  value={editingNote.content} 
-                  onChange={e => setEditingNote({...editingNote, content: e.target.value})}
-                  className={`flex-1 resize-none bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 p-4 text-base leading-relaxed`}
-                  placeholder="Write something (use # headers to create section links)..."
-                />
+                <div className={`flex-1 relative flex overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
+                  {/* Gutter Background */}
+                  <div className={`absolute top-0 bottom-0 left-0 w-8 border-r ${editColor.border} opacity-30 pointer-events-none z-10`} />
+                  
+                  {/* Gutter Icons */}
+                  <div className="absolute top-0 bottom-0 left-0 w-8 overflow-hidden z-20 pointer-events-none">
+                    <div style={{ transform: `translateY(-${scrollTop}px)` }}>
+                      {lineTops.map(line => (
+                        <div key={line.index} className="absolute left-0 right-0 pointer-events-auto flex items-start justify-center group" style={{ top: line.top, height: line.height }}>
+                          {(line.isList || line.status !== 'none') ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className={`mt-[4px] w-6 h-6 flex items-center justify-center rounded hover:bg-black/10 transition-colors ${line.status === 'none' ? 'opacity-40 hover:opacity-100' : ''}`}>
+                                 {line.status === 'done' ? '✅' : line.status === 'waiting' ? '⏳' : line.status === 'cancelled' ? '❌' : '⬜'}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" side="right" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '✅')}><span className="mr-2">✅</span> Done</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-red-400" onClick={() => handleSetStatus(line.index, 'none')}><span className="mr-2 pl-4"></span> Remove Status</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger className="mt-[4px] w-6 h-6 flex items-center justify-center rounded hover:bg-black/10 opacity-0 group-hover:opacity-40 transition-opacity">
+                                 ⬜
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" side="right" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '✅')}><span className="mr-2">✅</span> Done</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Textarea 
+                    ref={textareaRef}
+                    value={editingNote.content} 
+                    onChange={e => setEditingNote({...editingNote, content: e.target.value})}
+                    onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
+                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 pl-10 text-base leading-relaxed`}
+                    placeholder="Write something (use # headers to create section links)..."
+                  />
+
+                  {/* Mirror Div for height calculations */}
+                  <div 
+                    ref={mirrorRef} 
+                    className="absolute top-0 left-0 p-4 pl-10 text-base leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10"
+                    aria-hidden
+                  >
+                    {editingNote.content.split('\n').map((line, i) => (
+                      <div key={i} className="min-h-[1.5em]">{line || ' '}</div>
+                    ))}
+                  </div>
+                </div>
                 <Button 
                   size="icon" 
                   variant="outline" 
