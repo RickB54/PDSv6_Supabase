@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface Invoice {
 }
 
 const MyInvoices = () => {
+    const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
@@ -164,10 +166,15 @@ const MyInvoices = () => {
                                     <span className="text-2xl font-bold text-primary">${selectedInvoice.total.toFixed(2)}</span>
                                 </div>
                             </div>
-                            <Button onClick={() => downloadInvoice(selectedInvoice)} className="w-full">
-                                <Download className="h-4 w-4 mr-2" />
-                                Download PDF
-                            </Button>
+                            <div className="flex flex-col gap-2">
+                                <Button onClick={() => navigate(`/invoice/${selectedInvoice.id}`)} className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold">
+                                    View Interactive Invoice / Pay
+                                </Button>
+                                <Button onClick={() => downloadInvoice(selectedInvoice)} variant="outline" className="w-full">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download PDF
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </DialogContent>

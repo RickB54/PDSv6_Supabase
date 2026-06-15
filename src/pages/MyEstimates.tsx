@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import logo from "@/assets/pds-final-logo.png";
 import type { Estimate } from "@/types/estimate";
 
 const MyEstimates = () => {
+    const navigate = useNavigate();
     const [estimates, setEstimates] = useState<Estimate[]>([]);
     const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
 
@@ -90,7 +92,12 @@ const MyEstimates = () => {
                                     <div key={est.id} className="p-4 bg-background/50 rounded border border-border">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className="font-semibold text-foreground">Estimate on {est.date}</h3>
+                                                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                                    Estimate on {est.date}
+                                                    {est.status === 'accepted' && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase">Accepted</span>}
+                                                    {(est.status === 'declined' || est.status === 'denied') && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20 uppercase">Declined</span>}
+                                                    {(est.status !== 'accepted' && est.status !== 'declined' && est.status !== 'denied') && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 uppercase">Pending</span>}
+                                                </h3>
                                                 <p className="text-sm text-muted-foreground">{est.vehicle}</p>
                                                 <p className="text-lg font-bold text-primary mt-1">${est.total.toFixed(2)}</p>
                                             </div>
@@ -146,10 +153,15 @@ const MyEstimates = () => {
                                     <span className="text-2xl font-bold text-primary">${selectedEstimate.total.toFixed(2)}</span>
                                 </div>
                             </div>
-                            <Button onClick={() => downloadEstimate(selectedEstimate)} className="w-full">
-                                <Download className="h-4 w-4 mr-2" />
-                                Download PDF
-                            </Button>
+                            <div className="flex flex-col gap-2">
+                                <Button onClick={() => navigate(`/estimate/${selectedEstimate.id}`)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold">
+                                    View Interactive Estimate / Respond
+                                </Button>
+                                <Button onClick={() => downloadEstimate(selectedEstimate)} variant="outline" className="w-full">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download PDF
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </DialogContent>

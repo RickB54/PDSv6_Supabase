@@ -53,7 +53,7 @@ interface Estimate {
     total: number;
     date: string;
     estimateDate?: string;
-    status: "open" | "accepted" | "declined";
+    status: "open" | "accepted" | "declined" | "sent";
     packageId?: string;
     addonIds?: string[];
     vehicleId?: string;
@@ -118,7 +118,7 @@ const Estimates = () => {
     const [selectedPackage, setSelectedPackage] = useState("");
     const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
     const [selectedVehicleType, setSelectedVehicleType] = useState<"compact" | "midsize" | "truck" | "luxury">("midsize");
-    const [selectedStatus, setSelectedStatus] = useState<"open" | "accepted" | "declined">("open");
+    const [selectedStatus, setSelectedStatus] = useState<"open" | "accepted" | "declined" | "sent">("open");
     const [editingEstimateId, setEditingEstimateId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [searchParams, setSearchParams] = useSearchParams();
@@ -288,6 +288,10 @@ const Estimates = () => {
                             else if (vType.includes('truck') || vType.includes('suv') || vType.includes('van')) setSelectedVehicleType('truck');
                             else if (vType.includes('luxury')) setSelectedVehicleType('luxury');
                             else setSelectedVehicleType('midsize');
+                        } else {
+                            const guessed = normalizeVehicleType(`${v.year || ''} ${v.make || ''} ${v.model || ''}`);
+                            if (guessed) setSelectedVehicleType(guessed as any);
+                            else setSelectedVehicleType('midsize');
                         }
                     } else {
                         setSelectedVehicleId("");
@@ -298,6 +302,12 @@ const Estimates = () => {
                     else if (vType.includes('truck') || vType.includes('suv') || vType.includes('van')) setSelectedVehicleType('truck');
                     else if (vType.includes('luxury')) setSelectedVehicleType('luxury');
                     else setSelectedVehicleType('midsize');
+                } else if (customer.vehicle || customer.model) {
+                    const guessed = normalizeVehicleType(`${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`);
+                    if (guessed) setSelectedVehicleType(guessed as any);
+                    else setSelectedVehicleType('midsize');
+                } else {
+                    setSelectedVehicleType('midsize');
                 }
             }
         }
@@ -449,7 +459,7 @@ const Estimates = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleStatusChange = async (est: Estimate, newStatus: "open" | "accepted" | "declined") => {
+    const handleStatusChange = async (est: Estimate, newStatus: "open" | "accepted" | "declined" | "sent") => {
         if (isDemoMode) {
             toast({ title: "Simulation Mode", description: "State updated in local view." });
             return;
@@ -829,6 +839,10 @@ const Estimates = () => {
                                             else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
                                             else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
                                             else setSelectedVehicleType('midsize');
+                                         } else {
+                                            const guessed = normalizeVehicleType(`${v.year || ''} ${v.make || ''} ${v.model || ''}`);
+                                            if (guessed) setSelectedVehicleType(guessed as any);
+                                            else setSelectedVehicleType('midsize');
                                          }
                                      } else if (cust && cust.vehicles && cust.vehicles.length > 1) {
                                          // Multiple vehicles: Clear selection to force user to choose
@@ -839,7 +853,13 @@ const Estimates = () => {
                                         else if (vt.includes('truck') || vt.includes('suv') || vt.includes('van')) setSelectedVehicleType('truck');
                                         else if (vt.includes('luxury')) setSelectedVehicleType('luxury');
                                         else setSelectedVehicleType('midsize');
+                                     } else if (cust && (cust.vehicle || cust.model)) {
+                                        const guessed = normalizeVehicleType(`${cust.year || ''} ${cust.vehicle || ''} ${cust.model || ''}`);
+                                        if (guessed) setSelectedVehicleType(guessed as any);
+                                        else setSelectedVehicleType('midsize');
+                                        setSelectedVehicleId("");
                                      } else {
+                                         setSelectedVehicleType('midsize');
                                          setSelectedVehicleId("");
                                       }
 

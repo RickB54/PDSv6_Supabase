@@ -273,6 +273,15 @@ const Invoicing = () => {
         ? `${c.vehicles[0].year || ''} ${c.vehicles[0].make} ${c.vehicles[0].model} ${c.vehicles[0].color ? `[Color: ${c.vehicles[0].color}]` : ''}`.replace(/\s+/g, ' ').trim()
         : `${c.year || ''} ${c.vehicle || ''} ${c.model || ''}`.trim();
       setCustomVehicle(primaryVehicle);
+      
+      // Auto-set the vehicle class
+      if (c.vehicles && c.vehicles.length > 0 && c.vehicles[0].type) {
+        setCustomVehicleClass(c.vehicles[0].type.toLowerCase() as any);
+      } else {
+        const guessed = normalizeVehicleType(primaryVehicle);
+        if (guessed) setCustomVehicleClass(guessed);
+        else setCustomVehicleClass("midsize"); // fallback
+      }
 
       // Auto-carry booking discount, vehicle details and service package!
       try {
