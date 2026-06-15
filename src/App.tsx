@@ -273,9 +273,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
     return (
       <SidebarProvider defaultOpen={false}>
         <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
-          {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
+          { (effectiveUser || location.pathname.startsWith('/estimate/') || location.pathname.startsWith('/invoice/') || location.pathname.startsWith('/invoice-success/')) && (
             <div className="dark-theme">
-              <AppSidebar key={effectiveUser.id || 'sidebar-anon'} user={effectiveUser} businessStatus={businessStatus} />
+              <AppSidebar key={effectiveUser?.id || 'sidebar-anon'} user={effectiveUser} businessStatus={businessStatus} />
             </div>
           )}
           <div className="flex-1 flex flex-col min-w-0">

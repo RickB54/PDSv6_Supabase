@@ -68,7 +68,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
 
   const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const isEmployee = user?.role === 'employee';
-  const isCustomer = user?.role === 'customer';
+  const isCustomer = user?.role === 'customer' || !user;
 
   const isViewingAsCustomer = (isAdmin && localStorage.getItem('view_as_mode') === 'customer') || location.pathname.startsWith('/customer-dashboard') || location.pathname.startsWith('/portal') || location.pathname.startsWith('/active-jobs');
   const isViewingAsEmployee = (isAdmin && localStorage.getItem('view_as_mode') === 'employee') || location.pathname.startsWith('/dashboard/employee');
