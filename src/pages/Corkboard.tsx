@@ -459,10 +459,17 @@ export default function Corkboard() {
     if (editingNote) {
       const sectionId = editingNote.section_id || null;
       if (editingNote.id === 'new') {
-        await notesStore.createNote(sectionId, editingNote.title, editingNote.content, ['__corkboard__']);
+        const finalTags = editingNote.tags || [];
+        if (!finalTags.includes('__corkboard__')) finalTags.push('__corkboard__');
+        await notesStore.createNote(sectionId, editingNote.title, editingNote.content, finalTags);
         toast({ title: "Note Created" });
       } else {
-        await notesStore.updateNote(editingNote.id, { section_id: sectionId, title: editingNote.title, content: editingNote.content });
+        await notesStore.updateNote(editingNote.id, { 
+          section_id: sectionId, 
+          title: editingNote.title, 
+          content: editingNote.content,
+          tags: editingNote.tags 
+        });
         toast({ title: "Note Updated" });
       }
       setIsNoteModalOpen(false);
