@@ -116,7 +116,7 @@ const ContactSupport = () => {
                 try {
                     await supabase.functions.invoke('send-booking-email', {
                         body: {
-                            to: contactInfo?.email || 'Rick.PrimeAutoDetail@gmail.com',
+                            to: 'rick.primeautodetail@gmail.com',
                             customerEmail: formData.email,
                             subject: subject,
                             html: emailHtml
@@ -127,9 +127,9 @@ const ContactSupport = () => {
                 }
             }
 
-            // Alert the admin dashboard
+            // Alert the admin dashboard so they can open File Manager directly
             pushAdminAlert(
-                "admin_message",
+                "pdf_saved",
                 `New support message from ${formData.name}`,
                 "Customer Portal",
                 {
@@ -137,7 +137,8 @@ const ContactSupport = () => {
                     email: formData.email,
                     phone: formData.phone,
                     vehicle: formData.vehicle,
-                    message: formData.message
+                    message: formData.message,
+                    recordType: "Customer"
                 }
             );
 

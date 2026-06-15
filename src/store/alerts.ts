@@ -82,7 +82,7 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/file-manager?category=" + encodeURIComponent("Email Logs");
       break;
     case "admin_message":
-      href = "/admin-dashboard";
+      href = a.payload?.recordType ? `/file-manager?category=${encodeURIComponent(String(a.payload.recordType))}` : "/admin-dashboard";
       break;
     case "pricing_update":
       href = "/package-pricing";
