@@ -1078,8 +1078,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [serviceDetailsData, filteredQualBookings]);
 
     const probonoJobs = useMemo(() => {
-        return doneServices.filter(s => s.revenue === 0);
-    }, [doneServices]);
+        // All done services with $0 revenue, cross-referencing invoice IDs for navigation
+        return doneServices
+            .filter(s => s.revenue === 0)
+            .map(s => {
+                // Find matching invoice for navigation
+                const sDate = s.date?.split('T')[0];
+                const matchedInv = invoices.find(inv => {
+                    const invDate = (inv.date || inv.createdAt || '').split('T')[0];
+                    const isCustMatch = inv.customerId === s.id || inv.customerName === s.customer;
+                    return isCustMatch && (invDate === sDate || Math.abs(new Date(invDate).getTime() - new Date(sDate).getTime()) < 86400000 * 2);
+                });
+                return { ...s, invoiceId: matchedInv?.id || null };
+            });
+    }, [doneServices, invoices]);
 
     const freeVsPaidPieData = useMemo(() => {
         const free = probonoJobs.length;
@@ -2434,18 +2446,56 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
             {/* Probono Jobs Tracker */}
             <Card id="probono-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-pink-500/30 mt-6 scroll-mt-24">
-                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Gift className="w-5 h-5 text-pink-400" />
-                            <div>
-                                <CardTitle>Probono Jobs</CardTitle>
-                                <CardDescription>Track jobs and estimates executed with $0.00 collected revenue</CardDescription>
-                            </div>
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Gift className="w-5 h-5 text-pink-400" />
+                        <div>
+                            <CardTitle>Probono Jobs</CardTitle>
+                            <CardDescription>Completed jobs with $0.00 collected — click any row to view the invoice</CardDescription>
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                         <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20">
                             {probonoJobs.length} FREE JOBS
                         </Badge>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                    <Filter className="h-4 w-4" />
+                                    Filter
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                onClick={() => setQualDateFilter({ start: undefined, end: undefined })}>All Time</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                onClick={() => setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}>Today</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); }}>This Week</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); }}>This Month</Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
+                                            onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                        />
+                                        {(qualDateFilter.start || qualDateFilter.end) && (
+                                            <Button variant="ghost" size="sm" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="w-full text-zinc-400 hover:text-white mt-2">Clear Range</Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -2465,14 +2515,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     {probonoJobs.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
-                                                No probono jobs found for the selected period.
+                                                No probono jobs found for the selected period. 🎉
                                             </TableCell>
                                         </TableRow>
                                     ) : (
                                         probonoJobs.map((job) => (
-                                            <TableRow key={job.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                            <TableRow
+                                                key={job.id}
+                                                className="hover:bg-pink-900/10 border-zinc-800 transition-colors cursor-pointer"
+                                                onClick={() => {
+                                                    if (job.invoiceId) {
+                                                        navigate(`/invoicing?editId=${job.invoiceId}`);
+                                                    } else {
+                                                        navigate(`/bookings?customer=${encodeURIComponent(job.customer)}`);
+                                                    }
+                                                }}
+                                            >
                                                 <TableCell className="text-zinc-400 text-xs font-mono">
-                                                    {format(parseISO(job.date), "MMM d, yyyy")}
+                                                    {job.date ? format(parseISO(job.date), "MMM d, yyyy") : "N/A"}
                                                 </TableCell>
                                                 <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
                                                 <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
@@ -2502,12 +2562,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             paddingAngle={5}
                                             dataKey="value"
                                             stroke="none"
+                                            onClick={(entry: any) => {
+                                                if (entry?.name === 'Probono Jobs') {
+                                                    document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                                                }
+                                            }}
                                         >
                                             {freeVsPaidPieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                                <Cell key={`cell-${index}`} fill={entry.color} className="cursor-pointer" />
                                             ))}
                                         </Pie>
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
                                             itemStyle={{ color: '#fff' }}
                                         />

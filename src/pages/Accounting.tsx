@@ -459,147 +459,172 @@ const Accounting = () => {
       const pageWidth = doc.internal.pageSize.getWidth();
       let currentY = 20;
 
-    doc.setFontSize(24);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Accounting & Ledger Report", 14, currentY);
-    currentY += 6;
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, currentY);
-    currentY += 12;
-
-    if (pdfConfig.summary) {
-      const netProfit = calculateProfit();
-      const netColor = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
-      
-      doc.setFillColor(248, 250, 252);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(14, currentY, pageWidth - 28, 60, 2, 2, 'FD');
-      currentY += 10;
-
-      doc.setFontSize(11);
-      doc.setTextColor(71, 85, 105);
-      doc.text("CURRENT FINANCIAL POSITION", 20, currentY);
-      currentY += 14;
-
-      doc.setFontSize(20);
-      doc.setTextColor(netColor[0], netColor[1], netColor[2]);
-      doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, currentY);
+      doc.setFontSize(24);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Accounting & Ledger Report", 14, currentY);
       currentY += 6;
-      
-      doc.setFontSize(10);
-      doc.text(netProfit >= 0 ? "SURPLUS" : "DEFICIT", 20, currentY);
-      currentY += 10;
 
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text(`Operational Revenue: $${totalRevenue.toFixed(2)}`, 20, currentY);
-      currentY += 6;
-      doc.text(`Asset Investment: $${inventoryTotals.total.toFixed(2)}`, 20, currentY);
-      currentY += 20;
-    }
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, currentY);
+      currentY += 12;
 
-    if (pdfConfig.revenue && filteredAndSortedInvoices.length > 0) {
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Revenue Breakdown", 14, currentY);
-      currentY += 6;
+      if (pdfConfig.summary) {
+        const netProfit = calculateProfit();
+        const netColor: [number, number, number] = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
 
-      const revenueData = filteredAndSortedInvoices.map(inv => {
-        const d = (inv as any).paidDate || inv.date || inv.createdAt;
-        return [
-          d ? new Date(d).toLocaleDateString() : 'N/A',
-          inv.customerName || 'Walk-in',
-          inv.vehicle || 'Unknown',
-          inv.services?.map((s: any) => s.name).join(", ") || "",
-          `$${(inv.paidAmount || inv.total || 0).toFixed(2)}`
-        ];
-      });
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, currentY, pageWidth - 28, 60, 2, 2, 'FD');
+        currentY += 10;
 
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Date', 'Customer', 'Vehicle', 'Services', 'Amount']],
-        body: revenueData,
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [59, 130, 246] }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-    }
+        doc.setFontSize(11);
+        doc.setTextColor(71, 85, 105);
+        doc.text("CURRENT FINANCIAL POSITION", 20, currentY);
+        currentY += 14;
 
-    if (pdfConfig.expenses && expenseList.length > 0) {
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
-      
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Expense Breakdown", 14, currentY);
-      currentY += 6;
+        doc.setFontSize(20);
+        doc.setTextColor(...netColor);
+        doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, currentY);
+        currentY += 6;
 
-      const expenseData = expenseList.map(exp => [
-        exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A',
-        exp.category || 'N/A',
-        exp.description || 'N/A',
-        `$${(exp.amount || 0).toFixed(2)}`
-      ]);
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.text(netProfit >= 0 ? "SURPLUS" : "DEFICIT", 20, currentY);
+        currentY += 10;
 
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Date', 'Category', 'Description', 'Amount']],
-        body: expenseData,
-        theme: 'striped',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [239, 68, 68] }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-    }
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Operational Revenue: $${(totalRevenue || 0).toFixed(2)}`, 20, currentY);
+        currentY += 6;
+        doc.text(`Asset Investment: $${(inventoryTotals?.total || 0).toFixed(2)}`, 20, currentY);
+        currentY += 20;
+      }
 
-    if (pdfConfig.ledger && ledger.length > 0) {
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
+      if (pdfConfig.revenue && filteredAndSortedInvoices.length > 0) {
+        if (currentY > 250) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(14);
+        doc.setTextColor(30, 41, 59);
+        doc.text("Revenue Breakdown", 14, currentY);
+        currentY += 6;
 
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Transaction Ledger", 14, currentY);
-      currentY += 6;
+        const revenueData = filteredAndSortedInvoices.map(inv => {
+          const d = (inv as any).paidDate || inv.date || inv.createdAt;
+          return [
+            d ? new Date(d).toLocaleDateString() : 'N/A',
+            (inv as any).customerName || 'Walk-in',
+            (inv as any).vehicle || 'Unknown',
+            ((inv as any).services || []).map((s: any) => s.name).join(", ") || "",
+            `$${((inv as any).paidAmount || inv.total || 0).toFixed(2)}`
+          ];
+        });
 
-      const ledgerData = ledger.map(l => [
-        l.date ? new Date(l.date).toLocaleDateString() : 'N/A',
-        (l.type || 'unknown').toUpperCase(),
-        l.source || 'N/A',
-        l.type === 'income' ? `+$${(l.amount || 0).toFixed(2)}` : `-$${(l.amount || 0).toFixed(2)}`
-      ]);
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Date', 'Customer', 'Vehicle', 'Services', 'Amount']],
+          body: revenueData,
+          theme: 'striped',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+      }
 
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Date', 'Type', 'Source/Description', 'Amount']],
-        body: ledgerData,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [71, 85, 105] },
-        didParseCell: function(data) {
-          if (data.section === 'body' && data.column.index === 3) {
-            data.cell.styles.textColor = data.row.raw[1] === 'INCOME' ? [22, 101, 52] : [153, 27, 27];
-            data.cell.styles.fontStyle = 'bold';
-          }
+      if (pdfConfig.expenses && filteredAndSortedExpenses.length > 0) {
+        if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+        doc.setFontSize(14);
+        doc.setTextColor(30, 41, 59);
+        doc.text("Expense Breakdown", 14, currentY);
+        currentY += 6;
+
+        const expenseData = filteredAndSortedExpenses.map(exp => [
+          exp.createdAt ? new Date(exp.createdAt).toLocaleDateString() : 'N/A',
+          exp.category || 'N/A',
+          exp.description || 'N/A',
+          `$${(exp.amount || 0).toFixed(2)}`
+        ]);
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Date', 'Category', 'Description', 'Amount']],
+          body: expenseData,
+          theme: 'striped',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [239, 68, 68] }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      if (pdfConfig.ledger) {
+        // Build ledger from income + invoices combined
+        const ledgerRows: any[] = [];
+        filteredAndSortedInvoices.forEach(inv => {
+          const d = (inv as any).paidDate || inv.date || inv.createdAt;
+          ledgerRows.push({
+            date: d ? new Date(d).toLocaleDateString() : 'N/A',
+            type: 'INCOME',
+            source: `Invoice – ${(inv as any).customerName || 'Unknown'}`,
+            amount: `+$${((inv as any).paidAmount || inv.total || 0).toFixed(2)}`
+          });
+        });
+        filteredAndSortedIncomes.forEach(inc => {
+          const d = (inc as any).date || (inc as any).createdAt;
+          ledgerRows.push({
+            date: d ? new Date(d).toLocaleDateString() : 'N/A',
+            type: 'INCOME',
+            source: (inc as any).description || (inc as any).category || 'Income',
+            amount: `+$${((inc as any).amount || 0).toFixed(2)}`
+          });
+        });
+        filteredAndSortedExpenses.forEach(exp => {
+          ledgerRows.push({
+            date: exp.createdAt ? new Date(exp.createdAt).toLocaleDateString() : 'N/A',
+            type: 'EXPENSE',
+            source: exp.description || exp.category || 'Expense',
+            amount: `-$${(exp.amount || 0).toFixed(2)}`
+          });
+        });
+
+        if (ledgerRows.length > 0) {
+          if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+          doc.setFontSize(14);
+          doc.setTextColor(30, 41, 59);
+          doc.text("Transaction Ledger", 14, currentY);
+          currentY += 6;
+
+          autoTable(doc, {
+            startY: currentY,
+            head: [['Date', 'Type', 'Source/Description', 'Amount']],
+            body: ledgerRows.map(l => [l.date, l.type, l.source, l.amount]),
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [71, 85, 105] },
+            didParseCell: function(data: any) {
+              if (data.section === 'body' && data.column.index === 3) {
+                data.cell.styles.textColor = data.row.raw[1] === 'INCOME' ? [22, 101, 52] : [153, 27, 27];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          });
+          currentY = (doc as any).lastAutoTable.finalY + 15;
         }
-      });
-      currentY = (doc as any).lastAutoTable.finalY + 15;
-    }
+      }
 
-    if (pdfConfig.notes && notes.trim()) {
-      if (currentY > 250) { doc.addPage(); currentY = 20; }
+      if (pdfConfig.notes && notes.trim()) {
+        if (currentY > 250) { doc.addPage(); currentY = 20; }
 
-      doc.setFontSize(14);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Accounting Notes", 14, currentY);
-      currentY += 8;
+        doc.setFontSize(14);
+        doc.setTextColor(30, 41, 59);
+        doc.text("Accounting Notes", 14, currentY);
+        currentY += 8;
 
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
-      doc.text(splitNotes, 14, currentY);
-    }
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
+        doc.text(splitNotes, 14, currentY);
+      }
 
       if (action === 'save') {
         doc.save(`accounting-report-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -610,7 +635,7 @@ const Accounting = () => {
       }
     } catch (error: any) {
       console.error("PDF generation failed:", error);
-      toast({ title: "PDF Generation Failed", description: "An error occurred while generating the PDF. Check console for details.", variant: "destructive" });
+      toast({ title: "PDF Generation Failed", description: error?.message || "Unexpected error.", variant: "destructive" });
     }
   };
 
