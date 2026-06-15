@@ -742,10 +742,10 @@ const Accounting = () => {
                   <DropdownMenuCheckboxItem checked={pdfConfig.ledger} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, ledger: c})}>Transaction Ledger</DropdownMenuCheckboxItem>
                   <DropdownMenuCheckboxItem checked={pdfConfig.notes} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, notes: c})}>Notes</DropdownMenuCheckboxItem>
                   <DropdownMenuSeparator className="bg-zinc-800" />
-                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onClick={() => generatePDF('save')}>
+                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onSelect={() => generatePDF('save')}>
                     <Download className="h-4 w-4 mr-2 text-emerald-500" /> Generate PDF File
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onClick={() => generatePDF('print')}>
+                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onSelect={() => generatePDF('print')}>
                     <Printer className="h-4 w-4 mr-2 text-blue-500" /> Print Document
                   </DropdownMenuItem>
                 </DropdownMenuContent>
