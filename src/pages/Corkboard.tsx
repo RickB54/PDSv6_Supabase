@@ -468,8 +468,31 @@ export default function Corkboard() {
   };
 
   const handleTogglePin = async (note: Note) => {
-    await notesStore.updateNote(note.id, { is_pinned: !note.is_pinned });
-    toast({ title: note.is_pinned ? "Sticky Unpinned" : "Sticky Pinned to Top" });
+    const newPinned = !note.is_pinned;
+    await notesStore.updateNote(note.id, { is_pinned: newPinned });
+
+    // Move the note to the correct position in the local order
+    setLocalNoteOrder(prev => {
+      const base = prev.length > 0 ? [...prev] : notesStore.notes.map(n => n.id);
+      // Remove the note from wherever it is
+      const without = base.filter(id => id !== note.id);
+      if (newPinned) {
+        // Pinning: put it at position 0 (top-left)
+        return [note.id, ...without];
+      } else {
+        // Unpinning: put it right after all currently-pinned notes
+        const allNotes = notesStore.notes;
+        const pinnedIds = new Set(
+          allNotes.filter(n => n.id !== note.id && n.is_pinned).map(n => n.id)
+        );
+        const firstUnpinnedIdx = without.findIndex(id => !pinnedIds.has(id));
+        const insertAt = firstUnpinnedIdx === -1 ? without.length : firstUnpinnedIdx;
+        without.splice(insertAt, 0, note.id);
+        return without;
+      }
+    });
+
+    toast({ title: newPinned ? "📌 Pinned to Top!" : "Unpinned" });
   };
 
   const handleAddSection = () => {
