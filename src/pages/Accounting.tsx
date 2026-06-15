@@ -45,9 +45,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
-import { autoTable } from "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import localforage from "localforage";
 import { getAllCategoryColors } from "@/lib/categoryColors";
@@ -99,6 +108,14 @@ const Accounting = () => {
   const [deleteItemState, setDeleteItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string }>({ open: false, type: 'income', id: '' });
   const [editItemState, setEditItemState] = useState<{ open: boolean, type: 'income' | 'expense', id: string, amount: string }>({ open: false, type: 'income', id: '', amount: '' });
   const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
+
+  const [pdfConfig, setPdfConfig] = useState({
+    summary: true,
+    revenue: true,
+    expenses: true,
+    ledger: true,
+    notes: true
+  });
 
   const [dateFilter, setDateFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
@@ -439,37 +456,146 @@ const Accounting = () => {
   const generatePDF = (action: 'save' | 'print') => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    let currentY = 20;
 
     doc.setFontSize(24);
     doc.setTextColor(30, 41, 59);
-    doc.text("Accounting & Ledger Report", 14, 20);
+    doc.text("Accounting & Ledger Report", 14, currentY);
+    currentY += 6;
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, 26);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()} | Filter: ${dateFilter.toUpperCase()}`, 14, currentY);
+    currentY += 12;
 
-    const netProfit = calculateProfit();
-    const netColor = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
-    
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, 38, pageWidth - 28, 60, 2, 2, 'FD');
+    if (pdfConfig.summary) {
+      const netProfit = calculateProfit();
+      const netColor = netProfit >= 0 ? [22, 101, 52] : [153, 27, 27];
+      
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, currentY, pageWidth - 28, 60, 2, 2, 'FD');
+      currentY += 10;
 
-    doc.setFontSize(11);
-    doc.setTextColor(71, 85, 105);
-    doc.text("CURRENT FINANCIAL POSITION", 20, 48);
+      doc.setFontSize(11);
+      doc.setTextColor(71, 85, 105);
+      doc.text("CURRENT FINANCIAL POSITION", 20, currentY);
+      currentY += 14;
 
-    doc.setFontSize(20);
-    doc.setTextColor(netColor[0], netColor[1], netColor[2]);
-    doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, 62);
-    
-    doc.setFontSize(10);
-    doc.text(netProfit >= 0 ? "SURPLUS" : "DEFICIT", 20, 68);
+      doc.setFontSize(20);
+      doc.setTextColor(netColor[0], netColor[1], netColor[2]);
+      doc.text(`$${Math.abs(netProfit).toFixed(2)}`, 20, currentY);
+      currentY += 6;
+      
+      doc.setFontSize(10);
+      doc.text(netProfit >= 0 ? "SURPLUS" : "DEFICIT", 20, currentY);
+      currentY += 10;
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Operational Revenue: $${totalRevenue.toFixed(2)}`, 20, 78);
-    doc.text(`Asset Investment: $${inventoryTotals.total.toFixed(2)}`, 20, 84);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Operational Revenue: $${totalRevenue.toFixed(2)}`, 20, currentY);
+      currentY += 6;
+      doc.text(`Asset Investment: $${inventoryTotals.total.toFixed(2)}`, 20, currentY);
+      currentY += 20;
+    }
+
+    if (pdfConfig.revenue && filteredAndSortedInvoices.length > 0) {
+      if (currentY > 250) { doc.addPage(); currentY = 20; }
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Revenue Breakdown", 14, currentY);
+      currentY += 6;
+
+      const revenueData = filteredAndSortedInvoices.map(inv => [
+        new Date(inv.createdAt).toLocaleDateString(),
+        inv.customerName || 'Walk-in',
+        inv.vehicle || 'Unknown',
+        inv.services?.map((s: any) => s.name).join(", ") || "",
+        `$${(inv.paidAmount || inv.total).toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Date', 'Customer', 'Vehicle', 'Services', 'Amount']],
+        body: revenueData,
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246] }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    if (pdfConfig.expenses && expenseList.length > 0) {
+      if (currentY > 250) { doc.addPage(); currentY = 20; }
+      
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Expense Breakdown", 14, currentY);
+      currentY += 6;
+
+      const expenseData = expenseList.map(exp => [
+        new Date(exp.date).toLocaleDateString(),
+        exp.category,
+        exp.description,
+        `$${exp.amount.toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Date', 'Category', 'Description', 'Amount']],
+        body: expenseData,
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [239, 68, 68] }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    if (pdfConfig.ledger && ledger.length > 0) {
+      if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Transaction Ledger", 14, currentY);
+      currentY += 6;
+
+      const ledgerData = ledger.map(l => [
+        new Date(l.date).toLocaleDateString(),
+        l.type.toUpperCase(),
+        l.source,
+        l.type === 'income' ? `+$${l.amount.toFixed(2)}` : `-$${l.amount.toFixed(2)}`
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Date', 'Type', 'Source/Description', 'Amount']],
+        body: ledgerData,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [71, 85, 105] },
+        didParseCell: function(data) {
+          if (data.section === 'body' && data.column.index === 3) {
+            data.cell.styles.textColor = data.row.raw[1] === 'INCOME' ? [22, 101, 52] : [153, 27, 27];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      });
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    if (pdfConfig.notes && notes.trim()) {
+      if (currentY > 250) { doc.addPage(); currentY = 20; }
+
+      doc.setFontSize(14);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Accounting Notes", 14, currentY);
+      currentY += 8;
+
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
+      doc.text(splitNotes, 14, currentY);
+    }
 
     if (action === 'save') {
       doc.save(`accounting-report-${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -599,10 +725,31 @@ const Accounting = () => {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <h1 className="text-3xl font-bold text-foreground">Accounting</h1>
             <div className="flex gap-2 items-center flex-wrap">
-              <Button variant="outline" onClick={() => generatePDF('save')}>
-                <Save className="h-4 w-4 mr-2" />
-                Save PDF
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save PDF
+                    <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-zinc-950 border-zinc-800 text-white z-[400]">
+                  <DropdownMenuLabel>Select Sections to Include</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuCheckboxItem checked={pdfConfig.summary} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, summary: c})}>Profit/Loss Summary</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={pdfConfig.revenue} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, revenue: c})}>Revenue Breakdown</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={pdfConfig.expenses} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, expenses: c})}>Expense Breakdown</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={pdfConfig.ledger} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, ledger: c})}>Transaction Ledger</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem checked={pdfConfig.notes} onSelect={(e) => e.preventDefault()} onCheckedChange={(c) => setPdfConfig({...pdfConfig, notes: c})}>Notes</DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onClick={() => generatePDF('save')}>
+                    <Download className="h-4 w-4 mr-2 text-emerald-500" /> Generate PDF File
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="focus:bg-zinc-800 focus:text-white cursor-pointer" onClick={() => generatePDF('print')}>
+                    <Printer className="h-4 w-4 mr-2 text-blue-500" /> Print Document
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
