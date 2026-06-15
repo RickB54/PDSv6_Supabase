@@ -292,8 +292,11 @@ export default function CustomerEstimatePage() {
                     <div className="bg-emerald-500/10 border border-emerald-500/30 p-6 rounded-2xl mb-8 text-center animate-in fade-in slide-in-from-top-4 duration-500">
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
                         <h2 className="text-2xl font-black text-emerald-400 uppercase tracking-tight mb-2">Estimate Accepted!</h2>
-                        <p className="text-emerald-100">
+                        <p className="text-emerald-100 mb-4">
                             Thank you, {estimate.customerName.split(' ')[0]}! Your estimate has been accepted and your vehicle information has been received. Rick will follow up shortly to confirm your appointment.
+                        </p>
+                        <p className="text-emerald-200/70 text-sm italic border-t border-emerald-500/20 pt-4 mt-2">
+                            * Please note: While this estimate provides a comprehensive baseline, a final assessment of the vehicle in person is required to confirm the exact scope of work and final price.
                         </p>
                     </div>
                 )}
@@ -428,7 +431,7 @@ export default function CustomerEstimatePage() {
                                                     placeholder="Please describe location and type of stains..." 
                                                     value={formData.stainDesc} 
                                                     onChange={e => setFormData({...formData, stainDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800"
+                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
                                                 />
                                             </div>
                                         )}
@@ -445,7 +448,7 @@ export default function CustomerEstimatePage() {
                                                     placeholder="Please describe the odor (e.g. smoke, pet)..." 
                                                     value={formData.odorDesc} 
                                                     onChange={e => setFormData({...formData, odorDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800"
+                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
                                                 />
                                             </div>
                                         )}
@@ -482,7 +485,7 @@ export default function CustomerEstimatePage() {
                                                     placeholder="Please describe..." 
                                                     value={formData.scratchDesc} 
                                                     onChange={e => setFormData({...formData, scratchDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800"
+                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
                                                 />
                                             </div>
                                         )}
@@ -529,7 +532,7 @@ export default function CustomerEstimatePage() {
                                                     placeholder="Please describe..." 
                                                     value={formData.damageDesc} 
                                                     onChange={e => setFormData({...formData, damageDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800"
+                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
                                                 />
                                             </div>
                                         )}
@@ -557,7 +560,7 @@ export default function CustomerEstimatePage() {
                                             placeholder="Anything else we should know?" 
                                             value={formData.specialRequests}
                                             onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
-                                            className="bg-zinc-950 border-zinc-800 min-h-[100px]"
+                                            className="bg-zinc-950 border-zinc-800 min-h-[100px] text-zinc-100 placeholder:text-zinc-600"
                                         />
                                     </div>
                                 </div>

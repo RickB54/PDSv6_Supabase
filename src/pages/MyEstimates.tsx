@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import logo from "@/assets/pds-final-logo.png";
-import type { Estimate } from "@/types/estimate";
+import type { Estimate } from "@/lib/supa-data";
 
 const MyEstimates = () => {
     const navigate = useNavigate();
