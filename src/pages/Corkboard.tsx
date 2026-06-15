@@ -501,7 +501,10 @@ export default function Corkboard() {
       if (editingNote.id === 'new') {
         const finalTags = editingNote.tags || [];
         if (!finalTags.includes('__corkboard__')) finalTags.push('__corkboard__');
-        await notesStore.createNote(sectionId, editingNote.title, editingNote.content, finalTags);
+        const newId = await notesStore.createNote(sectionId, editingNote.title, editingNote.content, finalTags);
+        if (editingNote.is_pinned) {
+          await notesStore.updateNote(newId, { is_pinned: true });
+        }
         toast({ title: "Note Created" });
       } else {
         await notesStore.updateNote(editingNote.id, { 
@@ -1113,68 +1116,75 @@ export default function Corkboard() {
             </div>
             <div className={`p-4 border-t border-black/10 flex justify-between items-center ${editColor.bg} brightness-95`}>
               <div className="flex gap-2">
-                {editingNote.id !== 'new' && (
-                  <>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className={`h-9 w-9 ${editColor.text} ${editingNote.is_pinned ? 'bg-black/20' : ''} hover:bg-black/10`} 
-                      title={editingNote.is_pinned ? "Unpin" : "Pin to Top"}
-                      onClick={async () => {
-                        const newPinned = !editingNote.is_pinned;
-                        setEditingNote({ ...editingNote, is_pinned: newPinned });
-                        await handleTogglePin(editingNote);
-                      }}
-                    >
-                      <Pin className={`w-5 h-5 ${editingNote.is_pinned ? 'fill-current' : ''}`} />
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className={`h-9 w-9 ${editColor.text} ${editingNote.is_pinned ? 'bg-black/20' : ''} hover:bg-black/10`} 
+                  title={editingNote.is_pinned ? "Unpin" : "Pin to Top"}
+                  onClick={async () => {
+                    const newPinned = !editingNote.is_pinned;
+                    setEditingNote({ ...editingNote, is_pinned: newPinned });
+                    if (editingNote.id !== 'new') {
+                      await handleTogglePin(editingNote);
+                    }
+                  }}
+                >
+                  <Pin className={`w-5 h-5 ${editingNote.is_pinned ? 'fill-current' : ''}`} />
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
+                  <ImageIcon className="w-5 h-5" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
+                      <Palette className="w-5 h-5" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
-                      <ImageIcon className="w-5 h-5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
+                    {STICKY_COLORS.map(c => (
+                      <div key={c.id} onClick={() => {
+                        let newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
+                        newTags.push(`__inside_color:${c.id}__`);
+                        if (prefs.matchColor) {
+                          newTags = newTags.filter(t => !t.startsWith('__color:'));
+                          newTags.push(`__color:${c.id}__`);
+                        }
+                        setEditingNote({...editingNote, tags: newTags});
+                      }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
+                        (prefs.matchColor ? editingNote.tags?.includes(`__color:${c.id}__`) : editingNote.tags?.includes(`__inside_color:${c.id}__`)) 
+                          ? 'border-white' : 'border-transparent'
+                      } ${c.bg}`} />
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { 
+                  const tags = editingNote.tags?.filter(t => t !== '__corkboard__') || [];
+                  setEditingNote({...editingNote, tags});
+                  toast({ title: "Will be sent to Personal Notes on save" });
+                }}>
+                  <FileText className="w-5 h-5" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
+                      <MoreVertical className="w-5 h-5" />
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
-                          <Palette className="w-5 h-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
-                        {STICKY_COLORS.map(c => (
-                          <div key={c.id} onClick={() => {
-                            let newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
-                            newTags.push(`__inside_color:${c.id}__`);
-                            if (prefs.matchColor) {
-                              newTags = newTags.filter(t => !t.startsWith('__color:'));
-                              newTags.push(`__color:${c.id}__`);
-                            }
-                            setEditingNote({...editingNote, tags: newTags});
-                          }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
-                            (prefs.matchColor ? editingNote.tags?.includes(`__color:${c.id}__`) : editingNote.tags?.includes(`__inside_color:${c.id}__`)) 
-                              ? 'border-white' : 'border-transparent'
-                          } ${c.bg}`} />
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { 
-                      const tags = editingNote.tags?.filter(t => t !== '__corkboard__') || [];
-                      setEditingNote({...editingNote, tags});
-                      toast({ title: "Will be sent to Personal Notes on save" });
-                    }}>
-                      <FileText className="w-5 h-5" />
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
-                          <MoreVertical className="w-5 h-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
-                        <DropdownMenuItem onClick={() => { handleDeleteNote(editingNote.id); setIsNoteModalOpen(false); }}>Delete note</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(editingNote.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
-                )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
+                    <DropdownMenuItem onClick={() => { 
+                      if (editingNote.id === 'new') {
+                        setIsNoteModalOpen(false);
+                      } else {
+                        handleDeleteNote(editingNote.id); 
+                        setIsNoteModalOpen(false); 
+                      }
+                    }}>Delete note</DropdownMenuItem>
+                    {editingNote.id !== 'new' && (
+                      <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(editingNote.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent`}>Cancel</Button>
