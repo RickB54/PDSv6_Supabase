@@ -429,6 +429,36 @@ export default function Corkboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [labelSearchText, setLabelSearchText] = useState("");
+
+  const handleAddLabel = async () => {
+    const trimmed = labelSearchText.trim();
+    if (!trimmed || !editingNote) return;
+
+    const existing = notesStore.sections.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) {
+      setEditingNote({ ...editingNote, section_id: existing.id });
+      setLabelSearchText("");
+      return;
+    }
+
+    try {
+      let targetNbId = notesStore.notebooks[0]?.id;
+      if (!targetNbId) {
+        const newNb = await notesStore.createNotebook("General");
+        targetNbId = newNb.id;
+      }
+      const newSec = await notesStore.createSection(targetNbId, trimmed);
+      if (newSec) {
+        setEditingNote({ ...editingNote, section_id: newSec.id });
+      }
+      setLabelSearchText("");
+      toast({ title: `Label "${trimmed}" created` });
+    } catch (err) {
+      toast({ title: "Failed to create label", variant: "destructive" });
+    }
+  };
 
   const [sortBy, setSortBy] = useState<string>("manual");
   const [dateFilter, setDateFilter] = useState<string>("all");
@@ -1486,23 +1516,6 @@ export default function Corkboard() {
                   <ArrowUp className="w-5 h-5" />
                 </Button>
               </div>
-              <div className="shrink-0">
-                <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Category</label>
-                <select 
-                  value={editingNote.section_id || ''} 
-                  onChange={e => setEditingNote({...editingNote, section_id: e.target.value || null})}
-                  className={`w-full p-2 bg-black/5 border ${editColor.border} ${editColor.text} rounded focus-visible:ring-black/20 outline-none`}
-                >
-                  <option className="bg-zinc-900 text-white" value="">No Category</option>
-                  {notesStore.notebooks.map(nb => (
-                    <optgroup className="bg-zinc-900 text-zinc-400 font-bold" key={nb.id} label={nb.name}>
-                      {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => (
-                        <option className="bg-zinc-800 text-white" key={sec.id} value={sec.id}>{sec.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
             </div>
             <div className={`p-4 border-t border-black/10 flex justify-between items-center ${editColor.bg} brightness-95`}>
               <div className="flex gap-2">
@@ -1569,6 +1582,7 @@ export default function Corkboard() {
                         setIsNoteModalOpen(false); 
                       }
                     }}>Delete note</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change labels</DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
                     )}
@@ -1844,6 +1858,96 @@ export default function Corkboard() {
               <Button 
                 onClick={() => setIsVisibilityOpen(false)}
                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-9 px-6 rounded-lg font-semibold"
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Label note Popup */}
+      {isLabelModalOpen && editingNote && (
+        <div 
+          className="fixed inset-0 z-[450] bg-black/60 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setIsLabelModalOpen(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-lg bg-zinc-900 border border-zinc-800 shadow-2xl overflow-hidden flex flex-col"
+          >
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
+              <h3 className="font-bold text-white text-base">Label note</h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsLabelModalOpen(false)} 
+                className="h-8 w-8 text-zinc-400 hover:text-white rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter label name"
+                  value={labelSearchText}
+                  onChange={(e) => setLabelSearchText(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      await handleAddLabel();
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 bg-zinc-800 text-white rounded-lg border border-zinc-700 text-sm focus:outline-none focus:border-blue-500 placeholder:text-zinc-500"
+                />
+                <Button 
+                  onClick={handleAddLabel}
+                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 rounded-lg font-semibold h-9 shrink-0"
+                >
+                  Add
+                </Button>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {notesStore.sections.length === 0 ? (
+                  <p className="text-xs text-zinc-500 italic py-2">No labels created yet</p>
+                ) : (
+                  notesStore.sections
+                    .filter(sec => 
+                      !labelSearchText || 
+                      sec.name.toLowerCase().includes(labelSearchText.toLowerCase())
+                    )
+                    .map(sec => {
+                      const isChecked = editingNote.section_id === sec.id;
+                      return (
+                        <label 
+                          key={sec.id}
+                          className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-zinc-800/50 cursor-pointer text-zinc-300 hover:text-white transition-colors"
+                        >
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              const newSectionId = isChecked ? null : sec.id;
+                              setEditingNote({ ...editingNote, section_id: newSectionId });
+                            }}
+                            className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
+                          />
+                          <span className="text-sm font-medium">{sec.name}</span>
+                        </label>
+                      );
+                    })
+                )}
+              </div>
+            </div>
+
+            <div className="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end">
+              <Button 
+                onClick={() => setIsLabelModalOpen(false)}
+                className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-8 px-6 rounded-lg font-semibold"
               >
                 Done
               </Button>
