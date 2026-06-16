@@ -79,6 +79,7 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
     transition,
     isDragging
   } = useSortable({ id: note.id });
+  const notesStore = useNotesStore();
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -169,19 +170,43 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
         </h3>
         <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-6">{getCleanContent(note.content)}</p>
       </div>
-      {showTags && (
-        <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
-          {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
-            <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
-          )) : (
-            <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
-          )}
-        </div>
-      )}
+      {(() => {
+        const cardSections = [
+          ...(note.section_id ? [note.section_id] : []),
+          ...(note.tags?.filter(t => t.startsWith('__section:')).map(t => t.replace('__section:', '')) || [])
+        ];
+        const uniqueCardSections = Array.from(new Set(cardSections));
+        
+        return (
+          <>
+            {showTags && (
+              <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
+                {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
+                  <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
+                )) : (
+                  <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
+                )}
+              </div>
+            )}
 
-      {sectionName && (
-        <div className="mt-3 text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
-      )}
+            {uniqueCardSections.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-1">
+                {uniqueCardSections.map(secId => {
+                  const sec = notesStore.sections.find(s => s.id === secId);
+                  if (!sec) return null;
+                  return (
+                    <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
+                      {sec.name}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : sectionName ? (
+              <div className="mt-3 text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
+            ) : null}
+          </>
+        );
+      })()}
 
       {showToolbar && (
         <div className="flex justify-between items-center mt-4 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
@@ -438,7 +463,12 @@ export default function Corkboard() {
 
     const existing = notesStore.sections.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
     if (existing) {
-      setEditingNote({ ...editingNote, section_id: existing.id });
+      const newTags = [...(editingNote.tags || [])];
+      if (!newTags.includes(`__section:${existing.id}`)) {
+        newTags.push(`__section:${existing.id}`);
+      }
+      const newSectionId = editingNote.section_id || existing.id;
+      setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
       setLabelSearchText("");
       return;
     }
@@ -451,12 +481,62 @@ export default function Corkboard() {
       }
       const newSec = await notesStore.createSection(targetNbId, trimmed);
       if (newSec) {
-        setEditingNote({ ...editingNote, section_id: newSec.id });
+        const newTags = [...(editingNote.tags || [])];
+        if (!newTags.includes(`__section:${newSec.id}`)) {
+          newTags.push(`__section:${newSec.id}`);
+        }
+        const newSectionId = editingNote.section_id || newSec.id;
+        setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
       }
       setLabelSearchText("");
       toast({ title: `Label "${trimmed}" created` });
     } catch (err) {
       toast({ title: "Failed to create label", variant: "destructive" });
+    }
+  };
+
+  const handleToggleLabel = (secId: string) => {
+    if (!editingNote) return;
+    const isChecked = editingNote.section_id === secId || editingNote.tags?.includes(`__section:${secId}`);
+    let newTags = [...(editingNote.tags || [])];
+    let newSectionId = editingNote.section_id;
+
+    if (isChecked) {
+      newTags = newTags.filter(t => t !== `__section:${secId}`);
+      if (newSectionId === secId) {
+        const otherSecTag = newTags.find(t => t.startsWith('__section:'));
+        if (otherSecTag) {
+          newSectionId = otherSecTag.replace('__section:', '');
+        } else {
+          newSectionId = null;
+        }
+      }
+    } else {
+      if (!newTags.includes(`__section:${secId}`)) {
+        newTags.push(`__section:${secId}`);
+      }
+      if (!newSectionId) {
+        newSectionId = secId;
+      }
+    }
+
+    setEditingNote({ ...editingNote, tags: newTags, section_id: newSectionId });
+  };
+
+  const handleDeleteLabelFromPopup = async (secId: string) => {
+    if (!editingNote) return;
+    if (confirm("Are you sure you want to delete this label? This will delete the label category and ALL stickies associated with it.")) {
+      await notesStore.deleteSection(secId);
+      let newTags = (editingNote.tags || []).filter(t => t !== `__section:${secId}`);
+      let newSectionId = editingNote.section_id === secId ? null : editingNote.section_id;
+      if (newSectionId === null) {
+        const otherSecTag = newTags.find(t => t.startsWith('__section:'));
+        if (otherSecTag) {
+          newSectionId = otherSecTag.replace('__section:', '');
+        }
+      }
+      setEditingNote({ ...editingNote, tags: newTags, section_id: newSectionId });
+      toast({ title: "Label deleted successfully" });
     }
   };
 
@@ -586,10 +666,12 @@ export default function Corkboard() {
     let filtered = orderedAllNotes.filter(n => {
       if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (selectedSection) return n.section_id === selectedSection;
+      if (selectedSection) {
+        return n.section_id === selectedSection || n.tags?.includes(`__section:${selectedSection}`);
+      }
       if (selectedNotebook) {
         const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
-        return n.section_id && sectionIds.includes(n.section_id);
+        return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
       }
 
       if (dateFilter !== "all") {
@@ -1095,7 +1177,11 @@ export default function Corkboard() {
               </button>
               
               {notesStore.notebooks.filter(nb => !excludedNotebooks.includes(nb.id)).map(nb => {
-                const nbStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id && notesStore.sections.find(s => s.id === n.section_id)?.notebook_id === nb.id).length;
+                const nbStickies = visibleNotes.filter(n => {
+                  if (prefs.isolate && !n.tags?.includes('__corkboard__')) return false;
+                  const sectionIds = notesStore.sections.filter(s => s.notebook_id === nb.id).map(s => s.id);
+                  return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
+                }).length;
                 return (
                 <div key={nb.id} className="space-y-1">
                   <div className="flex items-center group">
@@ -1127,7 +1213,7 @@ export default function Corkboard() {
                   {(expandedNotebook === nb.id || expandAll) && (
                     <div className="pl-6 pr-2 space-y-1">
                       {notesStore.sections.filter(s => s.notebook_id === nb.id && !excludedSections.includes(s.id)).map(sec => {
-                        const secStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
+                        const secStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && (n.section_id === sec.id || n.tags?.includes(`__section:${sec.id}`))).length;
                         return (
                         <div key={sec.id} className="flex items-center group">
                           <button 
@@ -1506,23 +1592,40 @@ export default function Corkboard() {
                     ))}
                   </div>
 
-                  {editingNote.section_id && (
-                    <div className="px-4 pb-3 pl-10 pt-1 shrink-0 flex">
-                      <div className="inline-flex items-center text-xs font-bold px-3 py-1 rounded-full border border-black/20 bg-black/5 text-inherit select-none">
-                        {notesStore.sections.find(s => s.id === editingNote.section_id)?.name}
+                  {(() => {
+                    const cardSections = [
+                      ...(editingNote.section_id ? [editingNote.section_id] : []),
+                      ...(editingNote.tags?.filter(t => t.startsWith('__section:')).map(t => t.replace('__section:', '')) || [])
+                    ];
+                    const uniqueCardSections = Array.from(new Set(cardSections));
+                    
+                    if (uniqueCardSections.length === 0) return null;
+                    
+                    return (
+                      <div className="px-4 pb-3 pl-10 pt-1 shrink-0 flex flex-wrap gap-1.5 z-10">
+                        {uniqueCardSections.map(secId => {
+                          const sec = notesStore.sections.find(s => s.id === secId);
+                          if (!sec) return null;
+                          return (
+                            <div key={secId} className="inline-flex items-center text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-black/25 bg-black/5 text-inherit select-none">
+                              {sec.name}
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
+
+                  <Button 
+                    size="icon" 
+                    variant="outline" 
+                    className={`absolute bottom-3 right-3 rounded-full shadow-lg ${editColor.border} ${editColor.bg} ${editColor.text} hover:brightness-95 z-30`}
+                    onClick={scrollToTop}
+                    title="Scroll to Top"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button 
-                  size="icon" 
-                  variant="outline" 
-                  className={`absolute bottom-4 left-4 rounded-full shadow-lg ${editColor.border} ${editColor.bg} ${editColor.text} hover:brightness-95`}
-                  onClick={scrollToTop}
-                  title="Scroll to Top"
-                >
-                  <ArrowUp className="w-5 h-5" />
-                </Button>
               </div>
             </div>
             <div className={`p-4 border-t border-black/10 flex justify-between items-center ${editColor.bg} brightness-95`}>
@@ -1598,10 +1701,11 @@ export default function Corkboard() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent`}>Cancel</Button>
-                <Button onClick={handleSaveNote} className={`bg-black/20 ${editColor.text} hover:bg-black/30 border border-black/10`}>
-                  <Save className="w-4 h-4 mr-2" /> Save Sticky
+              <div className="flex gap-2 font-semibold">
+                <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent px-2.5 sm:px-4 text-xs sm:text-sm`}>Cancel</Button>
+                <Button onClick={handleSaveNote} className={`bg-black/20 ${editColor.text} hover:bg-black/30 border border-black/10 px-3 sm:px-4`}>
+                  <Save className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Save Sticky</span>
                 </Button>
               </div>
             </div>
@@ -1929,23 +2033,28 @@ export default function Corkboard() {
                       sec.name.toLowerCase().includes(labelSearchText.toLowerCase())
                     )
                     .map(sec => {
-                      const isChecked = editingNote.section_id === sec.id;
+                      const isChecked = editingNote.section_id === sec.id || editingNote.tags?.includes(`__section:${sec.id}`);
                       return (
-                        <label 
-                          key={sec.id}
-                          className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-zinc-800/50 cursor-pointer text-zinc-300 hover:text-white transition-colors"
-                        >
-                          <input 
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {
-                              const newSectionId = isChecked ? null : sec.id;
-                              setEditingNote({ ...editingNote, section_id: newSectionId });
-                            }}
-                            className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
-                          />
-                          <span className="text-sm font-medium">{sec.name}</span>
-                        </label>
+                        <div key={sec.id} className="flex items-center justify-between group px-2 py-1 transition-colors rounded-lg hover:bg-zinc-800/50">
+                          <label className="flex items-center gap-3 flex-1 cursor-pointer text-zinc-300 hover:text-white transition-colors">
+                            <input 
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleLabel(sec.id)}
+                              className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
+                            />
+                            <span className="text-sm font-medium">{sec.name}</span>
+                          </label>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDeleteLabelFromPopup(sec.id)}
+                            className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                            title="Delete Label"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       );
                     })
                 )}
