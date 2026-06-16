@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, FileText, Folder, ChevronDown, ChevronRight,
-  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
-  GripVertical, LayoutGrid, List, Sliders
+  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -20,7 +19,6 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
-  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent
@@ -30,7 +28,6 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   rectSortingStrategy,
-  verticalListSortingStrategy,
   useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -220,183 +217,17 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
   );
 };
 
-// --- Sortable List Row Component ---
-const SortableListRow = ({ 
-  note, 
-  sectionName, 
-  onEdit, 
-  onDelete, 
-  onSendToNotes, 
-  onDuplicate, 
-  onChangeColor, 
-  onTogglePin, 
-  showToolbar 
-}: { 
-  note: Note, 
-  sectionName?: string, 
-  onEdit: (n: Note) => void, 
-  onDelete: (id: string) => void, 
-  onSendToNotes: (n: Note) => void, 
-  onDuplicate: (n: Note) => void, 
-  onChangeColor: (n: Note, colorId: string) => void, 
-  onTogglePin: (n: Note) => void, 
-  showToolbar?: boolean 
-}) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: note.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-  };
-
-  const color = React.useMemo(() => {
-    const colorTag = note.tags?.find(t => t.startsWith('__color:'));
-    if (colorTag) {
-      const colorId = colorTag.split(':')[1].replace('__', '');
-      const found = STICKY_COLORS.find(c => c.id === colorId);
-      if (found) return found;
-    }
-    const hash = note.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return STICKY_COLORS[hash % 6];
-  }, [note.id, note.tags]);
-
-  const timestamp = React.useMemo(() => {
-    const dateStr = note.updated_at || note.created_at;
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString() + " " + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  }, [note.updated_at, note.created_at]);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      onClick={() => onEdit(note)}
-      className={`
-        relative group flex items-center gap-3 p-3 rounded-lg bg-zinc-900/90 border border-zinc-800/80 transition-all duration-200 cursor-pointer select-none
-        ${isDragging ? 'shadow-2xl scale-[1.01] opacity-90 border-zinc-700 bg-zinc-800' : 'hover:bg-zinc-800/50 hover:border-zinc-700'}
-      `}
-    >
-      {/* Sticky color vertical accent bar */}
-      <div className={`w-1.5 self-stretch rounded-full ${color.bg} shrink-0`} style={{ minHeight: '1.75rem' }} />
-
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        onClick={(e) => e.stopPropagation()}
-        style={{ touchAction: 'none' }}
-        className="cursor-grab active:cursor-grabbing p-1.5 hover:bg-zinc-800 rounded text-zinc-500 hover:text-zinc-300 transition-colors"
-      >
-        <GripVertical className="w-4 h-4" />
-      </div>
-
-      {/* Title & Timestamp content area */}
-      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
-        {/* Title: 1 or 2 lines */}
-        <h4 className="font-semibold text-zinc-100 text-sm leading-tight line-clamp-2">
-          {note.title || <span className="italic opacity-50 text-zinc-400">Untitled Sticky</span>}
-        </h4>
-        
-        {/* Timestamp & Section */}
-        <div className="flex items-center gap-2 shrink-0">
-          {sectionName && (
-            <span className="text-[9px] font-bold bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-wider max-w-[120px] truncate">
-              {sectionName}
-            </span>
-          )}
-          <span className="text-xs text-zinc-500 whitespace-nowrap">
-            {timestamp}
-          </span>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-        {/* Pin button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => onTogglePin(note)} 
-          className="h-8 w-8 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200"
-          title="Pin to Top"
-        >
-          <Pin className={`w-4 h-4 ${note.is_pinned ? 'fill-current text-yellow-500 rotate-45' : ''}`} />
-        </Button>
-
-        {/* More Options Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
-            <DropdownMenuItem onClick={() => onEdit(note)}>
-              <Edit2 className="w-4 h-4 mr-2" /> Edit / Category
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDuplicate(note)}>
-              <Copy className="w-4 h-4 mr-2" /> Make a copy
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSendToNotes(note)}>
-              <FileText className="w-4 h-4 mr-2" /> Send to Personal Notes
-            </DropdownMenuItem>
-            <div className="border-t border-zinc-800 my-1" />
-            <div className="px-2 py-1 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Change Color</div>
-            <div className="px-2 py-1.5 grid grid-cols-5 gap-1.5">
-              {STICKY_COLORS.slice(0, 10).map(c => (
-                <button 
-                  key={c.id} 
-                  onClick={() => onChangeColor(note, c.id)} 
-                  className={`w-6 h-6 rounded-full border ${note.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} 
-                  title={c.id}
-                />
-              ))}
-            </div>
-            <div className="border-t border-zinc-800 my-1" />
-            <DropdownMenuItem onClick={() => onDelete(note.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  );
-};
-
 export default function Corkboard() {
   const navigate = useNavigate();
   const notesStore = useNotesStore();
   
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedNotebook, setSelectedNotebook] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
-  const [localNoteOrder, setLocalNoteOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('corkboard_note_order');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [localNoteOrder, setLocalNoteOrder] = useState<string[]>([]);
   const [isExiting, setIsExiting] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => (localStorage.getItem('corkboard_view_mode') as 'grid' | 'list') || 'grid');
-
-  const toggleViewMode = () => {
-    const next = viewMode === 'grid' ? 'list' : 'grid';
-    setViewMode(next);
-    localStorage.setItem('corkboard_view_mode', next);
-  };
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -414,7 +245,6 @@ export default function Corkboard() {
   const [newSectionName, setNewSectionName] = useState("");
   const [selectedNbForNewSection, setSelectedNbForNewSection] = useState<string | null>(null);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
-  const [isVisibilityOpen, setIsVisibilityOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -432,47 +262,6 @@ export default function Corkboard() {
     toolbar: localStorage.getItem('corkboard_toolbar') !== 'false',
     matchColor: localStorage.getItem('corkboard_match_color') === 'true'
   });
-
-  const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
-    try {
-      const val = localStorage.getItem('corkboard_excluded_notebooks');
-      return val ? JSON.parse(val) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [excludedSections, setExcludedSections] = useState<string[]>(() => {
-    try {
-      const val = localStorage.getItem('corkboard_excluded_sections');
-      return val ? JSON.parse(val) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      try {
-        const nbVal = localStorage.getItem('corkboard_excluded_notebooks');
-        setExcludedNotebooks(nbVal ? JSON.parse(nbVal) : []);
-        
-        const secVal = localStorage.getItem('corkboard_excluded_sections');
-        setExcludedSections(secVal ? JSON.parse(secVal) : []);
-      } catch {}
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  useEffect(() => {
-    if (selectedNotebook && excludedNotebooks.includes(selectedNotebook)) {
-      setSelectedNotebook(null);
-    }
-    if (selectedSection && excludedSections.includes(selectedSection)) {
-      setSelectedSection(null);
-    }
-  }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
   const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor', val: boolean) => {
     localStorage.setItem(`corkboard_${key}`, String(val));
@@ -493,7 +282,6 @@ export default function Corkboard() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -507,27 +295,13 @@ export default function Corkboard() {
       const oldIdx = base.indexOf(String(active.id));
       const newIdx = base.indexOf(String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
-      const next = arrayMove(base, oldIdx, newIdx);
-      localStorage.setItem('corkboard_note_order', JSON.stringify(next));
-      return next;
+      return arrayMove(base, oldIdx, newIdx);
     });
   };
 
-  // Filter out notes from excluded notebooks or sections
-  const visibleNotes = useMemo(() => {
-    return notesStore.notes.filter(n => {
-      if (n.section_id) {
-        if (excludedSections.includes(n.section_id)) return false;
-        const s = notesStore.sections.find(sec => sec.id === n.section_id);
-        if (s && excludedNotebooks.includes(s.notebook_id)) return false;
-      }
-      return true;
-    });
-  }, [notesStore.notes, notesStore.sections, excludedNotebooks, excludedSections]);
-
   // Build the ordered list of ALL notes, respecting localNoteOrder if set
   const orderedAllNotes = useMemo(() => {
-    const storeNotes = visibleNotes;
+    const storeNotes = notesStore.notes;
     if (localNoteOrder.length === 0) return storeNotes;
     const orderMap = new Map(localNoteOrder.map((id, i) => [id, i]));
     return [...storeNotes].sort((a, b) => {
@@ -535,7 +309,7 @@ export default function Corkboard() {
       const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 99999;
       return ai - bi;
     });
-  }, [visibleNotes, localNoteOrder]);
+  }, [notesStore.notes, localNoteOrder]);
 
   const activeNotes = useMemo(() => {
     let filtered = orderedAllNotes.filter(n => {
@@ -925,43 +699,23 @@ export default function Corkboard() {
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            <select 
-              className="hidden sm:block bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-8 sm:h-10 px-2 outline-none focus:ring-1 focus:ring-yellow-500" 
-              value={dateFilter} 
-              onChange={e => setDateFilter(e.target.value)}
-            >
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            <select className="bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-9 sm:h-10 px-2 outline-none focus:ring-1 focus:ring-yellow-500" value={dateFilter} onChange={e => setDateFilter(e.target.value)}>
               <option value="all">All Dates</option>
               <option value="today">Today</option>
               <option value="this-week">This Week</option>
               <option value="this-month">This Month</option>
               <option value="this-year">This Year</option>
             </select>
-            <select 
-              className="bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-8 sm:h-10 px-1.5 sm:px-2 outline-none focus:ring-1 focus:ring-yellow-500 max-w-[95px] min-[360px]:max-w-none" 
-              value={sortBy} 
-              onChange={e => setSortBy(e.target.value)}
-            >
-              <option value="manual">Manual</option>
-              <option value="updated-desc">Recent</option>
-              <option value="created-desc">Newest</option>
-              <option value="created-asc">Oldest</option>
+            <select className="bg-zinc-900 text-white text-xs border border-zinc-700 rounded h-9 sm:h-10 px-2 outline-none focus:ring-1 focus:ring-yellow-500" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="manual">Manual Order</option>
+              <option value="updated-desc">Recently Updated</option>
+              <option value="created-desc">Newest First</option>
+              <option value="created-asc">Oldest First</option>
             </select>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={toggleViewMode} 
-            className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10 shrink-0" 
-            title={viewMode === 'grid' ? "Switch to List View" : "Switch to Grid View"}
-          >
-            {viewMode === 'grid' ? <List className="w-4 h-4 sm:w-5 sm:h-5" /> : <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </Button>
           <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
             <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Corkboard Visibility">
-            <Sliders className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1006,11 +760,11 @@ export default function Corkboard() {
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedSection && !selectedNotebook ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
               >
                 <div className="flex items-center gap-3"><LayoutDashboard className="w-4 h-4 shrink-0" /> All Stickies</div>
-                <span className="text-xs opacity-50 ml-2">{visibleNotes.filter(n => !prefs.isolate || n.tags?.includes('__corkboard__')).length}</span>
+                <span className="text-xs opacity-50 ml-2">{notesStore.notes.filter(n => !prefs.isolate || n.tags?.includes('__corkboard__')).length}</span>
               </button>
               
-              {notesStore.notebooks.filter(nb => !excludedNotebooks.includes(nb.id)).map(nb => {
-                const nbStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id && notesStore.sections.find(s => s.id === n.section_id)?.notebook_id === nb.id).length;
+              {notesStore.notebooks.map(nb => {
+                const nbStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id && notesStore.sections.find(s => s.id === n.section_id)?.notebook_id === nb.id).length;
                 return (
                 <div key={nb.id} className="space-y-1">
                   <div className="flex items-center group">
@@ -1041,8 +795,8 @@ export default function Corkboard() {
                   </div>
                   {(expandedNotebook === nb.id || expandAll) && (
                     <div className="pl-6 pr-2 space-y-1">
-                      {notesStore.sections.filter(s => s.notebook_id === nb.id && !excludedSections.includes(s.id)).map(sec => {
-                        const secStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
+                      {notesStore.sections.filter(s => s.notebook_id === nb.id).map(sec => {
+                        const secStickies = notesStore.notes.filter(n => (!prefs.isolate || n.tags?.includes('__corkboard__')) && n.section_id === sec.id).length;
                         return (
                         <div key={sec.id} className="flex items-center group">
                           <button 
@@ -1109,53 +863,28 @@ export default function Corkboard() {
             {activeNotes.filter(n => n.is_pinned).length > 0 && (
               <div className="mb-12">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2">Pinned</h3>
-                <SortableContext 
-                  items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} 
-                  strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
-                >
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableListRow
-                            key={`${note.id}-${note.is_pinned}`}
-                            note={note}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                            onSendToNotes={handleSendToNotes}
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onTogglePin={handleTogglePin}
-                            showToolbar={prefs.toolbar}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}`} 
-                            note={note} 
-                            sectionName={sectionName}
-                            onEdit={handleEditNote} 
-                            onDelete={handleDeleteNote} 
-                            onSendToNotes={handleSendToNotes} 
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onToggleCheckboxes={handleToggleCheckboxes}
-                            onTogglePin={handleTogglePin}
-                            showTags={true}
-                            showToolbar={prefs.toolbar}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                <SortableContext items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    {activeNotes.filter(n => n.is_pinned).map(note => {
+                      const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                      return (
+                        <SortableSticky 
+                          key={`${note.id}-${note.is_pinned}`} 
+                          note={note} 
+                          sectionName={sectionName}
+                          onEdit={handleEditNote} 
+                          onDelete={handleDeleteNote} 
+                          onSendToNotes={handleSendToNotes} 
+                          onDuplicate={handleDuplicateNote}
+                          onChangeColor={handleChangeColor}
+                          onToggleCheckboxes={handleToggleCheckboxes}
+                          onTogglePin={handleTogglePin}
+                          showTags={true}
+                          showToolbar={prefs.toolbar}
+                        />
+                      );
+                    })}
+                  </div>
                 </SortableContext>
               </div>
             )}
@@ -1163,53 +892,28 @@ export default function Corkboard() {
             {activeNotes.filter(n => !n.is_pinned).length > 0 && (
               <div>
                 {activeNotes.filter(n => n.is_pinned).length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
-                <SortableContext 
-                  items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} 
-                  strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
-                >
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableListRow
-                            key={`${note.id}-${note.is_pinned}`}
-                            note={note}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                            onSendToNotes={handleSendToNotes}
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onTogglePin={handleTogglePin}
-                            showToolbar={prefs.toolbar}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}`} 
-                            note={note} 
-                            sectionName={sectionName}
-                            onEdit={handleEditNote} 
-                            onDelete={handleDeleteNote} 
-                            onSendToNotes={handleSendToNotes} 
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onToggleCheckboxes={handleToggleCheckboxes}
-                            onTogglePin={handleTogglePin}
-                            showTags={true}
-                            showToolbar={prefs.toolbar}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                <SortableContext items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} strategy={rectSortingStrategy}>
+                  <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    {activeNotes.filter(n => !n.is_pinned).map(note => {
+                      const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                      return (
+                        <SortableSticky 
+                          key={`${note.id}-${note.is_pinned}`} 
+                          note={note} 
+                          sectionName={sectionName}
+                          onEdit={handleEditNote} 
+                          onDelete={handleDeleteNote} 
+                          onSendToNotes={handleSendToNotes} 
+                          onDuplicate={handleDuplicateNote}
+                          onChangeColor={handleChangeColor}
+                          onToggleCheckboxes={handleToggleCheckboxes}
+                          onTogglePin={handleTogglePin}
+                          showTags={true}
+                          showToolbar={prefs.toolbar}
+                        />
+                      );
+                    })}
+                  </div>
                 </SortableContext>
               </div>
             )}
@@ -1306,8 +1010,7 @@ export default function Corkboard() {
                                   const newTags = editingNote.tags?.filter(t => t !== `__img:${img}`);
                                   setEditingNote({ ...editingNote, tags: newTags });
                                 } else {
-                                  const imageRegex = new RegExp(`!\\\\[.*?\\\\]\\\\(` + img.replace(/[.*+?^${}()|[\]\\]/g, '\\const newTags = editingNote.tags?.filter(t => t !== `__img:${img}`);
-                                setEditingNote({ ...editingNote, tags: newTags });') + `\\\\)`, 'g');
+                                  const imageRegex = new RegExp(`!\\\\[.*?\\\\]\\\\(` + img.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + `\\\\)`, 'g');
                                   const updatedContent = editingNote.content.replace(imageRegex, '');
                                   setEditingNote({ ...editingNote, content: updatedContent });
                                 }
@@ -1581,17 +1284,6 @@ export default function Corkboard() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="font-bold text-white text-sm">List View Mode</div>
-                  <div className="text-xs text-zinc-500">Show stickies as a list instead of a grid</div>
-                </div>
-                <input type="checkbox" checked={viewMode === 'list'} onChange={e => {
-                  const next = e.target.checked ? 'list' : 'grid';
-                  setViewMode(next);
-                  localStorage.setItem('corkboard_view_mode', next);
-                }} className="w-4 h-4 accent-yellow-500" />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
                   <div className="font-bold text-white text-sm">Masonry Layout</div>
                   <div className="text-xs text-zinc-500">Pack stickies tightly instead of uniform rows</div>
                 </div>
@@ -1655,121 +1347,6 @@ export default function Corkboard() {
                 </Button>
                 <p className="text-[10px] text-zinc-500 mt-2 text-center">Deletes all stickies currently visible on the board. This action cannot be undone.</p>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Visibility Modal */}
-      {isVisibilityOpen && (
-        <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
-            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950 shrink-0">
-              <h2 className="text-white font-bold flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-blue-500"/> Corkboard Visibility Settings
-              </h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(false)} className="text-zinc-400 hover:text-white h-8 w-8">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <ScrollArea className="flex-1 p-6 overflow-y-auto">
-              <div className="space-y-4">
-                {notesStore.notebooks.map(nb => {
-                  const isNbChecked = !excludedNotebooks.includes(nb.id);
-                  const sections = notesStore.sections.filter(s => s.notebook_id === nb.id);
-                  
-                  return (
-                    <div key={nb.id} className="space-y-2 border-b border-zinc-800 pb-3 last:border-b-0">
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2.5 cursor-pointer select-none text-sm font-semibold text-zinc-200">
-                          <input
-                            type="checkbox"
-                            checked={isNbChecked}
-                            onChange={() => {
-                              setExcludedNotebooks(prev => {
-                                let next;
-                                if (prev.includes(nb.id)) {
-                                  next = prev.filter(id => id !== nb.id);
-                                } else {
-                                  next = [...prev, nb.id];
-                                }
-                                localStorage.setItem('corkboard_excluded_notebooks', JSON.stringify(next));
-                                window.dispatchEvent(new Event('storage'));
-                                return next;
-                              });
-                            }}
-                            className="h-4.5 w-4.5 rounded border-zinc-800 bg-zinc-950 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                          />
-                          <Folder className="w-4 h-4 text-zinc-500 shrink-0" />
-                          <span>{nb.name}</span>
-                        </label>
-                      </div>
-                      
-                      {sections.length > 0 && (
-                        <div className="ml-7 space-y-2">
-                          {sections.map(sec => {
-                            const isSecChecked = !excludedSections.includes(sec.id);
-                            return (
-                              <label key={sec.id} className="flex items-center gap-2.5 cursor-pointer select-none text-xs text-zinc-400 hover:text-zinc-300">
-                                <input
-                                  type="checkbox"
-                                  checked={isSecChecked && isNbChecked}
-                                  disabled={!isNbChecked}
-                                  onChange={() => {
-                                    setExcludedSections(prev => {
-                                      let next;
-                                      if (prev.includes(sec.id)) {
-                                        next = prev.filter(id => id !== sec.id);
-                                      } else {
-                                        next = [...prev, sec.id];
-                                      }
-                                      localStorage.setItem('corkboard_excluded_sections', JSON.stringify(next));
-                                      window.dispatchEvent(new Event('storage'));
-                                      return next;
-                                    });
-                                  }}
-                                  className="h-4 w-4 rounded border-zinc-800 bg-zinc-950 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
-                                />
-                                <FileText className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-                                <span>{sec.name}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {notesStore.notebooks.length === 0 && (
-                  <div className="text-center py-6 text-zinc-600 text-xs">
-                    No notebooks found.
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-            
-            <div className="p-4 border-t border-zinc-800 bg-zinc-950 flex justify-between gap-3 shrink-0">
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  setExcludedNotebooks([]);
-                  setExcludedSections([]);
-                  localStorage.removeItem('corkboard_excluded_notebooks');
-                  localStorage.removeItem('corkboard_excluded_sections');
-                  window.dispatchEvent(new Event('storage'));
-                  toast({ title: "Reset visibility to all folders" });
-                }}
-                className="text-zinc-400 hover:bg-zinc-800 text-xs h-9"
-              >
-                Reset to All
-              </Button>
-              <Button 
-                onClick={() => setIsVisibilityOpen(false)}
-                className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-9 px-6 rounded-lg font-semibold"
-              >
-                Done
-              </Button>
             </div>
           </div>
         </div>
