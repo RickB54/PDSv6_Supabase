@@ -8,10 +8,10 @@ export function Toaster() {
   const isChecklistPage = location.pathname === "/service-checklist";
 
   return (
-    <ToastProvider>
+    <ToastProvider duration={2000}>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast key={id} {...props}>
+          <Toast key={id} {...props} onClick={() => props.onOpenChange?.(false)} className="cursor-pointer hover:opacity-90 active:scale-[0.99] transition-all">
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}
