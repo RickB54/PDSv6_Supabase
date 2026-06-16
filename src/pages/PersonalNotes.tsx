@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
     Plus, Search, Trash2, Folder, Inbox, Briefcase, User, Menu, ArrowLeft,
     MoreVertical, FileText, Lock, Unlock, Star, Tag, ChevronRight, ChevronDown, Edit2, Image as ImageIcon, X, Maximize2,
-    ChevronLeft, Link as LinkIcon, ArrowRight, StickyNote
+    ChevronLeft, Link as LinkIcon, ArrowRight, StickyNote, Sliders, Eye, EyeOff
 } from "lucide-react";
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -54,6 +54,53 @@ export default function PersonalNotes() {
     const [renameOpen, setRenameOpen] = useState(false);
     const [renameData, setRenameData] = useState<{ type: 'notebook' | 'section', id: string, name: string } | null>(null);
 
+    // Corkboard Visibility States
+    const [corkboardFilterOpen, setCorkboardFilterOpen] = useState(false);
+    const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
+        try {
+            const val = localStorage.getItem('corkboard_excluded_notebooks');
+            return val ? JSON.parse(val) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [excludedSections, setExcludedSections] = useState<string[]>(() => {
+        try {
+            const val = localStorage.getItem('corkboard_excluded_sections');
+            return val ? JSON.parse(val) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const handleToggleNotebookVisibility = (notebookId: string) => {
+        setExcludedNotebooks(prev => {
+            let next;
+            if (prev.includes(notebookId)) {
+                next = prev.filter(id => id !== notebookId);
+            } else {
+                next = [...prev, notebookId];
+            }
+            localStorage.setItem('corkboard_excluded_notebooks', JSON.stringify(next));
+            window.dispatchEvent(new Event('storage'));
+            return next;
+        });
+    };
+
+    const handleToggleSectionVisibility = (sectionId: string) => {
+        setExcludedSections(prev => {
+            let next;
+            if (prev.includes(sectionId)) {
+                next = prev.filter(id => id !== sectionId);
+            } else {
+                next = [...prev, sectionId];
+            }
+            localStorage.setItem('corkboard_excluded_sections', JSON.stringify(next));
+            window.dispatchEvent(new Event('storage'));
+            return next;
+        });
+    };
+
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<{ type: 'notebook' | 'section' | 'note', id: string, name: string } | null>(null);
 
@@ -67,7 +114,11 @@ export default function PersonalNotes() {
 
     // Filter Logic
     const filteredNotes = useMemo(() => {
-        let list = store.notes.filter(n => !n.tags?.includes('__corkboard__'));
+        const isCorkboardSection = store.activeSectionId === 'corkboard-stickies';
+        let list = store.notes.filter(n => {
+            const hasCorkboardTag = n.tags?.includes('__corkboard__');
+            return isCorkboardSection ? hasCorkboardTag : !hasCorkboardTag;
+        });
 
         // 1. Search (Global across all notes)
         if (store.searchQuery) {
@@ -79,7 +130,9 @@ export default function PersonalNotes() {
             );
         } else {
             // 2. Hierarchy Filter (OneNote-style: Notebook > Section > Pages)
-            if (store.activeSectionId === 'quick-notes') {
+            if (isCorkboardSection) {
+                // Show all corkboard stickies
+            } else if (store.activeSectionId === 'quick-notes') {
                 // Quick Notes: only show notes without a section
                 list = list.filter(n => !n.section_id);
             } else if (store.activeSectionId) {
@@ -135,7 +188,10 @@ export default function PersonalNotes() {
     };
 
     const handleCreateNote = async () => {
-        const id = await store.createNote(store.activeSectionId === 'quick-notes' ? null : store.activeSectionId);
+        const isCorkboard = store.activeSectionId === 'corkboard-stickies';
+        const sectionId = (store.activeSectionId === 'quick-notes' || isCorkboard) ? null : store.activeSectionId;
+        const tags = isCorkboard ? ['__corkboard__'] : [];
+        const id = await store.createNote(sectionId, '', '', tags);
         if (isMobile) setMobileView('editor');
     };
 
@@ -274,7 +330,18 @@ export default function PersonalNotes() {
     return (
         <div className="h-screen flex flex-col bg-zinc-950 text-foreground overflow-hidden">
             <div className="shrink-0">
-                <PageHeader title="Personal Notes" />
+                <PageHeader title="Personal Notes">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCorkboardFilterOpen(true)}
+                        className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl flex items-center gap-2 h-9"
+                    >
+                        <Sliders className="w-4 h-4 text-blue-400" />
+                        <span className="hidden sm:inline">Corkboard Visibility</span>
+                        <span className="sm:hidden">Visibility</span>
+                    </Button>
+                </PageHeader>
             </div>
 
             <div className="flex-1 overflow-hidden relative">
@@ -304,6 +371,22 @@ export default function PersonalNotes() {
                                             <div className="flex-1">
                                                 <div className="font-bold text-sm">Quick Notes</div>
                                                 <div className="text-[10px] text-zinc-500 uppercase tracking-tighter">Initial Thoughts & Ideas</div>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-zinc-600" />
+                                        </div>
+
+                                        <div
+                                            className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border
+                                                ${store.activeSectionId === 'corkboard-stickies' ? 'bg-yellow-500/20 border-yellow-500/50 text-white' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'}
+                                            `}
+                                            onClick={() => { store.setActiveSection('corkboard-stickies'); store.setActiveNotebook(null); setMobileView('notes'); }}
+                                        >
+                                            <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                                                <StickyNote className="w-5 h-5 text-yellow-500" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-sm">Corkboard Stickies</div>
+                                                <div className="text-[10px] text-zinc-500 uppercase tracking-tighter">Stickies from Corkboard App</div>
                                             </div>
                                             <ChevronRight className="w-4 h-4 text-zinc-600" />
                                         </div>
@@ -376,7 +459,7 @@ export default function PersonalNotes() {
                                     </Button>
                                     <div className="flex-1">
                                         <h2 className="text-sm font-bold text-white">
-                                            {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : (store.sections.find(s => s.id === store.activeSectionId)?.name || 'Notes')}
+                                            {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'corkboard-stickies' ? 'Corkboard Stickies' : (store.sections.find(s => s.id === store.activeSectionId)?.name || 'Notes')}
                                         </h2>
                                     </div>
                                     <Button size="sm" className="bg-blue-600 h-8 font-bold rounded-lg" onClick={handleCreateNote}>
@@ -457,13 +540,18 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-5 h-5 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="rounded-full" title="Send to Corkboard" onClick={() => {
+                                            <Button variant="ghost" size="icon" className="rounded-full" title={activeNote.tags?.includes('__corkboard__') ? "Remove from Corkboard" : "Send to Corkboard"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
-                                                toast.success("Sent to Corkboard App");
+                                                if (tags.includes('__corkboard__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__corkboard__') });
+                                                    toast.success("Removed from Corkboard App");
+                                                } else {
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
+                                                    toast.success("Sent to Corkboard App");
+                                                }
                                                 setMobileView('notes');
                                             }}>
-                                                <StickyNote className="w-5 h-5 text-yellow-500" />
+                                                <StickyNote className={`w-5 h-5 ${activeNote.tags?.includes('__corkboard__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-500'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-5 h-5 text-red-500" /> : <Unlock className="w-5 h-5 text-zinc-500" />}
@@ -620,6 +708,16 @@ export default function PersonalNotes() {
                                         <span className="font-bold text-sm tracking-tight">Quick Notes</span>
                                     </div>
 
+                                    <div
+                                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all
+                                            ${store.activeSectionId === 'corkboard-stickies' ? 'bg-yellow-500/10 text-yellow-400' : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}
+                                        `}
+                                        onClick={() => { store.setActiveSection('corkboard-stickies'); store.setActiveNotebook(null); }}
+                                    >
+                                        <StickyNote className="w-4 h-4 text-yellow-500 shrink-0" />
+                                        <span className="font-bold text-sm tracking-tight">Corkboard Stickies</span>
+                                    </div>
+
                                     {store.notebooks.map(nb => (
                                         <div key={nb.id} className="space-y-0.5">
                                             <div
@@ -690,7 +788,7 @@ export default function PersonalNotes() {
                             <div className="p-5 border-b border-zinc-900 space-y-3 bg-zinc-900/10">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest truncate flex-1">
-                                        {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : 'Page List'}
+                                        {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'corkboard-stickies' ? 'Corkboard Stickies' : 'Page List'}
                                     </h2>
                                     <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg h-7 px-3 shrink-0 ml-2" onClick={handleCreateNote}>
                                         <Plus className="w-3.5 h-3.5 mr-1" /> New
@@ -803,12 +901,17 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-4 h-4 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-600'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title="Send to Corkboard App" onClick={() => {
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title={activeNote.tags?.includes('__corkboard__') ? "Remove from Corkboard" : "Send to Corkboard"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
-                                                toast.success("Sent to Corkboard App");
+                                                if (tags.includes('__corkboard__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__corkboard__') });
+                                                    toast.success("Removed from Corkboard App");
+                                                } else {
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
+                                                    toast.success("Sent to Corkboard App");
+                                                }
                                             }}>
-                                                <StickyNote className="w-4 h-4 text-yellow-500" />
+                                                <StickyNote className={`w-4 h-4 ${activeNote.tags?.includes('__corkboard__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-600'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-zinc-600" />}
@@ -953,6 +1056,94 @@ export default function PersonalNotes() {
             </div>
 
             {/* Dialogs */}
+            <Dialog open={corkboardFilterOpen} onOpenChange={setCorkboardFilterOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md w-full max-h-[80vh] flex flex-col p-6 rounded-2xl overflow-hidden shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                            <StickyNote className="w-5 h-5 text-yellow-500" />
+                            Corkboard Visibility Settings
+                        </DialogTitle>
+                        <p className="text-zinc-500 text-xs mt-1">
+                            Choose which folders (Notebooks) and subfolders (Sections) should be visible on the Corkboard. Deselecting will hide them.
+                        </p>
+                    </DialogHeader>
+                    
+                    <ScrollArea className="flex-1 mt-4 pr-2 max-h-[50vh]">
+                        <div className="space-y-4">
+                            {store.notebooks.map(nb => {
+                                const isNbChecked = !excludedNotebooks.includes(nb.id);
+                                const sections = store.sections.filter(s => s.notebook_id === nb.id);
+                                
+                                return (
+                                    <div key={nb.id} className="space-y-2 border-b border-zinc-900 pb-3 last:border-b-0">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-2.5 cursor-pointer select-none text-sm font-semibold text-zinc-200">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isNbChecked}
+                                                    onChange={() => handleToggleNotebookVisibility(nb.id)}
+                                                    className="h-4.5 w-4.5 rounded border-zinc-800 bg-zinc-900 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                                />
+                                                <Folder className="w-4 h-4 text-zinc-500 shrink-0" />
+                                                <span>{nb.name}</span>
+                                            </label>
+                                        </div>
+                                        
+                                        {sections.length > 0 && (
+                                            <div className="ml-7 space-y-2">
+                                                {sections.map(sec => {
+                                                    const isSecChecked = !excludedSections.includes(sec.id);
+                                                    return (
+                                                        <label key={sec.id} className="flex items-center gap-2.5 cursor-pointer select-none text-xs text-zinc-400 hover:text-zinc-300">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSecChecked && isNbChecked}
+                                                                disabled={!isNbChecked}
+                                                                onChange={() => handleToggleSectionVisibility(sec.id)}
+                                                                className="h-4 w-4 rounded border-zinc-800 bg-zinc-900 text-blue-600 focus:ring-0 focus:ring-offset-0 cursor-pointer disabled:opacity-50"
+                                                            />
+                                                            <FileText className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                                                            <span>{sec.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            {store.notebooks.length === 0 && (
+                                <div className="text-center py-6 text-zinc-600 text-xs">
+                                    No notebooks found. Create one first!
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                    
+                    <DialogFooter className="mt-6 flex justify-between gap-3 sm:justify-end">
+                        <Button 
+                            variant="ghost" 
+                            onClick={() => {
+                                setExcludedNotebooks([]);
+                                setExcludedSections([]);
+                                localStorage.removeItem('corkboard_excluded_notebooks');
+                                localStorage.removeItem('corkboard_excluded_sections');
+                                toast.success("Reset visibility to all folders");
+                            }}
+                            className="text-zinc-400 hover:bg-zinc-900 text-xs h-9"
+                        >
+                            Reset to All
+                        </Button>
+                        <Button 
+                            onClick={() => setCorkboardFilterOpen(false)}
+                            className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-9 px-6 rounded-lg font-semibold"
+                        >
+                            Done
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={createNotebookOpen} onOpenChange={setCreateNotebookOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Create New Notebook</DialogTitle></DialogHeader>
