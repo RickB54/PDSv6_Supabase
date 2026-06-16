@@ -70,7 +70,7 @@ const getCleanContent = (content) => {
   return content.substring(0, splitIndex).trim();
 };
 
-const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, showTags?: boolean, showToolbar?: boolean }) => {
+const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean }) => {
   const {
     attributes,
     listeners,
@@ -145,7 +145,16 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
             return (
               <div className={`grid gap-1 mb-3 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 {images.map((img, i) => (
-                  <img key={i} src={img} alt="attachment" className="w-full h-24 object-cover rounded shadow-sm bg-white/20" />
+                  <img 
+                    key={i} 
+                    src={img} 
+                    alt="attachment" 
+                    className="w-full h-24 object-cover rounded shadow-sm bg-white/20 cursor-zoom-in hover:brightness-95 transition-all" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onImageClick(img);
+                    }}
+                  />
                 ))}
               </div>
             );
@@ -162,7 +171,7 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       </div>
       {showTags && (
         <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
-          {note.tags && note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).length > 0 ? note.tags.filter(t => t !== '__corkboard__' && !t.startsWith('__color:')).map(t => (
+          {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
             <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
           )) : (
             <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
@@ -376,7 +385,7 @@ export default function Corkboard() {
   const navigate = useNavigate();
   const notesStore = useNotesStore();
   
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedNotebook, setSelectedNotebook] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
@@ -419,6 +428,7 @@ export default function Corkboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const [sortBy, setSortBy] = useState<string>("manual");
   const [dateFilter, setDateFilter] = useState<string>("all");
@@ -430,7 +440,8 @@ export default function Corkboard() {
     masonry: localStorage.getItem('corkboard_masonry') === 'true',
     isolate: localStorage.getItem('corkboard_isolate') !== 'false',
     toolbar: localStorage.getItem('corkboard_toolbar') !== 'false',
-    matchColor: localStorage.getItem('corkboard_match_color') === 'true'
+    matchColor: localStorage.getItem('corkboard_match_color') === 'true',
+    darkTheme: localStorage.getItem('corkboard_dark_theme') === 'true'
   });
 
   const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
@@ -474,8 +485,12 @@ export default function Corkboard() {
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor', val: boolean) => {
-    localStorage.setItem(`corkboard_${key}`, String(val));
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme', val: boolean) => {
+    if (key === 'darkTheme') {
+      localStorage.setItem('corkboard_dark_theme', String(val));
+    } else {
+      localStorage.setItem(`corkboard_${key}`, String(val));
+    }
     setPrefs(p => ({ ...p, [key]: val }));
   };
 
@@ -901,6 +916,15 @@ export default function Corkboard() {
             <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10">
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+              className={`text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10 ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
+              title={isSidebarOpen ? "Hide Categories" : "Show Categories"}
+            >
+              <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </Button>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30 shrink-0">
                 <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
@@ -928,9 +952,6 @@ export default function Corkboard() {
               className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold shadow-[0_0_15px_rgba(234,179,8,0.3)] h-8 px-2 text-xs"
             >
               <Plus className="w-3 h-3 mr-1" /> New
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-zinc-400 hover:text-white h-8 w-8">
-              <PanelLeft className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -1012,9 +1033,9 @@ export default function Corkboard() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden relative bg-[#5c4033]">
+      <div className={`flex-1 flex overflow-hidden relative ${prefs.darkTheme ? 'bg-zinc-950' : 'bg-[#5c4033]'}`}>
         {/* Faint Corkboard Texture Background */}
-        <div className="absolute inset-0 opacity-20 mix-blend-multiply pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+        <div className={`absolute inset-0 ${prefs.darkTheme ? 'opacity-10 mix-blend-overlay' : 'opacity-20 mix-blend-multiply'} pointer-events-none`} style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
         {/* Sidebar Categories */}
         <div className={`
@@ -1183,6 +1204,7 @@ export default function Corkboard() {
                             onChangeColor={handleChangeColor}
                             onToggleCheckboxes={handleToggleCheckboxes}
                             onTogglePin={handleTogglePin}
+                            onImageClick={setLightboxImage}
                             showTags={true}
                             showToolbar={prefs.toolbar}
                           />
@@ -1237,6 +1259,7 @@ export default function Corkboard() {
                             onChangeColor={handleChangeColor}
                             onToggleCheckboxes={handleToggleCheckboxes}
                             onTogglePin={handleTogglePin}
+                            onImageClick={setLightboxImage}
                             showTags={true}
                             showToolbar={prefs.toolbar}
                           />
@@ -1266,8 +1289,14 @@ export default function Corkboard() {
         const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
         return (
-        <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
-          <div className={`${editColor.bg} w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 ${editColor.border} flex flex-col h-[95vh]`}>
+        <div 
+          onClick={handleSaveNote}
+          className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={`${editColor.bg} w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 ${editColor.border} flex flex-col h-[95vh] cursor-default`}
+          >
             <div className={`p-4 border-b border-black/10 flex justify-between items-start ${editColor.bg} brightness-95`}>
               <div className="flex flex-col gap-1">
                 <h2 className={`font-bold ${editColor.text}`}>{editingNote.id === 'new' ? 'New Sticky' : 'Edit Sticky'}</h2>
@@ -1330,7 +1359,12 @@ export default function Corkboard() {
                       <div className={`grid gap-2 ${images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
                         {images.map((img, i) => (
                           <div key={i} className="relative group">
-                            <img src={img} alt="attachment" className="w-full h-32 sm:h-48 object-cover rounded shadow-sm bg-white/20" />
+                            <img 
+                              src={img} 
+                              alt="attachment" 
+                              className="w-full h-32 sm:h-48 object-cover rounded shadow-sm bg-white/20 cursor-zoom-in hover:brightness-95 transition-all" 
+                              onClick={() => setLightboxImage(img)}
+                            />
                             <Button 
                               variant="destructive" 
                               size="icon" 
@@ -1664,6 +1698,16 @@ export default function Corkboard() {
                   <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
               </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-sm">Dark Theme</div>
+                  <div className="text-xs text-zinc-500">Show only dark mode background</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={prefs.darkTheme} onChange={e => updatePref('darkTheme', e.target.checked)} />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
               <div className="pt-4 border-t border-zinc-800">
                 <Button 
                   variant="destructive" 
@@ -1804,6 +1848,34 @@ export default function Corkboard() {
                 Done
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-[500] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-full max-h-[90vh] flex items-center justify-center">
+            <img 
+              src={lightboxImage} 
+              alt="attachment preview" 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200" 
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setLightboxImage(null)} 
+              className="absolute -top-12 right-0 text-white hover:bg-white/10 rounded-full h-10 w-10 z-10"
+              title="Close Fullscreen"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+          <div className="mt-4 text-xs text-zinc-400 font-semibold bg-zinc-950/80 px-3 py-1.5 rounded-full border border-zinc-800 backdrop-blur-sm pointer-events-none select-none">
+            Click anywhere to exit fullscreen view
           </div>
         </div>
       )}
