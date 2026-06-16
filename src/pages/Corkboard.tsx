@@ -1437,7 +1437,7 @@ export default function Corkboard() {
                     <Plus className="w-3 h-3 mr-1" /> Add New Section Here
                   </Button>
                 </div>
-                <div className={`flex-1 relative flex overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
+                <div className={`flex-1 relative flex flex-col overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
                   {/* Gutter Background */}
                   <div className={`absolute top-0 bottom-0 left-0 w-8 border-r ${editColor.border} opacity-30 pointer-events-none z-10`} />
                   
@@ -1505,6 +1505,14 @@ export default function Corkboard() {
                       <div key={i} className="min-h-[1.5em]">{line || ' '}</div>
                     ))}
                   </div>
+
+                  {editingNote.section_id && (
+                    <div className="px-4 pb-3 pl-10 pt-1 shrink-0 flex">
+                      <div className="inline-flex items-center text-xs font-bold px-3 py-1 rounded-full border border-black/20 bg-black/5 text-inherit select-none">
+                        {notesStore.sections.find(s => s.id === editingNote.section_id)?.name}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button 
                   size="icon" 
