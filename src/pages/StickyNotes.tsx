@@ -858,7 +858,9 @@ export default function StickyNotes() {
   }, [visibleNotes, localNoteOrder]);
 
   const activeNotes = useMemo(() => {
-    let filtered = orderedAllNotes.filter(n => {
+      let filtered = orderedAllNotes.filter(n => {
+        if (pinFilter === 'pinned' && !n.is_pinned) return false;
+        if (pinFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (selectedSection) {
