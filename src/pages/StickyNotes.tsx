@@ -933,7 +933,7 @@ export default function StickyNotes() {
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
+  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, pinFilter, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
