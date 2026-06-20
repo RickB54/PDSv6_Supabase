@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Eye, Pin, PinOff, useNavigate } from "react-router-dom";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
@@ -515,6 +515,7 @@ export default function StickyNotes() {
   const notesStore = useNotesStore();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [pinFilter, setPinFilter] = useState<'all'|'pinned'|'unpinned'>('all');
   const [selectedNotebook, setSelectedNotebook] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
@@ -1425,7 +1426,12 @@ export default function StickyNotes() {
  
           {/* Compact actions only visible on Mobile (<md) */}
           <div className="flex flex-wrap items-center justify-end gap-1 md:hidden mt-2 sm:mt-0 w-full min-[400px]:w-auto">
-            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sync Stickies">
+            
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" + (isSidebarOpen ? ' text-emerald-400' : ' text-zinc-400')} title="Toggle Tags Menu"><PanelLeft className="w-3.5 h-3.5" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
+                {pinFilter === 'all' ? <Eye className="w-3.5 h-3.5" /> : pinFilter === 'pinned' ? <Pin className="w-3.5 h-3.5 fill-current" /> : <Pin className="w-3.5 h-3.5" />}
+              </Button>
+<Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sync Stickies">
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'sticky-notes' } }))} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Help Center">
@@ -1559,7 +1565,12 @@ export default function StickyNotes() {
 
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 ml-auto 2xl:ml-0">
-            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
+            
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" + (isSidebarOpen ? ' text-emerald-400' : ' text-zinc-400')} title="Toggle Tags Menu"><PanelLeft className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
+                {pinFilter === 'all' ? <Eye className="w-4 h-4" /> : pinFilter === 'pinned' ? <Pin className="w-4 h-4 fill-current" /> : <Pin className="w-4 h-4" />}
+              </Button>
+<Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
                 <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'sticky-notes' } }))} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Help Center">
@@ -2367,7 +2378,7 @@ export default function StickyNotes() {
 
                     <h4 className="font-bold text-sm mb-3 text-zinc-300 mt-4 border-t border-zinc-800 pt-3">Line Spacing</h4>
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      {[1.0, 1.5, 2.0].map(size => (
+                      {[1.0, 1.625, 2.0].map(size => (
                         <Button 
                           key={size} 
                           variant="outline" 
