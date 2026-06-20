@@ -710,7 +710,7 @@ export const stickyNotesHelpTopic: HelpTopic = {
     '• **Animations**: Choose how notes appear when you open/close them (Smooth, Pop, Bounce, Slide, Flip).',
     '• **Tags Visibility**: Toggle whether the colored tag labels are visible at the bottom of each note.',
     '• **Masonry vs Grid Layout**: Choose between a structured Grid layout or a dynamic Masonry layout (where notes stack tightly together like a real corkboard).',
-    '• **Isolate Mode**: When enabled, this completely hides any notes that don't explicitly have the "__sticky-notes__" system tag, allowing you to hide clutter.',
+    '• **Isolate Mode**: When enabled, this completely hides any notes that do not explicitly have the "__sticky-notes__" system tag, allowing you to hide clutter.',
     '• **Line Spacing**: Set the default spacing between lines of text (the 1.625 Custom setting is perfectly calibrated to align with the Status Boxes!).'
   ],
   route: '/sticky-notes',
