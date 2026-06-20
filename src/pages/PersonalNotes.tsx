@@ -116,7 +116,7 @@ export default function PersonalNotes() {
     const filteredNotes = useMemo(() => {
         const isStickyNotesSection = store.activeSectionId === 'sticky_notes-stickies';
         let list = store.notes.filter(n => {
-            const hasStickyNotesTag = n.tags?.includes('__sticky_notes__');
+            const hasStickyNotesTag = n.tags?.includes('__sticky-notes__');
             return isStickyNotesSection ? hasStickyNotesTag : !hasStickyNotesTag;
         });
 
@@ -190,7 +190,7 @@ export default function PersonalNotes() {
     const handleCreateNote = async () => {
         const isStickyNotes = store.activeSectionId === 'sticky_notes-stickies';
         const sectionId = (store.activeSectionId === 'quick-notes' || isStickyNotes) ? null : store.activeSectionId;
-        const tags = isStickyNotes ? ['__sticky_notes__'] : [];
+        const tags = isStickyNotes ? ['__sticky-notes__'] : [];
         const id = await store.createNote(sectionId, '', '', tags);
         if (isMobile) setMobileView('editor');
     };
@@ -540,18 +540,18 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-5 h-5 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="rounded-full" title={activeNote.tags?.includes('__sticky_notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
+                                            <Button variant="ghost" size="icon" className="rounded-full" title={activeNote.tags?.includes('__sticky-notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                if (tags.includes('__sticky_notes__')) {
-                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky_notes__') });
+                                                if (tags.includes('__sticky-notes__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky-notes__') });
                                                     toast.success("Removed from Sticky Notes App");
                                                 } else {
-                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky_notes__'] });
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky-notes__'] });
                                                     toast.success("Sent to Sticky Notes App");
                                                 }
                                                 setMobileView('notes');
                                             }}>
-                                                <StickyNote className={`w-5 h-5 ${activeNote.tags?.includes('__sticky_notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-500'}`} />
+                                                <StickyNote className={`w-5 h-5 ${activeNote.tags?.includes('__sticky-notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-500'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-5 h-5 text-red-500" /> : <Unlock className="w-5 h-5 text-zinc-500" />}
@@ -901,17 +901,17 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-4 h-4 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-600'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title={activeNote.tags?.includes('__sticky_notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title={activeNote.tags?.includes('__sticky-notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                if (tags.includes('__sticky_notes__')) {
-                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky_notes__') });
+                                                if (tags.includes('__sticky-notes__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky-notes__') });
                                                     toast.success("Removed from Sticky Notes App");
                                                 } else {
-                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky_notes__'] });
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky-notes__'] });
                                                     toast.success("Sent to Sticky Notes App");
                                                 }
                                             }}>
-                                                <StickyNote className={`w-4 h-4 ${activeNote.tags?.includes('__sticky_notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-600'}`} />
+                                                <StickyNote className={`w-4 h-4 ${activeNote.tags?.includes('__sticky-notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-600'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-zinc-600" />}
