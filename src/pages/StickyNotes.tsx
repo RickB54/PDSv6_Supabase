@@ -1429,7 +1429,7 @@ export default function StickyNotes() {
           {/* Compact actions only visible on Mobile (<md) */}
           <div className="flex flex-wrap items-center justify-end gap-1 md:hidden mt-2 sm:mt-0 w-full min-[400px]:w-auto">
             
-              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" + (isSidebarOpen ? ' text-emerald-400' : ' text-zinc-400')} title="Toggle Tags Menu"><PanelLeft className="w-3.5 h-3.5" /></Button>
+              
               <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
                 {pinFilter === 'all' ? <Eye className="w-3.5 h-3.5" /> : pinFilter === 'pinned' ? <Pin className="w-3.5 h-3.5 fill-current" /> : <Pin className="w-3.5 h-3.5" />}
               </Button>
@@ -1568,7 +1568,7 @@ export default function StickyNotes() {
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 ml-auto 2xl:ml-0">
             
-              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" + (isSidebarOpen ? ' text-emerald-400' : ' text-zinc-400')} title="Toggle Tags Menu"><PanelLeft className="w-4 h-4" /></Button>
+              
               <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
                 {pinFilter === 'all' ? <Eye className="w-4 h-4" /> : pinFilter === 'pinned' ? <Pin className="w-4 h-4 fill-current" /> : <Pin className="w-4 h-4" />}
               </Button>
@@ -1610,6 +1610,9 @@ export default function StickyNotes() {
                 <PanelLeftClose className="w-4 h-4" />
               </Button>
               <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
+                <Button variant="destructive" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="h-5 px-1.5 ml-1 bg-red-600 hover:bg-red-500 text-white rounded-md flex items-center justify-center shadow-lg" title="Toggle Sidebar">
+                  <PanelLeft className="w-3.5 h-3.5" />
+                </Button>
               <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
@@ -1727,14 +1730,7 @@ export default function StickyNotes() {
           onScroll={(e) => setShowScrollTopBtn(e.currentTarget.scrollTop > 300)}
           className="flex-1 overflow-y-auto p-8 relative z-10 scroll-smooth"
         >
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className={`fixed bottom-6 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800 ${isSidebarOpen ? 'lg:hidden' : ''}`}
-          >
-            <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
-          </Button>
+          
 
           {/* Quick Note Bar */}
           <div className="mb-8 max-w-2xl mx-auto mt-2">

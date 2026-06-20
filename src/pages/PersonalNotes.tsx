@@ -115,10 +115,7 @@ export default function PersonalNotes() {
     // Filter Logic
     const filteredNotes = useMemo(() => {
         const isStickyNotesSection = store.activeSectionId === 'sticky_notes-stickies';
-        let list = store.notes.filter(n => {
-            const hasStickyNotesTag = n.tags?.includes('__sticky-notes__');
-            return isStickyNotesSection ? hasStickyNotesTag : !hasStickyNotesTag;
-        });
+          let list = store.notes;
 
         // 1. Search (Global across all notes)
         if (store.searchQuery) {
@@ -131,8 +128,8 @@ export default function PersonalNotes() {
         } else {
             // 2. Hierarchy Filter (OneNote-style: Notebook > Section > Pages)
             if (isStickyNotesSection) {
-                // Show all sticky_notes stickies
-            } else if (store.activeSectionId === 'quick-notes') {
+                  list = list.filter(n => n.tags?.includes('__sticky-notes__'));
+              } else if (store.activeSectionId === 'quick-notes') {
                 // Quick Notes: only show notes without a section
                 list = list.filter(n => !n.section_id);
             } else if (store.activeSectionId) {
