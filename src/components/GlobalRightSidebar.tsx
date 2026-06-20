@@ -64,11 +64,11 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        {/* Corkboard */}
+        {/* Sticky Notes */}
         {isAdmin && (
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/corkboard')} title="Corkboard" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/sticky-notes')} title="Sticky Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CheckSquare className="w-5 h-5 text-yellow-500" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Corkboard</span>}
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Sticky Notes</span>}
             </Button>
         )}
 

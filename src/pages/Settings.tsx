@@ -116,9 +116,9 @@ const Settings = () => {
   const [wipeResult, setWipeResult] = useState<{ msg: string; details: string | null } | null>(null);
 
   const [hideChatBot, setHideChatBot] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
-  const [cbAnim, setCbAnim] = useState(() => localStorage.getItem('corkboard_anim') !== 'false');
-  const [cbMasonry, setCbMasonry] = useState(() => localStorage.getItem('corkboard_masonry') === 'true');
-  const [cbTags, setCbTags] = useState(() => localStorage.getItem('corkboard_tags') !== 'false');
+  const [cbAnim, setCbAnim] = useState(() => localStorage.getItem('sticky_notes_anim') !== 'false');
+  const [cbMasonry, setCbMasonry] = useState(() => localStorage.getItem('sticky_notes_masonry') === 'true');
+  const [cbTags, setCbTags] = useState(() => localStorage.getItem('sticky_notes_tags') !== 'false');
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -779,15 +779,15 @@ const Settings = () => {
               />
             </div>
 
-            {/* Corkboard Preferences */}
+            {/* Sticky Notes Preferences */}
             <div className="mt-6 border-t border-zinc-800/50 pt-4">
-              <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Plan & Review Corkboard Settings</h3>
+              <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Plan & Review Sticky Notes Settings</h3>
               <div className="space-y-4 px-2">
                 <div className="flex items-center gap-3">
                   <Checkbox 
                     id="cb-anim" 
                     checked={cbAnim} 
-                    onCheckedChange={(val) => { setCbAnim(!!val); localStorage.setItem('corkboard_anim', String(!!val)); }} 
+                    onCheckedChange={(val) => { setCbAnim(!!val); localStorage.setItem('sticky_notes_anim', String(!!val)); }} 
                   />
                   <div className="flex flex-col">
                     <Label htmlFor="cb-anim" className="text-white cursor-pointer text-sm">Enable Transitions & Animations</Label>
@@ -798,7 +798,7 @@ const Settings = () => {
                   <Checkbox 
                     id="cb-masonry" 
                     checked={cbMasonry} 
-                    onCheckedChange={(val) => { setCbMasonry(!!val); localStorage.setItem('corkboard_masonry', String(!!val)); }} 
+                    onCheckedChange={(val) => { setCbMasonry(!!val); localStorage.setItem('sticky_notes_masonry', String(!!val)); }} 
                   />
                   <div className="flex flex-col">
                     <Label htmlFor="cb-masonry" className="text-white cursor-pointer text-sm">Masonry Organization Layout</Label>
@@ -809,7 +809,7 @@ const Settings = () => {
                   <Checkbox 
                     id="cb-tags" 
                     checked={cbTags} 
-                    onCheckedChange={(val) => { setCbTags(!!val); localStorage.setItem('corkboard_tags', String(!!val)); }} 
+                    onCheckedChange={(val) => { setCbTags(!!val); localStorage.setItem('sticky_notes_tags', String(!!val)); }} 
                   />
                   <div className="flex flex-col">
                     <Label htmlFor="cb-tags" className="text-white cursor-pointer text-sm">Extended Functions & Badges</Label>

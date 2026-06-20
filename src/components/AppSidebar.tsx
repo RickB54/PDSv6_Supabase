@@ -393,7 +393,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery', iconColor: 'text-purple-500', helpTopicId: 'media-library' },
     { title: 'App Manual', url: '/app-manual', icon: Shield, role: 'employee', key: 'app-manual', iconColor: 'text-blue-400', helpTopicId: 'app-manual' },
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined, iconColor: 'text-emerald-500', helpTopicId: 'file-manager' },
-    { title: 'Corkboard', url: '/corkboard', icon: CheckSquare, role: 'admin', key: 'corkboard', iconColor: 'text-yellow-500', helpTopicId: 'personal-notes' }
+    { title: 'Sticky Notes', url: '/sticky-notes', icon: CheckSquare, role: 'admin', key: 'sticky_notes', iconColor: 'text-yellow-500', helpTopicId: 'sticky-notes' }
 
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;

@@ -54,11 +54,11 @@ export default function PersonalNotes() {
     const [renameOpen, setRenameOpen] = useState(false);
     const [renameData, setRenameData] = useState<{ type: 'notebook' | 'section', id: string, name: string } | null>(null);
 
-    // Corkboard Visibility States
-    const [corkboardFilterOpen, setCorkboardFilterOpen] = useState(false);
+    // Sticky Notes Visibility States
+    const [sticky_notesFilterOpen, setStickyNotesFilterOpen] = useState(false);
     const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
         try {
-            const val = localStorage.getItem('corkboard_excluded_notebooks');
+            const val = localStorage.getItem('sticky_notes_excluded_notebooks');
             return val ? JSON.parse(val) : [];
         } catch {
             return [];
@@ -66,7 +66,7 @@ export default function PersonalNotes() {
     });
     const [excludedSections, setExcludedSections] = useState<string[]>(() => {
         try {
-            const val = localStorage.getItem('corkboard_excluded_sections');
+            const val = localStorage.getItem('sticky_notes_excluded_sections');
             return val ? JSON.parse(val) : [];
         } catch {
             return [];
@@ -81,7 +81,7 @@ export default function PersonalNotes() {
             } else {
                 next = [...prev, notebookId];
             }
-            localStorage.setItem('corkboard_excluded_notebooks', JSON.stringify(next));
+            localStorage.setItem('sticky_notes_excluded_notebooks', JSON.stringify(next));
             window.dispatchEvent(new Event('storage'));
             return next;
         });
@@ -95,7 +95,7 @@ export default function PersonalNotes() {
             } else {
                 next = [...prev, sectionId];
             }
-            localStorage.setItem('corkboard_excluded_sections', JSON.stringify(next));
+            localStorage.setItem('sticky_notes_excluded_sections', JSON.stringify(next));
             window.dispatchEvent(new Event('storage'));
             return next;
         });
@@ -114,10 +114,10 @@ export default function PersonalNotes() {
 
     // Filter Logic
     const filteredNotes = useMemo(() => {
-        const isCorkboardSection = store.activeSectionId === 'corkboard-stickies';
+        const isStickyNotesSection = store.activeSectionId === 'sticky_notes-stickies';
         let list = store.notes.filter(n => {
-            const hasCorkboardTag = n.tags?.includes('__corkboard__');
-            return isCorkboardSection ? hasCorkboardTag : !hasCorkboardTag;
+            const hasStickyNotesTag = n.tags?.includes('__sticky_notes__');
+            return isStickyNotesSection ? hasStickyNotesTag : !hasStickyNotesTag;
         });
 
         // 1. Search (Global across all notes)
@@ -130,8 +130,8 @@ export default function PersonalNotes() {
             );
         } else {
             // 2. Hierarchy Filter (OneNote-style: Notebook > Section > Pages)
-            if (isCorkboardSection) {
-                // Show all corkboard stickies
+            if (isStickyNotesSection) {
+                // Show all sticky_notes stickies
             } else if (store.activeSectionId === 'quick-notes') {
                 // Quick Notes: only show notes without a section
                 list = list.filter(n => !n.section_id);
@@ -188,9 +188,9 @@ export default function PersonalNotes() {
     };
 
     const handleCreateNote = async () => {
-        const isCorkboard = store.activeSectionId === 'corkboard-stickies';
-        const sectionId = (store.activeSectionId === 'quick-notes' || isCorkboard) ? null : store.activeSectionId;
-        const tags = isCorkboard ? ['__corkboard__'] : [];
+        const isStickyNotes = store.activeSectionId === 'sticky_notes-stickies';
+        const sectionId = (store.activeSectionId === 'quick-notes' || isStickyNotes) ? null : store.activeSectionId;
+        const tags = isStickyNotes ? ['__sticky_notes__'] : [];
         const id = await store.createNote(sectionId, '', '', tags);
         if (isMobile) setMobileView('editor');
     };
@@ -334,11 +334,11 @@ export default function PersonalNotes() {
                     <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCorkboardFilterOpen(true)}
+                        onClick={() => setStickyNotesFilterOpen(true)}
                         className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl flex items-center gap-2 h-9"
                     >
                         <Sliders className="w-4 h-4 text-blue-400" />
-                        <span className="hidden sm:inline">Corkboard Visibility</span>
+                        <span className="hidden sm:inline">Sticky Notes Visibility</span>
                         <span className="sm:hidden">Visibility</span>
                     </Button>
                 </PageHeader>
@@ -377,16 +377,16 @@ export default function PersonalNotes() {
 
                                         <div
                                             className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border
-                                                ${store.activeSectionId === 'corkboard-stickies' ? 'bg-yellow-500/20 border-yellow-500/50 text-white' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'}
+                                                ${store.activeSectionId === 'sticky_notes-stickies' ? 'bg-yellow-500/20 border-yellow-500/50 text-white' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'}
                                             `}
-                                            onClick={() => { store.setActiveSection('corkboard-stickies'); store.setActiveNotebook(null); setMobileView('notes'); }}
+                                            onClick={() => { store.setActiveSection('sticky_notes-stickies'); store.setActiveNotebook(null); setMobileView('notes'); }}
                                         >
                                             <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
                                                 <StickyNote className="w-5 h-5 text-yellow-500" />
                                             </div>
                                             <div className="flex-1">
-                                                <div className="font-bold text-sm">Corkboard Stickies</div>
-                                                <div className="text-[10px] text-zinc-500 uppercase tracking-tighter">Stickies from Corkboard App</div>
+                                                <div className="font-bold text-sm">Sticky Notes Stickies</div>
+                                                <div className="text-[10px] text-zinc-500 uppercase tracking-tighter">Stickies from Sticky Notes App</div>
                                             </div>
                                             <ChevronRight className="w-4 h-4 text-zinc-600" />
                                         </div>
@@ -459,7 +459,7 @@ export default function PersonalNotes() {
                                     </Button>
                                     <div className="flex-1">
                                         <h2 className="text-sm font-bold text-white">
-                                            {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'corkboard-stickies' ? 'Corkboard Stickies' : (store.sections.find(s => s.id === store.activeSectionId)?.name || 'Notes')}
+                                            {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'sticky_notes-stickies' ? 'Sticky Notes Stickies' : (store.sections.find(s => s.id === store.activeSectionId)?.name || 'Notes')}
                                         </h2>
                                     </div>
                                     <Button size="sm" className="bg-blue-600 h-8 font-bold rounded-lg" onClick={handleCreateNote}>
@@ -540,18 +540,18 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-5 h-5 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="rounded-full" title={activeNote.tags?.includes('__corkboard__') ? "Remove from Corkboard" : "Send to Corkboard"} onClick={() => {
+                                            <Button variant="ghost" size="icon" className="rounded-full" title={activeNote.tags?.includes('__sticky_notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                if (tags.includes('__corkboard__')) {
-                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__corkboard__') });
-                                                    toast.success("Removed from Corkboard App");
+                                                if (tags.includes('__sticky_notes__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky_notes__') });
+                                                    toast.success("Removed from Sticky Notes App");
                                                 } else {
-                                                    store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
-                                                    toast.success("Sent to Corkboard App");
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky_notes__'] });
+                                                    toast.success("Sent to Sticky Notes App");
                                                 }
                                                 setMobileView('notes');
                                             }}>
-                                                <StickyNote className={`w-5 h-5 ${activeNote.tags?.includes('__corkboard__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-500'}`} />
+                                                <StickyNote className={`w-5 h-5 ${activeNote.tags?.includes('__sticky_notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-500'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-5 h-5 text-red-500" /> : <Unlock className="w-5 h-5 text-zinc-500" />}
@@ -710,12 +710,12 @@ export default function PersonalNotes() {
 
                                     <div
                                         className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all
-                                            ${store.activeSectionId === 'corkboard-stickies' ? 'bg-yellow-500/10 text-yellow-400' : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}
+                                            ${store.activeSectionId === 'sticky_notes-stickies' ? 'bg-yellow-500/10 text-yellow-400' : 'text-zinc-500 hover:bg-zinc-900/50 hover:text-zinc-300'}
                                         `}
-                                        onClick={() => { store.setActiveSection('corkboard-stickies'); store.setActiveNotebook(null); }}
+                                        onClick={() => { store.setActiveSection('sticky_notes-stickies'); store.setActiveNotebook(null); }}
                                     >
                                         <StickyNote className="w-4 h-4 text-yellow-500 shrink-0" />
-                                        <span className="font-bold text-sm tracking-tight">Corkboard Stickies</span>
+                                        <span className="font-bold text-sm tracking-tight">Sticky Notes Stickies</span>
                                     </div>
 
                                     {store.notebooks.map(nb => (
@@ -788,7 +788,7 @@ export default function PersonalNotes() {
                             <div className="p-5 border-b border-zinc-900 space-y-3 bg-zinc-900/10">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest truncate flex-1">
-                                        {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'corkboard-stickies' ? 'Corkboard Stickies' : 'Page List'}
+                                        {store.activeSectionId === 'quick-notes' ? 'Quick Notes' : store.activeSectionId === 'sticky_notes-stickies' ? 'Sticky Notes Stickies' : 'Page List'}
                                     </h2>
                                     <Button size="sm" className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg h-7 px-3 shrink-0 ml-2" onClick={handleCreateNote}>
                                         <Plus className="w-3.5 h-3.5 mr-1" /> New
@@ -901,17 +901,17 @@ export default function PersonalNotes() {
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={() => store.updateNote(activeNote.id, { is_pinned: !activeNote.is_pinned })}>
                                                 <Star className={`w-4 h-4 ${activeNote.is_pinned ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-600'}`} />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title={activeNote.tags?.includes('__corkboard__') ? "Remove from Corkboard" : "Send to Corkboard"} onClick={() => {
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" title={activeNote.tags?.includes('__sticky_notes__') ? "Remove from Sticky Notes" : "Send to Sticky Notes"} onClick={() => {
                                                 const tags = activeNote.tags || [];
-                                                if (tags.includes('__corkboard__')) {
-                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__corkboard__') });
-                                                    toast.success("Removed from Corkboard App");
+                                                if (tags.includes('__sticky_notes__')) {
+                                                    store.updateNote(activeNote.id, { tags: tags.filter(t => t !== '__sticky_notes__') });
+                                                    toast.success("Removed from Sticky Notes App");
                                                 } else {
-                                                    store.updateNote(activeNote.id, { tags: [...tags, '__corkboard__'] });
-                                                    toast.success("Sent to Corkboard App");
+                                                    store.updateNote(activeNote.id, { tags: [...tags, '__sticky_notes__'] });
+                                                    toast.success("Sent to Sticky Notes App");
                                                 }
                                             }}>
-                                                <StickyNote className={`w-4 h-4 ${activeNote.tags?.includes('__corkboard__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-600'}`} />
+                                                <StickyNote className={`w-4 h-4 ${activeNote.tags?.includes('__sticky_notes__') ? 'text-yellow-500 fill-yellow-500/20' : 'text-zinc-600'}`} />
                                             </Button>
                                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-zinc-900" onClick={toggleLock}>
                                                 {activeNote.is_locked ? <Lock className="w-4 h-4 text-red-500" /> : <Unlock className="w-4 h-4 text-zinc-600" />}
@@ -1056,15 +1056,15 @@ export default function PersonalNotes() {
             </div>
 
             {/* Dialogs */}
-            <Dialog open={corkboardFilterOpen} onOpenChange={setCorkboardFilterOpen}>
+            <Dialog open={sticky_notesFilterOpen} onOpenChange={setStickyNotesFilterOpen}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md w-full max-h-[80vh] flex flex-col p-6 rounded-2xl overflow-hidden shadow-2xl">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold flex items-center gap-2">
                             <StickyNote className="w-5 h-5 text-yellow-500" />
-                            Corkboard Visibility Settings
+                            Sticky Notes Visibility Settings
                         </DialogTitle>
                         <p className="text-zinc-500 text-xs mt-1">
-                            Choose which folders (Notebooks) and subfolders (Sections) should be visible on the Corkboard. Deselecting will hide them.
+                            Choose which folders (Notebooks) and subfolders (Sections) should be visible on the Sticky Notes. Deselecting will hide them.
                         </p>
                     </DialogHeader>
                     
@@ -1126,8 +1126,8 @@ export default function PersonalNotes() {
                             onClick={() => {
                                 setExcludedNotebooks([]);
                                 setExcludedSections([]);
-                                localStorage.removeItem('corkboard_excluded_notebooks');
-                                localStorage.removeItem('corkboard_excluded_sections');
+                                localStorage.removeItem('sticky_notes_excluded_notebooks');
+                                localStorage.removeItem('sticky_notes_excluded_sections');
                                 toast.success("Reset visibility to all folders");
                             }}
                             className="text-zinc-400 hover:bg-zinc-900 text-xs h-9"
@@ -1135,7 +1135,7 @@ export default function PersonalNotes() {
                             Reset to All
                         </Button>
                         <Button 
-                            onClick={() => setCorkboardFilterOpen(false)}
+                            onClick={() => setStickyNotesFilterOpen(false)}
                             className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-9 px-6 rounded-lg font-semibold"
                         >
                             Done

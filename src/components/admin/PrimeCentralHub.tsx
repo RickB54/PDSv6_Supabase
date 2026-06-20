@@ -785,12 +785,12 @@ export const PrimeCentralHub: React.FC<PrimeCentralHubProps> = ({ onQuickAction 
 
                     <div className="relative p-6 rounded-xl shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] border-[8px] border-[#5c4033] bg-[#8b5a2b] mb-6 min-h-[400px]">
                         
-                        <Link to="/corkboard" className="absolute top-4 right-4 z-30">
+                        <Link to="/sticky-notes" className="absolute top-4 right-4 z-30">
                             <Button 
                                 variant="outline" 
                                 size="icon" 
                                 className="bg-black/40 hover:bg-black/60 border-black/50 text-white/70 hover:text-white transition-all shadow-xl"
-                                title="Expand to Full Screen Corkboard App"
+                                title="Expand to Full Screen Sticky Notes App"
                             >
                                 <ArrowRight className="w-4 h-4 -rotate-45" />
                             </Button>

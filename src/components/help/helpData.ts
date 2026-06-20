@@ -681,6 +681,7 @@ export const chemicalDescriptionTopic: HelpTopic = {
 };
 
 export const adminMenuTopics: HelpTopic[] = [
+  stickyNotesHelpTopic,
   intakeWorkflowsTopic,
   chemicalDescriptionTopic,
   vehicleManagementTopic,
@@ -3245,6 +3246,7 @@ export const adminTopics: HelpTopic[] = [
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [
+  stickyNotesHelpTopic,
   demoModeHelpTopic,
   checklistFinalStepsTopic,
   {
@@ -3799,3 +3801,24 @@ export function makeToc(role: 'admin' | 'employee' | 'customer', _blockedIds: st
   // Employees: only show requested items in two sections
   return [...employeeMenuTopics, ...employeeDashboardTopics];
 }
+
+
+export const stickyNotesHelpTopic: HelpTopic = {
+  id: 'sticky-notes',
+  title: 'Sticky Notes',
+  summary: 'Your dynamic, tag-based virtual sticky note board.',
+  content: [
+    '**Overview**: The Sticky Notes module is a flexible space for jotting down quick ideas, tasks, or reminders.',
+    '',
+    '📝 **1. Creating Notes**',
+    'Click the "+ New Sticky" button. You can type freely, add checklists using the toolbar, and assign notes to different submenus (Tags).',
+    '',
+    '⏰ **2. Reminders & Badges**',
+    'Click the alarm bell icon on any note to set a reminder. You will get a popup notification when the time arrives, and the Active Reminders badge will track pending items.',
+    '',
+    '📌 **3. Organization & Filters**',
+    'Pin important notes to keep them at the top. Use the left sidebar to filter by "All Stickies", specific Tag Groups, or "Others (Un-pinned)".',
+  ],
+  route: '/sticky-notes',
+  section: 'menu',
+};
