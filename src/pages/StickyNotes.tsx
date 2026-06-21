@@ -2565,19 +2565,22 @@ export default function StickyNotes() {
                       }
                     }}>Delete note</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
-                        const newTags = [...(editingNote.tags || [])];
-                        if (!newTags.includes('__archived__')) {
+                        let newTags = [...(editingNote.tags || [])];
+                        const isArchived = newTags.includes('__archived__');
+                        if (isArchived) {
+                          newTags = newTags.filter(t => t !== '__archived__');
+                        } else {
                           newTags.push('__archived__');
                         }
                         setEditingNote({ ...editingNote, tags: newTags });
                         if (editingNote.id !== 'new') {
                           notesStore.updateNote(editingNote.id, { tags: newTags });
-                          toast({ title: "Note Archived" });
+                          toast({ title: isArchived ? "Note Unarchived" : "Note Archived" });
                           setIsNoteModalOpen(false);
                         } else {
-                          toast({ title: "Note marked as Archive. Please Save." });
+                          toast({ title: isArchived ? "Note Unarchived. Please Save." : "Note marked as Archive. Please Save." });
                         }
-                      }}>Archive Note</DropdownMenuItem>
+                      }}>{(editingNote.tags || []).includes('__archived__') ? 'UnArchive Note' : 'Archive Note'}</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
