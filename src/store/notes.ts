@@ -57,7 +57,7 @@ interface NotesState {
     createNotebook: (name: string) => Promise<string>;
     updateNotebook: (id: string, name: string) => Promise<void>;
     deleteNotebook: (id: string) => Promise<void>;
-    createSection: (notebookId: string, name: string) => Promise<void>;
+    createSection: (notebookId: string, name: string) => Promise<string>;
     updateSection: (id: string, name: string) => Promise<void>;
     deleteSection: (id: string) => Promise<void>;
 
@@ -112,11 +112,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return;
         }
 
+        const user = getCurrentUser();
+        if (!user) {
+            set({ notebooks: [], sections: [], notes: [], isLoading: false });
+            return;
+        }
+
         set({ isLoading: true });
         try {
-            const { data: n } = await supabase.from('personal_notebooks').select('*').order('created_at');
-            const { data: s } = await supabase.from('personal_sections').select('*').order('created_at');
-            const { data: notes } = await supabase.from('personal_notes').select('*').order('updated_at', { ascending: false });
+            const { data: n } = await supabase.from('personal_notebooks').select('*').eq('user_id', user.id).order('created_at');
+            const { data: s } = await supabase.from('personal_sections').select('*').eq('user_id', user.id).order('created_at');
+            const { data: notes } = await supabase.from('personal_notes').select('*').eq('user_id', user.id).order('updated_at', { ascending: false });
 
             set({
                 notebooks: n || [],
@@ -196,16 +202,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             data.sections.push(s);
             await saveDemoData(data);
             get().refresh();
-            return;
+            return s.id;
         }
         const user = getCurrentUser();
-        if (!user) return;
-        const { error } = await supabase.from('personal_sections').insert({
+        if (!user) return '';
+        const { data, error } = await supabase.from('personal_sections').insert({
             notebook_id: notebookId,
             name,
             user_id: user.id
-        });
+        }).select().single();
         if (!error) get().refresh();
+        return data?.id || '';
     },
 
     updateSection: async (id, name) => {

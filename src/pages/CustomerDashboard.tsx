@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle, FileBarChart } from "lucide-react";
+import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle, FileBarChart, CheckSquare } from "lucide-react";
 import { useCartStore } from "@/store/cart";
 
 const CustomerDashboard = () => {
@@ -105,6 +105,14 @@ const CustomerDashboard = () => {
               to="/blog"
               color="text-indigo-500"
               gradient="bg-gradient-to-br from-indigo-500 to-purple-500"
+            />
+            <DashboardCard
+              title="Sticky Notes"
+              description="Your personal dashboard sticky notes."
+              icon={CheckSquare}
+              to="/sticky-notes"
+              color="text-yellow-500"
+              gradient="bg-gradient-to-br from-yellow-500 to-amber-500"
             />
           </div>
         </div>

@@ -4,7 +4,7 @@ import {
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight, ChevronUp,
   Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon, Eye, PinOff,
-  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type
+  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type, Mic, MicOff, Archive
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -611,6 +611,8 @@ export default function StickyNotes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
@@ -637,16 +639,16 @@ export default function StickyNotes() {
     try {
       let targetNbId = notesStore.notebooks[0]?.id;
       if (!targetNbId) {
-        const newNb = await notesStore.createNotebook("General");
-        targetNbId = newNb.id;
+        const newNbId = await notesStore.createNotebook("General");
+        targetNbId = newNbId;
       }
-      const newSec = await notesStore.createSection(targetNbId, trimmed);
-      if (newSec) {
+      const newSecId = await notesStore.createSection(targetNbId, trimmed);
+      if (newSecId) {
         const newTags = [...(editingNote.tags || [])];
-        if (!newTags.includes(`__section:${newSec.id}`)) {
-          newTags.push(`__section:${newSec.id}`);
+        if (!newTags.includes(`__section:${newSecId}`)) {
+          newTags.push(`__section:${newSecId}`);
         }
-        const newSectionId = editingNote.section_id || newSec.id;
+        const newSectionId = editingNote.section_id || newSecId;
         setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
       }
       setLabelSearchText("");
@@ -718,6 +720,7 @@ export default function StickyNotes() {
     showReturnMarkers: localStorage.getItem('sticky_notes_return_markers') === 'true',
     autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
     showCheckboxes: localStorage.getItem('sticky_notes_show_checkboxes') !== 'false',
+    showArchived: localStorage.getItem('sticky_notes_show_archived') === 'true',
     textSize: localStorage.getItem('sticky_notes_text_size') ? parseInt(localStorage.getItem('sticky_notes_text_size')!) : 20,
     lineHeight: localStorage.getItem('sticky_notes_line_height') ? parseFloat(localStorage.getItem('sticky_notes_line_height')!) : 1.625,
   });
@@ -858,9 +861,10 @@ export default function StickyNotes() {
   }, [visibleNotes, localNoteOrder]);
 
   const activeNotes = useMemo(() => {
-      let filtered = orderedAllNotes.filter(n => {
-        if (pinFilter === 'pinned' && !n.is_pinned) return false;
-        if (pinFilter === 'unpinned' && n.is_pinned) return false;
+    let filtered = orderedAllNotes.filter(n => {
+      if (!prefs.showArchived && n.tags?.includes('__archived__')) return false;
+      if (pinFilter === 'pinned' && !n.is_pinned) return false;
+      if (pinFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (selectedSection) {
@@ -1052,6 +1056,59 @@ export default function StickyNotes() {
     if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
+  };
+
+  const toggleListen = () => {
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+    
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ title: "Speech to text not supported in this browser.", variant: "destructive" });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onresult = (event: any) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        if (textareaRef.current) {
+          const ta = textareaRef.current;
+          const cursorPos = ta.selectionStart;
+          setEditingNote(prev => {
+            if (!prev) return prev;
+            const newContent = prev.content.slice(0, cursorPos) + finalTranscript + " " + prev.content.slice(cursorPos);
+            setTimeout(() => {
+              if (textareaRef.current) {
+                textareaRef.current.focus();
+                textareaRef.current.setSelectionRange(cursorPos + finalTranscript.length + 1, cursorPos + finalTranscript.length + 1);
+              }
+            }, 0);
+            return { ...prev, content: newContent };
+          });
+        } else {
+          setEditingNote(prev => prev ? ({ ...prev, content: prev.content + " " + finalTranscript }) : null);
+        }
+      }
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+    setIsListening(true);
+    recognitionRef.current = recognition;
   };
 
   const handleSync = async () => {
@@ -1258,9 +1315,9 @@ export default function StickyNotes() {
 
   const handleCreateNotebook = async () => {
     if (newNotebookName.trim()) {
-      const nb = await notesStore.createNotebook(newNotebookName);
-      if (nb?.id) {
-        await notesStore.createSection(nb.id, "General");
+      const nbId = await notesStore.createNotebook(newNotebookName);
+      if (nbId) {
+        await notesStore.createSection(nbId, "General");
       }
       setNewNotebookName("");
       setIsNotebookModalOpen(false);
@@ -1614,6 +1671,7 @@ export default function StickyNotes() {
                   <PanelLeft className="w-3.5 h-3.5" />
                 </Button>
               <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
+              <Button variant="outline" size="sm" onClick={() => updatePref('showArchived', !prefs.showArchived)} className={`h-5 px-1.5 text-[9px] uppercase tracking-widest ml-1 ${prefs.showArchived ? 'bg-blue-600 text-white border-blue-500 hover:bg-blue-700' : 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800'}`}>Archives</Button>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
               <Plus className="w-4 h-4" />
@@ -2056,7 +2114,7 @@ export default function StickyNotes() {
                             </DropdownMenu>
                           ) : (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className="absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
+                              <DropdownMenuTrigger className="absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-30 hover:opacity-100 transition-opacity">
                                  ⬜
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -2222,6 +2280,15 @@ export default function StickyNotes() {
                 </Button>
                 <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
                   <ImageIcon className="w-5 h-5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={toggleListen}
+                  className={`h-9 w-9 ${editColor.text} ${isListening ? 'bg-red-500/20 text-red-500' : ''} hover:bg-black/10`} 
+                  title="Voice to Text"
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </Button>
                 <DropdownMenu open={isReminderMenuOpen} onOpenChange={setIsReminderMenuOpen}>
                   <DropdownMenuTrigger asChild>
@@ -2420,6 +2487,18 @@ export default function StickyNotes() {
                         setIsNoteModalOpen(false); 
                       }
                     }}>Delete note</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                        if (editingNote.id !== 'new') {
+                          const newTags = [...(editingNote.tags || [])];
+                          if (!newTags.includes('__archived__')) {
+                            newTags.push('__archived__');
+                          }
+                          setEditingNote({ ...editingNote, tags: newTags });
+                          notesStore.updateNote(editingNote.id, { tags: newTags });
+                          toast({ title: "Note Archived" });
+                          setIsNoteModalOpen(false);
+                        }
+                      }}>Archive Note</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
