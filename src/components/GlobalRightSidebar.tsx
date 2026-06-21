@@ -56,6 +56,67 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
+        {/* Pricing Scenario Shortcut - Admin Only */}
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Calculator className="w-5 h-5 text-red-500" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Scenario Builder</span>}
+            </Button>
+        )}
+
+        {/* Sticky Notes */}
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/sticky-notes')} title="Sticky Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <CheckSquare className="w-5 h-5 text-yellow-400" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Sticky Notes</span>}
+            </Button>
+        )}
+
+        {/* Personal Notes */}
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/notes')} title="Personal Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Book className="w-5 h-5 text-cyan-400" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notes</span>}
+        </Button>
+
+        {/* Hybrid Availability System - Admin Only */}
+        {isAdmin && (
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => navigate('/availability-manager')}
+                title="Hybrid Availability System"
+                className={collapsed ? "" : "w-full justify-start gap-2"}
+            >
+                <CalendarCheck className="w-5 h-5 text-blue-600" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Hybrid Availability</span>}
+            </Button>
+        )}
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <CalendarDays className="w-5 h-5 text-emerald-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Staff Schedule</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <CheckSquare className="w-5 h-5 text-blue-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Tasks</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Video className="w-5 h-5 text-pink-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Gallery</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Calendar className="w-5 h-5 text-purple-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase text-left">Bookings</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/service-checklist')} title="Checklist" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <ClipboardList className="w-5 h-5 text-orange-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
+        </Button>
+
         {isAdmin && (
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Package className="w-5 h-5 text-cyan-500" />
