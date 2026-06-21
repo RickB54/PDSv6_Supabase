@@ -667,6 +667,7 @@ const Invoicing = () => {
     setEditAdjustmentAmount(adjAmount);
     setEditPriceLocked(inv.priceLocked || false);
     setEditLockedTotal(inv.priceLocked ? inv.total : 0);
+      setEditServices(services);
     
     const baseTotal = services.reduce((sum, s) => sum + (s.price || 0), 0);
     
