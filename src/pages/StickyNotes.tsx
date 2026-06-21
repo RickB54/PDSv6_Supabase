@@ -1817,125 +1817,191 @@ export default function StickyNotes() {
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            {activeNotes.filter(n => n.is_pinned).length > 0 && (
-              <div className="mb-12">
-                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2">Pinned</h3>
-                <SortableContext 
-                  items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} 
-                  strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
-                >
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableListRow
-                            key={`${note.id}-${note.is_pinned}-${animTick}`}
-                            note={note}
-                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onTogglePin={handleTogglePin}
-                            showToolbar={prefs.toolbar}
-                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}-${animTick}`} 
-                            note={note} 
-                            isMasonry={isMasonry}
-                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote} 
-                            onDelete={handleDeleteNote} 
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onToggleCheckboxes={handleToggleCheckboxes}
-                            onTogglePin={handleTogglePin}
-                            onImageClick={setLightboxImage}
-                            showTags={true}
-                            showToolbar={prefs.toolbar}
-                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
-                            onOpenSettings={() => setIsSettingsOpen(true)}
-                          />
+            {prefs.showArchived ? (
+              activeNotes.length > 0 && (
+                <div className="mb-12">
+                  <h3 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 ml-2 flex items-center gap-2">
+                    <Archive className="w-4 h-4" />
+                    Archived Stickies
+                  </h3>
+                  <SortableContext 
+                    items={activeNotes.map(n => n.id)} 
+                    strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
+                  >
+                    {viewMode === 'list' ? (
+                      <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                        {activeNotes.map(note => {
+                          const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                          return (
+                            <SortableListRow
+                              key={`${note.id}-${note.is_pinned}-${animTick}`}
+                              note={note}
+                              animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                              sectionName={sectionName}
+                              onEdit={handleEditNote}
+                              onDelete={handleDeleteNote}
+                              onDuplicate={handleDuplicateNote}
+                              onChangeColor={handleChangeColor}
+                              onTogglePin={handleTogglePin}
+                              showToolbar={prefs.toolbar}
+                              onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
+                        {activeNotes.map(note => {
+                          const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                          return (
+                            <SortableSticky 
+                              key={`${note.id}-${note.is_pinned}-${animTick}`} 
+                              note={note} 
+                              isMasonry={isMasonry}
+                              animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                              sectionName={sectionName}
+                              onEdit={handleEditNote} 
+                              onDelete={handleDeleteNote} 
+                              onDuplicate={handleDuplicateNote}
+                              onChangeColor={handleChangeColor}
+                              onToggleCheckboxes={handleToggleCheckboxes}
+                              onTogglePin={handleTogglePin}
+                              onImageClick={setLightboxImage}
+                              showTags={true}
+                              showToolbar={prefs.toolbar}
+                              onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                              onOpenSettings={() => setIsSettingsOpen(true)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </SortableContext>
+                </div>
+              )
+            ) : (
+              <>
+                {activeNotes.filter(n => n.is_pinned).length > 0 && (
+                  <div className="mb-12">
+                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2">Pinned</h3>
+                    <SortableContext 
+                      items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} 
+                      strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
+                    >
+                      {viewMode === 'list' ? (
+                        <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                          {activeNotes.filter(n => n.is_pinned).map(note => {
+                            const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                            return (
+                              <SortableListRow
+                                key={`${note.id}-${note.is_pinned}-${animTick}`}
+                                note={note}
+                                animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                                sectionName={sectionName}
+                                onEdit={handleEditNote}
+                                onDelete={handleDeleteNote}
+                                onDuplicate={handleDuplicateNote}
+                                onChangeColor={handleChangeColor}
+                                onTogglePin={handleTogglePin}
+                                showToolbar={prefs.toolbar}
+                                onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
+                          {activeNotes.filter(n => n.is_pinned).map(note => {
+                            const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                            return (
+                              <SortableSticky 
+                                key={`${note.id}-${note.is_pinned}-${animTick}`} 
+                                note={note} 
+                                isMasonry={isMasonry}
+                                animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                                sectionName={sectionName}
+                                onEdit={handleEditNote} 
+                                onDelete={handleDeleteNote} 
+                                onDuplicate={handleDuplicateNote}
+                                onChangeColor={handleChangeColor}
+                                onToggleCheckboxes={handleToggleCheckboxes}
+                                onTogglePin={handleTogglePin}
+                                onImageClick={setLightboxImage}
+                                showTags={true}
+                                showToolbar={prefs.toolbar}
+                                onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                                onOpenSettings={() => setIsSettingsOpen(true)}
+                              />
 
 
-                        );
-                      })}
-                    </div>
-                  )}
-                </SortableContext>
-              </div>
-            )}
-            
-            {activeNotes.filter(n => !n.is_pinned).length > 0 && (
-              <div>
-                {activeNotes.filter(n => n.is_pinned).length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
-                <SortableContext 
-                  items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} 
-                  strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
-                >
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableListRow
-                            key={`${note.id}-${note.is_pinned}-${animTick}`}
-                            note={note}
-                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onTogglePin={handleTogglePin}
-                            showToolbar={prefs.toolbar}
-                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
-                          />
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
-                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
-                        return (
-                          <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}-${animTick}`} 
-                            note={note} 
-                            isMasonry={isMasonry}
-                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
-                            sectionName={sectionName}
-                            onEdit={handleEditNote} 
-                            onDelete={handleDeleteNote} 
-                            onDuplicate={handleDuplicateNote}
-                            onChangeColor={handleChangeColor}
-                            onToggleCheckboxes={handleToggleCheckboxes}
-                            onTogglePin={handleTogglePin}
-                            onImageClick={setLightboxImage}
-                            showTags={true}
-                            showToolbar={prefs.toolbar}
-                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
-                            onOpenSettings={() => setIsSettingsOpen(true)}
-                          />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </SortableContext>
+                  </div>
+                )}
+                
+                {activeNotes.filter(n => !n.is_pinned).length > 0 && (
+                  <div>
+                    {activeNotes.filter(n => n.is_pinned).length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
+                    <SortableContext 
+                      items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} 
+                      strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
+                    >
+                      {viewMode === 'list' ? (
+                        <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                          {activeNotes.filter(n => !n.is_pinned).map(note => {
+                            const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                            return (
+                              <SortableListRow
+                                key={`${note.id}-${note.is_pinned}-${animTick}`}
+                                note={note}
+                                animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                                sectionName={sectionName}
+                                onEdit={handleEditNote}
+                                onDelete={handleDeleteNote}
+                                onDuplicate={handleDuplicateNote}
+                                onChangeColor={handleChangeColor}
+                                onTogglePin={handleTogglePin}
+                                showToolbar={prefs.toolbar}
+                                onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
+                          {activeNotes.filter(n => !n.is_pinned).map(note => {
+                            const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                            return (
+                              <SortableSticky 
+                                key={`${note.id}-${note.is_pinned}-${animTick}`} 
+                                note={note} 
+                                isMasonry={isMasonry}
+                                animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                                sectionName={sectionName}
+                                onEdit={handleEditNote} 
+                                onDelete={handleDeleteNote} 
+                                onDuplicate={handleDuplicateNote}
+                                onChangeColor={handleChangeColor}
+                                onToggleCheckboxes={handleToggleCheckboxes}
+                                onTogglePin={handleTogglePin}
+                                onImageClick={setLightboxImage}
+                                showTags={true}
+                                showToolbar={prefs.toolbar}
+                                onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                                onOpenSettings={() => setIsSettingsOpen(true)}
+                              />
 
-                        );
-                      })}
-                    </div>
-                  )}
-                </SortableContext>
-              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </SortableContext>
+                  </div>
+                )}
+              </>
             )}
           </DndContext>
 
