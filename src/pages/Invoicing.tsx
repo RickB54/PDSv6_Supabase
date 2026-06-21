@@ -794,12 +794,19 @@ const Invoicing = () => {
   };
 
   const handleAddEditItem = (category: string, id: string) => {
+    const vType = toBuiltInVehKey(normalizeVehicleType(editVehicle || '') || 'midsize');
     if (category === 'package') {
       const p = servicePackages.find(x => x.id === id);
-      if (p) setEditServices([...editServices, { name: p.name, price: p.basePrice }]);
+      if (p) {
+        const price = getServicePrice(p.id, vType) || p.basePrice || 0;
+        setEditServices([...editServices, { name: p.name, price }]);
+      }
     } else if (category === 'addon') {
       const a = addOns.find(x => x.id === id);
-      if (a) setEditServices([...editServices, { name: a.name, price: a.basePrice }]);
+      if (a) {
+        const price = getAddOnPrice(a.id, vType) || a.basePrice || 0;
+        setEditServices([...editServices, { name: a.name, price }]);
+      }
     }
   };
 
