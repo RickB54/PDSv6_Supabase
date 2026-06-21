@@ -785,12 +785,13 @@ export default function StickyNotes() {
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes' | 'textSize' | 'lineHeight', val: boolean | number) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes' | 'showArchived' | 'textSize' | 'lineHeight', val: boolean | number) => {
     const keyMap: Record<string, string> = {
       darkTheme: 'sticky_notes_dark_theme',
       showReturnMarkers: 'sticky_notes_return_markers',
       autoLineNumbers: 'sticky_notes_auto_line_numbers',
       showCheckboxes: 'sticky_notes_show_checkboxes',
+      showArchived: 'sticky_notes_show_archived',
       textSize: 'sticky_notes_text_size',
       lineHeight: 'sticky_notes_line_height',
     };
