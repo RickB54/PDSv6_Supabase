@@ -872,13 +872,16 @@ export default function StickyNotes() {
       if (pinFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (selectedSection) {
-          if (selectedSection === '__unpinned__') return !n.is_pinned;
-          return n.section_id === selectedSection || n.tags?.includes(`__section:${selectedSection}`);
+      
+      if (!prefs.showArchived) {
+        if (selectedSection) {
+            if (selectedSection === '__unpinned__') return !n.is_pinned;
+            return n.section_id === selectedSection || n.tags?.includes(`__section:${selectedSection}`);
+          }
+        if (selectedNotebook) {
+          const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
+          return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
         }
-      if (selectedNotebook) {
-        const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
-        return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
       }
 
       if (dateFilter !== "all") {
@@ -2496,15 +2499,17 @@ export default function StickyNotes() {
                       }
                     }}>Delete note</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
+                        const newTags = [...(editingNote.tags || [])];
+                        if (!newTags.includes('__archived__')) {
+                          newTags.push('__archived__');
+                        }
+                        setEditingNote({ ...editingNote, tags: newTags });
                         if (editingNote.id !== 'new') {
-                          const newTags = [...(editingNote.tags || [])];
-                          if (!newTags.includes('__archived__')) {
-                            newTags.push('__archived__');
-                          }
-                          setEditingNote({ ...editingNote, tags: newTags });
                           notesStore.updateNote(editingNote.id, { tags: newTags });
                           toast({ title: "Note Archived" });
                           setIsNoteModalOpen(false);
+                        } else {
+                          toast({ title: "Note marked as Archive. Please Save." });
                         }
                       }}>Archive Note</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
