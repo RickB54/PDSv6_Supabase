@@ -56,10 +56,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        {/* Pricing Scenario Shortcut - Admin Only */}
-        {isAdmin && (
-            
-
         {isAdmin && (
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Package className="w-5 h-5 text-cyan-500" />

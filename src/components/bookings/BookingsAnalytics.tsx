@@ -1047,10 +1047,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             if (true) {
                 const bDate = b.date?.split('T')[0];
                 const match = invoices.find(inv => {
-                    const invDate = inv.date || inv.createdAt?.split('T')[0];
+                    const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
                     const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
                     // Match by customer and date (some wiggle room for date sync)
-                    return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000));
+                    return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
                 });
                 if (match) {
                     revenue = match.total || 0;
@@ -1085,7 +1085,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 // Find matching invoice for navigation
                 const sDate = s.date?.split('T')[0];
                 const matchedInv = invoices.find(inv => {
-                    const invDate = (inv.date || inv.createdAt || '').split('T')[0];
+                    const invDate = (inv.serviceDate || inv.date || inv.createdAt || '').split('T')[0];
                     const isCustMatch = inv.customerId === s.id || inv.customerName === s.customer;
                     return isCustMatch && (invDate === sDate || Math.abs(new Date(invDate).getTime() - new Date(sDate).getTime()) < 86400000 * 2);
                 });
@@ -1322,9 +1322,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         doneServices.forEach(b => {
             const hasInvoice = invoices.some(inv => {
                 const isCustMatch = inv.customerId === (b as any).customerId || inv.customerName === b.customer;
-                const invDate = inv.date || inv.createdAt?.split('T')[0];
+                const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
                 const bDate = b.date?.split('T')[0];
-                return isCustMatch && (invDate === bDate || Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000);
+                return isCustMatch && (invDate === bDate || Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2);
             });
             if (!hasInvoice && b.revenue > 0) {
                 reminders.push({
@@ -3296,4 +3296,5 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         </div>
     );
 }
+
 
