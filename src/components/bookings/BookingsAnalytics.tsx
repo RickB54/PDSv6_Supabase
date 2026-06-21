@@ -1044,7 +1044,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             let revenue = Number(b.price || 0);
             let value = Number(b.price || 0);
             
-            if (revenue === 0 || value === 0) {
+            if (true) {
                 const bDate = b.date?.split('T')[0];
                 const match = invoices.find(inv => {
                     const invDate = inv.date || inv.createdAt?.split('T')[0];
@@ -3296,3 +3296,4 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         </div>
     );
 }
+
