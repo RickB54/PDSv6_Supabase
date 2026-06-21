@@ -863,7 +863,11 @@ export default function StickyNotes() {
 
   const activeNotes = useMemo(() => {
     let filtered = orderedAllNotes.filter(n => {
-      if (!prefs.showArchived && n.tags?.includes('__archived__')) return false;
+      if (prefs.showArchived) {
+        if (!n.tags?.includes('__archived__')) return false;
+      } else {
+        if (n.tags?.includes('__archived__')) return false;
+      }
       if (pinFilter === 'pinned' && !n.is_pinned) return false;
       if (pinFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
@@ -1662,21 +1666,25 @@ export default function StickyNotes() {
           absolute lg:relative z-20 h-full bg-zinc-950 border-r border-zinc-800 transition-all duration-300 ease-in-out flex flex-col overflow-hidden
           ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full lg:w-0'}
         `}>
-          <div className="p-4 border-b border-zinc-800 flex items-center justify-between min-w-[16rem]">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
-                <PanelLeftClose className="w-4 h-4" />
-              </Button>
-              <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
-                <Button variant="destructive" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="h-5 px-1.5 ml-1 bg-red-600 hover:bg-red-500 text-white rounded-md flex items-center justify-center shadow-lg" title="Toggle Sidebar">
-                  <PanelLeft className="w-3.5 h-3.5" />
+          <div className="p-4 border-b border-zinc-800 flex flex-col gap-2 min-w-[16rem]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
+                  <PanelLeftClose className="w-4 h-4" />
                 </Button>
-              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
-              <Button variant="outline" size="sm" onClick={() => updatePref('showArchived', !prefs.showArchived)} className={`h-5 px-1.5 text-[9px] uppercase tracking-widest ml-1 ${prefs.showArchived ? 'bg-blue-600 text-white border-blue-500 hover:bg-blue-700' : 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800'}`}>Archives</Button>
+                <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
+                  <Button variant="destructive" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="h-5 px-1.5 ml-1 bg-red-600 hover:bg-red-500 text-white rounded-md flex items-center justify-center shadow-lg" title="Toggle Sidebar">
+                    <PanelLeft className="w-3.5 h-3.5" />
+                  </Button>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
-              <Plus className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest">{expandAll ? 'Collapse' : 'Expand'}</Button>
+              <Button variant="outline" size="sm" onClick={() => updatePref('showArchived', !prefs.showArchived)} className={`h-5 px-1.5 text-[9px] uppercase tracking-widest ${prefs.showArchived ? 'bg-blue-600 text-white border-blue-500 hover:bg-blue-700' : 'bg-zinc-900 border-zinc-700 hover:bg-zinc-800'}`}>Archives</Button>
+            </div>
           </div>
           <ScrollArea className="flex-1 min-w-[16rem]">
             <div className="p-3 space-y-2">
