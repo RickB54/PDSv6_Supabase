@@ -1186,14 +1186,13 @@ export default function StickyNotes() {
     input.click();
   };
 
-  const handleSaveNote = async () => {
+  const handleSaveNote = async (forceSave: boolean | React.MouseEvent = false) => {
+    const isForced = forceSave === true;
     if (editingNote) {
       const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:'));
-      if (!hasTag) {
-        if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
-          setIsLabelModalOpen(true);
-          return;
-        }
+      if (!hasTag && !isForced) {
+        setIsLabelModalOpen(true);
+        return;
       }
 
       const sectionId = editingNote.section_id || null;
@@ -2992,7 +2991,16 @@ export default function StickyNotes() {
               </div>
             </div>
 
-            <div className="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end">
+            <div className="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end gap-2">
+              <Button 
+                onClick={() => {
+                  setIsLabelModalOpen(false);
+                  handleSaveNote(true);
+                }}
+                className="bg-zinc-700 hover:bg-zinc-600 text-white text-xs h-8 px-4 rounded-lg font-semibold"
+              >
+                Save Without a tag
+              </Button>
               <Button 
                 onClick={() => setIsLabelModalOpen(false)}
                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-8 px-6 rounded-lg font-semibold"
