@@ -224,6 +224,14 @@ const EmployeeDashboard = () => {
               </Card>
             </Link>
 
+            {/* Sticky Notes (yellow) */}
+            <Link to="/sticky-notes" className="block h-full">
+              <Card className="p-6 bg-yellow-600 text-white rounded-xl h-full">
+                <div className="text-2xl font-bold">STICKY NOTES</div>
+                <div className="text-sm opacity-90">Your personal workspace for notes, lists, and reminders.</div>
+              </Card>
+            </Link>
+
             {/* Chemical Cards (cyan/blue) */}
             <Link to="/chemicals" className="block h-full">
               <Card className="p-6 bg-cyan-700 text-white rounded-xl h-full">
@@ -261,12 +269,7 @@ const EmployeeDashboard = () => {
                 <div className="font-semibold text-white">BLOG</div>
               </Card>
             </Link>
-            <Link to="/notes" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl border border-amber-900/50">
-                <div className="font-semibold text-amber-500">MY NOTES</div>
-                <div className="text-xs text-muted-foreground">(Private)</div>
-              </Card>
-            </Link>
+
             <Link to="/sticky-notes" className="block">
               <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl border border-yellow-900/50">
                 <div className="font-semibold text-yellow-500">STICKY NOTES</div>

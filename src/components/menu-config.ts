@@ -30,7 +30,8 @@ import {
         Tag,
     FlaskConical,
     Zap,
-    Mail
+    Mail,
+    Target
 } from "lucide-react";
 
 export type MenuItem = {
@@ -54,7 +55,8 @@ export type MenuGroup = {
 };
 
 export const TOP_ITEMS: MenuItem[] = [
-    { title: "Prime Central Hub", url: "/dashboard/admin", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'analytics' },
+    { title: "Analytics", url: "/bookings-analytics", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'analytics' },
+    { title: "Business Goals", url: "/goals", role: "admin", key: "goals", icon: Target, iconColor: "text-emerald-400", helpTopicId: 'business-goals' },
     { title: "Website Administration", url: "/website-admin", role: "admin", key: "website-admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
 ];
 

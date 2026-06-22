@@ -37,7 +37,7 @@ export const WalkthroughProvider: React.FC<{ children: React.ReactNode }> = ({ c
       title: "Welcome to Prime Central Hub",
       description: "This is your main command center. From here, you can see all key metrics and manage daily operations.",
       position: "center",
-      route: "/dashboard/admin"
+      route: "/bookings-analytics"
     },
     {
       id: "bookings",

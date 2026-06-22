@@ -117,6 +117,10 @@ export default function PersonalNotes() {
         const isStickyNotesSection = store.activeSectionId === 'sticky_notes-stickies';
           let list = store.notes;
 
+        if (!isStickyNotesSection) {
+            list = list.filter(n => !n.tags?.includes('__sticky-notes__'));
+        }
+
         // 1. Search (Global across all notes)
         if (store.searchQuery) {
             const q = store.searchQuery.toLowerCase();

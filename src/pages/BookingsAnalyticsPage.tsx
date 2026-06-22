@@ -4,7 +4,8 @@ import { useBookingsStore } from "@/store/bookings";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Loader2, Target } from "lucide-react";
+import { HelpCircle, RotateCcw, Loader2, Target } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -60,6 +61,46 @@ export default function BookingsAnalyticsPage() {
             <div className="flex items-center justify-between pr-4 sm:pr-8">
                 <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
                 <div className="flex items-center gap-3 mt-6">
+                    <div className="hidden md:flex items-center gap-2 mr-2">
+                        <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900/50 font-normal py-1 px-3 hover:bg-zinc-800 cursor-help transition-colors"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }));
+                            }}
+                        >
+                            Workflow
+                        </Badge>
+                        <HelpCircle 
+                            className="w-5 h-5 text-emerald-400/80 hover:text-emerald-400 transition-colors cursor-help drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]" 
+                            title="View Intake Workflows"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }));
+                            }}
+                        />
+                    </div>
+                    <div className="hidden md:flex items-center gap-2 mr-2 border-l border-zinc-800 pl-4">
+                        <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900/50 font-normal py-1 px-3 hover:bg-zinc-800 cursor-help transition-colors"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics', role: 'admin' } }));
+                            }}
+                        >
+                            Business Analytics
+                        </Badge>
+                        <HelpCircle 
+                            className="w-5 h-5 text-emerald-400/80 hover:text-emerald-400 transition-colors cursor-help drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]" 
+                            title="View Analytics Help"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics', role: 'admin' } }));
+                            }}
+                        />
+                    </div>
                     <Button
                         variant="outline"
                         size="sm"

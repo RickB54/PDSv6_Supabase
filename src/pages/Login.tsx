@@ -50,7 +50,7 @@ export default function Login() {
                 // Small delay to allow auth-changed event to propagate to App.tsx
                 await new Promise(resolve => setTimeout(resolve, 100));
                 // Role based redirect
-                if (user.role === 'admin') navigate("/dashboard/admin");
+                if (user.role === 'admin') navigate("/bookings-analytics");
                 else if (user.role === 'employee') navigate("/dashboard/employee");
                 else navigate("/customer-dashboard");
             }

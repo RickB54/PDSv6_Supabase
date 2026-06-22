@@ -235,7 +235,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-            {showTags && (note.tags?.filter(t => !t.startsWith('__')).length > 0 || (uniqueCardSections.length === 0 && !note.section_id)) && (
+             {(showTags && (note.tags?.filter(t => !t.startsWith('__')).length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) && (
               <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
                 {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
@@ -247,6 +247,11 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
 
             {uniqueCardSections.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-1">
+                {note.tags?.includes('__archived__') && (
+                  <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
+                    Archived
+                  </span>
+                )}
                 {uniqueCardSections.map(secId => {
                   const sec = notesStore.sections.find(s => s.id === secId);
                   if (!sec) return null;
@@ -258,7 +263,20 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 })}
               </div>
             ) : sectionName ? (
-              <div className="mt-3 text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
+              <div className="mt-3 flex flex-wrap gap-1">
+                {note.tags?.includes('__archived__') && (
+                  <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
+                    Archived
+                  </span>
+                )}
+                <div className="text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
+              </div>
+            ) : note.tags?.includes('__archived__') ? (
+              <div className="mt-3 flex flex-wrap gap-1">
+                <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
+                  Archived
+                </span>
+              </div>
             ) : null}
           </>
         );
@@ -424,6 +442,11 @@ const SortableListRow = React.memo(({
               </span>
             ) : null;
           })()}
+          {note.tags?.includes('__archived__') && (
+            <span className="text-[9px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm shrink-0">
+              Archived
+            </span>
+          )}
           {sectionName && (
             <span className="text-[9px] font-bold bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-wider max-w-[120px] truncate">
               {sectionName}
@@ -837,9 +860,12 @@ export default function StickyNotes() {
     });
   };
 
-  // Filter out notes from excluded notebooks or sections
+  // Filter out notes from excluded notebooks or sections, and ensure it's a sticky note
   const visibleNotes = useMemo(() => {
     return notesStore.notes.filter(n => {
+      // Must have the sticky notes tag
+      if (!n.tags?.includes('__sticky-notes__')) return false;
+
       if (n.section_id) {
         if (excludedSections.includes(n.section_id)) return false;
         const s = notesStore.sections.find(sec => sec.id === n.section_id);
@@ -945,7 +971,7 @@ export default function StickyNotes() {
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, pinFilter, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
+  }, [orderedAllNotes, prefs.isolate, prefs.showArchived, searchQuery, selectedSection, selectedNotebook, notesStore.sections, pinFilter, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -953,6 +979,81 @@ export default function StickyNotes() {
   const [lineTops, setLineTops] = useState<{index: number, top: number, isList: boolean, status: string, height: number}[]>([]);
   const [showScrollTopBtn, setShowScrollTopBtn] = useState(false);
   const mainBoardRef = useRef<HTMLDivElement>(null);
+
+  const [isListeningTarget, setIsListeningTarget] = useState<'title' | 'content' | null>(null);
+  const customRecognitionRef = useRef<any>(null);
+
+  const startSpeechRecognition = (target: 'title' | 'content') => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser. Please try Chrome or Safari.");
+      return;
+    }
+
+    if (customRecognitionRef.current) {
+      customRecognitionRef.current.stop();
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsListeningTarget(target);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .slice(event.resultIndex)
+        .map((result: any) => result[0].transcript)
+        .join('');
+      
+      setEditingNote(prev => {
+        if (!prev) return null;
+        if (target === 'title') {
+          return { ...prev, title: (prev.title + ' ' + transcript).trim() };
+        } else {
+          // Keep images part if exists
+          const splitIndex = prev.content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
+          if (splitIndex === -1) {
+            return { ...prev, content: (prev.content + ' ' + transcript).trim() };
+          } else {
+            const textPart = prev.content.substring(0, splitIndex);
+            const imagesPart = prev.content.substring(splitIndex);
+            const newText = (textPart + ' ' + transcript).trim();
+            return { ...prev, content: newText + '\n' + imagesPart };
+          }
+        }
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListeningTarget(null);
+    };
+
+    recognition.onend = () => {
+      setIsListeningTarget(null);
+    };
+
+    customRecognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const stopSpeechRecognition = () => {
+    if (customRecognitionRef.current) {
+      customRecognitionRef.current.stop();
+      customRecognitionRef.current = null;
+    }
+    setIsListeningTarget(null);
+  };
+
+  useEffect(() => {
+    if (!isNoteModalOpen) {
+      stopSpeechRecognition();
+    }
+  }, [isNoteModalOpen]);
 
   useEffect(() => {
     if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
@@ -1017,12 +1118,30 @@ export default function StickyNotes() {
     setEditingNote({ ...editingNote, content: lines.join('\n') });
   };
 
-  const handleRemoveAllStatuses = () => {
+  const handleRemoveAllStatuses = (index: number) => {
     if (!editingNote) return;
-    if (!window.confirm("Are you sure you want to remove all status checkboxes from this note?")) return;
+    if (!window.confirm("Are you sure you want to remove all status checkboxes from this section?")) return;
     const lines = editingNote.content.split('\n');
-    const newLines = lines.map(line => line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, ''));
-    setEditingNote({ ...editingNote, content: newLines.join('\n') });
+    let startIdx = index;
+    while (startIdx > 0) {
+      const prevLine = lines[startIdx - 1].trim();
+      if (prevLine.startsWith('#') || prevLine === '---') {
+        break;
+      }
+      startIdx--;
+    }
+    let endIdx = index;
+    while (endIdx < lines.length - 1) {
+      const nextLine = lines[endIdx + 1].trim();
+      if (nextLine.startsWith('#') || nextLine === '---') {
+        break;
+      }
+      endIdx++;
+    }
+    for (let i = startIdx; i <= endIdx; i++) {
+      lines[i] = lines[i].replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '');
+    }
+    setEditingNote({ ...editingNote, content: lines.join('\n') });
   };
 
   const noteHeaders = useMemo(() => {
@@ -2133,7 +2252,19 @@ export default function StickyNotes() {
                 return null;
               })()}
               <div className="shrink-0">
-                <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Title</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Title</label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => isListeningTarget === 'title' ? stopSpeechRecognition() : startSpeechRecognition('title')}
+                    className={`h-6 text-[10px] uppercase font-bold tracking-wider ${editColor.text} hover:bg-black/10 flex items-center gap-1 ${isListeningTarget === 'title' ? 'text-red-500 animate-pulse bg-red-500/10' : ''}`}
+                    title={isListeningTarget === 'title' ? "Listening... Click to stop" : "Start Voice Typing (Speech to Text)"}
+                  >
+                    <Mic className={`w-3.5 h-3.5 ${isListeningTarget === 'title' ? 'text-red-500 fill-red-500 animate-pulse' : ''}`} />
+                    {isListeningTarget === 'title' ? 'Listening...' : 'Voice Type'}
+                  </Button>
+                </div>
                 <Textarea 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
@@ -2156,7 +2287,19 @@ export default function StickyNotes() {
               </div>
               <div className="flex-1 flex flex-col relative">
                 <div className="flex justify-between items-end mb-1">
-                  <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
+                  <div className="flex items-center gap-2">
+                    <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => isListeningTarget === 'content' ? stopSpeechRecognition() : startSpeechRecognition('content')}
+                      className={`h-6 text-[10px] uppercase font-bold tracking-wider ${editColor.text} hover:bg-black/10 flex items-center gap-1 ${isListeningTarget === 'content' ? 'text-red-500 animate-pulse bg-red-500/10' : ''}`}
+                      title={isListeningTarget === 'content' ? "Listening... Click to stop" : "Start Voice Typing (Speech to Text)"}
+                    >
+                      <Mic className={`w-3.5 h-3.5 ${isListeningTarget === 'content' ? 'text-red-500 fill-red-500 animate-pulse' : ''}`} />
+                      {isListeningTarget === 'content' ? 'Listening...' : 'Voice Type'}
+                    </Button>
+                  </div>
                   <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
                     <Plus className="w-3 h-3 mr-1" /> Add New Section Here
                   </Button>
@@ -2186,12 +2329,12 @@ export default function StickyNotes() {
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
-                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={() => handleRemoveAllStatuses(line.index)}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className="absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-30 hover:opacity-100 transition-opacity">
+                              <DropdownMenuTrigger className="absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
                                  ⬜
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -2199,11 +2342,12 @@ export default function StickyNotes() {
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-red-400" onClick={() => handleSetStatus(line.index, 'none')}><span className="mr-2 pl-4"></span> Remove Status</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
-                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={() => handleRemoveAllStatuses(line.index)}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}

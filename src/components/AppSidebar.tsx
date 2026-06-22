@@ -79,7 +79,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         localStorage.setItem('view_as_mode', 'employee');
       } else if (location.pathname === '/customer-dashboard') {
         localStorage.setItem('view_as_mode', 'customer');
-      } else if (location.pathname === '/dashboard/admin') {
+      } else if (location.pathname === '/bookings-analytics') {
         localStorage.removeItem('view_as_mode');
       }
     }
@@ -121,7 +121,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     if (url.startsWith('/demo')) return url;
 
     // Mapping for major demo sections to /demo equivalents
-    if (url === '/dashboard/admin') return '/demo/dashboard';
+    if (url === '/bookings-analytics') return '/demo/dashboard';
     if (url === '/search-customer') return '/demo/search-customer';
     if (url === '/prospects') return '/demo/prospects';
     if (url === '/inventory-control') return '/demo/inventory-control';
@@ -387,13 +387,10 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   // Standalone Top Items
   const TOP_ITEMS = [
     ...CONFIGURED_TOP_ITEMS,
-    { title: 'Personal Notes', url: '/notes', icon: BookOpen, role: 'employee', highlight: 'yellow' as const, key: 'personal-notes', iconColor: 'text-yellow-500', helpTopicId: 'personal-notes' },
-    { title: 'Analytics', url: '/bookings-analytics', icon: FileBarChart, key: 'bookings-analytics', iconColor: 'text-amber-500', helpTopicId: 'bookings-analytics' },
-    { title: 'Business Goals', url: '/goals', icon: TargetIcon, key: 'goals', iconColor: 'text-emerald-400', helpTopicId: 'business-goals' },
     { title: 'Vehicle Gallery', url: '/vehicle-gallery', icon: Video, role: 'employee', key: 'vehicle-gallery', iconColor: 'text-purple-500', helpTopicId: 'media-library' },
     { title: 'App Manual', url: '/app-manual', icon: Shield, role: 'employee', key: 'app-manual', iconColor: 'text-blue-400', helpTopicId: 'app-manual' },
     { title: 'File Manager', url: '/file-manager', icon: FileText, role: 'admin', key: 'file-manager', badge: fileCount > 0 ? fileCount : undefined, iconColor: 'text-emerald-500', helpTopicId: 'file-manager' },
-    { title: 'Sticky Notes', url: '/sticky-notes', icon: CheckSquare, role: 'admin', key: 'sticky_notes', iconColor: 'text-yellow-500', helpTopicId: 'sticky-notes' }
+    { title: 'Sticky Notes', url: '/sticky-notes', icon: CheckSquare, role: 'employee', key: 'sticky_notes', iconColor: 'text-yellow-500', helpTopicId: 'sticky-notes' }
 
   ].filter(item => {
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
@@ -416,7 +413,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     { title: "Payments & Cart", url: "/payments-cart", icon: ShoppingCart },
     { title: "My Invoices", url: "/my-invoices", icon: FileText },
     { title: "My Estimates", url: "/my-estimates", icon: FileBarChart },
-    { title: "Personal Notes", url: "/notes", icon: BookOpen },
+    { title: "Sticky Notes", url: "/sticky-notes", icon: CheckSquare },
     { title: "Prime Blog", url: "/blog", icon: Newspaper },
     { title: "User Settings", url: "/user-settings", icon: Settings },
     { title: "Prime Website", url: "/", icon: Globe },
@@ -571,7 +568,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                          location.pathname === '/notes' ? 'personal-notes' :
                          location.pathname === '/vehicle-gallery' ? 'media-library' :
                          location.pathname === '/file-manager' ? 'file-manager' :
-                         location.pathname === '/dashboard/admin' ? 'admin-dashboard' :
+                         location.pathname === '/bookings-analytics' ? 'admin-dashboard' :
                          location.pathname === '/website-admin' ? 'website-admin' : undefined,
                     role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
                   } 

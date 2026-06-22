@@ -64,7 +64,7 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import CustomerAccount from "./pages/CustomerAccount";
 import CustomerProfile from "./pages/CustomerProfile";
 import Portal from "./pages/Portal";
-import AdminDashboard from "./pages/AdminDashboard";
+
 import AdminUsers from "./pages/AdminUsers";
 import WebsiteAdministration from "./pages/WebsiteAdministration";
 import BookingsPage from "./pages/BookingsPage";
@@ -173,7 +173,7 @@ const ProtectedRoute = ({ children, allowedRoles, user }: { children: React.Reac
 
   // Enforce roles strictly if specified
   if (user && allowedRoles.length > 0 && !allowedRoles.includes(effectiveRole)) {
-    if (effectiveRole === 'admin') return <Navigate to="/dashboard/admin" replace />;
+    if (effectiveRole === 'admin') return <Navigate to="/bookings-analytics" replace />;
     if (effectiveRole === 'employee') return <Navigate to="/dashboard/employee" replace />;
     return <Navigate to="/customer-dashboard" replace />;
   }
@@ -186,7 +186,7 @@ const DefaultRedirect = ({ user }: { user: any }) => {
   const effectiveUser = simUser || user;
   
   if (!effectiveUser) return <Navigate to="/" replace />;
-  if (effectiveUser?.role === 'admin') return <Navigate to="/dashboard/admin" replace />;
+  if (effectiveUser?.role === 'admin') return <Navigate to="/bookings-analytics" replace />;
   if (effectiveUser?.role === 'employee') return <Navigate to="/dashboard/employee" replace />;
   return <Navigate to="/customer-dashboard" replace />;
 };
@@ -352,8 +352,8 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       <div className={`flex-1 min-w-0 ${paddingClass} ${showDarkTheme ? 'dark-theme bg-black' : 'bg-white'}`}>
         <Routes>
           {publicRoutes}
-          <Route path="/dashboard/admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/demo/dashboard" element={<ProtectedRoute user={user} allowedRoles={[]}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/admin" element={<Navigate to="/bookings-analytics" replace />} />
+          <Route path="/demo/dashboard" element={<Navigate to="/bookings-analytics" replace />} />
           <Route path="/dashboard/employee" element={<ProtectedRoute user={user} allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
           <Route path="/customer-dashboard" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
@@ -417,7 +417,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/website-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
           <Route path="/section/:sectionId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
-          <Route path="/sticky-notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><StickyNotes /></ProtectedRoute>} />
+          <Route path="/sticky-notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><StickyNotes /></ProtectedRoute>} />
           <Route path="/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
           <Route path="/demo/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={[]}><VehicleGallery /></ProtectedRoute>} />
           <Route path="/app-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />

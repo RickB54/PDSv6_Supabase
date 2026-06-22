@@ -103,7 +103,7 @@ export default function UserSettings() {
                             onClick={() => {
                                 if (!user) return;
                                 const r = (user.role || '').trim().toLowerCase();
-                                if (r === 'admin' || r === 'owner') navigate("/dashboard/admin");
+                                if (r === 'admin' || r === 'owner') navigate("/bookings-analytics");
                                 else if (r === 'employee') navigate("/employee-dashboard");
                                 else navigate("/customer-dashboard");
                             }}

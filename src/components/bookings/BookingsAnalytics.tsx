@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -59,8 +59,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
     const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
+    const [employees, setEmployees] = useState<any[]>([]);
+
     useEffect(() => {
         setPriceHistory(getPriceChangeHistory());
+        localforage.getItem<any[]>('company-employees').then(val => setEmployees(val || []));
     }, []);
 
     const handleDeleteCustomerBooking = async (bookingId: string) => {
@@ -1361,6 +1364,74 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return reminders.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [filteredPerfBookings, toDoServices, doneServices, invoices]);
 
+    const snapshotTitle = useMemo(() => {
+        if (!perfDateFilter.start || !perfDateFilter.end) return "All-Time Operational Snapshot";
+        if (isSameDay(perfDateFilter.start, startOfDay(new Date()))) return "Daily Operational Snapshot";
+        if (isSameDay(perfDateFilter.start, startOfWeek(new Date()))) return "Weekly Operational Snapshot";
+        if (isSameDay(perfDateFilter.start, startOfMonth(new Date()))) return "Monthly Operational Snapshot";
+        return "Custom Operational Snapshot";
+    }, [perfDateFilter]);
+
+    const summaryMetrics = useMemo(() => {
+        try {
+            const now = new Date();
+            const filterStart = perfDateFilter.start || new Date(2000, 0, 1);
+            const filterEnd = perfDateFilter.end || new Date(2100, 11, 31);
+
+            const scopeBookings = (bookings || []).filter(b => {
+                if (!b) return false;
+                if (b.customer === 'Generic Customer' || b.customer === 'TEST Customer') return false;
+                try {
+                    const d = b.date ? parseISO(b.date) : null;
+                    return d && !isNaN(d.getTime()) && !isNaN(filterStart.getTime()) && !isNaN(filterEnd.getTime()) && isWithinInterval(d, { start: filterStart, end: filterEnd });
+                } catch { return false; }
+            });
+
+            const upcoming = scopeBookings.filter(b => {
+                if (!b.date) return false;
+                const d = new Date(b.date);
+                return !isNaN(d.getTime()) && d >= now;
+            }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+            
+            const jobsInProgress = scopeBookings.filter(b => b.status === 'in_progress').length;
+            const jobsWaiting = scopeBookings.filter(b => (b.status === 'confirmed' || b.status === 'pending') && b.date && new Date(b.date) >= now).length;
+            const assignedInScope = new Set(scopeBookings.filter(b => b.assignedEmployee).map(b => b.assignedEmployee)).size;
+
+            const scopeInvoices = (invoices || []).filter(inv => {
+                if (!inv) return false;
+                if (inv.customerName === 'Generic Customer' || inv.customer_name === 'Generic Customer' || inv.customerName === 'TEST Customer' || inv.customer_name === 'TEST Customer') return false;
+                try {
+                    const d = inv.createdAt ? parseISO(inv.createdAt) : null;
+                    return d && !isNaN(d.getTime()) && !isNaN(filterStart.getTime()) && !isNaN(filterEnd.getTime()) && isWithinInterval(d, { start: filterStart, end: filterEnd });
+                } catch { return false; }
+            });
+
+            return {
+                bookings: {
+                    count: scopeBookings.length,
+                    next: upcoming,
+                    completed: scopeBookings.filter(b => b.status === 'done' || b.status === 'completed').length
+                },
+                jobs: {
+                    inProgress: jobsInProgress,
+                    waiting: jobsWaiting,
+                    completed: scopeBookings.filter(b => b.status === 'done' || b.status === 'completed').length
+                },
+                employees: {
+                    scheduled: assignedInScope,
+                    available: employees.length - assignedInScope
+                },
+                finance: {
+                    balance: invoices.filter(i => i.paymentStatus !== 'paid').reduce((a, b) => a + (Number(b.total) || 0), 0),
+                    due: invoices.filter(i => i.paymentStatus !== 'paid').length,
+                    collected: scopeInvoices.reduce((a, b) => a + (Number(b.paidAmount) || 0), 0)
+                }
+            };
+        } catch (e) {
+            return { bookings: { count: 0, next: null, completed: 0 }, jobs: { inProgress: 0, waiting: 0, completed: 0 }, employees: { scheduled: 0, available: 0 }, finance: { balance: 0, due: 0, collected: 0 } };
+        }
+    }, [bookings, invoices, employees, perfDateFilter]);
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
             {/* Global Actions Bar & Bookmarks */}
@@ -1414,21 +1485,125 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <ArrowUp className="h-6 w-6" />
             </Button>
 
-            {/* KPI Cards - Mobile Optimized (Single Line) */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                <Card className="bg-zinc-900 border-zinc-800 p-2 sm:p-4 flex flex-col items-center justify-center text-center h-24">
-                    <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mb-1">Total</div>
-                    <div className="text-xl sm:text-2xl font-bold">{stats.totalBookings}</div>
-                </Card>
-                <Card className="bg-zinc-900 border-zinc-800 p-2 sm:p-4 flex flex-col items-center justify-center text-center h-24">
-                    <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mb-1">Done</div>
-                    <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.completed}</div>
-                </Card>
-                <Card className="bg-zinc-900 border-zinc-800 p-2 sm:p-4 flex flex-col items-center justify-center text-center h-24">
-                    <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mb-1">Pending</div>
-                    <div className="text-xl sm:text-2xl font-bold text-blue-500">{stats.pending}</div>
-                </Card>
-            </div>
+            {/* Dynamic Operational Snapshot */}
+            <section className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-lg font-semibold text-white">{snapshotTitle}</h2>
+                    <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")} onClick={() => {
+                        document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' });
+                        setTimeout(() => setIsFilterOpen(true), 300);
+                    }}>
+                        <Filter className="h-3.5 w-3.5" />
+                        Filter Data
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Bookings */}
+                    <div className="group cursor-pointer" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>
+                        <Card className="p-5 bg-zinc-900/40 border-zinc-800 hover:border-blue-500/30 transition-all h-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                    <CalendarIcon className="w-5 h-5 text-blue-500" />
+                                </div>
+                                <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Details</Badge>
+                            </div>
+                            <div className="space-y-1 mb-4">
+                                <div className="text-2xl font-bold text-white">{summaryMetrics.bookings.count}</div>
+                                <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Bookings in Period</div>
+                            </div>
+                            <div className="text-sm text-zinc-400">
+                                {summaryMetrics.bookings.next ? (
+                                    <span className="flex items-center gap-1.5 line-clamp-1">
+                                        <Clock className="w-3.5 h-3.5" /> Next: {(() => {
+                                            try {
+                                                const d = parseISO(summaryMetrics.bookings.next.date);
+                                                return isNaN(d.getTime()) ? 'Invalid date' : format(d, 'p');
+                                            } catch { return 'Invalid date'; }
+                                        })()}
+                                    </span>
+                                ) : 'No more upcoming'}
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-blue-500 group-hover:underline font-medium">
+                                Open Bookings Calendar <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Jobs / Operations */}
+                    <div className="group cursor-pointer" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>
+                        <Card className="p-5 bg-zinc-900/40 border-zinc-800 hover:border-orange-500/30 transition-all h-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-2 bg-orange-500/10 rounded-lg">
+                                    <ClipboardCheck className="w-5 h-5 text-orange-500" />
+                                </div>
+                                <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Active</Badge>
+                            </div>
+                            <div className="space-y-1 mb-4">
+                                <div className="text-2xl font-bold text-white">{summaryMetrics.jobs.inProgress}</div>
+                                <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Jobs in Progress</div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="flex flex-col">
+                                    <span className="text-zinc-500 uppercase font-medium">Waiting</span>
+                                    <span className="text-white font-semibold">{summaryMetrics.jobs.waiting}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-zinc-500 uppercase font-medium">Done</span>
+                                    <span className="text-white font-semibold">{summaryMetrics.jobs.completed}</span>
+                                </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-orange-500 group-hover:underline font-medium">
+                                Open Job Operations <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Employee Coverage */}
+                    <div className="group cursor-pointer">
+                        <Card className="p-5 bg-zinc-900/40 border-zinc-800 hover:border-purple-500/30 transition-all h-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-2 bg-purple-500/10 rounded-lg">
+                                    <Users className="w-5 h-5 text-purple-500" />
+                                </div>
+                                <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Coverage</Badge>
+                            </div>
+                            <div className="space-y-1 mb-4">
+                                <div className="text-2xl font-bold text-white">{summaryMetrics.employees.scheduled}/{employees.length}</div>
+                                <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Scheduled in Period</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${(summaryMetrics?.employees?.available || 0) > 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                <span className="text-sm text-zinc-400">{(summaryMetrics?.employees?.available || 0)} members available</span>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-purple-500 group-hover:underline font-medium">
+                                Open Employee Scheduler <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Financial Health */}
+                    <div className="group cursor-pointer" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>
+                        <Card className="p-5 bg-zinc-900/40 border-zinc-800 hover:border-emerald-500/30 transition-all h-full">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                    <DollarSign className="w-5 h-5 text-emerald-500" />
+                                </div>
+                                <Badge variant="outline" className="text-zinc-500 border-zinc-800 font-normal">Growth</Badge>
+                            </div>
+                            <div className="space-y-1 mb-4">
+                                <div className="text-2xl font-bold text-white">${summaryMetrics.finance.balance.toLocaleString()}</div>
+                                <div className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Outstanding Balances</div>
+                            </div>
+                            <div className="text-sm text-emerald-500/80 font-medium">
+                                {(summaryMetrics?.finance?.due || 0)} Invoices Due
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-zinc-800 flex justify-between items-center text-xs text-emerald-500 group-hover:underline font-medium">
+                                Open Finance / Invoices <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            </section>
 
 
 

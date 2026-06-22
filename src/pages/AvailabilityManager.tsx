@@ -84,7 +84,7 @@ export default function AvailabilityManager() {
                 <p className="text-zinc-500 max-w-md mx-auto mb-6">
                     The Hybrid Availability System contains sensitive administrative logic and is not available in the Interactive Demo.
                 </p>
-                <Button variant="outline" onClick={() => window.location.href = '/dashboard/admin'}>
+                <Button variant="outline" onClick={() => window.location.href = '/bookings-analytics'}>
                     Return to Dashboard
                 </Button>
             </div>
