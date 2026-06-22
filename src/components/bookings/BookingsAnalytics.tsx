@@ -846,14 +846,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         if (!showArchived) {
             result = result.filter(b => !b.isArchived && !b.archived);
         }
-        if (!showTestData) {
-            result = result.filter(b => {
-                const customerName = (b.customer || b.customerName || b.customer_name || '').toLowerCase().trim();
-                const isTestUser = customerName.includes('rick berube') || customerName === 'demo' || customerName === 'test';
-                const hasMockNote = (b.notes || '').includes('[MOCK_DATA]') || (b.notes || '').includes('Test booking');
-                return !isTestUser && !hasMockNote;
-            });
-        }
+
         if (dateFilter.start && dateFilter.end) {
             result = result.filter(b => {
                 const val = b[dateKey] || b.createdAt;
@@ -1464,7 +1457,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setQuotesDateFilter({ start: undefined, end: undefined });
         setQualShowArchived(false);
         setQualDateFilter({ start: undefined, end: undefined });
-        setShowTestData(true);
 
         const keysToRemove = [
             'analytics_snap_showArchived', 'analytics_snap_dateFilter',
@@ -1747,92 +1739,72 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             )}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-0 overflow-hidden shadow-2xl" align="end">
-                        <div className="p-4 bg-red-600 flex items-center justify-between shadow-lg">
-                            <span className="text-xs font-black uppercase tracking-widest text-white antialiased">Filter Graphs</span>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20 rounded-full" onClick={() => setIsFilterOpen(false)}>
-                                <span className="sr-only">Close</span>
-                                ✕
-                            </Button>
-                        </div>
-
+                    <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
                         <div className="p-4 space-y-6">
                             <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-white">Show Archived</span>
-                                </div>
-                                <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="border border-zinc-700 data-[state=checked]:bg-emerald-500" />
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-white">Show Test Data</span>
-                                    <span className="text-[10px] text-zinc-500">Include 'Rick Berube' demo accounts</span>
-                                </div>
-                                <Switch checked={showTestData} onCheckedChange={setShowTestData} className="border border-zinc-700 data-[state=checked]:bg-amber-500" />
+                                <span className="text-sm font-bold text-white">Show Archived</span>
+                                <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
                             </div>
 
                             <div className="space-y-3">
-                                <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Quick Filters</span>
+                                <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
                                 <div className="grid grid-cols-2 gap-2">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (!perfDateFilter.start && !perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!perfDateFilter.start && !perfDateFilter.end) && "bg-zinc-800 text-white")}
                                         onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
                                     >
-                                        ALL TIME
+                                        All Time
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-zinc-800 text-white")}
                                         onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
                                     >
-                                        TODAY
+                                        Today
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
                                         onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
                                     >
-                                        THIS WEEK
+                                        This Week
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
                                         onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
                                     >
-                                        THIS MONTH
+                                        This Month
                                     </Button>
                                 </div>
                             </div>
 
-                            <div className="space-y-3 pt-2 border-t border-zinc-800/50">
-                                <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Custom Range</span>
-                                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/40">
+                            <div className="space-y-3">
+                                <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
+                                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
                                     <Calendar
                                         mode="range"
                                         selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
                                         onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
                                         initialFocus
-                                        className="bg-transparent text-white"
+                                        className="bg-transparent text-zinc-300"
                                     />
                                 </div>
-                                {(perfDateFilter.start || perfDateFilter.end) && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full text-[10px] font-black uppercase text-zinc-500 hover:text-red-500 transition-colors"
-                                        onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
-                                    >
-                                        <RotateCcw className="h-3 w-3 mr-2" />
-                                        Clear Date Filter
-                                    </Button>
-                                )}
                             </div>
+                        </div>
+                        <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
+                            <Button 
+                                className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
+                                onClick={() => setIsFilterOpen(false)}
+                            >
+                                <Filter className="w-3.5 h-3.5" />
+                                Filter
+                            </Button>
                         </div>
                     </PopoverContent>
                 </Popover>
