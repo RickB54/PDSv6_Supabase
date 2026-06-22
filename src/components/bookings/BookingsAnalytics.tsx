@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft } from "lucide-react";
+import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -54,6 +55,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [selectedChartJobs, setSelectedChartJobs] = useState<any[]>([]);
     const [isChartJobsModalOpen, setIsChartJobsModalOpen] = useState(false);
     const [chartJobsModalTitle, setChartJobsModalTitle] = useState("");
+
+    const [showProfitability, setShowProfitability] = useState(false);
+    const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
+
+    useEffect(() => {
+        if (showProfitability) {
+            getConsumptionHistory().then(data => setConsumptionData(data));
+        }
+    }, [showProfitability]);
 
     // Operational Review State
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -1080,6 +1090,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 address: address,
                 locationType: isShop ? "Shop" : "Onsite",
                 service: b.title,
+                probonoReason: b.probonoReason,
                 status: (b.status || 'pending').toLowerCase(),
                 revenue: revenue,
                 value: value > 0 ? value : revenue
@@ -1160,7 +1171,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
     const customerStats = useMemo(() => {
-        const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string }>();
+        const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string, totalSpent: number }>();
 
         filteredInsBookings.forEach(b => {
             if (!b.customer) return;
@@ -1173,10 +1184,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 count: 0,
                 lastService: "",
                 service: "",
-                lastBookingId: ""
+                lastBookingId: "",
+                totalSpent: 0
             };
 
             existing.count += 1;
+            existing.totalSpent += (Number(b.price) || 0);
             if (!existing.lastService || new Date(b.date) > new Date(existing.lastService)) {
                 existing.lastService = b.date;
                 existing.service = b.title;
@@ -1194,6 +1207,29 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         });
         return Array.from(map.values()).sort((a, b) => new Date(b.lastService).getTime() - new Date(a.lastService).getTime());
     }, [filteredInsBookings, customers, estimates]);
+
+    const vehicleClassStats = useMemo(() => {
+        const stats = { compact: { revenue: 0, count: 0 }, midsize: { revenue: 0, count: 0 }, truck: { revenue: 0, count: 0 }, luxury: { revenue: 0, count: 0 } };
+        filteredPerfBookings.forEach(b => {
+            if (!b.vehicle) return;
+            const v = b.vehicle.toLowerCase();
+            const rev = Number(b.price) || 0;
+            if (v.includes('compact') || v.includes('sedan') || v.includes('coupe')) {
+                stats.compact.count++;
+                stats.compact.revenue += rev;
+            } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
+                stats.midsize.count++;
+                stats.midsize.revenue += rev;
+            } else if (v.includes('truck') || v.includes('van') || v.includes('large')) {
+                stats.truck.count++;
+                stats.truck.revenue += rev;
+            } else if (v.includes('luxury') || v.includes('exotic')) {
+                stats.luxury.count++;
+                stats.luxury.revenue += rev;
+            }
+        });
+        return stats;
+    }, [filteredPerfBookings]);
 
     const addonsData = useMemo(() => {
         const details: { name: string, customer: string, date: string, revenue: number, id: string }[] = [];
@@ -1471,6 +1507,151 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         toast.success("Filters Cleared", { description: "All analytics filters have been reset to defaults." });
     };
 
+    const profitabilityData = useMemo(() => {
+        let totalRevenue = 0;
+        let totalHours = 0;
+        let shopJobs = 0;
+        let shopCost = 0;
+        let mobileJobs = 0;
+        let mobileCost = 0;
+
+        const tableData = serviceDetailsData.map(s => {
+            const booking = filteredPerfBookings.find(b => b.id === s.id);
+            const matches = consumptionData.filter(c => c.jobId === s.id);
+            const cost = matches.reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
+            
+            const revenue = s.revenue || 0;
+            const margin = revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0;
+            
+            if (booking) {
+                totalRevenue += revenue;
+                totalHours += (booking.hoursWorked || 0);
+
+                const isShop = s.locationType === 'Shop';
+                if (isShop) {
+                    shopJobs++;
+                    shopCost += cost;
+                } else {
+                    mobileJobs++;
+                    const driveCost = (booking.milesDriven || 0) * 0.67;
+                    mobileCost += (cost + driveCost);
+                }
+            }
+
+            return {
+                ...s,
+                cost,
+                margin,
+                milesDriven: booking?.milesDriven,
+                hoursWorked: booking?.hoursWorked,
+            };
+        });
+
+        const revPerHour = totalHours > 0 ? totalRevenue / totalHours : 0;
+        const avgShopCost = shopJobs > 0 ? shopCost / shopJobs : 0;
+        const avgMobileCost = mobileJobs > 0 ? mobileCost / mobileJobs : 0;
+
+        return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs };
+    }, [serviceDetailsData, consumptionData, filteredPerfBookings]);
+
+    if (showProfitability) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
+                <Button variant="outline" onClick={() => setShowProfitability(false)} className="gap-2 mb-4 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
+                    <ArrowLeft className="w-4 h-4" /> Back to Analytics
+                </Button>
+                
+                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 rounded-lg text-xs font-medium flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p>
+                        <strong>Data Freshness Note:</strong> Cost Per Job data is currently device-specific (stored in local storage via consumption-history) 
+                        and may not reflect costs logged on other devices.
+                    </p>
+                </div>
+
+                {/* Stat Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="bg-zinc-900 border-zinc-800">
+                        <CardHeader>
+                            <CardTitle className="text-zinc-200">Revenue Per Hour</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {profitabilityData.totalHours > 0 ? (
+                                <div className="text-3xl font-black text-emerald-400 font-mono">
+                                    ${profitabilityData.revPerHour.toFixed(2)} <span className="text-sm text-zinc-500">/ hr</span>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-zinc-500 italic">Insufficient time data logged</div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-zinc-900 border-zinc-800">
+                        <CardHeader>
+                            <CardTitle className="text-zinc-200">Mobile vs Shop Cost Delta</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Shop Cost</span>
+                                    <span className="font-mono text-zinc-300">
+                                        {profitabilityData.shopJobs > 0 ? `$${profitabilityData.avgShopCost.toFixed(2)}` : 'No shop jobs'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Mobile Cost <span className="text-[9px] text-zinc-600">(Inc. Est. Drive Cost)</span></span>
+                                    <span className="font-mono text-zinc-300">
+                                        {profitabilityData.mobileJobs > 0 ? `$${profitabilityData.avgMobileCost.toFixed(2)}` : 'No mobile jobs'}
+                                    </span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Table */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-zinc-200">Cost Per Job</CardTitle>
+                        <CardDescription>Breakdown of revenue, costs, and margins for each job</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-zinc-950/50 border-zinc-800">
+                                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead className="text-right">Revenue</TableHead>
+                                        <TableHead className="text-right">Cost</TableHead>
+                                        <TableHead className="text-right">Margin</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {profitabilityData.tableData.map(row => (
+                                        <TableRow key={row.id} className="border-zinc-800 hover:bg-zinc-800/30">
+                                            <TableCell className="text-xs text-zinc-400 font-mono">{row.date ? format(parseISO(row.date), "MMM d") : "N/A"}</TableCell>
+                                            <TableCell className="text-zinc-200 font-medium">{row.customer}</TableCell>
+                                            <TableCell className="text-zinc-400 text-xs">{row.service}</TableCell>
+                                            <TableCell className="text-right text-emerald-400 font-mono">${row.revenue.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right text-red-400 font-mono">
+                                                {row.cost > 0 ? `$${row.cost.toFixed(2)}` : <span className="text-[10px] text-zinc-600 italic">No cost data logged</span>}
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono font-bold text-zinc-300">
+                                                {row.cost > 0 ? `${row.margin.toFixed(1)}%` : "N/A"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
             {/* Global Actions Bar & Bookmarks */}
@@ -1519,6 +1700,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Probono Jobs</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
                 </div>
             </div>
 
@@ -1614,6 +1796,51 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </PopoverContent>
                     </Popover>
                 </div>
+                
+                {/* Vehicle Class Performance Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Compact / Sedan</span>
+                            <div className="flex items-end justify-between mt-2">
+                                <span className="text-xl font-bold text-blue-400 font-mono">${vehicleClassStats.compact.revenue.toLocaleString()}</span>
+                                <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.compact.count} Jobs</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Midsize / SUV</span>
+                            <div className="flex items-end justify-between mt-2">
+                                <span className="text-xl font-bold text-emerald-400 font-mono">${vehicleClassStats.midsize.revenue.toLocaleString()}</span>
+                                <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.midsize.count} Jobs</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Truck / Large</span>
+                            <div className="flex items-end justify-between mt-2">
+                                <span className="text-xl font-bold text-amber-400 font-mono">${vehicleClassStats.truck.revenue.toLocaleString()}</span>
+                                <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.truck.count} Jobs</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Luxury / Exotic</span>
+                            <div className="flex items-end justify-between mt-2">
+                                <span className="text-xl font-bold text-purple-400 font-mono">${vehicleClassStats.luxury.revenue.toLocaleString()}</span>
+                                <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.luxury.count} Jobs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Bookings */}
                     <div className="group cursor-pointer" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -2603,7 +2830,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8 overflow-y-auto max-h-[500px]">
+                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8">
                             <div className="w-full flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
                                 <div className="h-[200px] w-full">
@@ -2658,6 +2885,37 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <Legend verticalAlign="bottom" height={36} iconType="circle" />
                                         </PieChart>
                                     </ResponsiveContainer>
+                                </div>
+                            </div>
+                            <div className="w-full flex flex-col items-center">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Conversion Funnel</h4>
+                                <div className="w-full px-4 space-y-5">
+                                    {(() => {
+                                        const total = filteredQuotes.length;
+                                        const sent = filteredQuotes.filter(q => {
+                                            const s = (q.status || '').toLowerCase();
+                                            return q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+                                        }).length;
+                                        const accepted = filteredQuotes.filter(q => (q.status || '').toLowerCase() === 'accepted').length;
+                                        const sentP = total > 0 ? Math.round((sent/total)*100) : 0;
+                                        const accP = sent > 0 ? Math.round((accepted/sent)*100) : 0;
+                                        return (
+                                            <div className="space-y-4 w-full mx-auto">
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-xs"><span className="text-zinc-400 uppercase font-semibold">Total Quotes</span><span className="font-bold text-zinc-200">{total}</span></div>
+                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" style={{width: '100%'}}/></div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-xs"><span className="text-indigo-400 uppercase font-semibold">Sent to Client</span><span className="font-bold text-indigo-300">{sent} ({sentP}%)</span></div>
+                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000" style={{width: `${sentP}%`}}/></div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex justify-between text-xs"><span className="text-emerald-400 uppercase font-semibold">Accepted</span><span className="font-bold text-emerald-300">{accepted} ({accP}%)</span></div>
+                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all duration-1000" style={{width: `${(accepted/Math.max(1, total))*100}%`}}/></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -2779,6 +3037,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <TableHead>Date</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead>Service</TableHead>
+                                        <TableHead>Reason</TableHead>
                                         <TableHead className="text-right">Job Value</TableHead>
                                         <TableHead className="text-right">Revenue</TableHead>
                                     </TableRow>
@@ -2808,6 +3067,30 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 </TableCell>
                                                 <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
                                                 <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
+                                                <TableCell>
+                                                    {job.probonoReason ? (
+                                                        <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px] uppercase font-black truncate max-w-[140px]">
+                                                            {job.probonoReason}
+                                                        </Badge>
+                                                    ) : (
+                                                        <select
+                                                            value={job.probonoReason || ''}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={async (e) => {
+                                                                const val = e.target.value;
+                                                                await update(job.id, { probonoReason: val });
+                                                            }}
+                                                            className="h-7 w-[140px] px-2 text-xs bg-zinc-950/50 border border-zinc-800/50 rounded focus:border-pink-500/50 transition-colors text-zinc-300 focus:outline-none"
+                                                        >
+                                                            <option value="">Backfill Legacy...</option>
+                                                            <option value="Referral Builder">Referral Builder</option>
+                                                            <option value="Family/Friend">Family/Friend</option>
+                                                            <option value="Review-for-Service Trade">Review-for-Service Trade</option>
+                                                            <option value="Redo/Comp for Issue">Redo/Comp for Issue</option>
+                                                            <option value="Other">Other</option>
+                                                        </select>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right text-emerald-400 font-mono">
                                                     {job.value > 0 ? `$${job.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "N/A"}
                                                 </TableCell>
@@ -2960,6 +3243,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <TableRow>
                                     <TableHead className="w-[150px]">Customer</TableHead>
                                     <TableHead className="min-w-[150px]">Contact</TableHead>
+                                    <TableHead className="min-w-[100px]">Loyalty / LTV</TableHead>
                                     <TableHead className="min-w-[100px]">Last Service</TableHead>
                                     <TableHead className="min-w-[120px]">Quotes Given</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
@@ -2973,6 +3257,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <div className="flex flex-col text-xs text-muted-foreground gap-1">
                                                 {cust.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {cust.email}</span>}
                                                 {cust.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {cust.phone}</span>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-xs font-bold text-emerald-400 font-mono">${(cust.totalSpent || 0).toLocaleString()}</span>
+                                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{cust.count} Jobs</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>{new Date(cust.lastService).toLocaleDateString()}</TableCell>

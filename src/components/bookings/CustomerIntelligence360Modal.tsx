@@ -179,7 +179,8 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
         details: {
           vehicle: `${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}${b.vehicleColor ? ` (${b.vehicleColor})` : ''}`.trim() || 'N/A',
           basePrice: basePrice.toFixed(2),
-          addons: addonBreakdown
+          addons: addonBreakdown,
+          probonoReason: b.probonoReason || null
         },
         value: b.price || 0,
         status: b.status,
@@ -510,6 +511,11 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                                      {item.details.addons.length > 0 && (
                                        <span className="text-zinc-500">
                                          Add-ons: <strong className="text-blue-400/80">{item.details.addons.join(', ')}</strong>
+                                       </span>
+                                     )}
+                                     {item.details.probonoReason && (
+                                       <span className="text-pink-400 font-black uppercase text-[8px] bg-pink-500/10 border border-pink-500/20 px-1 py-0.5 rounded ml-1">
+                                         PROBONO: {item.details.probonoReason}
                                        </span>
                                      )}
                                    </div>

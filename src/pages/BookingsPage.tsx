@@ -148,7 +148,8 @@ export default function BookingsPage() {
     discountType: "coupon" as "coupon" | "custom",
     discountCode: "",
     customDiscount: "",
-    placeOfService: "Customer's address"
+    placeOfService: "Customer's address",
+    probonoReason: ""
   });
 
   const [cancelReason, setCancelReason] = useState("");
@@ -778,7 +779,8 @@ export default function BookingsPage() {
             discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
             discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
             customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
-            placeOfService: booking.placeOfService || "Customer's address"
+            placeOfService: booking.placeOfService || "Customer's address",
+            probonoReason: booking.probonoReason || ""
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -1056,7 +1058,8 @@ export default function BookingsPage() {
       discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
       customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
-      placeOfService: booking.placeOfService || "Customer's address"
+      placeOfService: booking.placeOfService || "Customer's address",
+      probonoReason: booking.probonoReason || ""
     });
     
     if (booking.date) {
@@ -1316,7 +1319,8 @@ export default function BookingsPage() {
           price: calculatedPrice,
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
-          placeOfService: formData.placeOfService
+          placeOfService: formData.placeOfService,
+          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : ""
         };
 
         // Reschedule Tracking Logic
@@ -1408,7 +1412,8 @@ export default function BookingsPage() {
           createdAt: new Date().toISOString(),
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
-          placeOfService: formData.placeOfService
+          placeOfService: formData.placeOfService,
+          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : ""
         };
         
         await add(newBooking as any);
@@ -1489,7 +1494,8 @@ export default function BookingsPage() {
           discountType: "coupon",
           discountCode: "",
           customDiscount: "",
-          placeOfService: "Customer's address"
+          placeOfService: "Customer's address",
+          probonoReason: ""
         });
       }, 300);
 
@@ -1557,7 +1563,8 @@ export default function BookingsPage() {
       discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
       customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
-      placeOfService: booking.placeOfService || "Customer's address"
+      placeOfService: booking.placeOfService || "Customer's address",
+      probonoReason: booking.probonoReason || ""
     });
 
     // Reset validation/selection states for "New" mode
@@ -2781,6 +2788,27 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
+                {/* Probono Reason (Conditional) */}
+                {typeof liveTotal !== 'undefined' && liveTotal === 0 && (
+                  <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
+                    <label className="text-right text-sm font-medium text-pink-400">Probono Reason</label>
+                    <div className="col-span-3">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-pink-500/30 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                        value={formData.probonoReason || ""}
+                        onChange={(e) => setFormData({ ...formData, probonoReason: e.target.value })}
+                      >
+                        <option value="">Uncategorized</option>
+                        <option value="Referral Builder">Referral Builder</option>
+                        <option value="Family/Friend">Family/Friend</option>
+                        <option value="Review-for-Service Trade">Review-for-Service Trade</option>
+                        <option value="Redo/Comp for Issue">Redo/Comp for Issue</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Vehicle Type</label>
                   <div className="col-span-3 space-y-2">
@@ -3726,6 +3754,11 @@ export default function BookingsPage() {
                                                     {discAmt > 0 && (
                                                       <Badge variant="outline" className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border-amber-500/20 px-1.5 py-0 h-4">
                                                         Discount: -${discAmt.toFixed(2)} {discCode ? `(${discCode})` : ''}
+                                                      </Badge>
+                                                    )}
+                                                    {bookingItem.probonoReason && (
+                                                      <Badge variant="outline" className="text-[10px] font-black uppercase text-pink-400 bg-pink-500/10 border-pink-500/20 px-1.5 py-0 h-4">
+                                                        Probono: {bookingItem.probonoReason}
                                                       </Badge>
                                                     )}
                                                   </div>
