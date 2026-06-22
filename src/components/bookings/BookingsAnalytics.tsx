@@ -2887,37 +2887,63 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                            <div className="w-full flex flex-col items-center">
-                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Conversion Funnel</h4>
-                                <div className="w-full px-4 space-y-5">
-                                    {(() => {
-                                        const total = filteredQuotes.length;
-                                        const sent = filteredQuotes.filter(q => {
-                                            const s = (q.status || '').toLowerCase();
-                                            return q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
-                                        }).length;
-                                        const accepted = filteredQuotes.filter(q => (q.status || '').toLowerCase() === 'accepted').length;
-                                        const sentP = total > 0 ? Math.round((sent/total)*100) : 0;
-                                        const accP = sent > 0 ? Math.round((accepted/sent)*100) : 0;
-                                        return (
-                                            <div className="space-y-4 w-full mx-auto">
-                                                <div className="space-y-1">
-                                                    <div className="flex justify-between text-xs"><span className="text-zinc-400 uppercase font-semibold">Total Quotes</span><span className="font-bold text-zinc-200">{total}</span></div>
-                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" style={{width: '100%'}}/></div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="flex justify-between text-xs"><span className="text-indigo-400 uppercase font-semibold">Sent to Client</span><span className="font-bold text-indigo-300">{sent} ({sentP}%)</span></div>
-                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000" style={{width: `${sentP}%`}}/></div>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <div className="flex justify-between text-xs"><span className="text-emerald-400 uppercase font-semibold">Accepted</span><span className="font-bold text-emerald-300">{accepted} ({accP}%)</span></div>
-                                                    <div className="h-2.5 w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner"><div className="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all duration-1000" style={{width: `${(accepted/Math.max(1, total))*100}%`}}/></div>
-                                                </div>
+                        </div>
+                    </div>
+                    {/* NEW: DEDICATED CONVERSION FUNNEL ROW */}
+                    <div className="w-full bg-zinc-950/80 p-6 sm:p-8 border-t border-zinc-800 flex flex-col items-center">
+                        <div className="flex items-center gap-2 mb-6">
+                            <h4 className="text-sm uppercase font-black text-zinc-300 tracking-widest">Conversion Funnel</h4>
+                        </div>
+                        <div className="w-full max-w-4xl mx-auto">
+                            {(() => {
+                                const total = filteredQuotes.length;
+                                const sent = filteredQuotes.filter(q => {
+                                    const s = (q.status || '').toLowerCase();
+                                    return q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+                                }).length;
+                                const accepted = filteredQuotes.filter(q => (q.status || '').toLowerCase() === 'accepted').length;
+                                const sentP = total > 0 ? Math.round((sent / total) * 100) : 0;
+                                const accP = sent > 0 ? Math.round((accepted / sent) * 100) : 0;
+                                
+                                return (
+                                    <div className="flex flex-col md:flex-row items-stretch justify-between gap-4 md:gap-0">
+                                        {/* Stage 1: Total */}
+                                        <div className="flex-1 flex flex-col relative z-10">
+                                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 text-center mx-2 shadow-lg shadow-blue-900/20">
+                                                <div className="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-1">Total Quotes</div>
+                                                <div className="text-3xl font-black text-white">{total}</div>
+                                                <div className="text-xs text-blue-300/70 font-semibold mt-1">100% of pipeline</div>
                                             </div>
-                                        );
-                                    })()}
-                                </div>
-                            </div>
+                                            {/* Connector visible on desktop */}
+                                            <div className="hidden md:block absolute top-1/2 -right-2 w-4 h-0.5 bg-zinc-700 z-0"></div>
+                                        </div>
+
+                                        {/* Stage 2: Sent */}
+                                        <div className="flex-1 flex flex-col relative z-10">
+                                            {/* Connector from left */}
+                                            <div className="hidden md:block absolute top-1/2 -left-2 w-4 h-0.5 bg-zinc-700 z-0"></div>
+                                            <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 text-center mx-2 shadow-lg shadow-indigo-900/20">
+                                                <div className="text-[10px] font-black uppercase text-indigo-400 tracking-widest mb-1">Sent to Client</div>
+                                                <div className="text-3xl font-black text-white">{sent}</div>
+                                                <div className="text-xs text-indigo-300/70 font-semibold mt-1">{sentP}% conversion</div>
+                                            </div>
+                                            {/* Connector to right */}
+                                            <div className="hidden md:block absolute top-1/2 -right-2 w-4 h-0.5 bg-zinc-700 z-0"></div>
+                                        </div>
+
+                                        {/* Stage 3: Accepted */}
+                                        <div className="flex-1 flex flex-col relative z-10">
+                                            {/* Connector from left */}
+                                            <div className="hidden md:block absolute top-1/2 -left-2 w-4 h-0.5 bg-zinc-700 z-0"></div>
+                                            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 text-center mx-2 shadow-lg shadow-emerald-900/20">
+                                                <div className="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Accepted (Won)</div>
+                                                <div className="text-3xl font-black text-white">{accepted}</div>
+                                                <div className="text-xs text-emerald-300/70 font-semibold mt-1">{accP}% conversion</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </CardContent>

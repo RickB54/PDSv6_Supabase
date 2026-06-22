@@ -998,7 +998,8 @@ export default function BookingsPage() {
       discountType: "coupon",
       discountCode: defaultCoupon,
       customDiscount: "",
-      placeOfService: "Customer's address"
+      placeOfService: "Customer's address",
+      probonoReason: ""
     });
     setIsAddModalOpen(true);
   };
