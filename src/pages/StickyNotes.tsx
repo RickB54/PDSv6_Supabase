@@ -1418,15 +1418,18 @@ export default function StickyNotes() {
       const textarea = textareaRef.current;
       const cursorPos = textarea.selectionStart || editingNote.content.length;
       const timestamp = new Date().toLocaleString([], { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' });
-      const newSectionText = `\n\n---\n# New Section (${timestamp})\n\n`;
+      const newSectionText = `\n\n---\n# New Section (${timestamp})\n`;
       
       const newContent = editingNote.content.slice(0, cursorPos) + newSectionText + editingNote.content.slice(cursorPos);
       setEditingNote({ ...editingNote, content: newContent });
       
       setTimeout(() => {
         textarea.focus();
-        textarea.setSelectionRange(cursorPos + newSectionText.length, cursorPos + newSectionText.length);
-      }, 0);
+        const newPos = cursorPos + newSectionText.length;
+        textarea.setSelectionRange(newPos, newPos);
+        textarea.blur();
+        textarea.focus();
+      }, 50);
     }
   };
 
