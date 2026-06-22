@@ -736,6 +736,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return { start: undefined, end: undefined };
     });
 
+    // Snapshot Filter
+    const [isSnapshotFilterOpen, setIsSnapshotFilterOpen] = useState(false);
+    const [snapshotShowArchived, setSnapshotShowArchived] = useState(() => localStorage.getItem('analytics_snap_showArchived') === 'true');
+    const [snapshotDateFilter, setSnapshotDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_snap_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: startOfDay(new Date()), end: endOfDay(new Date()) };
+    });
+
     // Insights Filter
     const [insShowArchived, setInsShowArchived] = useState(() => localStorage.getItem('analytics_ins_showArchived') === 'true');
     const [insDateFilter, setInsDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
@@ -785,6 +799,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_ins_showArchived', String(insShowArchived));
         localStorage.setItem('analytics_ins_dateFilter', JSON.stringify(insDateFilter));
     }, [insShowArchived, insDateFilter]);
+
+    useEffect(() => {
+        localStorage.setItem('analytics_snap_showArchived', String(snapshotShowArchived));
+        localStorage.setItem('analytics_snap_dateFilter', JSON.stringify(snapshotDateFilter));
+    }, [snapshotShowArchived, snapshotDateFilter]);
 
     useEffect(() => {
         localStorage.setItem('analytics_inv_showArchived', String(invShowArchived));
@@ -1365,21 +1384,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [filteredPerfBookings, toDoServices, doneServices, invoices]);
 
     const snapshotTitle = useMemo(() => {
-        if (!perfDateFilter.start || !perfDateFilter.end) return "All-Time Operational Snapshot";
-        if (isSameDay(perfDateFilter.start, startOfDay(new Date()))) return "Daily Operational Snapshot";
-        if (isSameDay(perfDateFilter.start, startOfWeek(new Date()))) return "Weekly Operational Snapshot";
-        if (isSameDay(perfDateFilter.start, startOfMonth(new Date()))) return "Monthly Operational Snapshot";
+        if (!snapshotDateFilter.start || !snapshotDateFilter.end) return "All-Time Operational Snapshot";
+        if (isSameDay(snapshotDateFilter.start, startOfDay(new Date()))) return "Daily Operational Snapshot";
+        if (isSameDay(snapshotDateFilter.start, startOfWeek(new Date()))) return "Weekly Operational Snapshot";
+        if (isSameDay(snapshotDateFilter.start, startOfMonth(new Date()))) return "Monthly Operational Snapshot";
         return "Custom Operational Snapshot";
-    }, [perfDateFilter]);
+    }, [snapshotDateFilter]);
 
     const summaryMetrics = useMemo(() => {
         try {
             const now = new Date();
-            const filterStart = perfDateFilter.start || new Date(2000, 0, 1);
-            const filterEnd = perfDateFilter.end || new Date(2100, 11, 31);
+            const filterStart = snapshotDateFilter.start || new Date(2000, 0, 1);
+            const filterEnd = snapshotDateFilter.end || new Date(2100, 11, 31);
 
             const scopeBookings = (bookings || []).filter(b => {
                 if (!b) return false;
+                if (!snapshotShowArchived && (b.isArchived || b.archived)) return false;
                 if (b.customer === 'Generic Customer' || b.customer === 'TEST Customer') return false;
                 try {
                     const d = b.date ? parseISO(b.date) : null;
@@ -1430,7 +1450,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         } catch (e) {
             return { bookings: { count: 0, next: null, completed: 0 }, jobs: { inProgress: 0, waiting: 0, completed: 0 }, employees: { scheduled: 0, available: 0 }, finance: { balance: 0, due: 0, collected: 0 } };
         }
-    }, [bookings, invoices, employees, perfDateFilter]);
+    }, [bookings, invoices, employees, snapshotDateFilter, snapshotShowArchived]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
@@ -1489,13 +1509,82 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             <section className="space-y-4">
                 <div className="flex justify-between items-center">
                     <h2 className="text-lg font-semibold text-white">{snapshotTitle}</h2>
-                    <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")} onClick={() => {
-                        document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' });
-                        setTimeout(() => setIsFilterOpen(true), 300);
-                    }}>
-                        <Filter className="h-3.5 w-3.5" />
-                        Filter Data
-                    </Button>
+                    <Popover open={isSnapshotFilterOpen} onOpenChange={setIsSnapshotFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (snapshotDateFilter.start || snapshotDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                <Filter className="h-3.5 w-3.5" />
+                                Filter Data
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
+                            <div className="p-4 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-bold text-white">Show Archived</span>
+                                    <Switch checked={snapshotShowArchived} onCheckedChange={setSnapshotShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!snapshotDateFilter.start && !snapshotDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setSnapshotDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (snapshotDateFilter.start && isToday(snapshotDateFilter.start) && !snapshotDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setSnapshotDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (snapshotDateFilter.start && snapshotDateFilter.end && isSameDay(snapshotDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setSnapshotDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (snapshotDateFilter.start && isSameMonth(snapshotDateFilter.start, new Date()) && snapshotDateFilter.end && isSameDay(snapshotDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setSnapshotDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
+                                    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: snapshotDateFilter.start, to: snapshotDateFilter.end }}
+                                            onSelect={(range) => setSnapshotDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="bg-transparent text-zinc-300"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
+                                <Button 
+                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
+                                    onClick={() => setIsSnapshotFilterOpen(false)}
+                                >
+                                    <Filter className="w-3.5 h-3.5" />
+                                    Filter
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Bookings */}
