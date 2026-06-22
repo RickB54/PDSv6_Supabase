@@ -1399,7 +1399,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
             const scopeBookings = (bookings || []).filter(b => {
                 if (!b) return false;
-                if (!snapshotShowArchived && (b.isArchived || b.archived)) return false;
+                if (!snapshotShowArchived && (b.isArchived || (b as any).archived)) return false;
                 if (b.customer === 'Generic Customer' || b.customer === 'TEST Customer') return false;
                 try {
                     const d = b.date ? parseISO(b.date) : null;
