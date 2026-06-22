@@ -1159,7 +1159,7 @@ const Accounting = () => {
                           >
                             <div>
                               <p className="font-semibold text-blue-700">+${rawAmt.toFixed(2)}</p>
-                              <p className="text-sm">Paid Invoice #{String((inv as any).invoiceNumber || inv.id?.slice(0, 8))}</p>
+                              <p className="text-sm">Paid Invoice #{String((inv as any).invoiceNumber || inv.id?.slice(0, 8))} {((inv as any).customerName || (inv as any).customer_name) ? `— ${((inv as any).customerName || (inv as any).customer_name)}` : ''}</p>
                               {tipAmt > 0 && (
                                 <p className="text-[11px] text-emerald-600 font-semibold">Includes ${tipAmt.toFixed(2)} Tip · Service: ${serviceAmt.toFixed(2)}</p>
                               )}
@@ -1177,7 +1177,7 @@ const Accounting = () => {
                           >
                             <div>
                               <p className="font-semibold text-green-700">+${(income.amount || 0).toFixed(2)}</p>
-                              <p className="text-sm">{income.description || 'Income'}</p>
+                              <p className="text-sm">{income.description || 'Income'} {income.customerName ? `— ${income.customerName}` : ''}</p>
                               <span className="text-[11px] font-black text-emerald-500/80 mt-1 block uppercase tracking-widest">{new Date(income.createdAt || income.date).toLocaleString()}</span>
                             </div>
                             <div className="flex gap-1 items-center">

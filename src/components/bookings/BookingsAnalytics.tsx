@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -1451,6 +1451,33 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             return { bookings: { count: 0, next: null, completed: 0 }, jobs: { inProgress: 0, waiting: 0, completed: 0 }, employees: { scheduled: 0, available: 0 }, finance: { balance: 0, due: 0, collected: 0 } };
         }
     }, [bookings, invoices, employees, snapshotDateFilter, snapshotShowArchived]);
+    const clearAllFilters = () => {
+        setSnapshotShowArchived(false);
+        setSnapshotDateFilter({ start: undefined, end: undefined });
+        setPerfShowArchived(false);
+        setPerfDateFilter({ start: undefined, end: undefined });
+        setInsShowArchived(false);
+        setInsDateFilter({ start: undefined, end: undefined });
+        setInvShowArchived(false);
+        setInvDateFilter({ start: undefined, end: undefined });
+        setQuotesShowArchived(false);
+        setQuotesDateFilter({ start: undefined, end: undefined });
+        setQualShowArchived(false);
+        setQualDateFilter({ start: undefined, end: undefined });
+        setShowTestData(true);
+
+        const keysToRemove = [
+            'analytics_snap_showArchived', 'analytics_snap_dateFilter',
+            'analytics_perf_showArchived', 'analytics_perf_dateFilter',
+            'analytics_ins_showArchived', 'analytics_ins_dateFilter',
+            'analytics_inv_showArchived', 'analytics_inv_dateFilter',
+            'analytics_quotes_showArchived', 'analytics_quotes_dateFilter',
+            'analytics_qual_showArchived', 'analytics_qual_dateFilter'
+        ];
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        toast.success("Filters Cleared", { description: "All analytics filters have been reset to defaults." });
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
@@ -1477,6 +1504,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         >
                             <FileBarChart className="w-4 h-4" />
                             Price Audit
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            onClick={clearAllFilters}
+                            className="border-red-900/50 bg-red-900/10 text-red-400 hover:text-white hover:bg-red-900/40 h-10 gap-2 w-full sm:w-auto"
+                            title="Reset all Analytics filters to default"
+                        >
+                            <FilterX className="w-4 h-4" />
+                            Clear All Filters
                         </Button>
                     </div>
                 </div>
