@@ -1253,22 +1253,41 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 return;
             }
 
-            if (v.includes('compact') || v.includes('sedan') || v.includes('coupe')) {
+            if (v === 'compact/sedan') {
                 stats.compact.count++;
                 stats.compact.revenue += rev;
                 stats.compact.jobs.push(b);
-            } else if (v.includes('truck') || v.includes('van') || v.includes('large')) {
+            } else if (v === 'truck/van/large suv') {
                 stats.truck.count++;
                 stats.truck.revenue += rev;
                 stats.truck.jobs.push(b);
-            } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
+            } else if (v === 'mid-size/suv') {
                 stats.midsize.count++;
                 stats.midsize.revenue += rev;
                 stats.midsize.jobs.push(b);
-            } else if (v.includes('luxury') || v.includes('exotic')) {
+            } else if (v === 'luxury/high-end') {
                 stats.luxury.count++;
                 stats.luxury.revenue += rev;
                 stats.luxury.jobs.push(b);
+            } else {
+                // Fallback for legacy loosely-typed data
+                if (v.includes('compact') || v.includes('sedan') || v.includes('coupe')) {
+                    stats.compact.count++;
+                    stats.compact.revenue += rev;
+                    stats.compact.jobs.push(b);
+                } else if (v.includes('truck') || v.includes('van') || v.includes('large')) {
+                    stats.truck.count++;
+                    stats.truck.revenue += rev;
+                    stats.truck.jobs.push(b);
+                } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
+                    stats.midsize.count++;
+                    stats.midsize.revenue += rev;
+                    stats.midsize.jobs.push(b);
+                } else if (v.includes('luxury') || v.includes('exotic')) {
+                    stats.luxury.count++;
+                    stats.luxury.revenue += rev;
+                    stats.luxury.jobs.push(b);
+                }
             }
         });
         return stats;
@@ -1930,7 +1949,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     >
                         <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Compact / Sedan</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Compact/Sedan</span>
                             <div className="flex items-end justify-between mt-2">
                                 <span className="text-xl font-bold text-blue-400 font-mono">${vehicleClassStats.compact.revenue.toLocaleString()}</span>
                                 <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.compact.count} Jobs</span>
@@ -1943,7 +1962,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     >
                         <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Midsize / SUV</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Mid-Size/SUV</span>
                             <div className="flex items-end justify-between mt-2">
                                 <span className="text-xl font-bold text-emerald-400 font-mono">${vehicleClassStats.midsize.revenue.toLocaleString()}</span>
                                 <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.midsize.count} Jobs</span>
@@ -1956,7 +1975,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     >
                         <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Truck / Large</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Truck/Van/Large SUV</span>
                             <div className="flex items-end justify-between mt-2">
                                 <span className="text-xl font-bold text-amber-400 font-mono">${vehicleClassStats.truck.revenue.toLocaleString()}</span>
                                 <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.truck.count} Jobs</span>
@@ -1969,7 +1988,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     >
                         <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Luxury / Exotic</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Luxury/High-End</span>
                             <div className="flex items-end justify-between mt-2">
                                 <span className="text-xl font-bold text-purple-400 font-mono">${vehicleClassStats.luxury.revenue.toLocaleString()}</span>
                                 <span className="text-xs font-semibold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full">{vehicleClassStats.luxury.count} Jobs</span>
