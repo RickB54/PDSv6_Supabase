@@ -1,10 +1,10 @@
-import { useNavigate } from "react-router-dom";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight, ChevronUp,
-  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon, Eye, PinOff,
-  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type, Mic, MicOff, Archive
+  Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
+  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type,
+  Archive, Mic, MicOff, Eye, PinOff
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -92,20 +92,20 @@ const getBoardDisplayContent = (content: string) => {
   }).join('\n');
 };
 
-export const getFullSectionName = (notesStore: any, secId: string) => {
-  const section = notesStore.sections.find((s: any) => s.id === secId);
-  if (!section) return "Unknown";
-  const notebook = notesStore.notebooks.find((nb: any) => nb.id === section.notebook_id);
-  if (!notebook) return section.name;
-  return `${notebook.name}/${section.name}`;
-};
-
 export const getReminderData = (note: Note) => {
   const tag = note.tags?.find(t => t.startsWith('__reminder:'));
   if (!tag) return null;
   const content = tag.substring(11, tag.length - 2); // strip __reminder: and __
   const [date, time, repeat, sound, popup] = content.split('|');
   return { date, time, repeat: repeat || 'none', sound: sound !== 'false', popup: popup !== 'false' };
+};
+
+export const getFullSectionName = (notesStore: any, secId: string) => {
+  const sec = notesStore.sections.find((s: any) => s.id === secId);
+  if (!sec) return "";
+  const nb = notesStore.notebooks.find((n: any) => n.id === sec.notebook_id);
+  if (!nb || nb.name === sec.name) return sec.name;
+  return `${nb.name} / ${sec.name}`;
 };
 
 const formatAmPm = (timeStr: string) => {
@@ -118,7 +118,7 @@ const formatAmPm = (timeStr: string) => {
   return `${hour}:${m} ${ampm}`;
 };
 
-const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, onEdit, onDelete, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, isMasonry?: boolean, onEdit: (n: Note) => void, onDelete: (id: string) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
+const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, isMasonry?: boolean, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
   const {
     attributes,
     listeners,
@@ -243,47 +243,30 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-             {(showTags && (note.tags?.filter(t => !t.startsWith('__')).length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) && (
-              <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
-                {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
+            {(showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) || uniqueCardSections.length > 0 || sectionName ? (
+              <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap items-center gap-1">
+                {note.tags?.includes('__archived__') && (
+                  <span className={`text-[9px] uppercase font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-sm`}>Archived</span>
+                )}
+                {uniqueCardSections.length > 0 ? (
+                  uniqueCardSections.map(secId => {
+                    const sec = notesStore.sections.find(s => s.id === secId);
+                    if (!sec) return null;
+                    return (
+                      <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
+                        {getFullSectionName(notesStore, secId)}
+                      </span>
+                    );
+                  })
+                ) : sectionName ? (
+                  <span className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>{sectionName}</span>
+                ) : null}
+                {showTags && note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 && note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
-                )) : (
+                ))}
+                {showTags && (!note.tags || note.tags.filter(t => !t.startsWith('__')).length === 0) && !note.tags?.includes('__archived__') && uniqueCardSections.length === 0 && !sectionName && (
                   <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
                 )}
-              </div>
-            )}
-
-            {uniqueCardSections.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {note.tags?.includes('__archived__') && (
-                  <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
-                    Archived
-                  </span>
-                )}
-                {uniqueCardSections.map(secId => {
-                  const sec = notesStore.sections.find(s => s.id === secId);
-                  if (!sec) return null;
-                  return (
-                    <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
-                      {getFullSectionName(notesStore, secId)}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : sectionName ? (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {note.tags?.includes('__archived__') && (
-                  <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
-                    Archived
-                  </span>
-                )}
-                <div className="text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
-              </div>
-            ) : note.tags?.includes('__archived__') ? (
-              <div className="mt-3 flex flex-wrap gap-1">
-                <span className="inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 select-none shadow-sm animate-pulse">
-                  Archived
-                </span>
               </div>
             ) : null}
           </>
@@ -316,7 +299,9 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
 
               </DropdownMenuContent>
             </DropdownMenu>
-            
+            <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { e.stopPropagation(); onSendToNotes(note); }}>
+              <FileText className="w-4 h-4" />
+            </Button>
           </div>
           <div className="flex gap-1">
             <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Open Settings" onClick={(e) => { e.stopPropagation(); onOpenSettings?.(); }}>
@@ -355,6 +340,7 @@ const SortableListRow = React.memo(({
   sectionName, 
   onEdit, 
   onDelete, 
+  onSendToNotes, 
   onDuplicate, 
   onChangeColor, 
   onTogglePin, 
@@ -367,6 +353,7 @@ const SortableListRow = React.memo(({
   sectionName?: string, 
   onEdit: (n: Note) => void, 
   onDelete: (id: string) => void, 
+  onSendToNotes: (n: Note) => void, 
   onDuplicate: (n: Note) => void, 
   onChangeColor: (n: Note, colorId: string) => void, 
   onTogglePin: (n: Note) => void, 
@@ -441,6 +428,11 @@ const SortableListRow = React.memo(({
         
         {/* Timestamp & Section */}
         <div className="flex items-center gap-2 shrink-0">
+          {note.tags?.includes('__archived__') && (
+            <span className="text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+              Archived
+            </span>
+          )}
           {(() => {
             const reminder = getReminderData(note);
             return reminder ? (
@@ -450,11 +442,6 @@ const SortableListRow = React.memo(({
               </span>
             ) : null;
           })()}
-          {note.tags?.includes('__archived__') && (
-            <span className="text-[9px] font-bold bg-red-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm shrink-0">
-              Archived
-            </span>
-          )}
           {sectionName && (
             <span className="text-[9px] font-bold bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase tracking-wider max-w-[120px] truncate">
               {sectionName}
@@ -496,7 +483,9 @@ const SortableListRow = React.memo(({
             <DropdownMenuItem onClick={() => onDuplicate(note)}>
               <Copy className="w-4 h-4 mr-2" /> Make a copy
             </DropdownMenuItem>
-            
+            <DropdownMenuItem onClick={() => onSendToNotes(note)}>
+              <FileText className="w-4 h-4 mr-2" /> Send to Personal Notes
+            </DropdownMenuItem>
             <div className="border-t border-zinc-800 my-1" />
             <div className="px-2 py-1 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Change Color</div>
             <div className="px-2 py-1.5 grid grid-cols-5 gap-1.5">
@@ -541,12 +530,10 @@ const getAnimClass = (enabled: boolean, style: string, neonBurst = false) => {
   return cls;
 };
 
-export default function StickyNotes() {
-  const navigate = useNavigate();
+export default function StickyNotes({ setActivePage }: { setActivePage: (page: string) => void }) {
   const notesStore = useNotesStore();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [pinFilter, setPinFilter] = useState<'all'|'pinned'|'unpinned'>('all');
   const [selectedNotebook, setSelectedNotebook] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null); // null = All
   const [expandedNotebook, setExpandedNotebook] = useState<string | null>(null);
@@ -642,14 +629,21 @@ export default function StickyNotes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
   const [labelSearchText, setLabelSearchText] = useState("");
 
   const notesWithReminders = useMemo(() => notesStore.notes.filter(n => getReminderData(n) !== null), [notesStore.notes]);
+
+  type DeletePromptState = {
+    isOpen: boolean;
+    type: 'notebook' | 'section';
+    id: string;
+    name: string;
+    noteCount: number;
+  } | null;
+  const [deletePrompt, setDeletePrompt] = useState<DeletePromptState>(null);
 
   const handleAddLabel = async () => {
     const trimmed = labelSearchText.trim();
@@ -670,16 +664,16 @@ export default function StickyNotes() {
     try {
       let targetNbId = notesStore.notebooks[0]?.id;
       if (!targetNbId) {
-        const newNbId = await notesStore.createNotebook("General");
-        targetNbId = newNbId;
+        const newNb = await notesStore.createNotebook("General");
+        targetNbId = newNb.id;
       }
-      const newSecId = await notesStore.createSection(targetNbId, trimmed);
-      if (newSecId) {
+      const newSec = await notesStore.createSection(targetNbId, trimmed);
+      if (newSec) {
         const newTags = [...(editingNote.tags || [])];
-        if (!newTags.includes(`__section:${newSecId}`)) {
-          newTags.push(`__section:${newSecId}`);
+        if (!newTags.includes(`__section:${newSec.id}`)) {
+          newTags.push(`__section:${newSec.id}`);
         }
-        const newSectionId = editingNote.section_id || newSecId;
+        const newSectionId = editingNote.section_id || newSec.id;
         setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
       }
       setLabelSearchText("");
@@ -740,6 +734,15 @@ export default function StickyNotes() {
   const [dateFilterEnd, setDateFilterEnd] = useState("");
 
   const [archiveFilter, setArchiveFilter] = useState<'active'|'archived'|'both'>('active');
+  const [pinnedFilter, setPinnedFilter] = useState<'all'|'pinned'|'unpinned'>('all');
+  const cyclePinnedFilter = () => {
+    if (pinnedFilter === 'all') setPinnedFilter('pinned');
+    else if (pinnedFilter === 'pinned') setPinnedFilter('unpinned');
+    else setPinnedFilter('all');
+  };
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   // Prefs state for live updates
   const [prefs, setPrefs] = useState({
@@ -842,7 +845,7 @@ export default function StickyNotes() {
   const handleClose = () => {
     setIsExiting(true);
     setTimeout(() => {
-      navigate(-1);
+      setActivePage("dashboard");
     }, 400);
   };
 
@@ -868,12 +871,9 @@ export default function StickyNotes() {
     });
   };
 
-  // Filter out notes from excluded notebooks or sections, and ensure it's a sticky note
+  // Filter out notes from excluded notebooks or sections
   const visibleNotes = useMemo(() => {
     return notesStore.notes.filter(n => {
-      // Must have the sticky notes tag
-      if (!n.tags?.includes('__sticky-notes__')) return false;
-
       if (n.section_id) {
         if (excludedSections.includes(n.section_id)) return false;
         const s = notesStore.sections.find(sec => sec.id === n.section_id);
@@ -899,14 +899,11 @@ export default function StickyNotes() {
     let filtered = orderedAllNotes.filter(n => {
       if (archiveFilter === 'active' && n.tags?.includes('__archived__')) return false;
       if (archiveFilter === 'archived' && !n.tags?.includes('__archived__')) return false;
-      
-      if (pinFilter === 'pinned' && !n.is_pinned) return false;
-      if (pinFilter === 'unpinned' && n.is_pinned) return false;
+      if (pinnedFilter === 'pinned' && !n.is_pinned) return false;
+      if (pinnedFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      
       if (selectedSection) {
-        if (selectedSection === '__unpinned__') return !n.is_pinned;
         return n.section_id === selectedSection || n.tags?.includes(`__section:${selectedSection}`);
       }
       if (selectedNotebook) {
@@ -975,7 +972,7 @@ export default function StickyNotes() {
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, prefs.isolate, archiveFilter, searchQuery, selectedSection, selectedNotebook, notesStore.sections, pinFilter, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
+  }, [orderedAllNotes, archiveFilter, pinnedFilter, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -984,110 +981,35 @@ export default function StickyNotes() {
   const [showScrollTopBtn, setShowScrollTopBtn] = useState(false);
   const mainBoardRef = useRef<HTMLDivElement>(null);
 
-  const [isListeningTarget, setIsListeningTarget] = useState<'title' | 'content' | null>(null);
-  const customRecognitionRef = useRef<any>(null);
-
-  const startSpeechRecognition = (target: 'title' | 'content') => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Speech recognition is not supported in this browser. Please try Chrome or Safari.");
-      return;
-    }
-
-    if (customRecognitionRef.current) {
-      customRecognitionRef.current.stop();
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListeningTarget(target);
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .slice(event.resultIndex)
-        .map((result: any) => result[0].transcript)
-        .join('');
-      
-      setEditingNote(prev => {
-        if (!prev) return null;
-        if (target === 'title') {
-          return { ...prev, title: (prev.title + ' ' + transcript).trim() };
-        } else {
-          // Keep images part if exists
-          const splitIndex = prev.content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
-          if (splitIndex === -1) {
-            return { ...prev, content: (prev.content + ' ' + transcript).trim() };
-          } else {
-            const textPart = prev.content.substring(0, splitIndex);
-            const imagesPart = prev.content.substring(splitIndex);
-            const newText = (textPart + ' ' + transcript).trim();
-            return { ...prev, content: newText + '\n' + imagesPart };
-          }
-        }
-      });
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      setIsListeningTarget(null);
-    };
-
-    recognition.onend = () => {
-      setIsListeningTarget(null);
-    };
-
-    customRecognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const stopSpeechRecognition = () => {
-    if (customRecognitionRef.current) {
-      customRecognitionRef.current.stop();
-      customRecognitionRef.current = null;
-    }
-    setIsListeningTarget(null);
-  };
-
-  useEffect(() => {
-    if (!isNoteModalOpen) {
-      stopSpeechRecognition();
-    }
-  }, [isNoteModalOpen]);
-
   useEffect(() => {
     if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
+    
     const updateTops = () => {
       const ta = textareaRef.current;
       const mirror = mirrorRef.current;
       if (!ta || !mirror) return;
 
-    
-    mirror.style.width = `${ta.clientWidth}px`;
+      mirror.style.width = `${ta.clientWidth}px`;
 
-    const lines = editingNote.content.split('\n');
-    const tops: any[] = [];
-    
-    Array.from(mirror.children).forEach((child: any, i) => {
-      const lineText = lines[i] || '';
-      const trimmed = lineText.trim();
+      const lines = editingNote.content.split('\n');
+      const tops: any[] = [];
       
-      let status = 'none';
-      if (trimmed.startsWith('✅') || trimmed.startsWith(STATUS_MARKERS['✅'])) status = 'done';
-      else if (trimmed.startsWith('⏳') || trimmed.startsWith(STATUS_MARKERS['⏳'])) status = 'waiting';
-      else if (trimmed.startsWith('❌') || trimmed.startsWith(STATUS_MARKERS['❌'])) status = 'cancelled';
-      else if (trimmed.startsWith('⬜') || trimmed.startsWith(STATUS_MARKERS['⬜'])) status = 'todo';
-      else if (trimmed.startsWith('☐')) status = 'todo';
-      else if (trimmed.startsWith('☑')) status = 'done';
+      Array.from(mirror.children).forEach((child: any, i) => {
+        const lineText = lines[i] || '';
+        const trimmed = lineText.trim();
+        
+        let status = 'none';
+        if (trimmed.startsWith('✅') || trimmed.startsWith(STATUS_MARKERS['✅'])) status = 'done';
+        else if (trimmed.startsWith('⏳') || trimmed.startsWith(STATUS_MARKERS['⏳'])) status = 'waiting';
+        else if (trimmed.startsWith('❌') || trimmed.startsWith(STATUS_MARKERS['❌'])) status = 'cancelled';
+        else if (trimmed.startsWith('⬜') || trimmed.startsWith(STATUS_MARKERS['⬜'])) status = 'todo';
+        else if (trimmed.startsWith('☐')) status = 'todo';
+        else if (trimmed.startsWith('☑')) status = 'done';
 
-      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '')) || status !== 'none';
-      
-      tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
-    });
+        const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '')) || status !== 'none';
+        
+        tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
+      });
       setLineTops(tops);
     };
 
@@ -1132,30 +1054,12 @@ export default function StickyNotes() {
     setEditingNote({ ...editingNote, content: lines.join('\n') });
   };
 
-  const handleRemoveAllStatuses = (index: number) => {
+  const handleRemoveAllStatuses = () => {
     if (!editingNote) return;
-    if (!window.confirm("Are you sure you want to remove all status checkboxes from this section?")) return;
+    if (!window.confirm("Are you sure you want to remove all status checkboxes from this note?")) return;
     const lines = editingNote.content.split('\n');
-    let startIdx = index;
-    while (startIdx > 0) {
-      const prevLine = lines[startIdx - 1].trim();
-      if (prevLine.startsWith('#') || prevLine === '---') {
-        break;
-      }
-      startIdx--;
-    }
-    let endIdx = index;
-    while (endIdx < lines.length - 1) {
-      const nextLine = lines[endIdx + 1].trim();
-      if (nextLine.startsWith('#') || nextLine === '---') {
-        break;
-      }
-      endIdx++;
-    }
-    for (let i = startIdx; i <= endIdx; i++) {
-      lines[i] = lines[i].replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '');
-    }
-    setEditingNote({ ...editingNote, content: lines.join('\n') });
+    const newLines = lines.map(line => line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, ''));
+    setEditingNote({ ...editingNote, content: newLines.join('\n') });
   };
 
   const noteHeaders = useMemo(() => {
@@ -1199,64 +1103,11 @@ export default function StickyNotes() {
     }
   };
 
-  const toggleListen = () => {
-    if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-    
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast({ title: "Speech to text not supported in this browser.", variant: "destructive" });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    
-    recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        }
-      }
-      if (finalTranscript) {
-        if (textareaRef.current) {
-          const ta = textareaRef.current;
-          const cursorPos = ta.selectionStart;
-          setEditingNote(prev => {
-            if (!prev) return prev;
-            const newContent = prev.content.slice(0, cursorPos) + finalTranscript + " " + prev.content.slice(cursorPos);
-            setTimeout(() => {
-              if (textareaRef.current) {
-                textareaRef.current.focus();
-                textareaRef.current.setSelectionRange(cursorPos + finalTranscript.length + 1, cursorPos + finalTranscript.length + 1);
-              }
-            }, 0);
-            return { ...prev, content: newContent };
-          });
-        } else {
-          setEditingNote(prev => prev ? ({ ...prev, content: prev.content + " " + finalTranscript }) : null);
-        }
-      }
-    };
-
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-
-    recognition.start();
-    setIsListening(true);
-    recognitionRef.current = recognition;
-  };
-
   const handleSync = async () => {
     setIsSyncing(true);
     try {
       await notesStore.refresh();
-      toast({ title: "Personal Notes Synced!" });
+      toast({ title: "Corkboard Synced!" });
     } catch (e) {
       toast({ title: "Sync failed. Try again.", variant: "destructive" });
     } finally {
@@ -1322,13 +1173,14 @@ export default function StickyNotes() {
     input.click();
   };
 
-  const handleSaveNote = async (forceSave: boolean | React.MouseEvent = false) => {
-    const isForced = forceSave === true;
+  const handleSaveNote = async () => {
     if (editingNote) {
       const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:'));
-      if (!hasTag && !isForced) {
-        setIsLabelModalOpen(true);
-        return;
+      if (!hasTag) {
+        if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
+          setIsLabelModalOpen(true);
+          return;
+        }
       }
 
       const sectionId = editingNote.section_id || null;
@@ -1432,18 +1284,29 @@ export default function StickyNotes() {
       const textarea = textareaRef.current;
       const cursorPos = textarea.selectionStart || editingNote.content.length;
       const timestamp = new Date().toLocaleString([], { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' });
-      const newSectionText = `\n\n---\n# New Section (${timestamp})\n`;
+      
+      let prefix = '\n\n';
+      if (cursorPos === 0) {
+        prefix = '';
+      } else if (editingNote.content[cursorPos - 1] === '\n') {
+        prefix = '\n';
+        if (cursorPos > 1 && editingNote.content[cursorPos - 2] === '\n') {
+          prefix = '';
+        }
+      }
+      
+      const newSectionText = `${prefix}---\n# New Section (${timestamp})\n\n`;
       
       const newContent = editingNote.content.slice(0, cursorPos) + newSectionText + editingNote.content.slice(cursorPos);
       setEditingNote({ ...editingNote, content: newContent });
       
       setTimeout(() => {
         textarea.focus();
-        const newPos = cursorPos + newSectionText.length;
-        textarea.setSelectionRange(newPos, newPos);
+        const newCursorPos = cursorPos + newSectionText.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
         textarea.blur();
         textarea.focus();
-      }, 50);
+      }, 0);
     }
   };
 
@@ -1458,9 +1321,9 @@ export default function StickyNotes() {
 
   const handleCreateNotebook = async () => {
     if (newNotebookName.trim()) {
-      const nbId = await notesStore.createNotebook(newNotebookName);
-      if (nbId) {
-        await notesStore.createSection(nbId, "General");
+      const nb = await notesStore.createNotebook(newNotebookName);
+      if (nb?.id) {
+        await notesStore.createSection(nb.id, newNotebookName.trim());
       }
       setNewNotebookName("");
       setIsNotebookModalOpen(false);
@@ -1469,10 +1332,17 @@ export default function StickyNotes() {
   };
 
   const handleDeleteNotebook = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Tag Group? This will delete the group folder and ALL stickies and submenus inside it.")) {
-      if (confirm("CRITICAL WARNING: This action CANNOT be undone. All notes and section sublabels within this Tag Group will be permanently erased. Are you absolutely sure?")) {
+    const nb = notesStore.notebooks.find(n => n.id === id);
+    if (!nb) return;
+    const sectionIds = notesStore.sections.filter(s => s.notebook_id === id).map(s => s.id);
+    const notesInNb = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+    
+    if (notesInNb.length > 0) {
+      setDeletePrompt({ isOpen: true, type: 'notebook', id, name: nb.name, noteCount: notesInNb.length });
+    } else {
+      if (confirm(`Are you sure you want to delete the category "${nb.name}"?`)) {
         await notesStore.deleteNotebook(id);
-        toast({ title: "Tag Group deleted successfully" });
+        toast({ title: "Category deleted successfully" });
       }
     }
   };
@@ -1485,10 +1355,16 @@ export default function StickyNotes() {
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Submenu Tag? All stickies inside it will lose their association with this label.")) {
-      if (confirm("CRITICAL WARNING: This action cannot be undone. Are you absolutely sure you want to delete this Submenu Tag?")) {
+    const sec = notesStore.sections.find(s => s.id === id);
+    if (!sec) return;
+    const notesInSec = notesStore.notes.filter(n => n.section_id === id || n.tags?.includes(`__section:${id}`));
+    
+    if (notesInSec.length > 0) {
+      setDeletePrompt({ isOpen: true, type: 'section', id, name: sec.name, noteCount: notesInSec.length });
+    } else {
+      if (confirm(`Are you sure you want to delete the submenu "${sec.name}"?`)) {
         await notesStore.deleteSection(id);
-        toast({ title: "Submenu Tag deleted successfully" });
+        toast({ title: "Submenu deleted successfully" });
       }
     }
   };
@@ -1535,6 +1411,62 @@ export default function StickyNotes() {
   const renderOthers = activeNotes.filter(n => !n.is_pinned && !n.tags?.includes('__archived__'));
   const renderArchived = activeNotes.filter(n => n.tags?.includes('__archived__'));
 
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        toast({ title: "Speech recognition not supported in this browser.", variant: "destructive" });
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setEditingNote(prev => {
+            if (!prev) return prev;
+            const cursor = textareaRef.current?.selectionStart || prev.content.length;
+            const newContent = prev.content.substring(0, cursor) + finalTranscript + prev.content.substring(cursor);
+            return { ...prev, content: newContent };
+          });
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListening(true);
+      toast({ title: "Listening..." });
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 relative">
 
@@ -1566,15 +1498,6 @@ export default function StickyNotes() {
             <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10">
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-              className={`text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10 ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
-              title={isSidebarOpen ? "Hide Tags" : "Show Tags"}
-            >
-              <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-            </Button>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30 shrink-0">
                 <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
@@ -1582,6 +1505,17 @@ export default function StickyNotes() {
               <div className="hidden min-[380px]:block">
                 <h1 className="text-sm sm:text-xl font-black text-white uppercase tracking-wider leading-none mt-1 sm:mt-0 flex items-center gap-1.5">
                   Sticky Notes
+                  <button
+                    title="Sticky Notes Help"
+                    className="text-zinc-500 hover:text-yellow-400 transition-colors"
+                    style={{ lineHeight: 0 }}
+                    onClick={() => {
+                      const ev = new CustomEvent('slh_open_help', { detail: { pageId: 'type-sticky-notes' } });
+                      window.dispatchEvent(ev);
+                    }}
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </button>
                 </h1>
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] sm:text-xs text-zinc-400 hidden sm:block">Organize your thoughts and tasks</p>
@@ -1632,11 +1566,12 @@ export default function StickyNotes() {
  
           {/* Compact actions only visible on Mobile (<md) */}
           <div className="flex flex-wrap items-center justify-end gap-1 md:hidden mt-2 sm:mt-0 w-full min-[400px]:w-auto">
-            
-              
-              <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
-                {pinFilter === 'all' ? <Eye className="w-3.5 h-3.5" /> : pinFilter === 'pinned' ? <Pin className="w-3.5 h-3.5 fill-current" /> : <Pin className="w-3.5 h-3.5" />}
-              </Button>
+            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sync Stickies">
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sticky Notes Visibility">
+              <Sliders className="w-3.5 h-3.5 text-blue-400" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -1662,15 +1597,6 @@ export default function StickyNotes() {
                 <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-zinc-400 font-bold' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sync Stickies">
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
-            </Button>
-              <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'sticky-notes' } }))} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Help Center">
-                <HelpCircle className="w-3.5 h-3.5 text-blue-400" />
-              </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sticky Notes Visibility">
-              <Sliders className="w-3.5 h-3.5 text-blue-400" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Settings">
               <Settings className="w-3.5 h-3.5" />
             </Button>
@@ -1796,11 +1722,12 @@ export default function StickyNotes() {
 
           {/* Desktop-only action buttons */}
           <div className="hidden md:flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 ml-auto 2xl:ml-0">
-            
-              
-              <Button variant="ghost" size="icon" onClick={() => setPinFilter(prev => prev === 'all' ? 'pinned' : prev === 'pinned' ? 'unpinned' : 'all')} className={"hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" + (pinFilter === 'all' ? ' text-zinc-400' : ' text-yellow-500')} title={pinFilter === 'all' ? "Showing All Notes" : pinFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}>
-                {pinFilter === 'all' ? <Eye className="w-4 h-4" /> : pinFilter === 'pinned' ? <Pin className="w-4 h-4 fill-current" /> : <Pin className="w-4 h-4" />}
-              </Button>
+            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sticky Notes Visibility">
+              <Sliders className="w-4 h-4 text-blue-400" />
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -1826,14 +1753,14 @@ export default function StickyNotes() {
                 <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-zinc-400 font-bold' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
-            </Button>
-              <Button variant="ghost" size="icon" onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'sticky-notes' } }))} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Help Center">
-                <HelpCircle className="w-4 h-4 text-blue-400" />
-              </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sticky Notes Visibility">
-              <Sliders className="w-4 h-4 text-blue-400" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={cyclePinnedFilter} 
+              className={`h-8 w-8 sm:h-10 sm:w-10 border ${pinnedFilter !== 'all' ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' : 'text-zinc-400 hover:text-white bg-zinc-900 border-zinc-800'}`} 
+              title={pinnedFilter === 'all' ? "Showing All Notes" : pinnedFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}
+            >
+              {pinnedFilter === 'all' ? <Eye className="w-4 h-4" /> : pinnedFilter === 'pinned' ? <Pin className="w-4 h-4" fill="currentColor" /> : <PinOff className="w-4 h-4" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
               <Settings className="w-4 h-4" />
@@ -1858,24 +1785,17 @@ export default function StickyNotes() {
           absolute lg:relative z-20 h-full bg-zinc-950 border-r border-zinc-800 transition-all duration-300 ease-in-out flex flex-col overflow-hidden
           ${isSidebarOpen ? 'w-64 translate-x-0' : 'w-0 -translate-x-full lg:w-0'}
         `}>
-          <div className="p-4 border-b border-zinc-800 flex flex-col gap-2 min-w-[16rem]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
-                  <PanelLeftClose className="w-4 h-4" />
-                </Button>
-                <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
-                  <Button variant="destructive" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="h-5 px-1.5 ml-1 bg-red-600 hover:bg-red-500 text-white rounded-md flex items-center justify-center shadow-lg" title="Toggle Sidebar">
-                    <PanelLeft className="w-3.5 h-3.5" />
-                  </Button>
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="p-4 border-b border-zinc-800 flex items-center justify-between min-w-[16rem]">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest">{expandAll ? 'Collapse' : 'Expand'}</Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+              <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
+              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Expand'}</Button>
             </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
           <ScrollArea className="flex-1 min-w-[16rem]">
             <div className="p-3 space-y-2">
@@ -1899,27 +1819,6 @@ export default function StickyNotes() {
                   })()}
                 </div>
               </button>
-                
-                <button 
-                  onClick={() => handleCategorySelect(() => { setSelectedSection('__unpinned__'); setSelectedNotebook(null); setExpandedNotebook(null); })}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedSection === '__unpinned__' ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
-                >
-                  <div className="flex items-center gap-3"><LayoutDashboard className="w-4 h-4 shrink-0" /> Others (Un-pinned)</div>
-                  <div className="flex items-center gap-1 text-xs">
-                    {(() => {
-                      const allNotes = visibleNotes.filter(n => !n.is_pinned);
-                      const activeCount = allNotes.filter(n => !n.tags?.includes('__archived__')).length;
-                      const archivedCount = allNotes.filter(n => n.tags?.includes('__archived__')).length;
-                      return (
-                        <>
-                          {activeCount > 0 && <span className="opacity-50">{activeCount}</span>}
-                          {archivedCount > 0 && <span className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded-md" title={`${archivedCount} Archived`}>{archivedCount}</span>}
-                          {activeCount === 0 && archivedCount === 0 && <span className="opacity-50">0</span>}
-                        </>
-                      );
-                    })()}
-                  </div>
-                </button>
               
               {notesStore.notebooks.filter(nb => !excludedNotebooks.includes(nb.id)).map(nb => {
                 const nbNotes = visibleNotes.filter(n => {
@@ -1945,7 +1844,7 @@ export default function StickyNotes() {
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="p-2 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                        <button className="p-2 text-zinc-400 hover:text-white transition-colors cursor-pointer">
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
@@ -1982,7 +1881,7 @@ export default function StickyNotes() {
                           </button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="p-1.5 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                              <button className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer">
                                 <MoreVertical className="w-3 h-3" />
                               </button>
                             </DropdownMenuTrigger>
@@ -2026,7 +1925,24 @@ export default function StickyNotes() {
           onScroll={(e) => setShowScrollTopBtn(e.currentTarget.scrollTop > 300)}
           className="flex-1 overflow-y-auto p-8 relative z-10 scroll-smooth"
         >
-          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`absolute top-4 left-4 z-[60] h-8 w-8 text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 rounded shadow ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
+            title={isSidebarOpen ? "Hide Tags" : "Show Tags"}
+          >
+            <PanelLeft className="w-5 h-5" />
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`fixed bottom-6 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800 ${isSidebarOpen ? 'lg:hidden' : ''}`}
+          >
+            <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
+          </Button>
 
           {/* Quick Note Bar */}
           <div className="mb-8 max-w-2xl mx-auto mt-2">
@@ -2063,6 +1979,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
+                            onSendToNotes={handleSendToNotes}
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onTogglePin={handleTogglePin}
@@ -2085,6 +2002,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
+                            onSendToNotes={handleSendToNotes} 
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onToggleCheckboxes={handleToggleCheckboxes}
@@ -2122,6 +2040,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
+                            onSendToNotes={handleSendToNotes}
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onTogglePin={handleTogglePin}
@@ -2144,6 +2063,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
+                            onSendToNotes={handleSendToNotes} 
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onToggleCheckboxes={handleToggleCheckboxes}
@@ -2181,6 +2101,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
+                            onSendToNotes={handleSendToNotes}
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onTogglePin={handleTogglePin}
@@ -2203,6 +2124,7 @@ export default function StickyNotes() {
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
+                            onSendToNotes={handleSendToNotes} 
                             onDuplicate={handleDuplicateNote}
                             onChangeColor={handleChangeColor}
                             onToggleCheckboxes={handleToggleCheckboxes}
@@ -2221,12 +2143,6 @@ export default function StickyNotes() {
               </div>
             )}
           </DndContext>
-
-
-
-
-
-
 
           {activeNotes.length === 0 && (
             <div className="flex flex-col items-center justify-center h-64 opacity-50">
@@ -2356,19 +2272,7 @@ export default function StickyNotes() {
                 return null;
               })()}
               <div className="shrink-0">
-                <div className="flex justify-between items-center mb-1">
-                  <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Title</label>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => isListeningTarget === 'title' ? stopSpeechRecognition() : startSpeechRecognition('title')}
-                    className={`h-6 text-[10px] uppercase font-bold tracking-wider ${editColor.text} hover:bg-black/10 flex items-center gap-1 ${isListeningTarget === 'title' ? 'text-red-500 animate-pulse bg-red-500/10' : ''}`}
-                    title={isListeningTarget === 'title' ? "Listening... Click to stop" : "Start Voice Typing (Speech to Text)"}
-                  >
-                    <Mic className={`w-3.5 h-3.5 ${isListeningTarget === 'title' ? 'text-red-500 fill-red-500 animate-pulse' : ''}`} />
-                    {isListeningTarget === 'title' ? 'Listening...' : 'Voice Type'}
-                  </Button>
-                </div>
+                <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Title</label>
                 <Textarea 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
@@ -2391,22 +2295,16 @@ export default function StickyNotes() {
               </div>
               <div className="flex-1 flex flex-col relative">
                 <div className="flex justify-between items-end mb-1">
+                  <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
                   <div className="flex items-center gap-2">
-                    <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => isListeningTarget === 'content' ? stopSpeechRecognition() : startSpeechRecognition('content')}
-                      className={`h-6 text-[10px] uppercase font-bold tracking-wider ${editColor.text} hover:bg-black/10 flex items-center gap-1 ${isListeningTarget === 'content' ? 'text-red-500 animate-pulse bg-red-500/10' : ''}`}
-                      title={isListeningTarget === 'content' ? "Listening... Click to stop" : "Start Voice Typing (Speech to Text)"}
-                    >
-                      <Mic className={`w-3.5 h-3.5 ${isListeningTarget === 'content' ? 'text-red-500 fill-red-500 animate-pulse' : ''}`} />
-                      {isListeningTarget === 'content' ? 'Listening...' : 'Voice Type'}
+                    <Button size="sm" variant="ghost" onClick={toggleListening} className={`h-6 px-2 text-[10px] ${editColor.text} ${isListening ? 'bg-red-500/20 text-red-500' : 'hover:bg-black/10'} uppercase font-bold tracking-wider`}>
+                      {isListening ? <MicOff className="w-3 h-3 mr-1 animate-pulse" /> : <Mic className="w-3 h-3 mr-1" />}
+                      {isListening ? "Listening..." : "Dictate"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
+                      <Plus className="w-3 h-3 mr-1" /> Add New Section Here
                     </Button>
                   </div>
-                  <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
-                    <Plus className="w-3 h-3 mr-1" /> Add New Section Here
-                  </Button>
                 </div>
                 <div className={`flex-1 relative flex flex-col overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
                   {/* Gutter Background */}
@@ -2433,7 +2331,7 @@ export default function StickyNotes() {
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
-                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={() => handleRemoveAllStatuses(line.index)}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
@@ -2446,12 +2344,11 @@ export default function StickyNotes() {
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
-                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-red-400" onClick={() => handleSetStatus(line.index, 'none')}><span className="mr-2 pl-4"></span> Remove Status</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
-                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={() => handleRemoveAllStatuses(line.index)}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
@@ -2606,15 +2503,6 @@ export default function StickyNotes() {
                 <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
                   <ImageIcon className="w-5 h-5" />
                 </Button>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  onClick={toggleListen}
-                  className={`h-9 w-9 ${editColor.text} ${isListening ? 'bg-red-500/20 text-red-500' : ''} hover:bg-black/10`} 
-                  title="Voice to Text"
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </Button>
                 <DropdownMenu open={isReminderMenuOpen} onOpenChange={setIsReminderMenuOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button 
@@ -2728,7 +2616,13 @@ export default function StickyNotes() {
 
                   </DropdownMenuContent>
                 </DropdownMenu>
-                
+                <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { 
+                  const tags = editingNote.tags?.filter(t => t !== '__corkboard__') || [];
+                  setEditingNote({...editingNote, tags});
+                  toast({ title: "Will be sent to Personal Notes on save" });
+                }}>
+                  <FileText className="w-5 h-5" />
+                </Button>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Adjust Text Size">
@@ -2768,7 +2662,7 @@ export default function StickyNotes() {
 
                     <h4 className="font-bold text-sm mb-3 text-zinc-300 mt-4 border-t border-zinc-800 pt-3">Line Spacing</h4>
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      {[1.0, 1.625, 2.0].map(size => (
+                      {[1.0, 1.5, 2.0].map(size => (
                         <Button 
                           key={size} 
                           variant="outline" 
@@ -2812,24 +2706,18 @@ export default function StickyNotes() {
                         setIsNoteModalOpen(false); 
                       }
                     }}>Delete note</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                        let newTags = [...(editingNote.tags || [])];
-                        const isArchived = newTags.includes('__archived__');
-                        if (isArchived) {
-                          newTags = newTags.filter(t => t !== '__archived__');
-                        } else {
-                          newTags.push('__archived__');
-                        }
-                        setEditingNote({ ...editingNote, tags: newTags });
-                        if (editingNote.id !== 'new') {
-                          notesStore.updateNote(editingNote.id, { tags: newTags });
-                          toast({ title: isArchived ? "Note Unarchived" : "Note Archived" });
-                          setIsNoteModalOpen(false);
-                        } else {
-                          toast({ title: isArchived ? "Note Unarchived. Please Save." : "Note marked as Archive. Please Save." });
-                        }
-                      }}>{(editingNote.tags || []).includes('__archived__') ? 'UnArchive Note' : 'Archive Note'}</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const tags = editingNote.tags || [];
+                      const isArchived = tags.includes('__archived__');
+                      setEditingNote({ 
+                        ...editingNote, 
+                        tags: isArchived ? tags.filter(t => t !== '__archived__') : [...tags, '__archived__'],
+                        is_pinned: isArchived ? editingNote.is_pinned : false
+                      });
+                    }}>
+                      {editingNote.tags?.includes('__archived__') ? 'Unarchive note' : 'Archive note'}
+                    </DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
                     )}
@@ -3297,15 +3185,26 @@ export default function StickyNotes() {
                             />
                             <span className="text-sm font-medium">{getFullSectionName(notesStore, sec.id)}</span>
                           </label>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteLabelFromPopup(sec.id)}
-                            className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                            title="Delete Tag"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); setIsLabelModalOpen(false); handleEditSection(sec); }}
+                              className="h-7 w-7 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded"
+                              title="Edit Tag"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteLabelFromPopup(sec.id); }}
+                              className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded"
+                              title="Delete Tag"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })
@@ -3313,21 +3212,89 @@ export default function StickyNotes() {
               </div>
             </div>
 
-            <div className="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end gap-2">
-              <Button 
-                onClick={() => {
-                  setIsLabelModalOpen(false);
-                  handleSaveNote(true);
-                }}
-                className="bg-zinc-700 hover:bg-zinc-600 text-white text-xs h-8 px-4 rounded-lg font-semibold"
-              >
-                Save Without a tag
-              </Button>
+            <div className="p-3 border-t border-zinc-800 bg-zinc-950 flex justify-end">
               <Button 
                 onClick={() => setIsLabelModalOpen(false)}
                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-8 px-6 rounded-lg font-semibold"
               >
                 Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Prompt Modal */}
+      {deletePrompt?.isOpen && (
+        <div className="fixed inset-0 z-[500] bg-black/80 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-white font-bold mb-2 flex items-center gap-2 text-lg">
+              <span className="text-red-500">⚠️</span> Warning
+            </h2>
+            <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
+              You are deleting the {deletePrompt.type === 'notebook' ? 'Category' : 'Submenu'} <strong>"{deletePrompt.name}"</strong>, which contains <strong>{deletePrompt.noteCount}</strong> sticky note{deletePrompt.noteCount > 1 ? 's' : ''}.<br/><br/>
+              What would you like to do with these notes?
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 font-semibold"
+                onClick={async () => {
+                  // Keep notes (untag them)
+                  const isNb = deletePrompt.type === 'notebook';
+                  let sectionIds = isNb ? notesStore.sections.filter(s => s.notebook_id === deletePrompt.id).map(s => s.id) : [deletePrompt.id];
+                  const notesToUpdate = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+                  
+                  // Unlink notes sequentially
+                  for (const n of notesToUpdate) {
+                    const newTags = n.tags?.filter(t => !sectionIds.some(sid => t === `__section:${sid}`)) || [];
+                    let newSectionId = n.section_id;
+                    if (newSectionId && sectionIds.includes(newSectionId)) {
+                      newSectionId = newTags.find(t => t.startsWith('__section:'))?.replace('__section:', '') || null;
+                    }
+                    await notesStore.updateNote(n.id, { section_id: newSectionId, tags: newTags });
+                  }
+
+                  if (isNb) {
+                    await notesStore.deleteNotebook(deletePrompt.id);
+                  } else {
+                    await notesStore.deleteSection(deletePrompt.id);
+                  }
+                  toast({ title: `${isNb ? 'Category' : 'Submenu'} deleted, notes kept` });
+                  setDeletePrompt(null);
+                }}
+              >
+                Keep Notes (Un-tag)
+              </Button>
+              <Button 
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold"
+                onClick={async () => {
+                  // Delete notes sequentially (to ensure no orphaned UI state if Supabase cascade takes a moment)
+                  const isNb = deletePrompt.type === 'notebook';
+                  let sectionIds = isNb ? notesStore.sections.filter(s => s.notebook_id === deletePrompt.id).map(s => s.id) : [deletePrompt.id];
+                  const notesToDelete = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+                  
+                  for (const n of notesToDelete) {
+                    await notesStore.deleteNote(n.id);
+                  }
+
+                  if (isNb) {
+                    await notesStore.deleteNotebook(deletePrompt.id);
+                  } else {
+                    await notesStore.deleteSection(deletePrompt.id);
+                  }
+                  toast({ title: `${isNb ? 'Category' : 'Submenu'} and notes deleted` });
+                  setDeletePrompt(null);
+                }}
+              >
+                Delete Notes & Menu
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+                onClick={() => setDeletePrompt(null)}
+              >
+                Cancel
               </Button>
             </div>
           </div>
