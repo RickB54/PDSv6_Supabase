@@ -446,6 +446,26 @@ export default function BookingsPage() {
     return coupons.find(c => c.code === code && c.active);
   }, [formData.discountCode, formData.discountType, coupons]);
 
+  const liveSubtotal = useMemo(() => {
+    let subtotal = 0;
+    const vType = mapToServiceVehicleType(formData.vehicle);
+    const pkg = allServices.find(s => s.name === formData.service);
+    if (pkg) {
+      subtotal = getServicePrice(pkg.id, vType);
+    }
+    
+    if (formData.addons && formData.addons.length > 0) {
+      formData.addons.forEach(addonName => {
+        const canonical = getCanonicalAddonName(addonName);
+        const addon = allAddons.find(a => a.name === canonical);
+        if (addon) {
+          subtotal += getAddOnPrice(addon.id, vType);
+        }
+      });
+    }
+    return subtotal;
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons]);
+
   const liveTotal = useMemo(() => {
     let total = 0;
     const vType = mapToServiceVehicleType(formData.vehicle);
@@ -1297,7 +1317,7 @@ export default function BookingsPage() {
         }
       }
       
-      calculatedPrice = Math.max(0, calculatedPrice - discountAmount);
+      const finalPriceForTotal = Math.max(0, calculatedPrice - discountAmount);
  
       let resultingBooking: any;
  
@@ -1329,9 +1349,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : "",
-          probonoReasons: calculatedPrice === 0 ? formData.probonoReasons || [] : [],
-          probonoPrimaryReason: calculatedPrice === 0 ? formData.probonoPrimaryReason || "" : ""
+          probonoReason: finalPriceForTotal === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: finalPriceForTotal === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: finalPriceForTotal === 0 ? formData.probonoPrimaryReason || "" : ""
         };
 
         // Reschedule Tracking Logic
@@ -1424,9 +1444,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : "",
-          probonoReasons: calculatedPrice === 0 ? formData.probonoReasons || [] : [],
-          probonoPrimaryReason: calculatedPrice === 0 ? formData.probonoPrimaryReason || "" : ""
+          probonoReason: finalPriceForTotal === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: finalPriceForTotal === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: finalPriceForTotal === 0 ? formData.probonoPrimaryReason || "" : ""
         };
         
         await add(newBooking as any);
@@ -2413,6 +2433,11 @@ export default function BookingsPage() {
                       )}
                     </div>
                     <div className="text-right">
+                      {liveSubtotal !== liveTotal && (
+                        <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
+                          ${liveSubtotal.toFixed(2)}
+                        </div>
+                      )}
                       <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
                         ${liveTotal.toFixed(2)}
                       </div>

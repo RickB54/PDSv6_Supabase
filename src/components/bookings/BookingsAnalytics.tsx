@@ -1257,14 +1257,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 stats.compact.count++;
                 stats.compact.revenue += rev;
                 stats.compact.jobs.push(b);
-            } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
-                stats.midsize.count++;
-                stats.midsize.revenue += rev;
-                stats.midsize.jobs.push(b);
             } else if (v.includes('truck') || v.includes('van') || v.includes('large')) {
                 stats.truck.count++;
                 stats.truck.revenue += rev;
                 stats.truck.jobs.push(b);
+            } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
+                stats.midsize.count++;
+                stats.midsize.revenue += rev;
+                stats.midsize.jobs.push(b);
             } else if (v.includes('luxury') || v.includes('exotic')) {
                 stats.luxury.count++;
                 stats.luxury.revenue += rev;
