@@ -119,24 +119,26 @@ export default function VehicleSelectorModal({ open, onOpenChange, onSelect, ini
     const autoClassify = (make: string, model: string, knownCategory?: string) => {
         let autoCategory = "Mid-Size/SUV"; // Default fallback
         try {
-            // 1. Direct match from JSON DB
+            // 1. Check Pricing Helpers/Overrides FIRST for strict brand/model mapping
+            const pricingType = normalizeVehicleType(`${make} ${model}`);
+            if (pricingType) {
+                if (pricingType === 'truck') return "Truck/Van/Large SUV";
+                if (pricingType === 'luxury') return "Luxury/High-End";
+                if (pricingType === 'midsize') return "Mid-Size/SUV";
+                if (pricingType === 'compact') return "Compact/Sedan";
+            }
+
+            // 2. Fallback to direct match from JSON DB
             if (knownCategory) {
-                if (knownCategory === "Compact" || knownCategory.includes("Compact")) autoCategory = "Compact/Sedan";
-                else if (knownCategory.includes("Midsize")) autoCategory = "Mid-Size/SUV";
-                else if (knownCategory.includes("SUV")) autoCategory = "Mid-Size/SUV";
-                else if (knownCategory.includes("Truck")) autoCategory = "Truck/Van/Large SUV";
-                else if (knownCategory.includes("Oversized")) autoCategory = "Luxury/High-End";
-                else if (knownCategory.includes("Compact/Sedan")) autoCategory = "Compact/Sedan";
-                else if (knownCategory.includes("Mid-Size/SUV")) autoCategory = "Mid-Size/SUV";
-                else if (knownCategory.includes("Truck/Van/Large SUV")) autoCategory = "Truck/Van/Large SUV";
-                else if (knownCategory.includes("Luxury/High-End")) autoCategory = "Luxury/High-End";
-            } else {
-                // 2. Check Pricing Helpers/Overrides for Custom Vehicles
-                const pricingType = normalizeVehicleType(`${make} ${model}`);
-                if (pricingType === 'truck') autoCategory = "Truck/Van/Large SUV";
-                if (pricingType === 'luxury') autoCategory = "Luxury/High-End";
-                if (pricingType === 'midsize') autoCategory = "Mid-Size/SUV";
-                if (pricingType === 'compact') autoCategory = "Compact/Sedan";
+                const k = knownCategory.toLowerCase();
+                if (k === 'compact/sedan') autoCategory = "Compact/Sedan";
+                else if (k === 'truck/van/large suv') autoCategory = "Truck/Van/Large SUV";
+                else if (k === 'mid-size/suv') autoCategory = "Mid-Size/SUV";
+                else if (k === 'luxury/high-end') autoCategory = "Luxury/High-End";
+                else if (k.includes('compact') || k.includes('sedan')) autoCategory = "Compact/Sedan";
+                else if (k.includes('truck') || k.includes('van') || k.includes('large')) autoCategory = "Truck/Van/Large SUV";
+                else if (k.includes('midsize') || k.includes('suv') || k.includes('crossover')) autoCategory = "Mid-Size/SUV";
+                else if (k.includes('luxury') || k.includes('exotic') || k.includes('oversized')) autoCategory = "Luxury/High-End";
             }
         } catch (e) {
             console.error("Classification error:", e);
