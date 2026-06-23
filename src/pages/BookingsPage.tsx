@@ -2836,7 +2836,7 @@ export default function BookingsPage() {
                     <label className="text-right text-sm font-medium text-pink-400">Probono Reason</label>
                     <div className="col-span-3 space-y-3">
                       <div className="flex flex-wrap gap-2">
-                        {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Other"].map(reason => {
+                        {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Charity", "Other"].map(reason => {
                           const isChecked = (formData.probonoReasons && formData.probonoReasons.includes(reason)) || formData.probonoReason === reason;
                           return (
                             <label key={reason} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${isChecked ? 'bg-pink-500/20 border-pink-500/50 text-pink-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}>

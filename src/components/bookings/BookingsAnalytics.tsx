@@ -3270,6 +3270,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                             <option value="Family/Friend">Family/Friend</option>
                                                             <option value="Review-for-Service Trade">Review-for-Service Trade</option>
                                                             <option value="Redo/Comp for Issue">Redo/Comp for Issue</option>
+                                                            <option value="Charity">Charity</option>
                                                             <option value="Other">Other</option>
                                                         </select>
                                                     )}
