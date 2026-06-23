@@ -109,7 +109,8 @@ export function normalizeVehicleType(vehicleType?: string): VehicleType | undefi
         "x7", "xm", "7 series", "q7", "q8", "a8", "range rover", "defender 130",
         "lx", "ls", "lm", "wagoneer", "grand wagoneer", "cybertruck", "model x",
         "transit", "promaster", "express", "savana", "sienna", "odyssey", "pacifica", "carnival", "quest",
-        "cadillac", "porsche", "maserati", "bentley", "rolls royce", "aston martin", "ferrari", "lamborghini", "mclaren"
+        "cadillac", "porsche", "maserati", "bentley", "rolls royce", "aston martin", "ferrari", "lamborghini", "mclaren",
+        "bmw", "mercedes", "benz", "audi", "lexus", "land rover", "range rover", "jaguar", "infiniti", "acura", "genesis", "alfa romeo", "lincoln", "volvo", "lucid", "rivian"
     ])) return "luxury";
 
     // 2. TRUCK / LARGE SUV
