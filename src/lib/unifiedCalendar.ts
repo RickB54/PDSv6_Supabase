@@ -41,6 +41,9 @@ export interface CalendarEvent {
     discountCode?: string;
     discountAmount?: number;
     placeOfService?: string;
+    probonoReason?: string;
+    probonoReasons?: string[];
+    probonoPrimaryReason?: string;
 }
 
 /**
@@ -87,7 +90,10 @@ export async function getUnifiedCalendarEvents(
                 customerId: booking.customerId,
                 discountCode: booking.discountCode,
                 discountAmount: booking.discountAmount,
-                placeOfService: booking.placeOfService
+                placeOfService: booking.placeOfService,
+                probonoReason: booking.probonoReason,
+                probonoReasons: booking.probonoReasons,
+                probonoPrimaryReason: booking.probonoPrimaryReason
             });
         }
     });
