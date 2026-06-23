@@ -180,7 +180,9 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
           vehicle: `${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}${b.vehicleColor ? ` (${b.vehicleColor})` : ''}`.trim() || 'N/A',
           basePrice: basePrice.toFixed(2),
           addons: addonBreakdown,
-          probonoReason: b.probonoReason || null
+          probonoReason: b.probonoReason || null,
+          probonoPrimaryReason: b.probonoPrimaryReason || null,
+          probonoReasons: b.probonoReasons || []
         },
         value: b.price || 0,
         status: b.status,
@@ -513,9 +515,10 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                                          Add-ons: <strong className="text-blue-400/80">{item.details.addons.join(', ')}</strong>
                                        </span>
                                      )}
-                                     {item.details.probonoReason && (
-                                       <span className="text-pink-400 font-black uppercase text-[8px] bg-pink-500/10 border border-pink-500/20 px-1 py-0.5 rounded ml-1">
-                                         PROBONO: {item.details.probonoReason}
+                                     {(item.details.probonoPrimaryReason || item.details.probonoReason) && (
+                                       <span className="text-pink-400 font-black uppercase text-[8px] bg-pink-500/10 border border-pink-500/20 px-1 py-0.5 rounded ml-1" title={item.details.probonoReasons?.join(', ')}>
+                                         PROBONO: {item.details.probonoPrimaryReason || item.details.probonoReason}
+                                         {item.details.probonoReasons && item.details.probonoReasons.length > 1 && ` +${item.details.probonoReasons.length - 1}`}
                                        </span>
                                      )}
                                    </div>

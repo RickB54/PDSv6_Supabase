@@ -57,6 +57,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [chartJobsModalTitle, setChartJobsModalTitle] = useState("");
 
     const [showProfitability, setShowProfitability] = useState(false);
+    const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
 
     useEffect(() => {
@@ -1091,6 +1092,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 locationType: isShop ? "Shop" : "Onsite",
                 service: b.title,
                 probonoReason: b.probonoReason,
+                probonoPrimaryReason: b.probonoPrimaryReason,
+                probonoReasons: b.probonoReasons,
                 status: (b.status || 'pending').toLowerCase(),
                 revenue: revenue,
                 value: value > 0 ? value : revenue
@@ -1104,9 +1107,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [serviceDetailsData, filteredQualBookings]);
 
     const probonoJobs = useMemo(() => {
-        // All done services with $0 revenue, cross-referencing invoice IDs for navigation
-        return doneServices
-            .filter(s => s.revenue === 0)
+        // All qualified services with $0 revenue, regardless of completion status
+        const qualMap = filteredQualBookings.map(b => b.id);
+        return serviceDetailsData
+            .filter(s => s.revenue === 0 && qualMap.includes(s.id))
             .map(s => {
                 // Find matching invoice for navigation
                 const sDate = s.date?.split('T')[0];
@@ -1120,11 +1124,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [doneServices, invoices]);
 
     const freeVsPaidPieData = useMemo(() => {
-        const free = probonoJobs.length;
-        const paid = doneServices.length - free;
+        const freeDone = probonoJobs.filter(j => j.status === 'done' || j.status === 'completed').length;
+        const paidDone = doneServices.length - freeDone;
         return [
-            { name: 'Paid Jobs', value: paid, color: '#10b981' },
-            { name: 'Probono Jobs', value: free, color: '#ec4899' }
+            { name: 'Paid Jobs', value: paidDone, color: '#10b981' },
+            { name: 'Probono Jobs', value: freeDone, color: '#ec4899' }
         ].filter(d => d.value > 0);
     }, [doneServices, probonoJobs]);
 
@@ -1181,6 +1185,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 name: b.customer,
                 email: custMatch?.email || "",
                 phone: custMatch?.phone || "",
+                howFound: custMatch?.howFound || "",
+                howFoundOther: custMatch?.howFoundOther || "",
                 count: 0,
                 lastService: "",
                 service: "",
@@ -1208,24 +1214,61 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return Array.from(map.values()).sort((a, b) => new Date(b.lastService).getTime() - new Date(a.lastService).getTime());
     }, [filteredInsBookings, customers, estimates]);
 
+    const sourceBreakdown = useMemo(() => {
+        const counts: Record<string, number> = {};
+        customerStats.forEach(cust => {
+            const rawSource = cust.howFound === 'other' ? cust.howFoundOther : cust.howFound;
+            const source = rawSource ? rawSource.toLowerCase() : 'not recorded';
+            // Normalize names
+            let displaySource = 'Not Recorded';
+            if (source.includes('facebook')) displaySource = 'Facebook';
+            else if (source.includes('google')) displaySource = 'Google Search';
+            else if (source.includes('instagram')) displaySource = 'Instagram';
+            else if (source.includes('word of mouth') || source.includes('referral')) displaySource = 'Word of Mouth/Referral';
+            else if (source !== 'not recorded') displaySource = 'Other';
+            
+            counts[displaySource] = (counts[displaySource] || 0) + 1;
+        });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    }, [customerStats]);
+
     const vehicleClassStats = useMemo(() => {
-        const stats = { compact: { revenue: 0, count: 0 }, midsize: { revenue: 0, count: 0 }, truck: { revenue: 0, count: 0 }, luxury: { revenue: 0, count: 0 } };
+        const stats = { 
+            compact: { revenue: 0, count: 0, jobs: [] as any[] }, 
+            midsize: { revenue: 0, count: 0, jobs: [] as any[] }, 
+            truck: { revenue: 0, count: 0, jobs: [] as any[] }, 
+            luxury: { revenue: 0, count: 0, jobs: [] as any[] } 
+        };
         filteredPerfBookings.forEach(b => {
             if (!b.vehicle) return;
             const v = b.vehicle.toLowerCase();
+            const makeModel = `${b.vehicleMake || ''} ${b.vehicleModel || ''}`.toLowerCase();
             const rev = Number(b.price) || 0;
+
+            // Explicit override to fix specific misclassified edge cases (like the Prius selected as Luxury)
+            if (makeModel.includes('prius')) {
+                stats.compact.count++;
+                stats.compact.revenue += rev;
+                stats.compact.jobs.push(b);
+                return;
+            }
+
             if (v.includes('compact') || v.includes('sedan') || v.includes('coupe')) {
                 stats.compact.count++;
                 stats.compact.revenue += rev;
+                stats.compact.jobs.push(b);
             } else if (v.includes('midsize') || v.includes('suv') || v.includes('crossover')) {
                 stats.midsize.count++;
                 stats.midsize.revenue += rev;
+                stats.midsize.jobs.push(b);
             } else if (v.includes('truck') || v.includes('van') || v.includes('large')) {
                 stats.truck.count++;
                 stats.truck.revenue += rev;
+                stats.truck.jobs.push(b);
             } else if (v.includes('luxury') || v.includes('exotic')) {
                 stats.luxury.count++;
                 stats.luxury.revenue += rev;
+                stats.luxury.jobs.push(b);
             }
         });
         return stats;
@@ -1514,6 +1557,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         let shopCost = 0;
         let mobileJobs = 0;
         let mobileCost = 0;
+        let hasMileageData = false;
 
         const tableData = serviceDetailsData.map(s => {
             const booking = filteredPerfBookings.find(b => b.id === s.id);
@@ -1533,6 +1577,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     shopCost += cost;
                 } else {
                     mobileJobs++;
+                    if (booking.milesDriven && booking.milesDriven > 0) hasMileageData = true;
                     const driveCost = (booking.milesDriven || 0) * 0.67;
                     mobileCost += (cost + driveCost);
                 }
@@ -1551,15 +1596,93 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const avgShopCost = shopJobs > 0 ? shopCost / shopJobs : 0;
         const avgMobileCost = mobileJobs > 0 ? mobileCost / mobileJobs : 0;
 
-        return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs };
+        return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs, hasMileageData };
     }, [serviceDetailsData, consumptionData, filteredPerfBookings]);
 
     if (showProfitability) {
         return (
             <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
-                <Button variant="outline" onClick={() => setShowProfitability(false)} className="gap-2 mb-4 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
-                    <ArrowLeft className="w-4 h-4" /> Back to Analytics
-                </Button>
+                <div className="flex justify-between items-center mb-4">
+                    <Button variant="outline" onClick={() => setShowProfitability(false)} className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
+                        <ArrowLeft className="w-4 h-4" /> Back to Analytics
+                    </Button>
+                    <Popover open={isProfitabilityFilterOpen} onOpenChange={setIsProfitabilityFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                <Filter className="h-3.5 w-3.5" />
+                                Filter Data
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
+                            <div className="p-4 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-bold text-white">Show Archived</span>
+                                    <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!perfDateFilter.start && !perfDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
+                                    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
+                                            onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="bg-transparent text-zinc-300"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
+                                <Button 
+                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
+                                    onClick={() => setIsProfitabilityFilterOpen(false)}
+                                >
+                                    <Filter className="w-3.5 h-3.5" />
+                                    Filter
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
                 
                 <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 rounded-lg text-xs font-medium flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -1599,9 +1722,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Mobile Cost <span className="text-[9px] text-zinc-600">(Inc. Est. Drive Cost)</span></span>
+                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Mobile Cost <span className="text-[9px] text-zinc-600">(Est. Drive Cost IRS rate)</span></span>
                                     <span className="font-mono text-zinc-300">
-                                        {profitabilityData.mobileJobs > 0 ? `$${profitabilityData.avgMobileCost.toFixed(2)}` : 'No mobile jobs'}
+                                        {profitabilityData.mobileJobs > 0 
+                                            ? (profitabilityData.hasMileageData ? `$${profitabilityData.avgMobileCost.toFixed(2)}` : <span className="text-sm text-zinc-500 italic">No mileage data</span>) 
+                                            : 'No mobile jobs'}
                                     </span>
                                 </div>
                             </div>
@@ -1799,7 +1924,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 
                 {/* Vehicle Class Performance Strip */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                    <div 
+                        className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
+                        onClick={() => { setSelectedChartJobs(vehicleClassStats.compact.jobs); setChartJobsModalTitle("Compact / Sedan Jobs"); setIsChartJobsModalOpen(true); }}
+                    >
                         <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Compact / Sedan</span>
@@ -1809,7 +1937,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </div>
                     </div>
-                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                    <div 
+                        className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
+                        onClick={() => { setSelectedChartJobs(vehicleClassStats.midsize.jobs); setChartJobsModalTitle("Midsize / SUV Jobs"); setIsChartJobsModalOpen(true); }}
+                    >
                         <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Midsize / SUV</span>
@@ -1819,7 +1950,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </div>
                     </div>
-                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                    <div 
+                        className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
+                        onClick={() => { setSelectedChartJobs(vehicleClassStats.truck.jobs); setChartJobsModalTitle("Truck / Large Jobs"); setIsChartJobsModalOpen(true); }}
+                    >
                         <div className="absolute inset-0 bg-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Truck / Large</span>
@@ -1829,7 +1963,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </div>
                     </div>
-                    <div className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group">
+                    <div 
+                        className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
+                        onClick={() => { setSelectedChartJobs(vehicleClassStats.luxury.jobs); setChartJobsModalTitle("Luxury / Exotic Jobs"); setIsChartJobsModalOpen(true); }}
+                    >
                         <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex flex-col gap-1">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Luxury / Exotic</span>
@@ -3094,17 +3231,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
                                                 <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
                                                 <TableCell>
-                                                    {job.probonoReason ? (
-                                                        <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px] uppercase font-black truncate max-w-[140px]">
-                                                            {job.probonoReason}
+                                                    {job.probonoPrimaryReason || job.probonoReason ? (
+                                                        <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px] uppercase font-black truncate max-w-[140px]" title={job.probonoReasons?.join(', ')}>
+                                                            {job.probonoPrimaryReason || job.probonoReason}
+                                                            {job.probonoReasons && job.probonoReasons.length > 1 && ` +${job.probonoReasons.length - 1}`}
                                                         </Badge>
                                                     ) : (
                                                         <select
-                                                            value={job.probonoReason || ''}
+                                                            value={job.probonoPrimaryReason || job.probonoReason || ''}
                                                             onClick={(e) => e.stopPropagation()}
                                                             onChange={async (e) => {
                                                                 const val = e.target.value;
-                                                                await update(job.id, { probonoReason: val });
+                                                                await update(job.id, { probonoPrimaryReason: val, probonoReasons: val ? [val] : [], probonoReason: val });
                                                             }}
                                                             className="h-7 w-[140px] px-2 text-xs bg-zinc-950/50 border border-zinc-800/50 rounded focus:border-pink-500/50 transition-colors text-zinc-300 focus:outline-none"
                                                         >
@@ -3263,6 +3401,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Popover>
                 </CardHeader>
                 <CardContent>
+                    {sourceBreakdown.length > 0 && (
+                        <div className="mb-4 flex flex-wrap gap-2 items-center">
+                            <span className="text-xs text-zinc-400 font-medium mr-1 uppercase tracking-wider">Lead Sources:</span>
+                            {sourceBreakdown.map(([source, count]) => (
+                                <Badge key={source} variant="outline" className="bg-zinc-900 border-zinc-700 text-zinc-300 text-[10px]">
+                                    {source}: {count}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
                     <div className="rounded-md border border-zinc-800 overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-zinc-950">

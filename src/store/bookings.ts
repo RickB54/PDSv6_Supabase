@@ -47,7 +47,9 @@ export interface Booking {
   booking_vehicle?: any;
   hoursWorked?: number;
   milesDriven?: number;
-  probonoReason?: string;
+  probonoReason?: string; // Legacy
+  probonoReasons?: string[];
+  probonoPrimaryReason?: string;
 }
 
 const STORAGE_KEY = "bookings";

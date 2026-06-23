@@ -149,7 +149,9 @@ export default function BookingsPage() {
     discountCode: "",
     customDiscount: "",
     placeOfService: "Customer's address",
-    probonoReason: ""
+    probonoReason: "",
+    probonoReasons: [] as string[],
+    probonoPrimaryReason: ""
   });
 
   const [cancelReason, setCancelReason] = useState("");
@@ -780,7 +782,9 @@ export default function BookingsPage() {
             discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
             customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
             placeOfService: booking.placeOfService || "Customer's address",
-            probonoReason: booking.probonoReason || ""
+            probonoReason: booking.probonoReason || "",
+            probonoReasons: booking.probonoReasons || [],
+            probonoPrimaryReason: booking.probonoPrimaryReason || ""
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -999,7 +1003,9 @@ export default function BookingsPage() {
       discountCode: defaultCoupon,
       customDiscount: "",
       placeOfService: "Customer's address",
-      probonoReason: ""
+      probonoReason: "",
+      probonoReasons: [],
+      probonoPrimaryReason: ""
     });
     setIsAddModalOpen(true);
   };
@@ -1060,7 +1066,9 @@ export default function BookingsPage() {
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
       customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
       placeOfService: booking.placeOfService || "Customer's address",
-      probonoReason: booking.probonoReason || ""
+      probonoReason: booking.probonoReason || "",
+      probonoReasons: booking.probonoReasons || [],
+      probonoPrimaryReason: booking.probonoPrimaryReason || ""
     });
     
     if (booking.date) {
@@ -1321,7 +1329,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : ""
+          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: calculatedPrice === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: calculatedPrice === 0 ? formData.probonoPrimaryReason || "" : ""
         };
 
         // Reschedule Tracking Logic
@@ -1414,7 +1424,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : ""
+          probonoReason: calculatedPrice === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: calculatedPrice === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: calculatedPrice === 0 ? formData.probonoPrimaryReason || "" : ""
         };
         
         await add(newBooking as any);
@@ -1496,7 +1508,9 @@ export default function BookingsPage() {
           discountCode: "",
           customDiscount: "",
           placeOfService: "Customer's address",
-          probonoReason: ""
+          probonoReason: "",
+          probonoReasons: [],
+          probonoPrimaryReason: ""
         });
       }, 300);
 
@@ -1565,7 +1579,9 @@ export default function BookingsPage() {
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
       customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
       placeOfService: booking.placeOfService || "Customer's address",
-      probonoReason: booking.probonoReason || ""
+      probonoReason: booking.probonoReason || "",
+      probonoReasons: booking.probonoReasons || [],
+      probonoPrimaryReason: booking.probonoPrimaryReason || ""
     });
 
     // Reset validation/selection states for "New" mode
@@ -2790,22 +2806,66 @@ export default function BookingsPage() {
                 </div>
 
                 {/* Probono Reason (Conditional) */}
-                {typeof liveTotal !== 'undefined' && liveTotal === 0 && (
+                {typeof liveTotal !== 'undefined' && liveTotal === 0 && (formData.discountCode === 'PROBONO' || matchedCoupon || Number(formData.customDiscount) > 0) && (
                   <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
                     <label className="text-right text-sm font-medium text-pink-400">Probono Reason</label>
-                    <div className="col-span-3">
-                      <select
-                        className="flex h-10 w-full rounded-md border border-pink-500/30 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
-                        value={formData.probonoReason || ""}
-                        onChange={(e) => setFormData({ ...formData, probonoReason: e.target.value })}
-                      >
-                        <option value="">Uncategorized</option>
-                        <option value="Referral Builder">Referral Builder</option>
-                        <option value="Family/Friend">Family/Friend</option>
-                        <option value="Review-for-Service Trade">Review-for-Service Trade</option>
-                        <option value="Redo/Comp for Issue">Redo/Comp for Issue</option>
-                        <option value="Other">Other</option>
-                      </select>
+                    <div className="col-span-3 space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Other"].map(reason => {
+                          const isChecked = (formData.probonoReasons && formData.probonoReasons.includes(reason)) || formData.probonoReason === reason;
+                          return (
+                            <label key={reason} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${isChecked ? 'bg-pink-500/20 border-pink-500/50 text-pink-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}>
+                              <input 
+                                type="checkbox" 
+                                className="hidden"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  let newReasons = [...(formData.probonoReasons || [])];
+                                  if (formData.probonoReason && !newReasons.includes(formData.probonoReason)) {
+                                    newReasons.push(formData.probonoReason);
+                                  }
+                                  
+                                  if (checked) {
+                                    if (!newReasons.includes(reason)) newReasons.push(reason);
+                                  } else {
+                                    newReasons = newReasons.filter(r => r !== reason);
+                                  }
+                                  
+                                  let primary = formData.probonoPrimaryReason || formData.probonoReason;
+                                  if (newReasons.length === 1) {
+                                    primary = newReasons[0];
+                                  } else if (!newReasons.includes(primary || '')) {
+                                    primary = newReasons.length > 0 ? newReasons[0] : "";
+                                  }
+                                  
+                                  setFormData({ ...formData, probonoReasons: newReasons, probonoPrimaryReason: primary, probonoReason: primary });
+                                }}
+                              />
+                              <div className={`w-3 h-3 rounded-sm flex items-center justify-center border ${isChecked ? 'bg-pink-500 border-pink-500 text-white font-bold text-[10px]' : 'border-zinc-600 bg-zinc-950'}`}>
+                                {isChecked && "✓"}
+                              </div>
+                              {reason}
+                            </label>
+                          );
+                        })}
+                      </div>
+                      
+                      {((formData.probonoReasons && formData.probonoReasons.length > 1) || (!formData.probonoReasons?.length && formData.probonoReason)) && (
+                        <div className="flex items-center gap-3 bg-zinc-950/50 p-2.5 rounded-md border border-zinc-800/50">
+                          <span className="text-xs text-zinc-400 font-medium whitespace-nowrap">Primary Reason:</span>
+                          <select
+                            className="flex h-8 w-full rounded-md border border-pink-500/30 bg-zinc-900 px-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+                            value={formData.probonoPrimaryReason || formData.probonoReason || ""}
+                            onChange={(e) => setFormData({ ...formData, probonoPrimaryReason: e.target.value, probonoReason: e.target.value })}
+                          >
+                            <option value="">Select Primary...</option>
+                            {(formData.probonoReasons?.length ? formData.probonoReasons : [formData.probonoReason]).filter(Boolean).map(r => (
+                              <option key={r} value={r}>{r}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -3757,9 +3817,10 @@ export default function BookingsPage() {
                                                         Discount: -${discAmt.toFixed(2)} {discCode ? `(${discCode})` : ''}
                                                       </Badge>
                                                     )}
-                                                    {bookingItem.probonoReason && (
-                                                      <Badge variant="outline" className="text-[10px] font-black uppercase text-pink-400 bg-pink-500/10 border-pink-500/20 px-1.5 py-0 h-4">
-                                                        Probono: {bookingItem.probonoReason}
+                                                    {(bookingItem.probonoPrimaryReason || bookingItem.probonoReason) && (
+                                                      <Badge variant="outline" className="text-[10px] font-black uppercase text-pink-400 bg-pink-500/10 border-pink-500/20 px-1.5 py-0 h-4" title={bookingItem.probonoReasons?.join(', ')}>
+                                                        Probono: {bookingItem.probonoPrimaryReason || bookingItem.probonoReason}
+                                                        {bookingItem.probonoReasons && bookingItem.probonoReasons.length > 1 && ` +${bookingItem.probonoReasons.length - 1}`}
                                                       </Badge>
                                                     )}
                                                   </div>
