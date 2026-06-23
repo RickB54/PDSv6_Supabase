@@ -2437,6 +2437,14 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 export const upsertSupabaseBooking = async (booking: any) => {
     if (isDemoActive()) return { ...booking, id: booking.id || `demo_b_${Date.now()}` };
     try {
+        console.log('[upsertSupabaseBooking] INCOMING BOOKING:', JSON.stringify({
+            id: booking.id,
+            title: booking.title,
+            probonoReason: booking.probonoReason,
+            probonoReasons: booking.probonoReasons,
+            probonoPrimaryReason: booking.probonoPrimaryReason
+        }, null, 2));
+
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
         const payload: any = {
             customer_id: (booking.customerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.customerId)) ? booking.customerId : (booking.customer_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(booking.customer_id)) ? booking.customer_id : null,
