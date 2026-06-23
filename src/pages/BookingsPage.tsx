@@ -1349,9 +1349,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: finalPriceForTotal === 0 ? formData.probonoReason || "" : "",
-          probonoReasons: finalPriceForTotal === 0 ? formData.probonoReasons || [] : [],
-          probonoPrimaryReason: finalPriceForTotal === 0 ? formData.probonoPrimaryReason || "" : ""
+          probonoReason: liveTotal === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: liveTotal === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: liveTotal === 0 ? formData.probonoPrimaryReason || "" : ""
         };
 
         // Reschedule Tracking Logic
@@ -1444,9 +1444,9 @@ export default function BookingsPage() {
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
-          probonoReason: finalPriceForTotal === 0 ? formData.probonoReason || "" : "",
-          probonoReasons: finalPriceForTotal === 0 ? formData.probonoReasons || [] : [],
-          probonoPrimaryReason: finalPriceForTotal === 0 ? formData.probonoPrimaryReason || "" : ""
+          probonoReason: liveTotal === 0 ? formData.probonoReason || "" : "",
+          probonoReasons: liveTotal === 0 ? formData.probonoReasons || [] : [],
+          probonoPrimaryReason: liveTotal === 0 ? formData.probonoPrimaryReason || "" : ""
         };
         
         await add(newBooking as any);

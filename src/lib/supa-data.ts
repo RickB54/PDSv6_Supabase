@@ -2422,6 +2422,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
                 discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
                 placeOfService: meta.placeOfService || meta.place_of_service || b.place_of_service || '',
+                probonoReason: b.probono_reason || meta.probonoReason || meta.probono_reason || '',
+                probonoReasons: meta.probonoReasons || meta.probono_reasons || [],
+                probonoPrimaryReason: b.probono_primary_reason || meta.probonoPrimaryReason || meta.probono_primary_reason || '',
                 booking_vehicle: meta
             };
         });
@@ -2457,7 +2460,10 @@ export const upsertSupabaseBooking = async (booking: any) => {
               custom_reminder_date: booking.customReminderDate,
               discountCode: booking.discountCode || '',
               discountAmount: Number(booking.discountAmount || 0),
-              placeOfService: booking.placeOfService || ''
+              placeOfService: booking.placeOfService || '',
+              probonoReason: booking.probonoReason || '',
+              probonoReasons: booking.probonoReasons || [],
+              probonoPrimaryReason: booking.probonoPrimaryReason || ''
             },
             end_time: booking.endTime || booking.end_time || null,
             is_archived: booking.isArchived || false,
