@@ -42,8 +42,8 @@ export interface CalendarEvent {
     discountAmount?: number;
     placeOfService?: string;
     probonoReason?: string;
-    probonoReasons?: string[];
     probonoPrimaryReason?: string;
+    createdAt?: string; // Add createdAt to pass the booking time
 }
 
 /**
@@ -90,10 +90,10 @@ export async function getUnifiedCalendarEvents(
                 customerId: booking.customerId,
                 discountCode: booking.discountCode,
                 discountAmount: booking.discountAmount,
-                placeOfService: booking.placeOfService,
                 probonoReason: booking.probonoReason,
                 probonoReasons: booking.probonoReasons,
-                probonoPrimaryReason: booking.probonoPrimaryReason
+                probonoPrimaryReason: booking.probonoPrimaryReason,
+                createdAt: booking.createdAt // Map createdAt
             });
         }
     });

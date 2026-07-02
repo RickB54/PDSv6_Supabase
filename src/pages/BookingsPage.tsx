@@ -3041,8 +3041,8 @@ export default function BookingsPage() {
                 {selectedBooking && selectedBooking.createdAt && (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium text-gray-400">Created On</label>
-                    <div className="col-span-3 text-sm text-gray-400">
-                      {new Date(selectedBooking.createdAt).toLocaleString()}
+                    <div className="col-span-3 text-sm text-gray-400 font-semibold bg-zinc-900/50 p-2 rounded-md border border-zinc-800">
+                      {format(parseISO(selectedBooking.createdAt), "MMM d, yyyy 'at' h:mm a")}
                     </div>
                   </div>
                 )}
@@ -3905,10 +3905,10 @@ export default function BookingsPage() {
                                             <div className="text-xs text-muted-foreground flex items-center flex-wrap gap-1.5 mt-1">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
                                               
-                                              {event.type === 'booking' && (items.find(i => i.id === event.id)?.created_at || event.created_at) && (
+                                              {event.type === 'booking' && (items.find(i => i.id === event.id)?.createdAt || (event as any).createdAt) && (
                                                 <>
                                                   <span className="text-zinc-700">•</span>
-                                                  <span className="text-zinc-500 italic" title="Time booking was placed">Placed: {format(parseISO(items.find(i => i.id === event.id)?.created_at || event.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                                                  <span className="text-zinc-500 italic" title="Time booking was placed">Placed: {format(parseISO(items.find(i => i.id === event.id)?.createdAt || (event as any).createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
                                                 </>
                                               )}
 
