@@ -487,7 +487,10 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                         {ledger.map((item, idx) => (
                           <TableRow key={idx} className="border-zinc-800 hover:bg-zinc-800/30">
                             <TableCell className="text-[10px] font-mono text-zinc-500">
-                              {format(parseISO(item.date), "MMM dd, yyyy p")}
+                              <div className="font-semibold text-zinc-300">{format(parseISO(item.date), "MMM dd, yyyy p")}</div>
+                              {item.raw?.created_at && item.type === 'BOOKING' && (
+                                <div className="text-[9px] text-zinc-500 italic mt-0.5" title="Time Placed">Placed: {format(parseISO(item.raw.created_at), "MMM dd, yyyy p")}</div>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge 

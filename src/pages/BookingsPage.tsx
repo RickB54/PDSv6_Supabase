@@ -2154,6 +2154,16 @@ export default function BookingsPage() {
                             <div className="flex items-center gap-1 text-xs mt-0.5 opacity-90 font-medium">
                               <span className="uppercase">{booking.status || (booking.type === 'manual-block' ? 'Blocked' : 'Event')}</span>
                             </div>
+                            {booking.type === 'booking' && (((booking as Booking).customerEmail || (booking as Booking).email) || ((booking as Booking).customerPhone || (booking as Booking).phone)) && (
+                              <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-zinc-400 font-medium">
+                                {((booking as Booking).customerEmail || (booking as Booking).email) && (
+                                  <div>📧 {((booking as Booking).customerEmail || (booking as Booking).email)}</div>
+                                )}
+                                {((booking as Booking).customerPhone || (booking as Booking).phone) && (
+                                  <div>📞 {((booking as Booking).customerPhone || (booking as Booking).phone)}</div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -2337,6 +2347,12 @@ export default function BookingsPage() {
                                       <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
                                       {booking.assignedEmployee && <span className="text-zinc-400">👤 {booking.assignedEmployee}</span>}
                                     </div>
+                                    {((booking as Booking).customerEmail || (booking as Booking).email) && (
+                                      <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as Booking).email)}</div>
+                                    )}
+                                    {((booking as Booking).customerPhone || (booking as Booking).phone) && (
+                                      <div className="text-[10px] text-zinc-400">📞 {((booking as Booking).customerPhone || (booking as Booking).phone)}</div>
+                                    )}
                                     {(booking as Booking).vehicleMake && (
                                       <div className="text-[10px] text-blue-300 font-semibold px-1 py-0.5 bg-blue-500/10 rounded border border-blue-500/20">
                                         🚗 {(booking as Booking).vehicleYear} {(booking as Booking).vehicleMake} {(booking as Booking).vehicleModel}
@@ -2590,9 +2606,9 @@ export default function BookingsPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Contact</label>
-                  <div className="col-span-3 grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Contact</label>
+                  <div className="col-span-3 space-y-3">
                     <div className="relative">
                       <ContactInput
                         type="email"
@@ -3878,6 +3894,14 @@ export default function BookingsPage() {
                                             </div>
                                             <div className="text-xs text-muted-foreground flex items-center flex-wrap gap-1.5 mt-1">
                                               {format(parseISO(event.date), "MMM d, yyyy 'at' h:mm a")}
+                                              
+                                              {event.type === 'booking' && (items.find(i => i.id === event.id)?.created_at || event.created_at) && (
+                                                <>
+                                                  <span className="text-zinc-700">•</span>
+                                                  <span className="text-zinc-500 italic" title="Time booking was placed">Placed: {format(parseISO(items.find(i => i.id === event.id)?.created_at || event.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                                                </>
+                                              )}
+
                                               {event.type === 'booking' && (
                                                 <>
                                                   <span className="text-zinc-700">•</span>
@@ -3897,6 +3921,24 @@ export default function BookingsPage() {
                                                 </>
                                               )}
                                             </div>
+                                            
+                                            {event.type === 'booking' && (
+                                              <div className="flex flex-col gap-0.5 mt-1.5">
+                                                {(() => {
+                                                  const b = items.find(i => i.id === event.id) || event;
+                                                  const email = b.customerEmail || b.email || b.customer_email;
+                                                  const phone = b.customerPhone || b.phone;
+                                                  if (!email && !phone) return null;
+                                                  return (
+                                                    <div className="flex flex-col gap-0.5 text-[11px] text-zinc-400 font-medium">
+                                                      {email && <div>📧 {email}</div>}
+                                                      {phone && <div>📞 {phone}</div>}
+                                                    </div>
+                                                  );
+                                                })()}
+                                              </div>
+                                            )}
+                                            
                                           </div>
                                           <div className="flex items-center gap-2">
                                             {archiveFilter === 'all' && (('isArchived' in event ? event.isArchived : (items.find(i => i.id === event.id)?.isArchived)) && (
