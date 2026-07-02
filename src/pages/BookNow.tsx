@@ -733,6 +733,7 @@ const BookNow = () => {
             phone: formData.phone,
             email: formData.email,
             address: formData.address,
+            place_of_service: formData.placeOfService,
             vehicle_type: vehicleType,
             year: formData.year,
             make: formData.make,

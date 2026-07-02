@@ -24,6 +24,7 @@ export interface BookingInput {
   status?: string;
   created_by?: string;
   booked_by?: string; // Add this
+  place_of_service?: string;
 }
 
 export async function create(input: BookingInput) {
@@ -141,7 +142,8 @@ export async function create(input: BookingInput) {
         model: input.model || '',
         type: input.vehicle_type || '',
         color: input.color || '',
-        condition: input.condition || ''
+        condition: input.condition || '',
+        placeOfService: input.place_of_service || ''
       }
     };
 

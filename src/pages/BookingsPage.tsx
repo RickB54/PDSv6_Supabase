@@ -1218,8 +1218,8 @@ export default function BookingsPage() {
     toast.success('PDF saved to File Manager (Bookings)');
   };
 
-  const handleSave = async () => {
-    console.log("!!! SAVE BUTTON CLICKED !!!");
+  const handleSave = async (triggerEmailSend: boolean = false) => {
+    console.log("!!! SAVE BUTTON CLICKED !!!", { triggerEmailSend });
     
     // 1. Validation Logic
     if (isDemoMode) {
@@ -1245,7 +1245,7 @@ export default function BookingsPage() {
         email: formData.email,
         phone: formData.phone,
         address: formData.address,
-        type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || formData.status === 'done' || formData.status === 'in_progress') ? 'customer' : 'prospect',
+        type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || triggerEmailSend || formData.status === 'done' || formData.status === 'in_progress') ? 'customer' : 'prospect',
         updatedAt: new Date().toISOString(),
         vehicles: [{
           make: formData.vehicleMake,
@@ -1328,7 +1328,7 @@ export default function BookingsPage() {
           title: formData.service,
           date: date.toISOString(),
           endTime: endDate.toISOString(),
-          status: formData.status as any,
+          status: triggerEmailSend ? 'confirmed' : (formData.status as any),
           vehicle: formData.vehicle,
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
@@ -1353,6 +1353,10 @@ export default function BookingsPage() {
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
         };
+        
+        if (triggerEmailSend) {
+          (updates as any).last_email_sent_at = new Date().toISOString();
+        }
 
         // Reschedule Tracking Logic
         const oldDateObj = new Date(selectedBooking.date);
@@ -1423,7 +1427,7 @@ export default function BookingsPage() {
           title: formData.service,
           date: date.toISOString(),
           endTime: endDate.toISOString(),
-          status: (getCurrentUser()?.role === 'admin' ? formData.status : 'tentative') as any,
+          status: triggerEmailSend ? 'confirmed' : ((getCurrentUser()?.role === 'admin' ? formData.status : 'tentative') as any),
           vehicle: formData.vehicle,
           vehicleYear: formData.vehicleYear,
           vehicleMake: formData.vehicleMake,
@@ -1448,6 +1452,10 @@ export default function BookingsPage() {
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
         };
+        
+        if (triggerEmailSend) {
+          (newBooking as any).last_email_sent_at = new Date().toISOString();
+        }
         
         await add(newBooking as any);
         resultingBooking = newBooking;
@@ -1492,6 +1500,11 @@ export default function BookingsPage() {
       // Final cleanup and close
       console.log("Save complete, closing modal...");
       setIsAddModalOpen(false);
+      
+      if (triggerEmailSend) {
+        setSelectedBooking(resultingBooking);
+        handlePreviewEmailForBooking(resultingBooking, 'confirmation');
+      }
       
       // Refresh in background to ensure everything is in sync
       refresh();
@@ -3156,25 +3169,36 @@ export default function BookingsPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="top" align="start" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56 z-[9999]">
                     <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Customer Communication</DropdownMenuLabel>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('confirmation'); setShowEmailPreview(true); }}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handlePreviewEmailForBooking(selectedBooking || formData, 'confirmation')}>
                       <Check className="mr-2 h-4 w-4 text-emerald-500" /> Booking Approved
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('request'); setShowEmailPreview(true); }}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handlePreviewEmailForBooking(selectedBooking || formData, 'request')}>
                       <Clock className="mr-2 h-4 w-4 text-amber-500" /> Request Received
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('cancelled'); setShowEmailPreview(true); }}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handlePreviewEmailForBooking(selectedBooking || formData, 'cancelled')}>
                       <X className="mr-2 h-4 w-4 text-red-500" /> Job Cancelled
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('reminder'); setShowEmailPreview(true); }}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handlePreviewEmailForBooking(selectedBooking || formData, 'reminder')}>
                       <Bell className="mr-2 h-4 w-4 text-blue-500" /> 6-Month Reminder
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuLabel className="text-[10px] uppercase font-bold text-zinc-500">Sales & Billing</DropdownMenuLabel>
-                    <DropdownMenuItem className="cursor-pointer" onClick={() => { setEmailPreviewType('payment-success'); setShowEmailPreview(true); }}>
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handlePreviewEmailForBooking(selectedBooking || formData, 'payment-success')}>
                       <Package className="mr-2 h-4 w-4 text-green-500" /> Payment Success
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {formData.status !== 'cancelled' && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(true); }} 
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
+                  >
+                    <Check className="mr-1.5 h-4 w-4" /> {formData.status === 'confirmed' ? 'Resend Approval' : 'Approve & Email'}
+                  </Button>
+                )}
 
                 <Button 
                   variant="secondary" 
@@ -3235,20 +3259,6 @@ export default function BookingsPage() {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Email Preview Modal — Shared component using exact templates */}
-        <EmailPreviewModal 
-          open={showEmailPreview} 
-          onOpenChange={setShowEmailPreview}
-          type={emailPreviewType}
-          data={{
-            ...selectedBooking,
-            ...formData,
-            // Ensure date from selectedBooking or formData is used
-            date: selectedBooking?.date || (selectedDate ? selectedDate.toISOString() : undefined)
-          }}
-        />
-
 
         <Card className="mt-8 p-0 bg-zinc-950/50 border-zinc-800 overflow-hidden">
           <div className="p-3 sm:p-6 pb-2">
