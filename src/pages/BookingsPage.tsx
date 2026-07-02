@@ -134,6 +134,7 @@ export default function BookingsPage() {
     vehicleMake: "",
     vehicleModel: "",
     vehicleColor: "",
+    vehicleCondition: "",
     address: "",
     time: "09:00",
     endTime: "17:00",
@@ -1071,6 +1072,7 @@ export default function BookingsPage() {
       vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
       vehicleModel: booking.vehicleModel || matchingCust?.model || "",
       vehicleColor: booking.vehicleColor || "",
+      vehicleCondition: booking.vehicleCondition || "",
       address: booking.address || matchingCust?.address || "",
       time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
@@ -1252,7 +1254,8 @@ export default function BookingsPage() {
           model: formData.vehicleModel,
           year: formData.vehicleYear,
           type: formData.vehicle,
-          color: formData.vehicleColor
+          color: formData.vehicleColor,
+          condition: formData.vehicleCondition
         }]
       };
 
@@ -1334,6 +1337,7 @@ export default function BookingsPage() {
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
           vehicleColor: formData.vehicleColor,
+          vehicleCondition: formData.vehicleCondition,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy,
@@ -1433,6 +1437,7 @@ export default function BookingsPage() {
           vehicleMake: formData.vehicleMake,
           vehicleModel: formData.vehicleModel,
           vehicleColor: formData.vehicleColor,
+          vehicleCondition: formData.vehicleCondition,
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy || getCurrentUser()?.name || 'Staff',
@@ -2984,6 +2989,20 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
+                {formData.vehicleCondition && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-sm font-medium text-gray-400">Condition</label>
+                    <div className="col-span-3">
+                      <Input
+                        placeholder="Vehicle Condition"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+                        value={formData.vehicleCondition || ''}
+                        onChange={(e) => setFormData({ ...formData, vehicleCondition: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Assign To</label>
                   <div className="col-span-3 relative">
@@ -3014,6 +3033,7 @@ export default function BookingsPage() {
                       onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
                     >
                       <option value="" className="text-gray-400">Unknown</option>
+                      <option value="Public Website" className="text-emerald-400 bg-zinc-900 font-bold">Online Booking (Public)</option>
                       {/* Ensure current user defaults if not in list */}
                       {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
                         <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">

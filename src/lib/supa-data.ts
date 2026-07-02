@@ -2397,6 +2397,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
                 vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
                 vehicleColor: b.vehicles?.color || b.color || meta.color || (b.booking_vehicle?.color) || '',
+                vehicleCondition: meta.condition || meta.condition_outside || meta.conditionOutside || b.condition_outside || '',
 
                 // Addons mapping with robust parsing
                 addons: (() => {
@@ -2464,6 +2465,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
               year: booking.vehicleYear || booking.year,
               type: booking.vehicle || booking.type,
               color: booking.vehicleColor || booking.color || (booking.booking_vehicle?.color) || '',
+              condition: booking.vehicleCondition || booking.condition || (booking.booking_vehicle?.condition) || '',
               reminder_frequency: booking.reminderFrequency,
               custom_reminder_date: booking.customReminderDate,
               discountCode: booking.discountCode || '',
