@@ -2989,19 +2989,22 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
-                {formData.vehicleCondition && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium text-gray-400">Condition</label>
-                    <div className="col-span-3">
-                      <Input
-                        placeholder="Vehicle Condition"
-                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                        value={formData.vehicleCondition || ''}
-                        onChange={(e) => setFormData({ ...formData, vehicleCondition: e.target.value })}
-                      />
-                    </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium text-gray-400">Condition</label>
+                  <div className="col-span-3">
+                    <select
+                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={formData.vehicleCondition || ''}
+                      onChange={(e) => setFormData({ ...formData, vehicleCondition: e.target.value })}
+                    >
+                      <option value="" className="text-gray-500">Not Specified</option>
+                      <option value="Excellent">Excellent (Fairly Clean, Daily Driver)</option>
+                      <option value="Good">Good (Light Dust/Debris, No Heavy Stains)</option>
+                      <option value="Fair">Fair (Pet Hair, Light Stains, Spills)</option>
+                      <option value="Poor">Poor (Heavy Stains, Odors, Mold/Mildew)</option>
+                    </select>
                   </div>
-                )}
+                </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Assign To</label>
