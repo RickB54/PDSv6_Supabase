@@ -769,6 +769,14 @@ const BookNow = () => {
         status: 'tentative',
         supabaseId: createdBooking?.id
       });
+      
+      // Push in-app alert to Admin NotificationBell
+      if (!isTest) {
+        notify('booking_created', `Online Booking: ${formData.name}`, 'Website', {
+          bookingId: createdBooking?.id || finalId,
+          customerId: createdBooking?.customer_id
+        });
+      }
 
       // Trigger notifications and PDF generation (booking already saved to Supabase above)
       const bookingRecord = {
