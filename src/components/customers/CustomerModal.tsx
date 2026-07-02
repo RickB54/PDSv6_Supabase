@@ -168,7 +168,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
             model: model || latestBooking?.vehicleModel || '',
             year: year || (latestBooking?.vehicleYear ? String(latestBooking.vehicleYear) : ''),
             type: type || latestBooking?.vehicle || '',
-            color: color || '',
+            color: color || latestBooking?.vehicleColor || '',
             mileage: (initial.mileage || vInfo?.mileage) ? String(initial.mileage || vInfo?.mileage) : '',
             conditionInside: initial.conditionInside || vInfo?.conditionInside || cIn || '',
             conditionOutside: initial.conditionOutside || vInfo?.conditionOutside || cOut || '',

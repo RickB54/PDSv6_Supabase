@@ -30,6 +30,7 @@ export interface CalendarEvent {
     vehicleYear?: string;
     vehicleMake?: string;
     vehicleModel?: string;
+    vehicleColor?: string;
     notes?: string;
     addons?: string[];
     price?: number;
@@ -80,6 +81,7 @@ export async function getUnifiedCalendarEvents(
                 vehicleYear: booking.vehicleYear,
                 vehicleMake: booking.vehicleMake,
                 vehicleModel: booking.vehicleModel,
+                vehicleColor: booking.vehicleColor,
                 notes: booking.notes,
                 addons: booking.addons,
                 price: booking.price,
