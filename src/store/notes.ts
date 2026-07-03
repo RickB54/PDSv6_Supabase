@@ -60,6 +60,7 @@ interface NotesState {
     createSection: (notebookId: string, name: string) => Promise<string>;
     updateSection: (id: string, name: string) => Promise<void>;
     deleteSection: (id: string) => Promise<void>;
+    moveSection: (id: string, newNotebookId: string) => Promise<void>;
 
     // Notes
     createNote: (sectionId: string | null, title?: string, content?: string, tags?: string[]) => Promise<string>;
@@ -224,6 +225,18 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return;
         }
         await supabase.from('personal_sections').update({ name }).eq('id', id);
+        get().refresh();
+    },
+
+    moveSection: async (id, newNotebookId) => {
+        if (isDemo()) {
+            const data = await loadDemoData();
+            data.sections = data.sections.map((s: any) => s.id === id ? { ...s, notebook_id: newNotebookId } : s);
+            await saveDemoData(data);
+            get().refresh();
+            return;
+        }
+        await supabase.from('personal_sections').update({ notebook_id: newNotebookId }).eq('id', id);
         get().refresh();
     },
 

@@ -97,6 +97,9 @@ export const getFullSectionName = (notesStore: any, secId: string) => {
   if (!section) return "Unknown";
   const notebook = notesStore.notebooks.find((nb: any) => nb.id === section.notebook_id);
   if (!notebook) return section.name;
+  if (section.name.toLowerCase() === 'general' || section.name === notebook.name) {
+    return notebook.name;
+  }
   return `${notebook.name}/${section.name}`;
 };
 
@@ -637,6 +640,8 @@ export default function StickyNotes() {
   const [newSectionName, setNewSectionName] = useState("");
   const [selectedNbForNewSection, setSelectedNbForNewSection] = useState<string | null>(null);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [isMoveSectionModalOpen, setIsMoveSectionModalOpen] = useState(false);
+  const [sectionToMove, setSectionToMove] = useState<Section | null>(null);
   const [isVisibilityOpen, setIsVisibilityOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -1527,6 +1532,15 @@ export default function StickyNotes() {
     }
   };
 
+  const handleMoveSection = async (newNotebookId: string) => {
+    if (sectionToMove && newNotebookId) {
+      await notesStore.moveSection(sectionToMove.id, newNotebookId);
+      setIsMoveSectionModalOpen(false);
+      setSectionToMove(null);
+      toast({ title: "Submenu Moved" });
+    }
+  };
+
   const enableAnim = prefs.anim;
   const showTags = prefs.tags;
   const isMasonry = prefs.masonry;
@@ -1988,6 +2002,7 @@ export default function StickyNotes() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSection(sec); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Submenu</DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSectionToMove(sec); setIsMoveSectionModalOpen(true); }}><Folder className="w-4 h-4 mr-2"/> Move to Tag Group</DropdownMenuItem>
                               <div className="border-t border-zinc-800 my-1" />
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRemoveAllStatusesInSection(sec.id); }} className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10"><CheckSquare className="w-4 h-4 mr-2"/> Remove All Statuses</DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Submenu</DropdownMenuItem>
@@ -2889,6 +2904,33 @@ export default function StickyNotes() {
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setIsSectionModalOpen(false)} className="text-zinc-400">Cancel</Button>
               <Button onClick={handleCreateSection} className="bg-emerald-600 hover:bg-emerald-500 text-white">Create</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Section Modal */}
+      {isMoveSectionModalOpen && sectionToMove && (
+        <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm">
+            <h2 className="text-white font-bold mb-4">Move '{sectionToMove.name}' to...</h2>
+            <select
+              className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-white mb-4 focus-visible:ring-blue-500 focus:outline-none"
+              onChange={(e) => {
+                const targetNb = e.target.value;
+                if (targetNb) {
+                  handleMoveSection(targetNb);
+                }
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>Select a Tag Group...</option>
+              {notesStore.notebooks.filter((nb: any) => nb.id !== sectionToMove.notebook_id).map((nb: any) => (
+                <option key={nb.id} value={nb.id}>{nb.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setIsMoveSectionModalOpen(false)} className="text-zinc-400">Cancel</Button>
             </div>
           </div>
         </div>
