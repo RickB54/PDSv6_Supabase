@@ -2112,7 +2112,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Performance Graphs</h3>
                 <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
+                        <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700")}>
                             <Filter className="h-3.5 w-3.5" />
                             Filter Graphs
                             {(!perfShowArchived) && (
@@ -2400,11 +2400,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
                                 Filter
-                                {(perfShowArchived || perfDateFilter.start) && (
-                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                                        !
-                                    </Badge>
-                                )}
+                                
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -2618,11 +2614,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
                                 Filter
-                                {(invShowArchived || invDateFilter.start) && (
-                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                                        !
-                                    </Badge>
-                                )}
+                                
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -2840,11 +2832,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
                                 Filter
-                                {(quotesShowArchived || quotesDateFilter.start) && (
-                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                                        !
-                                    </Badge>
-                                )}
+                                
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3338,11 +3326,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
                                 Filter
-                                {(insShowArchived || insDateFilter.start) && (
-                                    <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                                        !
-                                    </Badge>
-                                )}
+                                
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3568,11 +3552,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                     <Filter className="h-4 w-4" />
                                     Filter
-                                    {(qualShowArchived || qualDateFilter.start) && (
-                                        <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 ml-1 h-5 px-1.5">
-                                            !
-                                        </Badge>
-                                    )}
+                                    
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
