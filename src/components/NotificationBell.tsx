@@ -348,6 +348,47 @@ export default function NotificationBell() {
               addedAny = true;
             }
           }
+
+          // 3. Sync Estimate Responses from engagements
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const { data: engData } = await supabase
+            .from('engagements')
+            .select('id, customer_id, customer_name, type, note, created_at')
+            .in('type', ['Estimate Response', 'Estimate Pre-Check'])
+            .gte('created_at', yesterday.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+          for (const e of (engData || [])) {
+            const syncId = `sync_eng_${e.id}`;
+            const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+            const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(e.id);
+            const alreadyAlerted = (useAlertsStore.getState().alerts || []).some(a => 
+              a.type === 'admin_message' && 
+              String(a.payload?.recordId || '') === String(e.id)
+            );
+
+            if (!isLocallyDismissed && !alreadyAlerted) {
+              const custName = e.customer_name || 'Customer';
+              
+              toast({
+                title: e.type === 'Estimate Pre-Check' ? "Estimate Accepted!" : "Estimate Declined",
+                description: e.note,
+                variant: "default",
+              });
+
+              notify(
+                'admin_message',
+                `ESTIMATE UPDATE: ${custName} - ${e.note}`,
+                'Customer Web',
+                { id: syncId, recordId: e.id, customerId: e.customer_id }
+              );
+              
+              addedAny = true;
+            }
+          }
+
           if (addedAny) {
             refresh();
           }

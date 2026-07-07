@@ -127,8 +127,7 @@ export default function CustomerEstimatePage() {
                 customer_id: estimate.customerId,
                 customer_name: estimate.customerName,
                 type: 'Estimate Response',
-                message: `Estimate #${estimate.estimateNumber || ''} DECLINED online.`,
-                note: `[DECLINED_BY_CUSTOMER]`
+                note: `[DECLINED_BY_CUSTOMER] Estimate #${estimate.estimateNumber || ''} DECLINED online.`
             });
 
             // Send Email Notification to Admin
@@ -188,8 +187,7 @@ export default function CustomerEstimatePage() {
                 customer_id: estimate.customerId,
                 customer_name: estimate.customerName,
                 type: 'Estimate Pre-Check',
-                message: `Estimate #${estimate.estimateNumber || ''} ACCEPTED online.`,
-                note: `Customer completed the Pre-Check Form.`
+                note: `[ACCEPTED_BY_CUSTOMER] Estimate #${estimate.estimateNumber || ''} ACCEPTED online. Customer completed the Pre-Check Form.`
             });
 
             // Send Email Notification to Admin
