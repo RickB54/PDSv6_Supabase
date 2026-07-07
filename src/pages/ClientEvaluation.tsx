@@ -18,6 +18,7 @@ import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getCurrentUser } from "@/lib/auth";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 
 interface ClientEvaluation {
@@ -502,7 +503,9 @@ export default function ClientEvaluation() {
 
     return (
         <div>
-            <PageHeader title="Client Evaluation" />
+            <PageHeader title="Client Evaluation">
+                <CustomerCommunicationGuide />
+            </PageHeader>
             <div className="p-4 max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

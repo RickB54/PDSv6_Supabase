@@ -34,6 +34,10 @@ const VehicleScratchpad = () => {
               </div>
             </div>
             <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color</label>
+              <input type="text" onChange={(e) => emitUpdate('color', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="e.g. Black" />
+            </div>
+            <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Class</label>
               <select onChange={(e) => emitUpdate('type', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>

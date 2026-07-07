@@ -75,6 +75,7 @@ interface Vehicle {
     year: string;
     make: string;
     model: string;
+    color: string;
     type: VehicleType;
     condition: "light" | "moderate" | "heavy";
     dailyDriver: boolean;
@@ -173,6 +174,7 @@ export function createEmptyVehicle(livePackages?: any[]): Vehicle {
         year: "",
         make: "",
         model: "",
+        color: "",
         type: "midsize",
         condition: "moderate",
         dailyDriver: true,
@@ -756,6 +758,7 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
                     make: firstVehicle.make || '',
                     model: firstVehicle.model || '',
                     year: firstVehicle.year || '',
+                    color: firstVehicle.color || '',
                     type: firstVehicle.type || 'midsize',
                     mileage: firstVehicle.mileage || '',
                     conditionInside: firstVehicle.interiorCondition || '',
@@ -775,6 +778,7 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
 
 [EVALUATION SUMMARY]
 • Detailing Service: ${selectedServiceName.toUpperCase()}
+• Color: ${firstVehicle.color || 'N/A'}
 • Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
 • Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
 • Storage: ${firstVehicle.garaged || 'N/A'}
@@ -837,6 +841,7 @@ ${firstVehicle.notes || ''}`.trim(),
                 make: firstVehicle.make || '',
                 model: firstVehicle.model || '',
                 year: firstVehicle.year || '',
+                color: firstVehicle.color || '',
                 type: firstVehicle.type || 'midsize',
                 mileage: firstVehicle.mileage || '',
                 conditionInside: firstVehicle.interiorCondition || '',
@@ -857,6 +862,7 @@ ${firstVehicle.notes || ''}`.trim(),
 
 [EVALUATION SUMMARY]
 • Detailing Service: ${selectedServiceName.toUpperCase()}
+• Color: ${firstVehicle.color || 'N/A'}
 • Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
 • Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
 • Storage: ${firstVehicle.garaged || 'N/A'}
@@ -1105,11 +1111,12 @@ ${firstVehicle.notes || ''}`.trim(),
                                     {/* Year/Make/Model Section */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Year / Make / Model</Label>
+                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Year / Make / Model / Color</Label>
                                             <div className="flex gap-2">
-                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
-                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
-                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100" />
+                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-16 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Color" value={activeVehicle.color} onChange={(e) => updateVehicle(activeVehicleId, { color: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
                                             </div>
                                         </div>
                                         <div className="space-y-1.5">
