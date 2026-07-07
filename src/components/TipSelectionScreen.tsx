@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock } from 'lucide-react';
+import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone } from 'lucide-react';
 
 interface TipSelectionScreenProps {
   jobId: string;
@@ -31,8 +31,10 @@ export default function TipSelectionScreen({
   // The base price in dollars
   const basePriceFormatted = (remainingBalanceInCents / 100).toFixed(2);
 
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+
   // Calls the Supabase Edge Function to configure and launch Stripe Checkout.
-  const handleProceedToPay = async () => {
+  const handleProceedToPay = async (mode: 'redirect' | 'qrcode' = 'redirect') => {
     if (selectedTip === undefined) return;
     
     let finalTip: number | null = null;
@@ -59,9 +61,16 @@ export default function TipSelectionScreen({
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
 
-      // Successfully returned a session URL, redirect immediately
+      // Successfully returned a session URL
       if (data.url) {
-        window.location.href = data.url;
+        if (mode === 'qrcode') {
+          setQrCodeUrl(data.url);
+          setLoading(false);
+        } else {
+          window.location.href = data.url;
+        }
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       console.error('Failed to create tip checkout session:', err);
@@ -136,6 +145,26 @@ export default function TipSelectionScreen({
               <Loader2 size={64} className="animate-spin" />
               <p className="text-xl text-gray-700 font-semibold">Preparing payment...</p>
               <p className="text-sm text-gray-400">Please do not close this window</p>
+            </div>
+          ) : qrCodeUrl ? (
+            <div className="flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-300 space-y-4 py-4">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Scan to Pay</h3>
+              <div className="p-4 bg-white border-2 border-gray-100 rounded-2xl shadow-sm inline-block">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCodeUrl)}`} 
+                  alt="Payment QR Code"
+                  className="w-[200px] h-[200px] object-contain"
+                />
+              </div>
+              <p className="text-sm text-gray-500 font-medium max-w-[250px] mx-auto mt-4">
+                Customer can scan this code with their phone camera to pay securely.
+              </p>
+              <button
+                onClick={() => setQrCodeUrl(null)}
+                className="mt-6 text-emerald-600 font-bold text-sm hover:text-emerald-700"
+              >
+                Go Back
+              </button>
             </div>
           ) : (
             <div className="space-y-2 max-w-md mx-auto">
@@ -222,21 +251,31 @@ export default function TipSelectionScreen({
         </div>
 
         {/* Footer - Part of flex to prevent overlap */}
-        {!loading && (
-          <div className="mt-auto bg-white border-t border-gray-100 p-4 sm:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-2">
+        {!loading && !qrCodeUrl && (
+          <div className="mt-auto bg-white border-t border-gray-100 p-4 sm:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] space-y-3">
             <div className="flex justify-between items-center mb-1 px-2">
               <span className="text-gray-500 font-semibold">Total to Pay</span>
               <span className="text-2xl font-black text-gray-900">${getTotalAmountDisplay()}</span>
             </div>
             
-            <button
-              onClick={handleProceedToPay}
-              disabled={!canProceed}
-              className="w-full py-3.5 bg-emerald-500 text-white rounded-2xl font-black text-lg shadow-lg hover:bg-emerald-600 shadow-emerald-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              Continue to Pay
-              <ArrowRight size={24} />
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleProceedToPay('qrcode')}
+                disabled={!canProceed}
+                className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 shadow-blue-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <QrCode size={18} />
+                Show QR Code
+              </button>
+              <button
+                onClick={() => handleProceedToPay('redirect')}
+                disabled={!canProceed}
+                className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-emerald-600 shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Smartphone size={18} />
+                Pay on Device
+              </button>
+            </div>
 
             {onCashPayment && (
               <button
