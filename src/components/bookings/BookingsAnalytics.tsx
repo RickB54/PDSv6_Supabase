@@ -1029,9 +1029,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         
         let jobs: any[] = [];
         if (type === 'Service') {
-            jobs = filteredPerfBookings.filter(b => (b.title || "Unknown") === title);
+            jobs = filteredSnapshotBookings.filter(b => (b.title || "Unknown") === title);
         } else if (type === 'Location') {
-            jobs = filteredPerfBookings.filter(b => {
+            jobs = filteredSnapshotBookings.filter(b => {
                 const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
                 const address = b.address || customer?.address || "N/A";
                 const pos = b.placeOfService || "";
@@ -1040,7 +1040,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             });
         } else if (type === 'Volume') {
             const thisYear = new Date().getFullYear();
-            jobs = filteredPerfBookings.filter(b => {
+            jobs = filteredSnapshotBookings.filter(b => {
                 const d = parseISO(b.date);
                 return format(d, "MMM") === title && d.getFullYear() === thisYear;
             });
@@ -2153,7 +2153,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 {/* Service & Location Distribution */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Service Distribution Pie Chart */}
-                    <Card ref={serviceChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                    <Card ref={serviceChartRef} className="bg-zinc-900/50 border-zinc-800 w-full backdrop-blur-sm shadow-xl">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-zinc-100 flex items-center gap-2 text-sm">
                                 <Package className="w-4 h-4 text-emerald-400" />
@@ -2190,7 +2190,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Card>
 
                     {/* Location Distribution Pie Chart */}
-                    <Card className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
+                    <Card className="bg-zinc-900/50 border-zinc-800 w-full backdrop-blur-sm shadow-xl">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-zinc-100 flex items-center gap-2 text-sm">
                                 <Sparkles className="w-4 h-4 text-amber-400" />
