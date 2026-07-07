@@ -5,14 +5,77 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const VehicleScratchpad = () => {
-  const emitUpdate = (key: string, value: any) => {
+  const [open, setOpen] = useState(false);
+  const [formData, setFormData] = useState<any>({
+    year: "", make: "", model: "", color: "", type: "", condition: "", dailyDriver: "", 
+    reasonForDetail: "", interiorCondition: "", seatMaterial: "", paintCondition: "", garaged: "", notes: ""
+  });
+
+  React.useEffect(() => {
+    if (open) {
+      // Pull latest from local storage (Phone Assistant)
+      const savedStr = localStorage.getItem("phone_assistant_draft_vehicles");
+      const activeId = localStorage.getItem("phone_assistant_draft_active_id");
+      if (savedStr) {
+        try {
+          const vehicles = JSON.parse(savedStr);
+          const active = vehicles.find((v: any) => v.id === activeId) || vehicles[0];
+          if (active) {
+            setFormData({
+              year: active.year || "",
+              make: active.make || "",
+              model: active.model || "",
+              color: active.color || "",
+              type: active.type || "",
+              condition: active.condition || "",
+              dailyDriver: active.dailyDriver !== undefined ? active.dailyDriver.toString() : "",
+              reasonForDetail: active.reasonForDetail || "",
+              interiorCondition: active.interiorCondition || "",
+              seatMaterial: active.seatMaterial || "",
+              paintCondition: active.paintCondition || "",
+              garaged: active.garaged || "",
+              notes: active.notes || ""
+            });
+          }
+        } catch (e) {
+          console.error("Failed to parse vehicle draft from local storage", e);
+        }
+      }
+    }
+  }, [open]);
+
+  const handleChange = (key: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSave = () => {
+    // Sync all form data to the underlying Call Assistant at once
+    Object.entries(formData).forEach(([key, val]) => {
+      let finalVal = val;
+      if (key === 'dailyDriver') {
+        if (val === 'true') finalVal = true;
+        else if (val === 'false') finalVal = false;
+        else finalVal = undefined; // Do not overwrite if unselected
+      }
+      
+      // Dispatch one by one or all at once? The listener merges updates, so one big update is better.
+    });
+
+    // Actually, we can dispatch all keys in a single event
+    const payload = { ...formData };
+    if (payload.dailyDriver === 'true') payload.dailyDriver = true;
+    else if (payload.dailyDriver === 'false') payload.dailyDriver = false;
+    else delete payload.dailyDriver;
+
     window.dispatchEvent(new CustomEvent('update-call-assistant-vehicle', {
-      detail: { [key]: value }
+      detail: payload
     }));
+    
+    setOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full max-w-[200px] bg-white text-emerald-700 hover:bg-emerald-50 border-emerald-200 shadow-sm flex items-center justify-center gap-2">
           <FileText className="w-4 h-4" />
@@ -29,18 +92,18 @@ const VehicleScratchpad = () => {
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Year / Make / Model</label>
               <div className="flex gap-2">
-                <input type="text" onChange={(e) => emitUpdate('year', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Year" />
-                <input type="text" onChange={(e) => emitUpdate('make', e.target.value)} className="w-2/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Make" />
-                <input type="text" onChange={(e) => emitUpdate('model', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Model" />
+                <input type="text" value={formData.year} onChange={(e) => handleChange('year', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Year" />
+                <input type="text" value={formData.make} onChange={(e) => handleChange('make', e.target.value)} className="w-2/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Make" />
+                <input type="text" value={formData.model} onChange={(e) => handleChange('model', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Model" />
               </div>
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color</label>
-              <input type="text" onChange={(e) => emitUpdate('color', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="e.g. Black" />
+              <input type="text" value={formData.color} onChange={(e) => handleChange('color', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="e.g. Black" />
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Class</label>
-              <select onChange={(e) => emitUpdate('type', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.type} onChange={(e) => handleChange('type', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="compact">Compact / Sedan</option>
                 <option value="midsize">Midsize / SUV</option>
@@ -50,7 +113,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dirt Level</label>
-              <select onChange={(e) => emitUpdate('condition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.condition} onChange={(e) => handleChange('condition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="light">Light</option>
                 <option value="moderate">Moderate</option>
@@ -59,7 +122,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Usage</label>
-              <select onChange={(e) => emitUpdate('dailyDriver', e.target.value === 'true')} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.dailyDriver} onChange={(e) => handleChange('dailyDriver', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="true">Daily Driver</option>
                 <option value="false">Weekend / Occasional</option>
@@ -67,7 +130,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Goal / Motivation</label>
-              <select onChange={(e) => emitUpdate('reasonForDetail', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.reasonForDetail} onChange={(e) => handleChange('reasonForDetail', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="maintenance">Maintenance</option>
                 <option value="selling">Selling</option>
@@ -80,7 +143,7 @@ const VehicleScratchpad = () => {
           <div className="space-y-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Interior Condition</label>
-              <select onChange={(e) => emitUpdate('interiorCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.interiorCondition} onChange={(e) => handleChange('interiorCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="normal">Normal</option>
                 <option value="pethair">Pet Hair</option>
@@ -91,7 +154,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Seat Material</label>
-              <select onChange={(e) => emitUpdate('seatMaterial', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.seatMaterial} onChange={(e) => handleChange('seatMaterial', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="cloth">Cloth</option>
                 <option value="leather">Leather</option>
@@ -100,7 +163,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Paint Condition</label>
-              <select onChange={(e) => emitUpdate('paintCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.paintCondition} onChange={(e) => handleChange('paintCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="good">Good</option>
                 <option value="swirls">Swirls / Scratches</option>
@@ -109,7 +172,7 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage</label>
-              <select onChange={(e) => emitUpdate('garaged', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+              <select value={formData.garaged} onChange={(e) => handleChange('garaged', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                 <option value="">Select...</option>
                 <option value="Garaged">Garaged</option>
                 <option value="Outdoors">Outdoors</option>
@@ -118,11 +181,18 @@ const VehicleScratchpad = () => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extra Notes</label>
-              <textarea onChange={(e) => emitUpdate('notes', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none h-16 resize-none bg-white" placeholder="Freehand notes here..."></textarea>
+              <textarea value={formData.notes} onChange={(e) => handleChange('notes', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none h-16 resize-none bg-white" placeholder="Freehand notes here..."></textarea>
             </div>
           </div>
         </div>
-        <p className="text-[10px] text-slate-400 mt-2 italic text-center">Note: Your selections here will automatically sync to the Call Assistant behind this window.</p>
+        
+        <div className="mt-6 flex flex-col items-center border-t border-slate-200 pt-4">
+          <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Save & Sync to Assistant
+          </Button>
+          <p className="text-[10px] text-slate-400 mt-2 italic text-center">Your selections will securely transfer to the active Phone Assistant in the background.</p>
+        </div>
       </DialogContent>
     </Dialog>
   );
