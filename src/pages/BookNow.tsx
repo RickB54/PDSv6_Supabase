@@ -1225,7 +1225,7 @@ const BookNow = () => {
                         <SelectValue placeholder="Select service location..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Customer's address">Customer's address (Onsite / Mobile Detailing)</SelectItem>
+                        <SelectItem value="Customer's address">Mobile Detailing (Customer's address)</SelectItem>
                         <SelectItem value="Shop in Methuen">Shop in Methuen (54 Boston Street, Methuen, MA)</SelectItem>
                       </SelectContent>
                     </Select>

@@ -2681,7 +2681,7 @@ export default function BookingsPage() {
                       value={formData.placeOfService}
                       onChange={(e) => setFormData({ ...formData, placeOfService: e.target.value })}
                     >
-                      <option value="Customer's address">Mobile / Onsite (Customer's address)</option>
+                      <option value="Customer's address">Mobile Detailing (Customer's address)</option>
                       <option value="Shop in Methuen">Shop in Methuen</option>
                     </select>
                   </div>

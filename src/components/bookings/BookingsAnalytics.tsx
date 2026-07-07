@@ -1023,7 +1023,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 const address = b.address || customer?.address || "N/A";
                 const pos = b.placeOfService || "";
                 const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
-                return title === 'Onsite' ? isShop : !isShop;
+                return title === 'Shop' ? isShop : !isShop;
             });
         } else if (type === 'Volume') {
             const thisYear = new Date().getFullYear();
@@ -1055,7 +1055,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         return [
             { name: "Mobile", value: mobile },
-            { name: "Onsite", value: onsite }
+            { name: "Shop", value: onsite }
         ].filter(d => d.value > 0);
     }, [filteredPerfBookings, customers]);
 
@@ -1089,7 +1089,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 date: b.date,
                 customer: b.customer,
                 address: address,
-                locationType: isShop ? "Shop" : "Onsite",
+                locationType: isShop ? "Shop" : "Mobile",
                 service: b.title,
                 probonoReason: b.probonoReason,
                 probonoPrimaryReason: b.probonoPrimaryReason,
