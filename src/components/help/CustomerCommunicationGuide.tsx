@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { MessageSquareQuote, X, ChevronDown, CheckCircle2, Info, FileText } from "lucide-react";
+import { MessageSquareQuote, X, ChevronDown, CheckCircle2, Info, FileText, ClipboardCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const VehicleScratchpad = () => {
   const emitUpdate = (key: string, value: any) => {
@@ -396,6 +397,21 @@ export function CustomerCommunicationGuide() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="pt-8 pb-4 border-t border-slate-200 mt-8 flex flex-col items-center justify-center space-y-3 text-center">
+              <div className="bg-purple-100 p-3 rounded-full">
+                <ClipboardCheck className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-800">Ready to build their customized estimate?</h3>
+              <p className="text-sm text-slate-600 max-w-lg">
+                Use the Client Evaluation tool to input the information you've gathered, generate service recommendations, and get a customized closing script.
+              </p>
+              <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 px-6 mt-2">
+                <Link to="/client-evaluation" onClick={() => setOpen(false)}>
+                  Go to Client Evaluation
+                </Link>
+              </Button>
             </div>
             
           </div>

@@ -72,20 +72,24 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
       icon: <FileCheck className="w-5 h-5 text-blue-600" />,
       steps: [
         {
-          title: "1. Quotes, Not Bills",
-          desc: "Estimates are non-binding proposals. No payments can be collected from an Estimate."
+          title: "1. Sending the Estimate",
+          desc: "Click the 'Copy Hosted Link' icon (chain link) on the estimate row to copy its secure URL. You can then paste and send this link directly to the customer via text or email."
         },
         {
-          title: "2. Customer Acceptance",
-          desc: "Track which estimates are 'Open', 'Accepted', or 'Declined'. When a customer accepts, they will fill out a Pre-Check form with vehicle condition details."
+          title: "2. Quotes, Not Bills",
+          desc: "Estimates are non-binding proposals. No payments can be collected directly from an Estimate."
         },
         {
-          title: "3. Conversion to Invoice",
-          desc: "Once an estimate is accepted, you must manually create an Invoice or Job based on the agreed terms to actually collect money."
+          title: "3. Customer Acceptance",
+          desc: "Track which estimates are 'Open', 'Accepted', or 'Declined'. When a customer accepts via the link, they will fill out a Pre-Check form with vehicle condition details."
         },
         {
           title: "4. Reviewing Pre-Check",
           desc: "Always read the Pre-Check notes (pet hair, damage) that the customer submitted upon acceptance before confirming their appointment."
+        },
+        {
+          title: "5. Conversion to Invoice",
+          desc: "Once an estimate is accepted and the job is scheduled, you must manually create an Invoice or Job based on the agreed terms to actually collect money."
         }
       ]
     },

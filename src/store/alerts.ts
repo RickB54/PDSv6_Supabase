@@ -82,7 +82,11 @@ export function mapAlert(a: AdminAlert): UIAlert {
       href = "/file-manager?category=" + encodeURIComponent("Email Logs");
       break;
     case "admin_message":
-      href = a.payload?.recordType ? `/file-manager?category=${encodeURIComponent(String(a.payload.recordType))}` : "/admin-dashboard";
+      if (a.message?.toLowerCase().includes("estimate") || a.title?.toLowerCase().includes("estimate")) {
+        href = "/bookings-analytics#estimates-tracker";
+      } else {
+        href = a.payload?.recordType ? `/file-manager?category=${encodeURIComponent(String(a.payload.recordType))}` : "/admin-dashboard";
+      }
       break;
     case "pricing_update":
       href = "/package-pricing";

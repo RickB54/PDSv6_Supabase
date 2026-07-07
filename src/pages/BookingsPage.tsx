@@ -1880,115 +1880,85 @@ export default function BookingsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
-      <PageHeader title="Booking Calendar" subtitle="Manage appointments">
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs px-3 min-w-[70px] flex justify-between bg-zinc-900/50 border-zinc-800">
-                  <span className="capitalize">{viewMode}</span>
-                  <ChevronDown className="h-3 w-3 ml-2 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setViewMode('day')}>Day</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode('week')}>Week</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode('month')}>Month</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setViewMode('year')}>Year</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+      <PageHeader title="Booking Calendar" subtitle="Manage appointments" />
 
-            <div className="flex items-center gap-1 bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-800">
-              <Button variant="ghost" size="icon" onClick={() => refresh()} className="h-7 w-7" title="Refresh">
-                <RotateCcw className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handlePrintFullSchedule} className="h-7 w-7" title="Print All Bookings">
-                <Printer className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handlePurgeGenericBookings} className="h-7 w-7 text-red-500/50 hover:text-red-500" title="Cleanup Generic Test Bookings">
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleSyncGoogleCalendar} 
-                    className={cn(
-                      "h-8 text-xs gap-1.5 transition-all px-2.5",
-                      isGoogleSynced ? "border-blue-500/50 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10" : "border-zinc-700 text-zinc-400"
-                    )}
-                  >
-                    <CalendarIcon className={cn("h-3 w-3", isGoogleSynced && "animate-pulse")} />
-                    {isGoogleSynced ? "Personal Sync" : "Personal Calendar"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isGoogleSynced ? "Your Google Calendar is connected and syncing personal items." : "Click to authorize and show your personal Google Calendar events."}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <Button variant="outline" size="sm" onClick={handleToday} className="h-8 px-2.5">Today</Button>
-
-            <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
-              <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>
-              <span className="min-w-[80px] w-auto text-center text-xs font-semibold px-2">
-                {viewMode === 'day' ? format(currentDate, "MMMM d") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
-              </span>
-              <Button variant="ghost" size="icon" onClick={() => handleNext()} className="h-8 w-8"><ChevronRight className="h-3 w-3" /></Button>
-            </div>
-
-            <Button className="bg-primary hover:bg-primary/90 h-8 text-xs" onClick={() => {
-              setSelectedDate(new Date());
-              setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
-              setIsAddModalOpen(true);
-            }}>
-              <Plus className="h-3 w-3 mr-1" /> New
-            </Button>
-          </div>
-        </div>
-      </PageHeader>
-
-      <div className="p-1 sm:p-6 space-y-6 mt-12 lg:mt-0">
-        {/* Mobile Controls (visible only on small screens) */}
-        <div className="flex flex-col gap-4 lg:hidden mb-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800">
+      <div className="p-1 sm:p-6 space-y-6 lg:mt-4">
+        {/* Unified Responsive Toolbar */}
+        <div className="flex flex-col xl:flex-row items-center justify-between gap-4 mb-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/50 shadow-sm">
+          
+          <div className="flex items-center justify-between w-full xl:w-auto gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 shadow-inner">
               <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-8 text-xs px-3">Day</Button>
               <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-8 text-xs px-3">Week</Button>
               <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-8 text-xs px-3">Month</Button>
               <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-8 text-xs px-3">Year</Button>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="icon" onClick={() => refresh()} title="Refresh">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} title="Print All Bookings">
-                <Printer className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={handleSyncGoogleCalendar} 
-                className={cn(isGoogleSynced ? "border-blue-500 text-blue-400" : "text-zinc-400")}
-                title="Sync Google Calendar"
-              >
-                <CalendarIcon className={cn("h-4 w-4", isGoogleSynced && "animate-pulse")} />
-              </Button>
-              <Button className="bg-primary hover:bg-primary/90" size="sm" onClick={() => { setSelectedDate(new Date()); setIsAddModalOpen(true); }}>
-                <Plus className="h-4 w-4" />
-              </Button>
+            
+            {/* Mobile Actions (Visible on small screens, grouped) */}
+            <div className="flex gap-1.5 xl:hidden">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => refresh()} title="Refresh"><RotateCcw className="h-3.5 w-3.5" /></Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrintFullSchedule} title="Print"><Printer className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <Button variant="outline" size="icon" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
-            <span className="font-semibold">{viewMode === 'day' ? format(currentDate, "EEEE, MMMM d, yyyy") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}</span>
-            <Button variant="outline" size="icon" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={handleToday}>Today</Button>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full xl:w-auto gap-4">
+            {/* Date Navigation & Label */}
+            <div className="flex items-center bg-secondary/30 rounded-md border border-border h-9 shadow-sm">
+              <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="font-semibold text-sm min-w-[150px] text-center tracking-tight text-zinc-200">
+                {viewMode === 'day' ? format(currentDate, "EEEE, MMM d, yyyy") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
+              </span>
+              <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
+              <div className="w-px h-5 bg-border mx-1" />
+              <Button variant="ghost" size="sm" onClick={handleToday} className="h-9 px-3 text-xs font-semibold hover:bg-zinc-800">Today</Button>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Desktop/Tablet Actions */}
+              <div className="hidden xl:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shadow-sm">
+                <Button variant="ghost" size="icon" onClick={() => refresh()} className="h-7 w-7 text-zinc-400 hover:text-white" title="Refresh">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handlePrintFullSchedule} className="h-7 w-7 text-zinc-400 hover:text-white" title="Print All Bookings">
+                  <Printer className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handlePurgeGenericBookings} className="h-7 w-7 text-red-500/50 hover:text-red-500" title="Cleanup Generic Test Bookings">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleSyncGoogleCalendar} 
+                      className={cn(
+                        "h-9 text-xs gap-1.5 transition-all px-3 hidden sm:flex shadow-sm",
+                        isGoogleSynced ? "border-blue-500/50 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10" : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+                      )}
+                    >
+                      <CalendarIcon className={cn("h-3.5 w-3.5", isGoogleSynced && "animate-pulse")} />
+                      {isGoogleSynced ? "Personal Sync" : "Personal Calendar"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isGoogleSynced ? "Your Google Calendar is connected and syncing personal items." : "Click to authorize and show your personal Google Calendar events."}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* New Booking Button */}
+              <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold shadow-sm w-full sm:w-auto" onClick={() => {
+                setSelectedDate(new Date());
+                setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
+                setIsAddModalOpen(true);
+              }}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> New
+              </Button>
+            </div>
           </div>
         </div>
 

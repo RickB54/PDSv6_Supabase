@@ -360,7 +360,7 @@ const Contact = () => {
 
           await supabase.functions.invoke('send-booking-email', {
             body: {
-              to: 'Rick.PrimeAutoDetail@gmail.com',
+              to: 'rick.primeautodetail@gmail.com',
               subject: `🔔 NEW VEHICLE EVALUATION: ${formData.name} - ${formData.vehicleType}`,
               customerName: formData.name,
               service: formData.serviceInterested,

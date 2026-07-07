@@ -137,7 +137,7 @@ export default function CustomerInvoicePage() {
                 try {
                     await supabase.functions.invoke('send-booking-email', {
                         body: {
-                            to: 'Rick.PrimeAutoDetail@gmail.com',
+                            to: 'rick.primeautodetail@gmail.com',
                             subject: `💰 INVOICE PAID: ${inv.customerName} - #${inv.invoiceNumber || 'N/A'}`,
                             customerName: inv.customerName,
                             date: new Date().toLocaleDateString(),
