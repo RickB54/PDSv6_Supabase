@@ -851,6 +851,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         toast.success(currentStatus ? "Booking restored" : "Booking archived");
     };
 
+    const getFilterLabel = (filter: { start: Date | undefined; end: Date | undefined }, defaultLabel: string = "Filter") => {
+        if (!filter.start) return defaultLabel;
+        if (filter.end && isSameDay(filter.start, filter.end)) {
+            return isToday(filter.start) ? "Today" : format(filter.start, "MMM d, yyyy");
+        }
+        if (filter.end) {
+            return `${format(filter.start, "MMM d")} - ${format(filter.end, "MMM d")}`;
+        }
+        return format(filter.start, "MMM d, yyyy");
+    };
+
     // --- Helper to filter data ---
     const getFiltered = (data: any[], showArchived: boolean, dateFilter: { start: Date | undefined; end: Date | undefined }, dateKey: string = 'date') => {
         let result = data;
@@ -1629,7 +1640,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
                                 <Filter className="h-3.5 w-3.5" />
-                                Filter Data
+                                {getFilterLabel(perfDateFilter, "Filter Data")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
@@ -1696,7 +1707,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     onClick={() => setIsProfitabilityFilterOpen(false)}
                                 >
                                     <Filter className="w-3.5 h-3.5" />
-                                    Filter
+                                {getFilterLabel(snapshotDateFilter)}
                                 </Button>
                             </div>
                         </PopoverContent>
@@ -1867,7 +1878,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (snapshotDateFilter.start || snapshotDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
                                 <Filter className="h-3.5 w-3.5" />
-                                Filter Data
+                                {getFilterLabel(perfDateFilter, "Filter Data")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
@@ -1934,7 +1945,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     onClick={() => setIsSnapshotFilterOpen(false)}
                                 >
                                     <Filter className="w-3.5 h-3.5" />
-                                    Filter
+                                {getFilterLabel(snapshotDateFilter)}
                                 </Button>
                             </div>
                         </PopoverContent>
@@ -2114,7 +2125,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700")}>
                             <Filter className="h-3.5 w-3.5" />
-                            Filter Graphs
+                            {getFilterLabel(perfDateFilter, "Filter Graphs")}
                             {(!perfShowArchived) && (
                                 <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
                                     Active Only
@@ -2186,7 +2197,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 onClick={() => setIsFilterOpen(false)}
                             >
                                 <Filter className="w-3.5 h-3.5" />
-                                Filter
+                                {getFilterLabel(snapshotDateFilter)}
                             </Button>
                         </div>
                     </PopoverContent>
