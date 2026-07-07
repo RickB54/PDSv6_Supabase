@@ -134,7 +134,7 @@ export default function CustomerEstimatePage() {
             try {
                 await supabase.functions.invoke('send-booking-email', {
                     body: {
-                        to: 'Rick.PrimeAutoDetail@gmail.com',
+                        to: 'rick.primeautodetail@gmail.com',
                         subject: `❌ ESTIMATE DECLINED: ${estimate.customerName} - #${estimate.estimateNumber || 'N/A'}`,
                         customerName: estimate.customerName,
                         customerEmail: '', // Not strictly needed
@@ -211,7 +211,7 @@ export default function CustomerEstimatePage() {
 
                 await supabase.functions.invoke('send-booking-email', {
                     body: {
-                        to: 'Rick.PrimeAutoDetail@gmail.com',
+                        to: 'rick.primeautodetail@gmail.com',
                         subject: `✅ ESTIMATE ACCEPTED: ${estimate.customerName} - #${estimate.estimateNumber || 'N/A'}`,
                         customerName: estimate.customerName,
                         date: new Date().toLocaleDateString(),

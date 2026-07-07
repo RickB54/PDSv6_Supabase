@@ -135,7 +135,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
                     size="icon"
                     className="h-9 w-9 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
                     onClick={() => navigate('/sticky-notes')}
-                    title="Quick Note"
+                    title="Sticky Notes"
                   >
                     <FileText className="h-5 w-5" />
                   </Button>
@@ -176,7 +176,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
                         <div className="h-px bg-zinc-900 my-1" />
                         <DropdownMenuItem onClick={() => navigate('/sticky-notes')} className="gap-2 focus:bg-zinc-900">
                           <FileText className="h-4 w-4 text-blue-400" />
-                          Quick Note
+                          Sticky Notes
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('open-quick-task', { detail: { path: location.pathname } }))} className="gap-2 focus:bg-zinc-900">
                           <CheckSquare className="h-4 w-4 text-emerald-400" />
