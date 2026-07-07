@@ -90,6 +90,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [prevNotes, setPrevNotes] = useState<string | null>(null);
 
   useEffect(() => {
+    if (open) {
+      setActiveTab(initialTab);
+    }
     const initForm = async () => {
       setLinkedVehicles([]);
       if (initial) {
@@ -467,15 +470,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-foreground p-0 overflow-hidden flex flex-col h-[85vh] top-[55%]">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2 w-full pr-8">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-500" />
             {initial?.id ? `Edit ${isProspect ? 'Prospect' : 'Customer'}` : `Add New ${isProspect ? 'Prospect' : 'Customer'}`}
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 bg-zinc-900 border border-zinc-800 shadow-sm rounded-md" onClick={() => setActiveTab('notes')} title="Jump to Notes">
-                <FileText className="w-4 h-4" />
-              </Button>
-              <CustomerCommunicationGuide />
-            </div>
+            <CustomerCommunicationGuide />
           </DialogTitle>
         </DialogHeader>
 

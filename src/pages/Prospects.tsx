@@ -25,7 +25,7 @@ import {
   Search, Pencil, Trash2, Plus, Save, Users, Archive, RotateCcw, RefreshCw,
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
-  HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown,
+  HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown, FileText,
   Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
   Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft
 } from "lucide-react";
@@ -1050,6 +1050,9 @@ export default function Prospects() {
                           title="Preview Prospect Report"
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer, 'notes'); }} className="h-8 w-8 p-0 text-yellow-500 hover:text-yellow-400" title="Quick Notes">
+                          <FileText className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                         {isAdmin && (

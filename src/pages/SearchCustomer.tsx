@@ -1007,6 +1007,9 @@ const SearchCustomer = () => {
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
+                         <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer, 'notes'); }} className="h-8 w-8 p-0 text-yellow-500 hover:text-yellow-400" title="Quick Notes">
+                           <FileText className="h-4 w-4" />
+                         </Button>
                          <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                          {isAdmin && (
                            <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
