@@ -364,6 +364,6 @@ entrypoint = "./functions/create-checkout/index.ts"
 
 [functions.stripe-webhook]
 enabled = true
-verify_jwt = true
+verify_jwt = false   # Stripe sends no JWT — signature is verified inside the function via STRIPE_WEBHOOK_SECRET
 import_map = "./functions/stripe-webhook/deno.json"
 entrypoint = "./functions/stripe-webhook/index.ts"
