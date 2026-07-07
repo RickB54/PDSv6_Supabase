@@ -4,6 +4,12 @@ import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/
 import { Button } from "@/components/ui/button";
 
 const VehicleScratchpad = () => {
+  const emitUpdate = (key: string, value: any) => {
+    window.dispatchEvent(new CustomEvent('update-call-assistant-vehicle', {
+      detail: { [key]: value }
+    }));
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -12,7 +18,7 @@ const VehicleScratchpad = () => {
           Open Editable Scratchpad
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl bg-slate-50 p-6 shadow-2xl z-[200]">
+      <DialogContent className="max-w-3xl bg-slate-50 p-6 shadow-2xl z-[200] max-h-[90vh] overflow-y-auto">
         <DialogTitle className="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
           <FileText className="w-5 h-5 text-emerald-600" />
           Vehicle Info Scratchpad
@@ -21,46 +27,97 @@ const VehicleScratchpad = () => {
           <div className="space-y-3">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Year / Make / Model</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="e.g. 2020 Ford F-150" />
+              <div className="flex gap-2">
+                <input type="text" onChange={(e) => emitUpdate('year', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Year" />
+                <input type="text" onChange={(e) => emitUpdate('make', e.target.value)} className="w-2/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Make" />
+                <input type="text" onChange={(e) => emitUpdate('model', e.target.value)} className="w-1/4 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white" placeholder="Model" />
+              </div>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="e.g. Black" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Interior Material</label>
-              <select className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white transition-all">
-                <option value="">Select or type freehand...</option>
-                <option value="Leather">Leather</option>
-                <option value="Cloth">Cloth</option>
-                <option value="Mixed">Mixed / Other</option>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Vehicle Class</label>
+              <select onChange={(e) => emitUpdate('type', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="compact">Compact / Sedan</option>
+                <option value="midsize">Midsize / SUV</option>
+                <option value="truck">Truck / Van / Large SUV</option>
+                <option value="luxury">Luxury / XL</option>
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Interior Condition</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="Pet hair? Stains? Odors?" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dirt Level</label>
+              <select onChange={(e) => emitUpdate('condition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="light">Light</option>
+                <option value="moderate">Moderate</option>
+                <option value="heavy">Heavy</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Usage</label>
+              <select onChange={(e) => emitUpdate('dailyDriver', e.target.value === 'true')} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="true">Daily Driver</option>
+                <option value="false">Weekend / Occasional</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Goal / Motivation</label>
+              <select onChange={(e) => emitUpdate('reasonForDetail', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="selling">Selling</option>
+                <option value="purchase">Just Purchased</option>
+                <option value="protection">Protection</option>
+                <option value="restoration">Restoration</option>
+              </select>
             </div>
           </div>
           <div className="space-y-3">
             <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Interior Condition</label>
+              <select onChange={(e) => emitUpdate('interiorCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="normal">Normal</option>
+                <option value="pethair">Pet Hair</option>
+                <option value="stains">Stains / Odors</option>
+                <option value="kids">Child Seats</option>
+                <option value="neglected">Very Dirty</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Seat Material</label>
+              <select onChange={(e) => emitUpdate('seatMaterial', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="cloth">Cloth</option>
+                <option value="leather">Leather</option>
+                <option value="synthetic">Synthetic</option>
+              </select>
+            </div>
+            <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Paint Condition</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="Swirls? Scratches? Fading?" />
+              <select onChange={(e) => emitUpdate('paintCondition', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="good">Good</option>
+                <option value="swirls">Swirls / Scratches</option>
+                <option value="neglected">Oxidized / Faded</option>
+              </select>
             </div>
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Usage & Storage</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="Daily driver? Garaged?" />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Goal / Motivation</label>
-              <input type="text" className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all bg-white" placeholder="Selling? Maintenance?" />
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage</label>
+              <select onChange={(e) => emitUpdate('garaged', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                <option value="">Select...</option>
+                <option value="Garaged">Garaged</option>
+                <option value="Outdoors">Outdoors</option>
+                <option value="Carport">Carport</option>
+              </select>
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Extra Notes</label>
-              <textarea className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none transition-all bg-white" placeholder="Freehand notes here..."></textarea>
+              <textarea onChange={(e) => emitUpdate('notes', e.target.value)} className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none h-16 resize-none bg-white" placeholder="Freehand notes here..."></textarea>
             </div>
           </div>
         </div>
-        <p className="text-[10px] text-slate-400 mt-2 italic text-center">Note: This scratchpad is temporary. Copy any important info to your actual booking or estimate.</p>
+        <p className="text-[10px] text-slate-400 mt-2 italic text-center">Note: Your selections here will automatically sync to the Call Assistant behind this window.</p>
       </DialogContent>
     </Dialog>
   );

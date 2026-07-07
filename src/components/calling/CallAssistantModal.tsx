@@ -521,6 +521,16 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         setVehicles(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
     };
 
+    useEffect(() => {
+        const handleSync = (e: any) => {
+            if (e.detail && activeVehicleId) {
+                updateVehicle(activeVehicleId, e.detail);
+            }
+        };
+        window.addEventListener('update-call-assistant-vehicle', handleSync);
+        return () => window.removeEventListener('update-call-assistant-vehicle', handleSync);
+    }, [activeVehicleId, vehicles]);
+
     const updateScenario = (vid: string, sid: string, updates: Partial<Scenario>) => {
         setVehicles(prev => prev.map(v => {
             if (v.id !== vid) return v;
