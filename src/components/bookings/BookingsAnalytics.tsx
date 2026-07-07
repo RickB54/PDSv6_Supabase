@@ -851,7 +851,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         toast.success(currentStatus ? "Booking restored" : "Booking archived");
     };
 
-    const getFilterLabel = (filter: { start: Date | undefined; end: Date | undefined }, defaultLabel: string = "Filter") => {
+    const getFilterLabel = (filter: { start: Date | undefined; end: Date | undefined }, defaultLabel: string = "All Time") => {
         if (!filter.start) return defaultLabel;
         if (filter.end && isSameDay(filter.start, filter.end)) {
             return isToday(filter.start) ? "Today" : format(filter.start, "MMM d, yyyy");
@@ -1070,60 +1070,62 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         ].filter(d => d.value > 0);
     }, [filteredPerfBookings, customers]);
 
-    const serviceDetailsData = useMemo(() => {
-        return filteredPerfBookings.map(b => {
-            const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
-            const address = b.address || customer?.address || "N/A";
-            const pos = b.placeOfService || "";
-            const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
-            
-            // Cross-reference revenue from invoices if booking price is 0
-            let revenue = Number(b.price || 0);
-            let value = Number(b.price || 0);
-            
-            if (true) {
-                const bDate = b.date?.split('T')[0];
-                const match = invoices.find(inv => {
-                    const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
-                    const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
-                    // Match by customer and date (some wiggle room for date sync)
-                    return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
-                });
-                if (match) {
-                    revenue = match.total || 0;
-                    value = match.services?.reduce((acc: number, s: any) => acc + (Number(s.price) || 0), 0) || revenue;
-                }
+    
+    const mapBookingToServiceDetail = (b: any, customers: any[], invoices: any[]) => {
+        const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+        const address = b.address || customer?.address || "N/A";
+        const pos = b.placeOfService || "";
+        const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
+        
+        let revenue = Number(b.price || 0);
+        let value = Number(b.price || 0);
+        
+        if (true) {
+            const bDate = b.date?.split('T')[0];
+            const match = invoices.find(inv => {
+                const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
+                const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
+                return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
+            });
+            if (match) {
+                revenue = match.total || 0;
+                value = match.services?.reduce((acc: number, s: any) => acc + (Number(s.price) || 0), 0) || revenue;
             }
+        }
 
-            return {
-                id: b.id,
-                date: b.date,
-                customer: b.customer,
-                address: address,
-                locationType: isShop ? "Shop" : "Mobile",
-                service: b.title,
-                probonoReason: b.probonoReason,
-                probonoPrimaryReason: b.probonoPrimaryReason,
-                probonoReasons: b.probonoReasons,
-                status: (b.status || 'pending').toLowerCase(),
-                revenue: revenue,
-                value: value > 0 ? value : revenue
-            };
-        }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return {
+            id: b.id,
+            date: b.date,
+            customer: b.customer,
+            address: address,
+            locationType: isShop ? "Shop" : "Mobile",
+            service: b.title,
+            probonoReason: b.probonoReason,
+            probonoPrimaryReason: b.probonoPrimaryReason,
+            probonoReasons: b.probonoReasons,
+            status: (b.status || 'pending').toLowerCase(),
+            revenue: revenue,
+            value: value > 0 ? value : revenue
+        };
+    };
+
+
+    const serviceDetailsData = useMemo(() => {
+        return filteredPerfBookings.map(b => mapBookingToServiceDetail(b, customers, invoices)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [filteredPerfBookings, customers, invoices]);
 
+    const qualServiceDetailsData = useMemo(() => {
+        return filteredQualBookings.map(b => mapBookingToServiceDetail(b, customers, invoices)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredQualBookings, customers, invoices]);
+
     const doneServices = useMemo(() => {
-        const qualMap = filteredQualBookings.map(b => b.id);
-        return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed') && qualMap.includes(s.id));
-    }, [serviceDetailsData, filteredQualBookings]);
+        return qualServiceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
+    }, [qualServiceDetailsData]);
 
     const probonoJobs = useMemo(() => {
-        // All qualified services with $0 revenue, regardless of completion status
-        const qualMap = filteredQualBookings.map(b => b.id);
-        return serviceDetailsData
-            .filter(s => s.revenue === 0 && qualMap.includes(s.id))
+        return qualServiceDetailsData
+            .filter(s => s.revenue === 0)
             .map(s => {
-                // Find matching invoice for navigation
                 const sDate = s.date?.split('T')[0];
                 const matchedInv = invoices.find(inv => {
                     const invDate = (inv.serviceDate || inv.date || inv.createdAt || '').split('T')[0];
@@ -1132,7 +1134,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 });
                 return { ...s, invoiceId: matchedInv?.id || null };
             });
-    }, [doneServices, invoices]);
+    }, [qualServiceDetailsData, invoices]);
 
     const freeVsPaidPieData = useMemo(() => {
         const freeDone = probonoJobs.filter(j => j.status === 'done' || j.status === 'completed').length;
@@ -1878,7 +1880,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (snapshotDateFilter.start || snapshotDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
                                 <Filter className="h-3.5 w-3.5" />
-                                {getFilterLabel(perfDateFilter, "Filter Data")}
+                                {getFilterLabel(snapshotDateFilter)}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
@@ -1938,15 +1940,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         />
                                     </div>
                                 </div>
-                            </div>
-                            <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
-                                <Button 
-                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
-                                    onClick={() => setIsSnapshotFilterOpen(false)}
-                                >
-                                    <Filter className="w-3.5 h-3.5" />
-                                {getFilterLabel(snapshotDateFilter)}
-                                </Button>
                             </div>
                         </PopoverContent>
                     </Popover>
