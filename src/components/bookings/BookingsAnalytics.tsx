@@ -23,6 +23,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { addOns, servicePackages } from "@/lib/services";
 import { cn } from "@/lib/utils";
 import { getPriceChangeHistory, PriceChangeRecord, getAllPackageMeta, getAllAddOnMeta, getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
@@ -3242,30 +3243,74 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
                                                 <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
                                                 <TableCell>
-                                                    {job.probonoPrimaryReason || job.probonoReason ? (
-                                                        <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px] uppercase font-black truncate max-w-[140px]" title={job.probonoReasons?.join(', ')}>
-                                                            {job.probonoPrimaryReason || job.probonoReason}
-                                                            {job.probonoReasons && job.probonoReasons.length > 1 && ` +${job.probonoReasons.length - 1}`}
-                                                        </Badge>
-                                                    ) : (
-                                                        <select
-                                                            value={job.probonoPrimaryReason || job.probonoReason || ''}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onChange={async (e) => {
-                                                                const val = e.target.value;
-                                                                await update(job.id, { probonoPrimaryReason: val, probonoReasons: val ? [val] : [], probonoReason: val });
-                                                            }}
-                                                            className="h-7 w-[140px] px-2 text-xs bg-zinc-950/50 border border-zinc-800/50 rounded focus:border-pink-500/50 transition-colors text-zinc-300 focus:outline-none"
-                                                        >
-                                                            <option value="">Backfill Legacy...</option>
-                                                            <option value="Referral Builder">Referral Builder</option>
-                                                            <option value="Family/Friend">Family/Friend</option>
-                                                            <option value="Review-for-Service Trade">Review-for-Service Trade</option>
-                                                            <option value="Redo/Comp for Issue">Redo/Comp for Issue</option>
-                                                            <option value="Charity">Charity</option>
-                                                            <option value="Other">Other</option>
-                                                        </select>
-                                                    )}
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm" 
+                                                                className={cn(
+                                                                    "h-7 px-2 text-[10px] uppercase font-black truncate max-w-[140px] justify-start",
+                                                                    (job.probonoPrimaryReason || job.probonoReason || (job.probonoReasons && job.probonoReasons.length > 0)) 
+                                                                        ? "bg-pink-500/10 text-pink-400 border-pink-500/20 hover:bg-pink-500/20" 
+                                                                        : "bg-zinc-950/50 text-zinc-400 border-zinc-800 hover:text-zinc-300"
+                                                                )} 
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {job.probonoReasons && job.probonoReasons.length > 0 ? (
+                                                                    <>
+                                                                        {job.probonoReasons[0]}
+                                                                        {job.probonoReasons.length > 1 && ` +${job.probonoReasons.length - 1}`}
+                                                                    </>
+                                                                ) : job.probonoPrimaryReason || job.probonoReason ? (
+                                                                    job.probonoPrimaryReason || job.probonoReason
+                                                                ) : (
+                                                                    "Select Reason..."
+                                                                )}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-56 p-3 bg-zinc-950 border-zinc-800" align="start" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="space-y-3">
+                                                                <h4 className="font-medium text-xs text-zinc-400 uppercase tracking-widest">Probono Reasons</h4>
+                                                                <div className="space-y-2">
+                                                                    {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Charity", "Other"].map(reason => {
+                                                                        const currentReasons = job.probonoReasons && job.probonoReasons.length > 0 
+                                                                            ? job.probonoReasons 
+                                                                            : (job.probonoPrimaryReason || job.probonoReason ? [job.probonoPrimaryReason || job.probonoReason] : []);
+                                                                        const isSelected = currentReasons.includes(reason);
+                                                                        return (
+                                                                            <div key={reason} className="flex items-center space-x-2">
+                                                                                <Checkbox 
+                                                                                    id={`reason-${job.id}-${reason}`} 
+                                                                                    checked={isSelected}
+                                                                                    onCheckedChange={async (checked) => {
+                                                                                        let newReasons = [...currentReasons];
+                                                                                        if (checked) {
+                                                                                            newReasons.push(reason);
+                                                                                        } else {
+                                                                                            newReasons = newReasons.filter(r => r !== reason);
+                                                                                        }
+                                                                                        const primary = newReasons.length > 0 ? newReasons[0] : null;
+                                                                                        await update(job.id, { 
+                                                                                            probonoReasons: newReasons, 
+                                                                                            probonoPrimaryReason: primary,
+                                                                                            probonoReason: primary 
+                                                                                        });
+                                                                                    }}
+                                                                                    className="border-zinc-700 data-[state=checked]:bg-pink-600 data-[state=checked]:border-pink-600"
+                                                                                />
+                                                                                <label 
+                                                                                    htmlFor={`reason-${job.id}-${reason}`}
+                                                                                    className="text-xs text-zinc-200 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                                                >
+                                                                                    {reason}
+                                                                                </label>
+                                                                            </div>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
                                                 </TableCell>
                                                 <TableCell className="text-right text-emerald-400 font-mono">
                                                     {job.value > 0 ? `$${job.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "N/A"}
