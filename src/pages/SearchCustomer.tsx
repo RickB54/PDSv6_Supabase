@@ -54,6 +54,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import jsPDF from "jspdf";
 
 import { UnifiedCustomerTimeline } from "@/components/customers/UnifiedCustomerTimeline";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 const SearchCustomer = () => {
   const location = useLocation();
@@ -630,6 +631,7 @@ const SearchCustomer = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-bold text-white">Customer Database</h2>
+                  <CustomerCommunicationGuide />
                   <button 
                     onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'customers' } }))}
                     className="p-1 text-zinc-500 hover:text-blue-400 transition-colors"

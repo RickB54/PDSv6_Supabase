@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { CheckCircle2, ShieldAlert, Loader2, Car, DollarSign, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser } from '@/lib/auth';
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 interface Invoice {
   id?: string;
@@ -304,7 +305,10 @@ export default function CustomerInvoicePage() {
 
                     <div className="bg-zinc-950 p-6 border-b border-zinc-800 flex justify-between items-start">
                         <div>
-                            <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1">Tax Invoice</h2>
+                            <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 flex items-center gap-2">
+                                Tax Invoice
+                                {user && <PaymentWorkflowHelp variant="customer-invoice-page" />}
+                            </h2>
                             <p className="text-3xl font-black text-white">#{invoice.invoiceNumber || 'N/A'}</p>
                         </div>
                         <div className="text-right">

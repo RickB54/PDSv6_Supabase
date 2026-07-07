@@ -28,6 +28,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { RetentionHub } from "./RetentionHub";
 import { ActivityLog } from "./ActivityLog";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 interface Props {
   open: boolean;
@@ -469,6 +470,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-500" />
             {initial?.id ? `Edit ${isProspect ? 'Prospect' : 'Customer'}` : `Add New ${isProspect ? 'Prospect' : 'Customer'}`}
+            <CustomerCommunicationGuide />
           </DialogTitle>
         </DialogHeader>
 

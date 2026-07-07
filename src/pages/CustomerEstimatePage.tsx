@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 import { getCurrentUser } from '@/lib/auth';
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export default function CustomerEstimatePage() {
     const { id } = useParams<{ id: string }>();
@@ -313,7 +314,10 @@ export default function CustomerEstimatePage() {
                 <Card className="bg-zinc-900 border-zinc-800 overflow-hidden shadow-2xl">
                     <div className="bg-zinc-950 p-6 border-b border-zinc-800 flex justify-between items-start">
                         <div>
-                            <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1">Service Estimate</h2>
+                            <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 flex items-center gap-2">
+                                Service Estimate
+                                {user && <PaymentWorkflowHelp variant="customer-estimate-page" />}
+                            </h2>
                             <p className="text-3xl font-black text-white">#{estimate.estimateNumber || 'N/A'}</p>
                         </div>
                         <div className="text-right">

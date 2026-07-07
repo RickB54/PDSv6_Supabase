@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -2272,7 +2273,10 @@ const ServiceChecklist = () => {
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight truncate">Service Checklist</h1>
+                <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight truncate flex items-center gap-2">
+                  Service Checklist
+                  <PaymentWorkflowHelp variant="service-checklist" />
+                </h1>
                 <Button
                   variant="ghost"
                   size="icon"

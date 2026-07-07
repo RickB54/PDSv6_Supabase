@@ -17,6 +17,7 @@ import {
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { PaymentDialog } from "@/components/invoicing/PaymentDialog";
 import {
   Dialog,
@@ -1289,7 +1290,10 @@ Precision. Protection. Perfection.`;
                 <FileText className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Invoicing & Payments</h2>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  Invoicing & Payments
+                  <PaymentWorkflowHelp variant="invoicing-dashboard" />
+                </h2>
                 <p className="text-zinc-400 text-sm">Manage billing and track revenue</p>
               </div>
             </div>

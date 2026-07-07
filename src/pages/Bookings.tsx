@@ -15,6 +15,7 @@ import { format, parseISO, isSameDay, isWithinInterval, startOfDay, endOfDay, st
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
@@ -286,6 +287,7 @@ export default function Bookings() {
                   <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} className="h-9 w-9" title="Print All Bookings">
                     <Printer className="h-4 w-4" />
                   </Button>
+                  <CustomerCommunicationGuide />
                   {window.location.hostname === 'localhost' && (
                     <Button variant="outline" size="icon" onClick={handleDeleteTestBookings} className="h-9 w-9 text-red-500 border-red-500/30 hover:bg-red-500/10" title="Delete All Mock Data">
                       <Trash2 className="h-4 w-4" />

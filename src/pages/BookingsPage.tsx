@@ -1882,21 +1882,33 @@ export default function BookingsPage() {
     <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
       <PageHeader title="Booking Calendar" subtitle="Manage appointments">
         <div className="flex items-center gap-2">
-          <div className="hidden lg:flex items-center gap-2">
-            <div className="flex bg-zinc-900/50 rounded-lg p-1 border border-zinc-800">
-              <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-7 text-xs px-2">Day</Button>
-              <Button variant={viewMode === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('week')} className="h-7 text-xs px-2">Week</Button>
-              <Button variant={viewMode === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('month')} className="h-7 text-xs px-2">Month</Button>
-              <Button variant={viewMode === 'year' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('year')} className="h-7 text-xs px-2">Year</Button>
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs px-3 min-w-[70px] flex justify-between bg-zinc-900/50 border-zinc-800">
+                  <span className="capitalize">{viewMode}</span>
+                  <ChevronDown className="h-3 w-3 ml-2 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setViewMode('day')}>Day</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('week')}>Week</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('month')}>Month</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setViewMode('year')}>Year</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex items-center gap-1 bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-800">
+              <Button variant="ghost" size="icon" onClick={() => refresh()} className="h-7 w-7" title="Refresh">
+                <RotateCcw className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handlePrintFullSchedule} className="h-7 w-7" title="Print All Bookings">
+                <Printer className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handlePurgeGenericBookings} className="h-7 w-7 text-red-500/50 hover:text-red-500" title="Cleanup Generic Test Bookings">
+                <Trash2 className="h-3 w-3" />
+              </Button>
             </div>
-
-            <Button variant="outline" size="icon" onClick={() => refresh()} className="h-8 w-8" title="Refresh">
-              <RotateCcw className="h-3 w-3" />
-            </Button>
-
-            <Button variant="outline" size="icon" onClick={handlePrintFullSchedule} className="h-8 w-8" title="Print All Bookings">
-              <Printer className="h-3 w-3" />
-            </Button>
 
             <TooltipProvider>
               <Tooltip>
@@ -1906,12 +1918,12 @@ export default function BookingsPage() {
                     size="sm" 
                     onClick={handleSyncGoogleCalendar} 
                     className={cn(
-                      "h-8 text-xs gap-2 transition-all",
+                      "h-8 text-xs gap-1.5 transition-all px-2.5",
                       isGoogleSynced ? "border-blue-500/50 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10" : "border-zinc-700 text-zinc-400"
                     )}
                   >
                     <CalendarIcon className={cn("h-3 w-3", isGoogleSynced && "animate-pulse")} />
-                    {isGoogleSynced ? "Personal Sync Active" : "Show My Personal Calendar"}
+                    {isGoogleSynced ? "Personal Sync" : "Personal Calendar"}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -1920,11 +1932,7 @@ export default function BookingsPage() {
               </Tooltip>
             </TooltipProvider>
 
-            <Button variant="outline" size="sm" onClick={handleToday} className="h-8">Today</Button>
-
-            <Button variant="outline" size="icon" onClick={handlePurgeGenericBookings} className="h-8 w-8 text-red-500/50 hover:text-red-500 border-red-500/20" title="Cleanup Generic Test Bookings">
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            <Button variant="outline" size="sm" onClick={handleToday} className="h-8 px-2.5">Today</Button>
 
             <div className="flex items-center bg-secondary/50 rounded-md border border-border h-8">
               <Button variant="ghost" size="icon" onClick={handlePrev} className="h-8 w-8"><ChevronLeft className="h-3 w-3" /></Button>

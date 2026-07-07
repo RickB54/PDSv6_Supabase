@@ -34,6 +34,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -736,6 +737,7 @@ export default function Prospects() {
                   >
                     <HelpCircle className="h-5 w-5" />
                   </button>
+                  <CustomerCommunicationGuide />
                 </div>
                 <p className="text-zinc-400 text-sm">Track potential clients and leads</p>
               </div>

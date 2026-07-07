@@ -67,6 +67,7 @@ import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CA
 import { toast } from "sonner";
 import supabase from "@/lib/supabase";
 import { SmartMissionWorkflow } from "@/components/followup/SmartMissionWorkflow";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 export default function FollowUpCenter() {
   const { items: allBookings, update: updateBooking } = useBookingsStore();
@@ -465,6 +466,8 @@ export default function FollowUpCenter() {
                </Button>
 
                <div className="hidden lg:block h-8 w-[1px] bg-zinc-800 mx-2" />
+
+               <CustomerCommunicationGuide />
 
                <Button 
                  variant="ghost" 

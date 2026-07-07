@@ -13,6 +13,7 @@ import { getInvoices } from "@/lib/db";
 import { useCouponsStore } from "@/store/coupons";
 import { Tag, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 interface Invoice {
   id: string; // Required for getInvoices type safety
@@ -221,7 +222,10 @@ const Checkout = () => {
         </Button>
         <div className="space-y-6">
           <Card className="p-6 bg-gradient-card border-border">
-            <h2 className="text-2xl font-bold text-foreground mb-4">Cart</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+              Cart
+              <PaymentWorkflowHelp variant="checkout" />
+            </h2>
             {items.length === 0 ? (
               <p className="text-muted-foreground">Your cart is empty.</p>
             ) : (

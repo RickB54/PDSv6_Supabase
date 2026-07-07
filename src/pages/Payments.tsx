@@ -10,6 +10,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export interface UnifiedPayment {
   id: string;
@@ -156,7 +157,10 @@ const Payments = () => {
                 <DollarSign className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Universal Payment Ledger</h2>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  Universal Payment Ledger
+                  <PaymentWorkflowHelp variant="payments-dashboard" />
+                </h2>
                 <p className="text-zinc-400 text-sm">Every payment tracked across the application.</p>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -79,7 +80,10 @@ export default function PaymentSuccess() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
       <div className="bg-white p-8 sm:p-10 rounded-3xl shadow-2xl w-full max-w-lg text-center border-t-8 border-green-500 transform transition-all">
         <CheckCircle className="mx-auto text-green-500 mb-6" size={88} strokeWidth={1.5} />
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">Payment Successful</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight flex items-center justify-center gap-3">
+          Payment Successful
+          <PaymentWorkflowHelp variant="payment-success" />
+        </h1>
         <p className="text-gray-500 font-medium text-lg mb-8">Job #{paymentData.job_id}</p>
 
         <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-100 shadow-inner">

@@ -42,6 +42,7 @@ import qrCode from "@/assets/review-qr.png";
 import { getCustomPackages } from "@/lib/servicesMeta";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { useCouponsStore } from "@/store/coupons";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 interface Estimate {
     id?: string;
@@ -730,7 +731,10 @@ const Estimates = () => {
                                 <FileText className="h-8 w-8" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-white">Estimates & Quotes</h2>
+                                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                                    Estimates & Quotes
+                                    <PaymentWorkflowHelp variant="estimates-dashboard" />
+                                </h2>
                                 <p className="text-zinc-400 text-sm">Create, track, and approve estimates</p>
                                 <div className="mt-2 flex items-center gap-2 text-xs font-bold font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 w-fit">
                             <Clock className="h-4 w-4" />

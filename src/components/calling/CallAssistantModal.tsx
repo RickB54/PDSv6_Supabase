@@ -61,6 +61,7 @@ import { generateInvoiceNumber } from "@/lib/utils";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 interface Scenario {
     id: string;
@@ -902,6 +903,7 @@ ${firstVehicle.notes || ''}`.trim(),
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <CustomerCommunicationGuide />
                         <Button variant="ghost" size="icon" onClick={() => handleCloseAttempt(false)} className="h-8 w-8 rounded-full hover:bg-primary/20">
                             <X className="w-5 h-5" />
                         </Button>
