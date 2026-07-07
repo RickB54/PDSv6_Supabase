@@ -890,6 +890,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     // Derived filtered data
     const filteredPerfBookings = useMemo(() => getFiltered(bookings, perfShowArchived, perfDateFilter), [bookings, perfShowArchived, perfDateFilter]);
+    const filteredSnapshotBookings = useMemo(() => getFiltered(bookings, snapshotShowArchived, snapshotDateFilter), [bookings, snapshotShowArchived, snapshotDateFilter]);
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
     const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
@@ -999,21 +1000,21 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         }
         return months.map(date => {
             const name = format(date, "MMM");
-            const count = filteredPerfBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
+            const count = filteredSnapshotBookings.filter(b => isSameMonth(parseISO(b.date), date)).length;
             return { name, bookings: count };
         });
-    }, [filteredPerfBookings]);
+    }, [filteredSnapshotBookings]);
 
     const pieData = useMemo(() => {
         const counts: Record<string, number> = {};
-        filteredPerfBookings.forEach(b => {
+        filteredSnapshotBookings.forEach(b => {
             const svc = b.title || "Unknown";
             counts[svc] = (counts[svc] || 0) + 1;
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value);
-    }, [filteredPerfBookings]);
+    }, [filteredSnapshotBookings]);
 
     const handleChartClick = (data: any, type: string) => {
         if (!data || (!data.name && !data.activePayload)) return;
@@ -1052,12 +1053,13 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const locationPieData = useMemo(() => {
         let mobile = 0;
         let onsite = 0;
-        
-        filteredPerfBookings.forEach(b => {
+
+        filteredSnapshotBookings.forEach(b => {
             const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
             const address = b.address || customer?.address || "N/A";
             const pos = b.placeOfService || "";
             const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
+
             if (isShop) {
                 onsite++;
             } else {
@@ -1069,7 +1071,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             { name: "Mobile", value: mobile },
             { name: "Shop", value: onsite }
         ].filter(d => d.value > 0);
-    }, [filteredPerfBookings, customers]);
+    }, [filteredSnapshotBookings, customers]);
 
     
     const mapBookingToServiceDetail = (b: any, customers: any[], invoices: any[]) => {
@@ -1873,6 +1875,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <ArrowUp className="h-6 w-6" />
             </Button>
 
+            <div className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl">
             {/* Dynamic Operational Snapshot */}
             <section className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -2112,91 +2115,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
 
-            {/* Global Charts Filter */}
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Performance Graphs</h3>
-                <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700")}>
-                            <Filter className="h-3.5 w-3.5" />
-                            {getFilterLabel(perfDateFilter, "Filter Graphs")}
-                            {(!perfShowArchived) && (
-                                <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
-                                    Active Only
-                                </Badge>
-                            )}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
-                        <div className="p-4 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold text-white">Show Archived</span>
-                                <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
-                            </div>
-
-                            <div className="space-y-3">
-                                <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!perfDateFilter.start && !perfDateFilter.end) && "bg-zinc-800 text-white")}
-                                        onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
-                                    >
-                                        All Time
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-zinc-800 text-white")}
-                                        onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
-                                    >
-                                        Today
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
-                                        onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
-                                    >
-                                        This Week
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
-                                        onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
-                                    >
-                                        This Month
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
-                                <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
-                                    <Calendar
-                                        mode="range"
-                                        selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
-                                        onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
-                                        initialFocus
-                                        className="bg-transparent text-zinc-300"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
-                            <Button 
-                                className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
-                                onClick={() => setIsFilterOpen(false)}
-                            >
-                                <Filter className="w-3.5 h-3.5" />
-                                {getFilterLabel(snapshotDateFilter)}
-                            </Button>
-                        </div>
-                    </PopoverContent>
-                </Popover>
-            </div>
+            <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest mt-8 mb-4 border-b border-zinc-800 pb-2">Performance Graphs</h3>
 
             {/* Charts Row */}
             <div id="revenue-performance" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-24">
@@ -2389,6 +2308,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </AccordionItem>
                 </Accordion>
             </Card>
+
+            </div>
 
             {/* Service Performance Detail Log - COMPLETED ONLY */}
             <Card id="service-detail" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl scroll-mt-24">
