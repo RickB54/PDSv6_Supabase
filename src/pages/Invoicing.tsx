@@ -94,6 +94,8 @@ interface Invoice {
   includeTravelTime?: boolean;
   employeeId?: string;
   productCost?: number;
+  stripeNetPayout?: number;
+  stripeFee?: number;
 }
 
 const Invoicing = () => {

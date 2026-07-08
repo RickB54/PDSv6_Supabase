@@ -1621,6 +1621,14 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
                 i.productCost = parseFloat(s.name.replace("VIRTUAL_PRODUCT_COST:", "").trim());
                 return false;
               }
+              if (s.name.startsWith("VIRTUAL_STRIPE_NET_PAYOUT:")) {
+                i.stripeNetPayout = parseFloat(s.name.replace("VIRTUAL_STRIPE_NET_PAYOUT:", "").trim());
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_STRIPE_FEE:")) {
+                i.stripeFee = parseFloat(s.name.replace("VIRTUAL_STRIPE_FEE:", "").trim());
+                return false;
+              }
               return true;
             });
 
@@ -1649,6 +1657,8 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
               includeTravelTime: i.includeTravelTime,
               employeeId: i.employeeId,
               productCost: i.productCost,
+              stripeNetPayout: i.stripeNetPayout,
+              stripeFee: i.stripeFee,
               createdAt: i.created_at
             };
         });
@@ -1697,6 +1707,8 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     if (invoice.includeTravelTime !== undefined) virtualServices.push({ name: `VIRTUAL_TRAVEL_INCLUDED:${invoice.includeTravelTime}`, price: 0 });
     if (invoice.employeeId !== undefined) virtualServices.push({ name: `VIRTUAL_EMPLOYEE_ID:${invoice.employeeId}`, price: 0 });
     if (invoice.productCost !== undefined) virtualServices.push({ name: `VIRTUAL_PRODUCT_COST:${invoice.productCost}`, price: 0 });
+    if (invoice.stripeNetPayout !== undefined) virtualServices.push({ name: `VIRTUAL_STRIPE_NET_PAYOUT:${invoice.stripeNetPayout}`, price: 0 });
+    if (invoice.stripeFee !== undefined) virtualServices.push({ name: `VIRTUAL_STRIPE_FEE:${invoice.stripeFee}`, price: 0 });
 
     const payload = {
         total: invoice.total,

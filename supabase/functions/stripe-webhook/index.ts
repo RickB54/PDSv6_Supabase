@@ -168,7 +168,41 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   let   customerName:  string           = "Valued Customer";
   let   totalAmount:   number           = (session.amount_total ?? 0) / 100;
 
+  // Retrieve net payout and fee from Stripe
+  let netPayout = totalAmount;
+  let feeAmount = 0;
+  if (session.payment_intent) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, { expand: ['latest_charge.balance_transaction'] });
+      const charge = pi.latest_charge as any;
+      if (charge && charge.balance_transaction) {
+        netPayout = charge.balance_transaction.net / 100;
+        feeAmount = charge.balance_transaction.fee / 100;
+      }
+    } catch (err) {
+      console.warn("⚠️ Failed to retrieve net payout:", err.message);
+    }
+  }
+
   for (const id of invoiceIds) {
+    // 1. Fetch current services array to preserve it while adding virtual fields
+    let existingServices: any[] = [];
+    try {
+      const getRes = await fetch(`${supabaseUrl}/rest/v1/invoices?id=eq.${id}&select=services`, { method: "GET", headers: dbHeaders });
+      if (getRes.ok) {
+        const rows = await getRes.json();
+        if (rows && rows.length > 0 && Array.isArray(rows[0].services)) {
+          existingServices = [...rows[0].services];
+        }
+      }
+    } catch(e) {
+      console.warn(`⚠️ Could not fetch existing services for invoice ${id}`);
+    }
+
+    // Append Net Payout & Fee
+    existingServices.push({ name: `VIRTUAL_STRIPE_NET_PAYOUT:${netPayout}`, price: 0 });
+    existingServices.push({ name: `VIRTUAL_STRIPE_FEE:${feeAmount}`, price: 0 });
+
     const patchRes = await fetch(
       `${supabaseUrl}/rest/v1/invoices?id=eq.${id}&select=invoice_number,customers(full_name,email)`,
       {
@@ -178,6 +212,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           status:       "paid",
           paid_amount:  totalAmount,   // total session amount; per-invoice split not available from Stripe
           paid_date:    paidDate,      // FIX 3: stamped for every invoice in the batch
+          services:     existingServices
         }),
       }
     );

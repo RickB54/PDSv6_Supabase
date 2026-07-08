@@ -53,23 +53,30 @@ export default function TimeProfitabilityPage() {
   const calculateMetrics = (invList: any[]) => {
     let totalRevenue = 0;
     let totalProfit = 0;
+    let totalNetPayout = 0;
     let totalHours = 0;
 
     invList.forEach(inv => {
       const rev = inv.total || 0;
       const cost = inv.productCost || 0;
       const hrs = inv.hoursWorked || 0;
+      // Use stripeNetPayout if available, otherwise assume 0 fees and use rev
+      const netPayout = inv.stripeNetPayout !== undefined ? inv.stripeNetPayout : rev;
+
       totalRevenue += rev;
       totalProfit += (rev - cost);
+      totalNetPayout += netPayout;
       totalHours += hrs;
     });
 
     return {
       revenuePerHour: totalHours > 0 ? totalRevenue / totalHours : 0,
       profitPerHour: totalHours > 0 ? totalProfit / totalHours : 0,
+      netPayoutPerHour: totalHours > 0 ? totalNetPayout / totalHours : 0,
       totalHours,
       totalRevenue,
       totalProfit,
+      totalNetPayout,
       count: invList.length
     };
   };
@@ -140,7 +147,7 @@ export default function TimeProfitabilityPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <Card className="p-6 bg-emerald-900/10 border-emerald-500/20">
           <div className="flex items-center gap-3 mb-2">
             <DollarSign className="h-5 w-5 text-emerald-400" />
@@ -148,6 +155,15 @@ export default function TimeProfitabilityPage() {
           </div>
           <div className="text-4xl font-black text-emerald-400">${overall.revenuePerHour.toFixed(2)}</div>
           <div className="text-sm text-zinc-500 mt-2">Gross average across {overall.count} tracked jobs</div>
+        </Card>
+
+        <Card className="p-6 bg-purple-900/10 border-purple-500/20">
+          <div className="flex items-center gap-3 mb-2">
+            <DollarSign className="h-5 w-5 text-purple-400" />
+            <h3 className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Net Payout / Hour</h3>
+          </div>
+          <div className="text-4xl font-black text-purple-400">${overall.netPayoutPerHour.toFixed(2)}</div>
+          <div className="text-sm text-zinc-500 mt-2">Actual net average (after Stripe fees)</div>
         </Card>
 
         <Card className="p-6 bg-blue-900/10 border-blue-500/20">
@@ -181,7 +197,7 @@ export default function TimeProfitabilityPage() {
                 <>
                   <div className="h-64 w-full mb-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={Object.entries(byVehicle).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                      <BarChart data={Object.entries(byVehicle).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour, NetHr: calculateMetrics(list).netPayoutPerHour }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                         <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
@@ -192,6 +208,7 @@ export default function TimeProfitabilityPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="NetHr" name="Net Payout/Hr" fill="#c084fc" radius={[4, 4, 0, 0]} maxBarSize={40} />
                         <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -208,6 +225,10 @@ export default function TimeProfitabilityPage() {
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
                             <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
@@ -231,7 +252,7 @@ export default function TimeProfitabilityPage() {
                 <>
                   <div className="h-64 w-full mb-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={Object.entries(byMonth).map(([k, list]) => ({ name: k, RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                      <BarChart data={Object.entries(byMonth).map(([k, list]) => ({ name: k, RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour, NetHr: calculateMetrics(list).netPayoutPerHour }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                         <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
@@ -242,6 +263,7 @@ export default function TimeProfitabilityPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="NetHr" name="Net Payout/Hr" fill="#c084fc" radius={[4, 4, 0, 0]} maxBarSize={40} />
                         <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -258,6 +280,10 @@ export default function TimeProfitabilityPage() {
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
                             <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
@@ -281,7 +307,7 @@ export default function TimeProfitabilityPage() {
                 <>
                   <div className="h-64 w-full mb-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={Object.entries(byMethod).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                      <BarChart data={Object.entries(byMethod).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour, NetHr: calculateMetrics(list).netPayoutPerHour }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
                         <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
                         <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
@@ -292,6 +318,7 @@ export default function TimeProfitabilityPage() {
                         />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
                         <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="NetHr" name="Net Payout/Hr" fill="#c084fc" radius={[4, 4, 0, 0]} maxBarSize={40} />
                         <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -308,6 +335,10 @@ export default function TimeProfitabilityPage() {
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
                             <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
