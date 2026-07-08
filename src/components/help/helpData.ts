@@ -723,7 +723,33 @@ export const stickyNotesHelpTopic: HelpTopic = {
   section: 'menu',
 };
 
+export const timeProfitabilityHelpTopic: HelpTopic = {
+  id: 'time-profitability-guide',
+  title: 'Time & Profitability Dashboard',
+  summary: 'Learn how to track actual earnings vs time spent, backfill historical jobs, and find your lowest-performing services.',
+  content: [
+    '**The Analytics Engine**: This dashboard helps you determine exactly what your time is worth by comparing gross revenue and net payout against actual hours worked.',
+    '',
+    '📊 **1. The Summary Widgets**',
+    '• **Revenue/Hour**: Your gross earnings divided by tracked hours.',
+    '• **Net Payout/Hour**: Your true earnings after Stripe fees are deducted.',
+    '• **Profit/Hour**: Net payout minus the cost of products used.',
+    '',
+    '🧹 **2. Backfill Historical Data**',
+    'Click the blue "Backfill Historical Data" button to pull up a bulk list of all past jobs that are missing hours-worked data. You can rapidly type the hours and cost for each and save them directly from the list. This instantly updates your entire dashboard\'s accuracy without making you click into each individual invoice.',
+    '',
+    '📉 **3. The Drag List (Red Section)**',
+    'This list highlights your absolute lowest $/Hour performing jobs. These are the jobs dragging down your average. Review these constantly to identify services that are taking too long or are chronically underpriced.',
+    '',
+    '💳 **4. Stripe Fee Tracking & Badges**',
+    'For jobs paid via cash or Zelle, your Net Payout exactly equals your Revenue. For Stripe payments, the fee is deducted from the Net Payout. When this happens, a small red badge will appear on the breakdown charts showing exactly how much was lost to Stripe fees for that specific segment.',
+  ],
+  route: '/time-profitability',
+  section: 'dashboard',
+};
+
 export const adminMenuTopics: HelpTopic[] = [
+  timeProfitabilityHelpTopic,
   stickyNotesHelpTopic,
   intakeWorkflowsTopic,
   chemicalDescriptionTopic,

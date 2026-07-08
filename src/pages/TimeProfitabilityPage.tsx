@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TimeProfitabilityHelp } from "@/components/help/TimeProfitabilityHelp";
 
 export default function TimeProfitabilityPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -34,6 +35,8 @@ export default function TimeProfitabilityPage() {
     return invoices.filter(inv => {
       // Must have hours worked to calculate metrics
       if (!inv.hoursWorked || inv.hoursWorked <= 0) return false;
+      // Exclude ProBono or $0 value jobs
+      if ((inv.total || 0) <= 0) return false;
 
       const invDateStr = inv.serviceDate || inv.date || inv.createdAt;
       const invDate = invDateStr ? new Date(invDateStr) : new Date();
@@ -135,7 +138,9 @@ export default function TimeProfitabilityPage() {
       <PageHeader 
         title="Time & Profitability" 
         subtitle="Track average revenue and profit per hour to optimize your business operations."
-      />
+      >
+        <TimeProfitabilityHelp />
+      </PageHeader>
 
       <div className="flex flex-col md:flex-row gap-4 items-end bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
         <div className="space-y-2 w-full md:w-auto">
@@ -167,7 +172,7 @@ export default function TimeProfitabilityPage() {
             </SelectTrigger>
             <SelectContent className="max-h-[300px]">
               <SelectItem value="all">All Customers</SelectItem>
-              {Array.from(new Set(invoices.map(i => i.customerName || "Unknown Customer"))).sort().map(c => (
+              {Array.from(new Set(invoices.filter(i => (i.total || 0) > 0).map(i => i.customerName || "Unknown Customer"))).sort().map(c => (
                 <SelectItem key={c} value={c}>{c}</SelectItem>
               ))}
             </SelectContent>
@@ -195,12 +200,12 @@ export default function TimeProfitabilityPage() {
                 This list shows all past jobs that are missing hours-worked data. Enter the hours below and save individually to instantly update your analytics.
               </p>
               <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-                {invoices.filter(i => !i.hoursWorked || i.hoursWorked <= 0).sort((a,b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).map(inv => (
+                {invoices.filter(i => (!i.hoursWorked || i.hoursWorked <= 0) && (i.total || 0) > 0).sort((a,b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).map(inv => (
                   <BackfillRow key={inv.id} invoice={inv} onUpdate={(updated) => {
                     setInvoices(prev => prev.map(p => p.id === updated.id ? updated : p));
                   }} />
                 ))}
-                {invoices.filter(i => !i.hoursWorked || i.hoursWorked <= 0).length === 0 && (
+                {invoices.filter(i => (!i.hoursWorked || i.hoursWorked <= 0) && (i.total || 0) > 0).length === 0 && (
                   <div className="text-center text-zinc-500 italic py-8">All your invoices have hours tracked! 🎉</div>
                 )}
               </div>
