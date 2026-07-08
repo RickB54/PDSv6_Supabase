@@ -1191,7 +1191,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b'];
 
     const customerStats = useMemo(() => {
-        const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string, totalSpent: number }>();
+        const map = new Map<string, { id: string, name: string, email: string, phone: string, count: number, lastService: string, service: string, lastBookingId: string, totalSpent: number, howFound?: string, howFoundOther?: string, quotes?: any[] }>();
 
         filteredInsBookings.forEach(b => {
             if (!b.customer) return;
