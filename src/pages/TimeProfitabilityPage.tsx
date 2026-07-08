@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { Link } from "react-router-dom";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 export default function TimeProfitabilityPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -174,81 +175,150 @@ export default function TimeProfitabilityPage() {
           <Card className="p-6 bg-zinc-900/50 border-zinc-800">
             <h3 className="text-lg font-bold text-white mb-4">Breakdown by Vehicle Class</h3>
             <div className="space-y-3">
-              {Object.entries(byVehicle).sort((a, b) => b[1].length - a[1].length).map(([vClass, list]) => {
-                const metrics = calculateMetrics(list);
-                return (
-                  <div key={vClass} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
-                    <div>
-                      <div className="text-white font-medium capitalize">{vClass}</div>
-                      <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
-                    </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                        <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                        <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                      </div>
-                    </div>
+              {Object.keys(byVehicle).length === 0 ? (
+                <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No data available for the selected period.</div>
+              ) : (
+                <>
+                  <div className="h-64 w-full mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={Object.entries(byVehicle).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                        <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                          itemStyle={{ color: '#e4e4e7' }}
+                          formatter={(value: number) => [`$${value.toFixed(2)}/hr`, '']}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                );
-              })}
+                  {Object.entries(byVehicle).sort((a, b) => b[1].length - a[1].length).map(([vClass, list]) => {
+                    const metrics = calculateMetrics(list);
+                    return (
+                      <div key={vClass} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
+                        <div>
+                          <div className="text-white font-medium capitalize">{vClass}</div>
+                          <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
+                        </div>
+                        <div className="text-right flex items-center gap-4">
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </Card>
 
           <Card className="p-6 bg-zinc-900/50 border-zinc-800">
             <h3 className="text-lg font-bold text-white mb-4">Breakdown by Month</h3>
             <div className="space-y-3">
-              {Object.entries(byMonth).map(([month, list]) => {
-                const metrics = calculateMetrics(list);
-                return (
-                  <div key={month} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
-                    <div>
-                      <div className="text-white font-medium">{month}</div>
-                      <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
-                    </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                        <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                        <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                      </div>
-                    </div>
+              {Object.keys(byMonth).length === 0 ? (
+                <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No data available for the selected period.</div>
+              ) : (
+                <>
+                  <div className="h-64 w-full mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={Object.entries(byMonth).map(([k, list]) => ({ name: k, RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                        <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                          itemStyle={{ color: '#e4e4e7' }}
+                          formatter={(value: number) => [`$${value.toFixed(2)}/hr`, '']}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                );
-              })}
+                  {Object.entries(byMonth).map(([month, list]) => {
+                    const metrics = calculateMetrics(list);
+                    return (
+                      <div key={month} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
+                        <div>
+                          <div className="text-white font-medium">{month}</div>
+                          <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
+                        </div>
+                        <div className="text-right flex items-center gap-4">
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </Card>
 
           <Card className="p-6 bg-zinc-900/50 border-zinc-800">
             <h3 className="text-lg font-bold text-white mb-4">Breakdown by Entry Method</h3>
             <div className="space-y-3">
-              {Object.entries(byMethod).map(([method, list]) => {
-                const metrics = calculateMetrics(list);
-                return (
-                  <div key={method} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
-                    <div>
-                      <div className="text-white font-medium capitalize">{method}</div>
-                      <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
-                    </div>
-                    <div className="text-right flex items-center gap-4">
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                        <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                        <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                      </div>
-                    </div>
+              {Object.keys(byMethod).length === 0 ? (
+                <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No data available for the selected period.</div>
+              ) : (
+                <>
+                  <div className="h-64 w-full mb-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={Object.entries(byMethod).map(([k, list]) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), RevHr: calculateMetrics(list).revenuePerHour, ProfHr: calculateMetrics(list).profitPerHour }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                        <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                          itemStyle={{ color: '#e4e4e7' }}
+                          formatter={(value: number) => [`$${value.toFixed(2)}/hr`, '']}
+                        />
+                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                        <Bar dataKey="RevHr" name="Revenue/Hr" fill="#34d399" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        <Bar dataKey="ProfHr" name="Profit/Hr" fill="#60a5fa" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
-                );
-              })}
+                  {Object.entries(byMethod).map(([method, list]) => {
+                    const metrics = calculateMetrics(list);
+                    return (
+                      <div key={method} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
+                        <div>
+                          <div className="text-white font-medium capitalize">{method}</div>
+                          <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
+                        </div>
+                        <div className="text-right flex items-center gap-4">
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </Card>
         </div>
