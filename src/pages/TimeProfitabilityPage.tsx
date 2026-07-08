@@ -292,19 +292,26 @@ export default function TimeProfitabilityPage() {
                           <div className="text-white font-medium capitalize">{vClass}</div>
                           <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
                         </div>
-                        <div className="text-right flex items-center gap-4">
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="text-right flex items-center gap-4">
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                              <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                              <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                              <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
-                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                          </div>
+                          {metrics.totalRevenue > metrics.totalNetPayout && (
+                            <div className="text-[10px] text-red-400/80 font-mono bg-red-950/30 px-2 py-0.5 rounded border border-red-900/30">
+                              −${(metrics.totalRevenue - metrics.totalNetPayout).toFixed(2)} total Stripe fees
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -347,19 +354,26 @@ export default function TimeProfitabilityPage() {
                           <div className="text-white font-medium">{month}</div>
                           <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
                         </div>
-                        <div className="text-right flex items-center gap-4">
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="text-right flex items-center gap-4">
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                              <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                              <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                              <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
-                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                          </div>
+                          {metrics.totalRevenue > metrics.totalNetPayout && (
+                            <div className="text-[10px] text-red-400/80 font-mono bg-red-950/30 px-2 py-0.5 rounded border border-red-900/30">
+                              −${(metrics.totalRevenue - metrics.totalNetPayout).toFixed(2)} total Stripe fees
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -402,19 +416,26 @@ export default function TimeProfitabilityPage() {
                           <div className="text-white font-medium capitalize">{method}</div>
                           <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
                         </div>
-                        <div className="text-right flex items-center gap-4">
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                            <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="text-right flex items-center gap-4">
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                              <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                              <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                              <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
-                            <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                            <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                          </div>
+                          {metrics.totalRevenue > metrics.totalNetPayout && (
+                            <div className="text-[10px] text-red-400/80 font-mono bg-red-950/30 px-2 py-0.5 rounded border border-red-900/30">
+                              −${(metrics.totalRevenue - metrics.totalNetPayout).toFixed(2)} total Stripe fees
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -490,19 +511,26 @@ export default function TimeProfitabilityPage() {
                     <div className="text-white font-medium">{customer}</div>
                     <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
                   </div>
-                  <div className="text-right flex items-center gap-4">
-                    <div>
-                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
-                      <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <div className="text-right flex items-center gap-4">
+                      <div>
+                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                        <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                        <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                        <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
-                      <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
-                      <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
-                    </div>
+                    {metrics.totalRevenue > metrics.totalNetPayout && (
+                      <div className="text-[10px] text-red-400/80 font-mono bg-red-950/30 px-2 py-0.5 rounded border border-red-900/30">
+                        −${(metrics.totalRevenue - metrics.totalNetPayout).toFixed(2)} total Stripe fees
+                      </div>
+                    )}
                   </div>
                 </div>
               );
