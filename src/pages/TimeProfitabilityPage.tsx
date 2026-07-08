@@ -74,7 +74,7 @@ export default function TimeProfitabilityPage() {
       const netPayout = inv.stripeNetPayout !== undefined ? inv.stripeNetPayout : rev;
 
       totalRevenue += rev;
-      totalProfit += (rev - cost);
+      totalProfit += (netPayout - cost);
       totalNetPayout += netPayout;
       totalHours += hrs;
     });

@@ -158,6 +158,8 @@ const Invoicing = () => {
   const [editIncludeTravelTime, setEditIncludeTravelTime] = useState<boolean>(false);
   const [editEmployeeId, setEditEmployeeId] = useState<string>("");
   const [editProductCost, setEditProductCost] = useState<string>("");
+  const [editStripeNetPayout, setEditStripeNetPayout] = useState<string>("");
+  const [editStripeFee, setEditStripeFee] = useState<string>("");
   
   const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
   
@@ -464,8 +466,10 @@ const Invoicing = () => {
         hoursWorked: editHoursWorked !== "" ? parseFloat(editHoursWorked) : undefined,
         hoursMethod: editHoursMethod !== "" ? editHoursMethod : undefined,
         includeTravelTime: editIncludeTravelTime,
-        employeeId: editEmployeeId !== "" ? editEmployeeId : undefined,
-        productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined
+        employeeId: editEmployeeId || undefined,
+        productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined,
+        stripeNetPayout: editStripeNetPayout !== "" ? parseFloat(editStripeNetPayout) : undefined,
+        stripeFee: editStripeFee !== "" ? parseFloat(editStripeFee) : undefined,
       };
 
       // 3. Create Invoice
@@ -480,11 +484,10 @@ const Invoicing = () => {
       setInvoiceDiscountType('percent');
       setInvoiceDiscountCode('');
       
-      setEditHoursWorked("");
-      setEditHoursMethod("");
-      setEditIncludeTravelTime(false);
       setEditEmployeeId("");
       setEditProductCost("");
+      setEditStripeNetPayout("");
+      setEditStripeFee("");
       
       setShowCreateForm(false);
       loadData();
@@ -733,7 +736,8 @@ const Invoicing = () => {
     setEditIncludeTravelTime(inv.includeTravelTime || false);
     setEditEmployeeId(inv.employeeId || "");
     setEditProductCost(inv.productCost !== undefined ? String(inv.productCost) : "");
-
+    setEditStripeNetPayout(inv.stripeNetPayout !== undefined ? String(inv.stripeNetPayout) : "");
+    setEditStripeFee(inv.stripeFee !== undefined ? String(inv.stripeFee) : "");
     setIsEditingInvoice(true);
   };
 
@@ -793,8 +797,10 @@ const Invoicing = () => {
       hoursWorked: editHoursWorked !== "" ? parseFloat(editHoursWorked) : undefined,
       hoursMethod: editHoursMethod !== "" ? editHoursMethod : undefined,
       includeTravelTime: editIncludeTravelTime,
-      employeeId: editEmployeeId !== "" ? editEmployeeId : undefined,
-      productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined
+      employeeId: editEmployeeId || undefined,
+      productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined,
+      stripeNetPayout: editStripeNetPayout !== "" ? parseFloat(editStripeNetPayout) : undefined,
+      stripeFee: editStripeFee !== "" ? parseFloat(editStripeFee) : undefined,
     };
 
     if (updated.paidAmount && updated.paidAmount >= newTotal) {
@@ -1903,6 +1909,28 @@ Precision. Protection. Perfection.`;
                           className="bg-zinc-900 border-zinc-800 text-white"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Stripe Net Payout ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editStripeNetPayout}
+                          onChange={(e) => setEditStripeNetPayout(e.target.value)}
+                          placeholder="e.g. 261.87"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Stripe Fee ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editStripeFee}
+                          onChange={(e) => setEditStripeFee(e.target.value)}
+                          placeholder="e.g. 8.13"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2 pt-2">
                       <Checkbox 
@@ -2647,6 +2675,28 @@ Precision. Protection. Perfection.`;
                           value={editProductCost}
                           onChange={(e) => setEditProductCost(e.target.value)}
                           placeholder="e.g. 15.00"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Stripe Net Payout ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editStripeNetPayout}
+                          onChange={(e) => setEditStripeNetPayout(e.target.value)}
+                          placeholder="e.g. 261.87"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Stripe Fee ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editStripeFee}
+                          onChange={(e) => setEditStripeFee(e.target.value)}
+                          placeholder="e.g. 8.13"
                           className="bg-zinc-900 border-zinc-800 text-white"
                         />
                       </div>
