@@ -13,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function TimeProfitabilityPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [dateFilter, setDateFilter] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,13 @@ export default function TimeProfitabilityPage() {
       if (dateRange.from) passRange = invDate >= new Date(dateRange.from.setHours(0, 0, 0, 0));
       if (passRange && dateRange.to) passRange = invDate <= new Date(dateRange.to.setHours(23, 59, 59, 999));
 
-      return passQuick && passRange;
+      let passCustomer = true;
+      if (customerFilter !== "all") {
+        const cust = inv.customerName || "Unknown Customer";
+        passCustomer = cust === customerFilter;
+      }
+
+      return passQuick && passRange && passCustomer;
     });
   };
 
@@ -146,6 +153,23 @@ export default function TimeProfitabilityPage() {
             </SelectContent>
           </Select>
         </div>
+        
+        <div className="space-y-2 w-full md:w-auto">
+          <label className="text-xs text-zinc-500 uppercase font-bold tracking-widest flex items-center gap-2">
+            <Filter className="h-3 w-3" /> Customer
+          </label>
+          <Select value={customerFilter} onValueChange={setCustomerFilter}>
+            <SelectTrigger className="w-full md:w-[220px] bg-zinc-900 border-zinc-700 text-white">
+              <SelectValue placeholder="All Customers" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              <SelectItem value="all">All Customers</SelectItem>
+              {Array.from(new Set(invoices.map(i => i.customerName || "Unknown Customer"))).sort().map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {dateFilter === "custom" && (
           <div className="w-full md:w-auto mt-4 md:mt-0">
             <DateRangeFilter value={dateRange} onChange={setDateRange} />
@@ -153,7 +177,7 @@ export default function TimeProfitabilityPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <Card className="p-6 bg-emerald-900/10 border-emerald-500/20">
           <div className="flex items-center gap-3 mb-2">
             <DollarSign className="h-5 w-5 text-emerald-400" />
@@ -179,6 +203,15 @@ export default function TimeProfitabilityPage() {
           </div>
           <div className="text-4xl font-black text-blue-400">${overall.profitPerHour.toFixed(2)}</div>
           <div className="text-sm text-zinc-500 mt-2">Net average after product costs</div>
+        </Card>
+
+        <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+          <div className="flex items-center gap-3 mb-2">
+            <CheckCircle className="h-5 w-5 text-white" />
+            <h3 className="text-zinc-400 text-sm font-bold uppercase tracking-wider">Total Profit</h3>
+          </div>
+          <div className="text-4xl font-black text-white">${overall.totalProfit.toFixed(2)}</div>
+          <div className="text-sm text-zinc-500 mt-2">Absolute profit across {overall.count} jobs</div>
         </Card>
 
         <Card className="p-6 bg-zinc-900/50 border-zinc-800">
