@@ -88,6 +88,8 @@ export default function TimeProfitabilityPage() {
   const byMethod: Record<string, any[]> = {};
   const byMonth: Record<string, any[]> = {};
 
+  const byCustomer: Record<string, any[]> = {};
+
   filtered.forEach(inv => {
     const vClass = normalizeVehicleType(inv.vehicle || "");
     if (!byVehicle[vClass]) byVehicle[vClass] = [];
@@ -101,6 +103,10 @@ export default function TimeProfitabilityPage() {
     const mStr = d.toLocaleString('default', { month: 'short', year: 'numeric' });
     if (!byMonth[mStr]) byMonth[mStr] = [];
     byMonth[mStr].push(inv);
+
+    const cust = inv.customerName || "Unknown Customer";
+    if (!byCustomer[cust]) byCustomer[cust] = [];
+    byCustomer[cust].push(inv);
   });
 
   // Calculate worst performing jobs (Drag List)
@@ -404,6 +410,42 @@ export default function TimeProfitabilityPage() {
           </Card>
         </div>
       </div>
+
+      <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+        <h3 className="text-lg font-bold text-white mb-4">Breakdown by Customer</h3>
+        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+          {Object.keys(byCustomer).length === 0 ? (
+            <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No data available for the selected period.</div>
+          ) : (
+            Object.entries(byCustomer).sort((a, b) => b[1].length - a[1].length).map(([customer, list]) => {
+              const metrics = calculateMetrics(list);
+              return (
+                <div key={customer} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
+                  <div>
+                    <div className="text-white font-medium">{customer}</div>
+                    <div className="text-xs text-zinc-500">{metrics.count} jobs • {metrics.totalHours.toFixed(1)} hrs</div>
+                  </div>
+                  <div className="text-right flex items-center gap-4">
+                    <div>
+                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Rev/Hr</div>
+                      <div className="text-emerald-400 font-mono font-bold">${metrics.revenuePerHour.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Net/Hr</div>
+                      <div className="text-purple-400 font-mono font-bold">${metrics.netPayoutPerHour.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Prof/Hr</div>
+                      <div className="text-blue-400 font-mono font-bold">${metrics.profitPerHour.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
+
     </div>
   );
 }
