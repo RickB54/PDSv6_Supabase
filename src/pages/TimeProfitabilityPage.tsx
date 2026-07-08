@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
-import { getSupabaseInvoices } from "@/lib/supa-data";
-import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle } from "lucide-react";
+import { getSupabaseInvoices, upsertSupabaseInvoice } from "@/lib/supa-data";
+import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle, Database } from "lucide-react";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function TimeProfitabilityPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -175,6 +178,35 @@ export default function TimeProfitabilityPage() {
             <DateRangeFilter value={dateRange} onChange={setDateRange} />
           </div>
         )}
+
+        <div className="md:ml-auto w-full md:w-auto mt-4 md:mt-0 flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full md:w-auto bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-white">
+                <Database className="w-4 h-4 mr-2 text-blue-400" />
+                Backfill Historical Data
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl bg-zinc-950 border-zinc-800 text-white max-h-[85vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Backfill Time & Profitability Data</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-zinc-400 mb-4">
+                This list shows all past jobs that are missing hours-worked data. Enter the hours below and save individually to instantly update your analytics.
+              </p>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                {invoices.filter(i => !i.hoursWorked || i.hoursWorked <= 0).sort((a,b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).map(inv => (
+                  <BackfillRow key={inv.id} invoice={inv} onUpdate={(updated) => {
+                    setInvoices(prev => prev.map(p => p.id === updated.id ? updated : p));
+                  }} />
+                ))}
+                {invoices.filter(i => !i.hoursWorked || i.hoursWorked <= 0).length === 0 && (
+                  <div className="text-center text-zinc-500 italic py-8">All your invoices have hours tracked! 🎉</div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -479,6 +511,76 @@ export default function TimeProfitabilityPage() {
         </div>
       </Card>
 
+    </div>
+  );
+}
+
+function BackfillRow({ invoice, onUpdate }: { invoice: any, onUpdate: (inv: any) => void }) {
+  const [hours, setHours] = useState<string>("");
+  const [cost, setCost] = useState<string>(invoice.productCost?.toString() || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    if (!hours) return;
+    setSaving(true);
+    try {
+      const h = parseFloat(hours);
+      const c = cost ? parseFloat(cost) : 0;
+      const payload = { ...invoice, hoursWorked: h, productCost: c, hoursMethod: "manual" };
+      await upsertSupabaseInvoice(payload);
+      setSaved(true);
+      onUpdate(payload);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update invoice.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (saved) return null; // Hide from list once saved
+
+  return (
+    <div className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-lg gap-4">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-bold truncate">{invoice.customerName} - {invoice.vehicle}</div>
+        <div className="text-xs text-zinc-500 mt-1">
+          {new Date(invoice.serviceDate || invoice.date || invoice.createdAt).toLocaleDateString()} • Inv #{invoice.invoiceNumber || invoice.id?.substring(0, 6)} • Total: ${invoice.total || 0}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-400">Hours:</label>
+          <Input 
+            type="number" 
+            step="0.5" 
+            placeholder="e.g. 2.5"
+            value={hours} 
+            onChange={(e) => setHours(e.target.value)} 
+            className="w-20 bg-zinc-950 border-zinc-700 h-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-400">Cost $:</label>
+          <Input 
+            type="number" 
+            step="1" 
+            placeholder="e.g. 15"
+            value={cost} 
+            onChange={(e) => setCost(e.target.value)} 
+            className="w-20 bg-zinc-950 border-zinc-700 h-8 text-sm"
+          />
+        </div>
+        <Button 
+          size="sm" 
+          onClick={handleSave} 
+          disabled={!hours || saving}
+          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          {saving ? "..." : "Save"}
+        </Button>
+      </div>
     </div>
   );
 }
