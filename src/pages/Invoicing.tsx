@@ -12,6 +12,7 @@ import {
   deleteSupabaseInvoice,
   getSupabaseCustomers,
   upsertSupabaseCustomer,
+  getSupabaseEmployees,
   Customer
 } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import supabase from "@/lib/supabase";
 import {
   Select,
@@ -58,6 +60,7 @@ import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/pds-final-logo.png";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as LibVehicleType } from "@/lib/services";
 import { getCustomPackages } from "@/lib/servicesMeta";
+// removed duplicate import
 import qrCode from "@/assets/review-qr.png";
 
 interface Invoice {
@@ -86,6 +89,11 @@ interface Invoice {
   notes?: string;
   isSent?: boolean;
   sentDate?: string;
+  hoursWorked?: number;
+  hoursMethod?: "manual" | "timer" | "estimated" | "";
+  includeTravelTime?: boolean;
+  employeeId?: string;
+  productCost?: number;
 }
 
 const Invoicing = () => {
@@ -140,6 +148,14 @@ const Invoicing = () => {
   const [lockedTotal, setLockedTotal] = useState(0);
   const [currentInvoiceNumber, setCurrentInvoiceNumber] = useState<number>(0);
   const [serviceDate, setServiceDate] = useState<string>("");
+  
+  // Time and Profitability Fields
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [editHoursWorked, setEditHoursWorked] = useState<string>("");
+  const [editHoursMethod, setEditHoursMethod] = useState<"manual" | "timer" | "estimated" | "">("");
+  const [editIncludeTravelTime, setEditIncludeTravelTime] = useState<boolean>(false);
+  const [editEmployeeId, setEditEmployeeId] = useState<string>("");
+  const [editProductCost, setEditProductCost] = useState<string>("");
   
   const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
   
@@ -233,6 +249,9 @@ const Invoicing = () => {
     const activeCustomers = allCustomers.filter(c => !c.is_archived);
     const displayedCustomers = showArchived ? allCustomers : activeCustomers;
     const displayedCustomerIds = new Set(displayedCustomers.map(c => c.id));
+
+    const emps = await getSupabaseEmployees();
+    setEmployees(emps || []);
 
     setInvoices(processedInvoices);
     setCustomers(displayedCustomers);
@@ -439,7 +458,12 @@ const Invoicing = () => {
           type: invoiceDiscountType === 'percent' ? 'percent' : 'fixed',
           value: invoiceDiscount,
           amount: finalDiscountAmount
-        } : undefined
+        } : undefined,
+        hoursWorked: editHoursWorked !== "" ? parseFloat(editHoursWorked) : undefined,
+        hoursMethod: editHoursMethod !== "" ? editHoursMethod : undefined,
+        includeTravelTime: editIncludeTravelTime,
+        employeeId: editEmployeeId !== "" ? editEmployeeId : undefined,
+        productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined
       };
 
       // 3. Create Invoice
@@ -453,6 +477,13 @@ const Invoicing = () => {
       setInvoiceDiscount(0);
       setInvoiceDiscountType('percent');
       setInvoiceDiscountCode('');
+      
+      setEditHoursWorked("");
+      setEditHoursMethod("");
+      setEditIncludeTravelTime(false);
+      setEditEmployeeId("");
+      setEditProductCost("");
+      
       setShowCreateForm(false);
       loadData();
 
@@ -680,7 +711,7 @@ const Invoicing = () => {
     } else if (inv.total < baseTotal) {
       const impliedDiscount = baseTotal - inv.total;
       setEditDiscountMethod('custom');
-      setEditDiscountType('amount');
+      setEditDiscountType('fixed');
       setEditDiscountValue(impliedDiscount);
       setEditDiscountCode('CUSTOM');
     } else {
@@ -694,6 +725,13 @@ const Invoicing = () => {
     setEditNotes(inv.notes || "");
     setEditIsSent(inv.isSent || false);
     setServiceDate(inv.serviceDate || inv.date || new Date().toISOString().split('T')[0]);
+    
+    setEditHoursWorked(inv.hoursWorked !== undefined ? String(inv.hoursWorked) : "");
+    setEditHoursMethod((inv.hoursMethod as any) || "");
+    setEditIncludeTravelTime(inv.includeTravelTime || false);
+    setEditEmployeeId(inv.employeeId || "");
+    setEditProductCost(inv.productCost !== undefined ? String(inv.productCost) : "");
+
     setIsEditingInvoice(true);
   };
 
@@ -749,7 +787,12 @@ const Invoicing = () => {
         amount: finalDiscountAmount,
         code: editDiscountCode || undefined
       } : undefined,
-      adjustment: editAdjustmentAmount > 0 ? editAdjustmentAmount : undefined
+      adjustment: editAdjustmentAmount > 0 ? editAdjustmentAmount : undefined,
+      hoursWorked: editHoursWorked !== "" ? parseFloat(editHoursWorked) : undefined,
+      hoursMethod: editHoursMethod !== "" ? editHoursMethod : undefined,
+      includeTravelTime: editIncludeTravelTime,
+      employeeId: editEmployeeId !== "" ? editEmployeeId : undefined,
+      productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined
     };
 
     if (updated.paidAmount && updated.paidAmount >= newTotal) {
@@ -1807,6 +1850,74 @@ Precision. Protection. Perfection.`;
                     <div className="text-center py-4 text-zinc-600 italic text-sm">No items added yet</div>
                   )}
 
+                  <div className="pt-4 border-t border-zinc-800/50 mt-4 space-y-4">
+                    <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-2">Time & Profitability Tracking</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Hours Worked</Label>
+                        <Input 
+                          type="number"
+                          step="0.1"
+                          value={editHoursWorked}
+                          onChange={(e) => setEditHoursWorked(e.target.value)}
+                          placeholder="e.g. 2.5"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Time Entry Method</Label>
+                        <Select value={editHoursMethod} onValueChange={(val: any) => setEditHoursMethod(val)}>
+                          <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white h-10">
+                            <SelectValue placeholder="Select Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="manual">Manual Entry</SelectItem>
+                            <SelectItem value="timer">Timer (Service Checklist)</SelectItem>
+                            <SelectItem value="estimated">Estimated (By Service)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Employee Assigned</Label>
+                        <Select value={editEmployeeId} onValueChange={(val: any) => setEditEmployeeId(val)}>
+                          <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white h-10">
+                            <SelectValue placeholder="Select Employee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Estimated Product Cost ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editProductCost}
+                          onChange={(e) => setEditProductCost(e.target.value)}
+                          placeholder="e.g. 15.00"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox 
+                        id="include-travel-time-create" 
+                        checked={editIncludeTravelTime}
+                        onCheckedChange={(c) => setEditIncludeTravelTime(!!c)}
+                        className="border-zinc-700 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
+                      />
+                      <label
+                        htmlFor="include-travel-time-create"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                      >
+                        Include mobile travel time in hours
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2 mt-4">
                     <Button onClick={createInvoice} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" disabled={services.length === 0 || !selectedCustomer || isCreating}>
                       {isCreating ? (
@@ -2484,6 +2595,74 @@ Precision. Protection. Perfection.`;
                       className="bg-zinc-900 border-zinc-800 text-white min-h-[120px] text-sm leading-relaxed"
                     />
                     <p className="text-[10px] text-zinc-500 italic">These notes will appear at the bottom of the PDF invoice.</p>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-zinc-800/50 mt-4 space-y-4">
+                    <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-2">Time & Profitability Tracking</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Hours Worked</Label>
+                        <Input 
+                          type="number"
+                          step="0.1"
+                          value={editHoursWorked}
+                          onChange={(e) => setEditHoursWorked(e.target.value)}
+                          placeholder="e.g. 2.5"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Time Entry Method</Label>
+                        <Select value={editHoursMethod} onValueChange={(val: any) => setEditHoursMethod(val)}>
+                          <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white h-10">
+                            <SelectValue placeholder="Select Method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="manual">Manual Entry</SelectItem>
+                            <SelectItem value="timer">Timer (Service Checklist)</SelectItem>
+                            <SelectItem value="estimated">Estimated (By Service)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Employee Assigned</Label>
+                        <Select value={editEmployeeId} onValueChange={(val: any) => setEditEmployeeId(val)}>
+                          <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white h-10">
+                            <SelectValue placeholder="Select Employee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs text-zinc-500 font-bold">Estimated Product Cost ($)</Label>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          value={editProductCost}
+                          onChange={(e) => setEditProductCost(e.target.value)}
+                          placeholder="e.g. 15.00"
+                          className="bg-zinc-900 border-zinc-800 text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox 
+                        id="include-travel-time" 
+                        checked={editIncludeTravelTime}
+                        onCheckedChange={(c) => setEditIncludeTravelTime(!!c)}
+                        className="border-zinc-700 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
+                      />
+                      <label
+                        htmlFor="include-travel-time"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300"
+                      >
+                        Include mobile travel time in hours
+                      </label>
+                    </div>
                   </div>
                 </div>
 

@@ -1801,6 +1801,8 @@ const ServiceChecklist = () => {
     }
 
     const now = new Date();
+    const hoursWorked = masterElapsedTimeMs > 0 ? Number((masterElapsedTimeMs / (1000 * 60 * 60)).toFixed(2)) : 0;
+    
     const invoice: any = {
       customerId: customer.id!,
       customerName: customer.name,
@@ -1814,6 +1816,9 @@ const ServiceChecklist = () => {
       notes,
       date: now.toLocaleDateString(),
       createdAt: now.toISOString(),
+      hoursWorked: hoursWorked > 0 ? hoursWorked : undefined,
+      hoursMethod: hoursWorked > 0 ? 'timer' : undefined,
+      employeeId: employeeAssigned || undefined
     };
 
     await upsertSupabaseInvoice(invoice);
@@ -2049,6 +2054,9 @@ const ServiceChecklist = () => {
       if (!hasCreatedInvoice) {
         try {
           step = 'create_invoice';
+          
+          const hoursWorked = masterElapsedTimeMs > 0 ? Number((masterElapsedTimeMs / (1000 * 60 * 60)).toFixed(2)) : 0;
+          
           const invoiceData = {
             invoiceNumber: generateInvoiceNumber(),
             customerId: selectedCustomer || idToUse, // Fallback to booking ID if no customer
@@ -2059,7 +2067,10 @@ const ServiceChecklist = () => {
             date: new Date().toLocaleDateString(),
             createdAt: new Date().toISOString(),
             paymentStatus: 'unpaid',
-            paidAmount: 0
+            paidAmount: 0,
+            hoursWorked: hoursWorked > 0 ? hoursWorked : undefined,
+            hoursMethod: hoursWorked > 0 ? 'timer' : undefined,
+            employeeId: employeeAssigned || undefined
           };
           await upsertSupabaseInvoice(invoiceData);
           setHasCreatedInvoice(true);

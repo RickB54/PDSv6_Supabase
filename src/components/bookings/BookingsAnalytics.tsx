@@ -1729,18 +1729,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-zinc-900 border-zinc-800">
-                        <CardHeader>
-                            <CardTitle className="text-zinc-200">Revenue Per Hour</CardTitle>
+                    <Card className="bg-zinc-900 border-zinc-800 flex flex-col justify-between">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-zinc-200">Revenue & Profit Per Hour</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            {profitabilityData.totalHours > 0 ? (
-                                <div className="text-3xl font-black text-emerald-400 font-mono">
-                                    ${profitabilityData.revPerHour.toFixed(2)} <span className="text-sm text-zinc-500">/ hr</span>
-                                </div>
-                            ) : (
-                                <div className="text-sm text-zinc-500 italic">Insufficient time data logged</div>
-                            )}
+                        <CardContent className="flex flex-col h-full justify-between">
+                            <div>
+                                {profitabilityData.totalHours > 0 ? (
+                                    <div className="text-3xl font-black text-emerald-400 font-mono">
+                                        ${profitabilityData.revPerHour.toFixed(2)} <span className="text-sm text-zinc-500">Rev/hr</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-zinc-500 italic">Insufficient time data logged for standard bookings.</div>
+                                )}
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                className="w-full mt-4 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-400 border-emerald-900/50 flex items-center justify-center gap-2"
+                                onClick={() => navigate('/time-profitability')}
+                            >
+                                <BarChart3 className="w-4 h-4" />
+                                View Full Time & Profitability Dashboard
+                            </Button>
                         </CardContent>
                     </Card>
 

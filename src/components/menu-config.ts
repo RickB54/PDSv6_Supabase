@@ -56,6 +56,7 @@ export type MenuGroup = {
 
 export const TOP_ITEMS: MenuItem[] = [
     { title: "Analytics", url: "/bookings-analytics", role: "admin", key: "admin-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'analytics' },
+    { title: "Time & Profitability", url: "/time-profitability", role: "admin", key: "time-profitability", icon: DollarSign, iconColor: "text-emerald-500", helpTopicId: 'time-profitability' },
     { title: "Business Goals", url: "/goals", role: "admin", key: "goals", icon: Target, iconColor: "text-emerald-400", helpTopicId: 'business-goals' },
     { title: "Website Administration", url: "/website-admin", role: "admin", key: "website-admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
 ];

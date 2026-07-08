@@ -808,7 +808,7 @@ const Accounting = () => {
             <p className="text-[10px] opacity-70 mt-2 italic">Calculated as: (All-Time Cash Revenue) - (Manual Expenses + Inventory Valuation)</p>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 bg-green-50 rounded-lg">
               <p className="text-xs text-muted-foreground">Total Revenue</p>
               <p className="text-2xl font-bold text-green-600">+${totalRevenue.toFixed(2)}</p>
@@ -822,6 +822,28 @@ const Accounting = () => {
               <p className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {profit >= 0 ? '+' : ''} ${profit.toFixed(2)}
               </p>
+            </div>
+            <div className="p-4 bg-emerald-950/30 border border-emerald-500/20 rounded-lg flex flex-col justify-between">
+              {(() => {
+                const trackedInvoices = invoiceList.filter(i => (i as any).hoursWorked > 0);
+                const hrs = trackedInvoices.reduce((sum, i) => sum + ((i as any).hoursWorked || 0), 0);
+                const prof = trackedInvoices.reduce((sum, i) => sum + (i.total - ((i as any).productCost || 0)), 0);
+                const avgProf = hrs > 0 ? prof / hrs : 0;
+                return (
+                  <>
+                    <div>
+                      <p className="text-xs text-emerald-400/80 uppercase tracking-widest font-bold flex items-center gap-1">
+                        <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Avg Profit / Hour
+                      </p>
+                      <p className="text-2xl font-bold text-emerald-400 mt-1">${avgProf.toFixed(2)}</p>
+                    </div>
+                    <a href="/time-profitability" className="text-[10px] text-emerald-500 hover:text-emerald-400 underline mt-2 block">
+                      View full Time & Profit dashboard
+                    </a>
+                  </>
+                );
+              })()}
             </div>
           </div>
 

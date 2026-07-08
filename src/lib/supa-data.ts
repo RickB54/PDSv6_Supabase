@@ -1601,6 +1601,26 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
                 serviceDate = s.name.replace("VIRTUAL_SERVICE_DATE:", "").trim();
                 return false;
               }
+              if (s.name.startsWith("VIRTUAL_HOURS_WORKED:")) {
+                i.hoursWorked = parseFloat(s.name.replace("VIRTUAL_HOURS_WORKED:", "").trim());
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_HOURS_METHOD:")) {
+                i.hoursMethod = s.name.replace("VIRTUAL_HOURS_METHOD:", "").trim();
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_TRAVEL_INCLUDED:")) {
+                i.includeTravelTime = s.name.replace("VIRTUAL_TRAVEL_INCLUDED:", "").trim() === "true";
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_EMPLOYEE_ID:")) {
+                i.employeeId = s.name.replace("VIRTUAL_EMPLOYEE_ID:", "").trim();
+                return false;
+              }
+              if (s.name.startsWith("VIRTUAL_PRODUCT_COST:")) {
+                i.productCost = parseFloat(s.name.replace("VIRTUAL_PRODUCT_COST:", "").trim());
+                return false;
+              }
               return true;
             });
 
@@ -1624,6 +1644,11 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
               priceLocked: priceLocked,
               isSent: isSent,
               sentDate: sentDate,
+              hoursWorked: i.hoursWorked,
+              hoursMethod: i.hoursMethod,
+              includeTravelTime: i.includeTravelTime,
+              employeeId: i.employeeId,
+              productCost: i.productCost,
               createdAt: i.created_at
             };
         });
@@ -1667,6 +1692,11 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
     if (invoice.isSent !== undefined) virtualServices.push({ name: `VIRTUAL_SENT:${invoice.isSent}`, price: 0 });
     if (invoice.sentDate) virtualServices.push({ name: `VIRTUAL_SENT_DATE:${invoice.sentDate}`, price: 0 });
     if (invoice.serviceDate) virtualServices.push({ name: `VIRTUAL_SERVICE_DATE:${invoice.serviceDate}`, price: 0 });
+    if (invoice.hoursWorked !== undefined) virtualServices.push({ name: `VIRTUAL_HOURS_WORKED:${invoice.hoursWorked}`, price: 0 });
+    if (invoice.hoursMethod !== undefined) virtualServices.push({ name: `VIRTUAL_HOURS_METHOD:${invoice.hoursMethod}`, price: 0 });
+    if (invoice.includeTravelTime !== undefined) virtualServices.push({ name: `VIRTUAL_TRAVEL_INCLUDED:${invoice.includeTravelTime}`, price: 0 });
+    if (invoice.employeeId !== undefined) virtualServices.push({ name: `VIRTUAL_EMPLOYEE_ID:${invoice.employeeId}`, price: 0 });
+    if (invoice.productCost !== undefined) virtualServices.push({ name: `VIRTUAL_PRODUCT_COST:${invoice.productCost}`, price: 0 });
 
     const payload = {
         total: invoice.total,
