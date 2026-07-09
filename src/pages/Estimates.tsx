@@ -593,11 +593,21 @@ const Estimates = () => {
 
         doc.setFontSize(10);
         estimate.services.forEach((s) => {
-                        const serviceName = s.name || 'Service';
-            const lines = doc.splitTextToSize(serviceName, 140);
-            doc.text(lines, 25, y);
-            doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
-            y += (lines.length * 7);
+            const serviceName = s.name || 'Service';
+            const isHeader = serviceName.startsWith('---') && s.price === 0;
+            
+            if (isHeader) {
+                doc.setFont("helvetica", "bold");
+                const lines = doc.splitTextToSize(serviceName, 140);
+                doc.text(lines, 20, y + 2);
+                doc.setFont("helvetica", "normal");
+                y += (lines.length * 7) + 2;
+            } else {
+                const lines = doc.splitTextToSize(serviceName, 140);
+                doc.text(lines, 25, y);
+                doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
+                y += (lines.length * 7);
+            }
         });
 
         y += 3;
@@ -991,24 +1001,18 @@ const Estimates = () => {
                             <div className="border-t border-zinc-800 pt-4">
                                 <Label className="text-zinc-400">Quick Package Select</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
-                                    <Select value={selectedPackage} onValueChange={(val) => {
-                                        setSelectedPackage(val);
+                                    <Select value="" onValueChange={(val) => {
                                         const pkg = servicePackages.find(p => p.id === val);
                                         if (pkg) {
                                             const price = pkg.pricing[selectedVehicleType] || 0;
-                                            setServices([{ name: pkg.name, price }]);
+                                            setServices([...services, { name: pkg.name, price }]);
                                         }
                                     }}>
-                                        <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Package..." /></SelectTrigger>
+                                        <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Add Package..." /></SelectTrigger>
                                         <SelectContent>{servicePackages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                                     </Select>
                                     <Select value={selectedVehicleType} onValueChange={(val: any) => {
                                         setSelectedVehicleType(val);
-                                        // Update price logic...
-                                        if (selectedPackage) {
-                                            const pkg = servicePackages.find(p => p.id === selectedPackage);
-                                            if (pkg) setServices([{ name: pkg.name, price: pkg.pricing[val] || 0 }]);
-                                        }
                                     }}>
                                         <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Vehicle Type used for pricing" /></SelectTrigger>
                                         <SelectContent>
@@ -1177,24 +1181,13 @@ const Estimates = () => {
                                                      let newAddons;
                                                      if (isSelected) {
                                                          newAddons = selectedAddons.filter(id => id !== addon.id);
+                                                         setServices(services.filter(s => s.name !== addon.name));
                                                      } else {
                                                          newAddons = [...selectedAddons, addon.id];
+                                                         const price = addon.pricing[selectedVehicleType] || addon.basePrice || 0;
+                                                         setServices([...services, { name: addon.name, price }]);
                                                      }
                                                      setSelectedAddons(newAddons);
-                                                     
-                                                     // Update services list
-                                                     const pkg = servicePackages.find(p => p.id === selectedPackage);
-                                                     const basePrice = pkg ? pkg.pricing[selectedVehicleType] || 0 : 0;
-                                                     const baseService = pkg ? [{ name: pkg.name, price: basePrice }] : services.filter(s => !addOns.some(a => a.name === s.name));
-                                                     
-                                                     const addonServices = newAddons.map(id => {
-                                                         const a = addOns.find(add => add.id === id);
-                                                         if (!a) return null;
-                                                         const price = a.pricing[selectedVehicleType] || a.basePrice || 0;
-                                                         return { name: a.name, price };
-                                                     }).filter(Boolean) as { name: string, price: number }[];
-                                                     
-                                                     setServices([...baseService, ...addonServices]);
                                                  }}
                                              >
                                                  {addon.name} (+${addon.pricing[selectedVehicleType] || addon.basePrice})
@@ -1233,16 +1226,62 @@ const Estimates = () => {
                              </div>
 
                             {/* Services List */}
-                            <div className="bg-zinc-950 p-4 rounded border border-zinc-800">
-                                {services.map((s, i) => (
-                                    <div key={i} className="flex justify-between items-center text-zinc-300 mb-2">
-                                        <span>{s.name}</span>
-                                        <span className="font-mono">${(s.price || 0).toFixed(2)}</span>
+                            <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
+                                {services.map((s, i) => {
+                                    const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                    return (
+                                    <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4" : "text-zinc-300")}>
+                                        <Input 
+                                            value={s.name}
+                                            onChange={(e) => {
+                                                const newServices = [...services];
+                                                newServices[i].name = e.target.value;
+                                                setServices(newServices);
+                                            }}
+                                            className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500" : "text-zinc-200")}
+                                            placeholder="Service, Vehicle Name, or Sub-Header"
+                                        />
+                                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                                            {!isHeader && <span className="text-zinc-500">$</span>}
+                                            <Input 
+                                                type="number"
+                                                value={s.price === 0 && (!s.name || s.name.includes("Custom") || isHeader) ? 0 : (s.price || '')}
+                                                onChange={(e) => {
+                                                    const newServices = [...services];
+                                                    newServices[i].price = parseFloat(e.target.value) || 0;
+                                                    setServices(newServices);
+                                                }}
+                                                className={cn("bg-zinc-900 border-zinc-700 h-8 w-full sm:w-24 text-right font-mono", isHeader ? "opacity-50" : "")}
+                                            />
+                                            <Button variant="ghost" size="icon" onClick={() => {
+                                                setServices(services.filter((_, idx) => idx !== i));
+                                            }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
-                                ))}
-                                <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-white">
-                                    <span>Total</span>
-                                    <span>${calculateTotal().toFixed(2)}</span>
+                                )})}
+                                <div className="flex gap-2 w-full mt-4">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setServices([...services, { name: "Custom Line Item", price: 0 }])}
+                                        className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" /> Add Line Item
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => setServices([...services, { name: "--- Vehicle 1 ---", price: 0 }])}
+                                        className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
+                                    >
+                                        <FileText className="h-4 w-4 mr-2" /> Add Sub-Header
+                                    </Button>
+                                </div>
+                                <div className="border-t border-zinc-800 pt-3 mt-3 flex justify-between font-black text-white text-lg">
+                                    <span>Estimated Total</span>
+                                    <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
                                 </div>
                             </div>
 
@@ -1606,12 +1645,15 @@ const Estimates = () => {
 
                             {/* Service Details similar to Invoicing but tailored for Estimates */}
                             <div className="py-6 space-y-3 border-t border-b border-zinc-800">
-                                {selectedEstimate.services.map((s, i) => (
-                                    <div key={i} className="flex justify-between items-center text-sm">
-                                        <span className="text-zinc-300">{s.name}</span>
-                                        <span className="font-mono text-zinc-200">${(s.price || 0).toFixed(2)}</span>
-                                    </div>
-                                ))}
+                                {selectedEstimate.services.map((s, i) => {
+                                    const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                    return (
+                                        <div key={i} className={cn("flex justify-between items-center text-sm", isHeader ? "font-bold text-amber-500 mt-4" : "text-zinc-300")}>
+                                            <span>{s.name}</span>
+                                            {!isHeader && <span className="font-mono text-zinc-200">${(s.price || 0).toFixed(2)}</span>}
+                                        </div>
+                                    );
+                                })}
                                 <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
                                     <span className="text-lg font-bold text-white">Total</span>
                                     <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
