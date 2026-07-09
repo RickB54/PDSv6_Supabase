@@ -1251,6 +1251,17 @@ const Estimates = () => {
                                  </div>
                              </div>
                             {/* Services List (MOVED UP FOR BETTER VISIBILITY) */}
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mt-6 mb-4">
+                                <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
+                                    <Sparkles className="h-4 w-4" /> Multiple Vehicle & Options Guide
+                                </h4>
+                                <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
+                                    <li>Select <strong>Custom / Write-in Vehicle</strong> (above) and type a title like "Lina's Fleet".</li>
+                                    <li>Use <strong>+ Add Sub-Header</strong> below to type the first vehicle name (e.g. "--- 2024 Honda Civic ---").</li>
+                                    <li>Add the packages you want to offer for that vehicle underneath it.</li>
+                                    <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box so the customer sees options, not a massive total bill!</li>
+                                </ol>
+                            </div>
                             <div>
                                 <Label className="text-zinc-400 mb-2 block">Estimate Line Items & Scenarios</Label>
                                 <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
@@ -1354,18 +1365,6 @@ const Estimates = () => {
                                       placeholder="Click to view full page & edit notes..."
                                       className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-2 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer hover:border-zinc-700 transition-colors"
                                   />
-                             </div>
-
-                             <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mt-6 mb-4">
-                                 <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
-                                     <Sparkles className="h-4 w-4" /> Multiple Vehicle & Options Guide
-                                 </h4>
-                                 <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
-                                     <li>Select <strong>Custom / Write-in Vehicle</strong> and type a title like "Lina's Fleet (6 Vehicles)".</li>
-                                     <li>Use <strong>+ Add Sub-Header</strong> in the line items to type the first vehicle name (e.g. "--- 2024 Honda Civic ---").</li>
-                                     <li>Add the packages you want to offer for that vehicle underneath it.</li>
-                                     <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box so the customer sees options, not a massive total bill!</li>
-                                 </ol>
                              </div>
 
                             <div className="flex gap-2">
