@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
@@ -86,6 +87,7 @@ const getPublicNotes = (notes: string): string => {
     let clean = notes;
     if (clean.includes("[ACCEPTED_BY_CUSTOMER]")) clean = clean.split("[ACCEPTED_BY_CUSTOMER]")[0];
     if (clean.includes("[PRE_CHECK_DATA]:")) clean = clean.split("[PRE_CHECK_DATA]:")[0];
+    clean = clean.replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '');
     let divider = "=== INTERNAL HISTORY LOG ===";
     if (clean.includes(divider)) return clean.split(divider)[0].trim();
     if (clean.includes("[VEHICLE INFO]")) return clean.split("[VEHICLE INFO]")[0].trim();
@@ -128,6 +130,7 @@ const Estimates = () => {
     const [discountMethod, setDiscountMethod] = useState<"coupon" | "manual">("manual");
     const [discountCode, setDiscountCode] = useState("");
     const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
+    const [isMenuMode, setIsMenuMode] = useState(false);
     
     useEffect(() => {
         refreshCoupons();
@@ -346,6 +349,7 @@ const Estimates = () => {
                 setEditingEstimateId(null);
                 setSelectedCustomer("");
                 setServices([]);
+                setIsMenuMode(false);
                 return;
             }
 
@@ -362,6 +366,7 @@ const Estimates = () => {
             if (!vehicleStr) vehicleStr = "Unknown Vehicle";
 
             const isEditing = !!editingEstimateId;
+            const finalNotes = isMenuMode ? `[MENU_MODE]\n${notes}` : notes.replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '');
             const estimateData: any = {
                 id: editingEstimateId || undefined,
                 estimateNumber: isEditing ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
@@ -379,7 +384,7 @@ const Estimates = () => {
                 vehicleType: selectedVehicleType,
                 discount,
                 discountType,
-                notes: notes,
+                notes: finalNotes,
                 isSent: editIsSent,
                 sentDate: editIsSent ? (isEditing ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
                 created_at: isEditing ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
@@ -433,6 +438,7 @@ const Estimates = () => {
             setNotes("");
             setEditIsSent(false);
             setEstimateDate(getLocalDateString());
+            setIsMenuMode(false);
 
             // Background sync to reconcile with server (no await — UI already updated)
             loadData();
@@ -455,7 +461,8 @@ const Estimates = () => {
         setSelectedVehicleId((est as any).vehicleId || "");
         setDiscount(est.discount || 0);
         setDiscountType(est.discountType || "percent");
-                setNotes(est.notes || "");
+        setIsMenuMode(est.notes?.includes('[MENU_MODE]') || false);
+        setNotes(est.notes?.replace('[MENU_MODE]\n', '')?.replace('[MENU_MODE]', '') || "");
         setEditIsSent(est.isSent || false);
         setEstimateDate(est.estimateDate || getLocalDateString());
         setShowCreateForm(true);
@@ -593,6 +600,8 @@ const Estimates = () => {
         doc.text("Proposed Services:", 20, y);
         y += 6;
 
+        const isEstimateMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
+
         doc.setFontSize(10);
         estimate.services.forEach((s) => {
             const serviceName = s.name || 'Service';
@@ -616,50 +625,52 @@ const Estimates = () => {
         doc.line(20, y, 190, y);
         y += 8;
 
-        doc.setFontSize(12);
-        
-        if (estimate.discount && estimate.discount > 0) {
-            doc.setFontSize(10);
-            doc.setTextColor(150, 150, 150);
-            const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
+        if (!isEstimateMenuMode) {
+            doc.setFontSize(12);
+            
+            if (estimate.discount && estimate.discount > 0) {
+                doc.setFontSize(10);
+                doc.setTextColor(150, 150, 150);
+                const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
 
-            // Self-healing: if discountType is missing (old records), back-calculate from saved total
-            let resolvedType = estimate.discountType;
-            if (!resolvedType && estimate.total != null && subtotal > 0) {
-                const asPercent = Math.round(subtotal * (1 - estimate.discount / 100) * 100) / 100;
-                const asAmount  = Math.round((subtotal - estimate.discount) * 100) / 100;
-                const savedTotal = Math.round(estimate.total * 100) / 100;
-                if (Math.abs(asPercent - savedTotal) < 0.02) {
-                    resolvedType = 'percent';
-                } else if (Math.abs(asAmount - savedTotal) < 0.02) {
-                    resolvedType = 'amount';
-                } else {
-                    resolvedType = 'percent'; // safest fallback for coupon discounts
+                // Self-healing: if discountType is missing (old records), back-calculate from saved total
+                let resolvedType = estimate.discountType;
+                if (!resolvedType && estimate.total != null && subtotal > 0) {
+                    const asPercent = Math.round(subtotal * (1 - estimate.discount / 100) * 100) / 100;
+                    const asAmount  = Math.round((subtotal - estimate.discount) * 100) / 100;
+                    const savedTotal = Math.round(estimate.total * 100) / 100;
+                    if (Math.abs(asPercent - savedTotal) < 0.02) {
+                        resolvedType = 'percent';
+                    } else if (Math.abs(asAmount - savedTotal) < 0.02) {
+                        resolvedType = 'amount';
+                    } else {
+                        resolvedType = 'percent'; // safest fallback for coupon discounts
+                    }
                 }
+
+                const discountAmount = resolvedType === 'percent'
+                    ? subtotal * (estimate.discount / 100)
+                    : estimate.discount;
+                const discountLabel = resolvedType === 'percent'
+                    ? `Discount (${estimate.discount}%):`
+                    : `Discount:`;
+
+                doc.text(discountLabel, 140, y);
+                doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
+                y += 12;
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+            } else {
+                // NO DISCOUNT: Remove the extra gap
+                y += 2;
             }
 
-            const discountAmount = resolvedType === 'percent'
-                ? subtotal * (estimate.discount / 100)
-                : estimate.discount;
-            const discountLabel = resolvedType === 'percent'
-                ? `Discount (${estimate.discount}%):`
-                : `Discount:`;
-
-            doc.text(discountLabel, 140, y);
-            doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
+            doc.setFont("helvetica", "bold");
+            doc.text("Estimated Total:", 125, y);
+            doc.text(`$${(estimate.total || 0).toFixed(2)}`, 180, y, { align: "right" });
+            doc.setFont("helvetica", "normal");
             y += 12;
-            doc.setFontSize(12);
-            doc.setTextColor(0, 0, 0);
-        } else {
-            // NO DISCOUNT: Remove the extra gap
-            y += 2;
         }
-
-        doc.setFont("helvetica", "bold");
-        doc.text("Estimated Total:", 125, y);
-        doc.text(`$${(estimate.total || 0).toFixed(2)}`, 180, y, { align: "right" });
-        doc.setFont("helvetica", "normal");
-        y += 12;
 
                 if (estimate.notes) {
             if (y > 230) {
@@ -1255,9 +1266,24 @@ const Estimates = () => {
                                             <FileText className="h-4 w-4 mr-2" /> Add Sub-Header
                                         </Button>
                                     </div>
-                                    <div className="border-t border-zinc-800 pt-3 mt-3 flex justify-between font-black text-white text-lg">
-                                        <span>Estimated Total</span>
-                                        <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
+                                    <div className="border-t border-zinc-800 pt-3 mt-3 flex flex-col sm:flex-row justify-between sm:items-center font-black text-white text-lg gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox 
+                                                id="menu-mode" 
+                                                checked={isMenuMode} 
+                                                onCheckedChange={(checked) => setIsMenuMode(!!checked)}
+                                                className="border-zinc-700 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                            />
+                                            <label htmlFor="menu-mode" className="text-sm font-normal text-zinc-400 cursor-pointer select-none">
+                                                Hide Grand Total (Menu Mode)
+                                            </label>
+                                        </div>
+                                        {!isMenuMode && (
+                                            <div className="flex gap-4">
+                                                <span>Estimated Total</span>
+                                                <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1659,10 +1685,12 @@ const Estimates = () => {
                                         </div>
                                     );
                                 })}
-                                <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
-                                    <span className="text-lg font-bold text-white">Total</span>
-                                    <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
-                                </div>
+                                {!selectedEstimate.notes?.includes('[MENU_MODE]') && (
+                                    <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
+                                        <span className="text-lg font-bold text-white">Total</span>
+                                        <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Pre-Check Data Block if customer accepted online */}
