@@ -128,7 +128,7 @@ const Estimates = () => {
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
     const [customVehicleName, setCustomVehicleName] = useState("");
     const [discount, setDiscount] = useState(0);
-    const [discountMethod, setDiscountMethod] = useState<"coupon" | "manual">("manual");
+    const [discountMethod, setDiscountMethod] = useState<"coupon" | "manual" | "none">("manual");
     const [discountCode, setDiscountCode] = useState("");
     const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
     const [isMenuMode, setIsMenuMode] = useState(false);
