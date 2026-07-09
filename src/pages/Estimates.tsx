@@ -1356,6 +1356,18 @@ const Estimates = () => {
                                   />
                              </div>
 
+                             <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mt-6 mb-4">
+                                 <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
+                                     <Sparkles className="h-4 w-4" /> Multiple Vehicle & Options Guide
+                                 </h4>
+                                 <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
+                                     <li>Select <strong>Custom / Write-in Vehicle</strong> and type a title like "Lina's Fleet (6 Vehicles)".</li>
+                                     <li>Use <strong>+ Add Sub-Header</strong> in the line items to type the first vehicle name (e.g. "--- 2024 Honda Civic ---").</li>
+                                     <li>Add the packages you want to offer for that vehicle underneath it.</li>
+                                     <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box so the customer sees options, not a massive total bill!</li>
+                                 </ol>
+                             </div>
+
                             <div className="flex gap-2">
                                 <Button onClick={createEstimate} disabled={isSubmitting} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60">
                                     {isSubmitting ? (
@@ -1370,11 +1382,20 @@ const Estimates = () => {
                                     onClick={() => {
                                         const cust = customers.find(c => c.id === selectedCustomer);
                                         const vehicleObj = cust?.vehicles?.find(v => v.id === selectedVehicleId);
-                                        const vehicleStr = vehicleObj 
+                                        let vehicleStr = vehicleObj 
                                             ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)} ${vehicleObj.color ? `[Color: ${vehicleObj.color}]` : ''}`.replace(/\s+/g, ' ').trim()
                                             : cust 
                                                 ? `${formatPart(cust.year)} ${formatPart(cust.vehicle)} ${formatPart(cust.model)}`.replace(/\s+/g, ' ').trim()
                                                 : "Current Vehicle";
+
+                                        if (selectedVehicleId === "multiple") {
+                                            vehicleStr = "Multiple Vehicles (Listed Below)";
+                                        } else if (selectedVehicleId === "custom") {
+                                            vehicleStr = customVehicleName || "Custom Vehicle";
+                                        } else if (selectedVehicleId === "primary") {
+                                            vehicleStr = `${vehicleStr} (Primary)`.trim();
+                                        }
+                                        if (!vehicleStr) vehicleStr = "Unknown Vehicle";
 
                                         const tempEst: Estimate = {
                                             estimateNumber: editingEstimateId ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),

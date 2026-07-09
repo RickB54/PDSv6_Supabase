@@ -76,7 +76,7 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
           desc: "To quote multiple vehicles or show options, check 'Hide Grand Total (Menu Mode)'. This turns the PDF into a clean pricing menu without scaring the customer with a massive total."
         },
         {
-          title: "2. Custom Vehicle Titles (New!)",
+          title: "2. Custom Vehicle Titles",
           desc: "Select 'Custom / Write-in Vehicle' from the garage dropdown to type in custom titles like 'Lina's Fleet (6 Vehicles)' without cluttering your CRM."
         },
         {
