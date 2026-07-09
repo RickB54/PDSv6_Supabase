@@ -1234,14 +1234,9 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
             return [];
         }
 
-        const results = (data || []).map((e: any) => ({
-            id: e.id,
-            estimateNumber: e.estimate_number,
-            customerId: e.customer_id,
-            customerName: e.customers?.full_name || 'Unknown',
-            vehicle: e.vehicles ? `${e.vehicles.year} ${e.vehicles.make} ${e.vehicles.model}` : 'Unknown',
-                        vehicleId: e.vehicle_id,
-            services: (e.services || []).filter((s: any) => {
+        const results = (data || []).map((e: any) => {
+            let virtualVehicle = null;
+            const filteredServices = (e.services || []).filter((s: any) => {
                 if (s.name?.startsWith("VIRTUAL_SENT:")) {
                     (e as any).isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
                     return false;
@@ -1250,23 +1245,37 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                     (e as any).sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
                     return false;
                 }
+                if (s.name?.startsWith("VIRTUAL_VEHICLE:")) {
+                    virtualVehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+                    return false;
+                }
                 return true;
-            }),
-            isSent: (e as any).isSent ?? false,
-            sentDate: (e as any).sentDate,
-            total: e.total,
-            date: e.date || e.created_at?.split('T')[0],
-            status: e.status,
-            createdAt: e.created_at,
-            created_at: e.created_at,
-            notes: e.notes,
-            vehicleType: e.vehicle_type,
-            packageId: e.package_id,
-            addonIds: e.addon_ids || [],
-            discount: e.discount,
-            discountType: e.discount_type as ('percent' | 'amount' | undefined),
-            estimateDate: e.estimate_date
-        }));
+            });
+
+            return {
+                id: e.id,
+                estimateNumber: e.estimate_number,
+                customerId: e.customer_id,
+                customerName: e.customers?.full_name || 'Unknown',
+                vehicle: virtualVehicle ? virtualVehicle : (e.vehicles ? `${e.vehicles.year} ${e.vehicles.make} ${e.vehicles.model}` : 'Unknown'),
+                vehicleId: e.vehicle_id,
+                services: filteredServices,
+                isSent: (e as any).isSent ?? false,
+                sentDate: (e as any).sentDate,
+                total: e.total,
+                date: e.date || e.created_at?.split('T')[0],
+                status: e.status,
+                createdAt: e.created_at,
+                created_at: e.created_at,
+                notes: e.notes,
+                vehicleType: e.vehicle_type,
+                packageId: e.package_id,
+                addonIds: e.addon_ids || [],
+                discount: e.discount,
+                discountType: e.discount_type as ('percent' | 'amount' | undefined),
+                estimateDate: e.estimate_date
+            };
+        });
 
         // Merge Local Estimates (Offline or Legacy)
         try {
@@ -1332,7 +1341,8 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
         services: [
             ...(p.services || []),
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
-            ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : [])
+            ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : []),
+            ...((p.vehicle && vehicleId === undefined) ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : [])
         ], 
         total: p.total,
         date: p.date,
