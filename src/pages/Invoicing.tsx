@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, Check, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, Check, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon, ArrowUp, ArrowDown, Copy } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -943,12 +943,29 @@ const Invoicing = () => {
 
     doc.setFontSize(10);
     if (invoice.services && invoice.services.length > 0) {
-      invoice.services.forEach((s) => {
+      invoice.services.forEach((s, i) => {
         const serviceName = s.name || 'Service';
-        const lines = doc.splitTextToSize(serviceName, 140);
-        doc.text(lines, 25, y);
-        doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
-        y += (lines.length * 7);
+        const isHeader = serviceName.startsWith('---') && s.price === 0;
+
+        if (isHeader) {
+          doc.setFont("helvetica", "bold");
+          const lines = doc.splitTextToSize(serviceName, 140);
+          doc.text(lines, 20, y + 2);
+          
+          // Calculate and print subtotal
+          const nextHeaderIndex = invoice.services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+          const sliceEnd = nextHeaderIndex === -1 ? invoice.services.length : nextHeaderIndex;
+          const sectionTotal = invoice.services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
+          doc.text(`Subtotal: $${sectionTotal.toFixed(2)}`, 180, y + 2, { align: "right" });
+
+          doc.setFont("helvetica", "normal");
+          y += (lines.length * 7) + 2;
+        } else {
+          const lines = doc.splitTextToSize(serviceName, 140);
+          doc.text(lines, 25, y); // Indented slightly
+          doc.text(`$${(s.price || 0).toFixed(2)}`, 180, y, { align: "right" });
+          y += (lines.length * 7);
+        }
       });
     } else {
       // Gracefully handle empty services (e.g., if it was only added to notes)
@@ -2303,37 +2320,104 @@ Precision. Protection. Perfection.`;
                   <Label className="text-emerald-500 uppercase tracking-widest font-bold text-[10px] block mb-4">Line Items</Label>
                   
                   <div className="space-y-2 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {editServices.map((s, i) => (
-                      <div key={i} className="flex gap-2 items-center bg-zinc-950 p-2 rounded-md border border-zinc-800 group">
-                        <div className="flex-1">
-                          <Input 
-                            value={s.name} 
-                            onChange={e => {
-                              const newS = [...editServices];
-                              newS[i].name = e.target.value;
-                              setEditServices(newS);
-                            }}
-                            className="bg-transparent border-0 text-sm h-8 font-medium text-white focus-visible:ring-0 px-1"
-                          />
+                    {editServices.map((s, i) => {
+                      const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                      return (
+                        <div key={i} className="flex gap-2 items-center bg-zinc-950 p-2 rounded-md border border-zinc-800 group">
+                          <div className="flex-1">
+                            <Input 
+                              value={s.name} 
+                              onChange={e => {
+                                const newS = [...editServices];
+                                newS[i].name = e.target.value;
+                                setEditServices(newS);
+                              }}
+                              className={`bg-transparent border-0 text-sm h-8 focus-visible:ring-0 px-1 ${isHeader ? "font-bold text-amber-500 hover:bg-zinc-800/50 cursor-text" : "font-medium text-white"}`}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {!isHeader && (
+                              <>
+                                <span className="text-zinc-500 text-xs">$</span>
+                                <Input 
+                                  type="number"
+                                  value={s.price === 0 && (!s.name || s.name.includes("Custom")) ? 0 : (s.price || '')}
+                                  onChange={e => {
+                                    const newS = [...editServices];
+                                    newS[i].price = parseFloat(e.target.value) || 0;
+                                    setEditServices(newS);
+                                  }}
+                                  className="w-20 bg-transparent border-0 text-sm h-8 text-right font-mono focus-visible:ring-0 px-1"
+                                />
+                              </>
+                            )}
+
+                            {isHeader && (
+                                <>
+                                    <Button variant="ghost" size="icon" onClick={() => {
+                                        let prevHeaderIndex = -1;
+                                        for (let j = i - 1; j >= 0; j--) {
+                                            if ((editServices[j].name || '').startsWith('---') && editServices[j].price === 0) {
+                                                prevHeaderIndex = j;
+                                                break;
+                                            }
+                                        }
+                                        if (prevHeaderIndex !== -1) {
+                                            const nextHeaderIndex = editServices.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                            const sliceEnd = nextHeaderIndex === -1 ? editServices.length : nextHeaderIndex;
+                                            const newServices = [...editServices];
+                                            const currentSection = newServices.splice(i, sliceEnd - i);
+                                            newServices.splice(prevHeaderIndex, 0, ...currentSection);
+                                            setEditServices(newServices);
+                                        }
+                                    }} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Move Section Up">
+                                        <ArrowUp className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => {
+                                        const nextHeaderIndex = editServices.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                        if (nextHeaderIndex !== -1) {
+                                            const sliceEnd = nextHeaderIndex;
+                                            const nextNextHeaderIndex = editServices.findIndex((sx, idx) => idx > nextHeaderIndex && (sx.name || '').startsWith('---') && sx.price === 0);
+                                            const nextSliceEnd = nextNextHeaderIndex === -1 ? editServices.length : nextNextHeaderIndex;
+                                            const newServices = [...editServices];
+                                            const currentSection = newServices.splice(i, sliceEnd - i);
+                                            newServices.splice(i + (nextSliceEnd - nextHeaderIndex), 0, ...currentSection);
+                                            setEditServices(newServices);
+                                        }
+                                    }} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Move Section Down">
+                                        <ArrowDown className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => {
+                                        const nextHeaderIndex = editServices.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                        const sliceEnd = nextHeaderIndex === -1 ? editServices.length : nextHeaderIndex;
+                                        const sectionToCopy = editServices.slice(i, sliceEnd).map((item, idx) => {
+                                            if (idx === 0) return { ...item, name: item.name.replace(' ---', ' (Copy) ---') };
+                                            return { ...item };
+                                        });
+                                        const newServices = [...editServices];
+                                        newServices.splice(sliceEnd, 0, ...sectionToCopy);
+                                        setEditServices(newServices);
+                                    }} className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicate Vehicle Section">
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+                                </>
+                            )}
+                            
+                            <Button variant="ghost" size="icon" onClick={() => {
+                                const newServices = [...editServices];
+                                newServices.splice(i + 1, 0, { name: "Custom Line Item", price: 0 });
+                                setEditServices(newServices);
+                            }} className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Insert line item below">
+                                <Plus className="h-4 w-4" />
+                            </Button>
+
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-zinc-500 text-xs">$</span>
-                          <Input 
-                            type="number"
-                            value={s.price} 
-                            onChange={e => {
-                              const newS = [...editServices];
-                              newS[i].price = parseFloat(e.target.value) || 0;
-                              setEditServices(newS);
-                            }}
-                            className="w-20 bg-transparent border-0 text-sm h-8 text-right font-mono focus-visible:ring-0 px-1"
-                          />
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setEditServices(editServices.filter((_, idx) => idx !== i))}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4 border-b border-zinc-800/50 mb-4">
@@ -2372,9 +2456,14 @@ Precision. Protection. Perfection.`;
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Button variant="outline" className="w-full border-dashed border-zinc-700 text-zinc-400 h-9" onClick={() => setEditServices([...editServices, { name: "Custom Service", price: 0 }])}>
-                          <Plus className="h-4 w-4 mr-2" /> Custom Item
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button variant="outline" className="w-full border-dashed border-zinc-700 text-zinc-400 h-9 px-2" onClick={() => setEditServices([...editServices, { name: "Custom Service", price: 0 }])}>
+                            <Plus className="h-4 w-4 md:mr-2 shrink-0" /> <span className="hidden md:inline">Custom</span>
+                          </Button>
+                          <Button variant="outline" className="w-full border-dashed border-amber-700/50 text-amber-500/80 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10 h-9 px-2" onClick={() => setEditServices([...editServices, { name: "--- [Type Section Name Here] ---", price: 0 }])}>
+                            <FileText className="h-4 w-4 md:mr-2 shrink-0" /> <span className="hidden md:inline">Header</span>
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>

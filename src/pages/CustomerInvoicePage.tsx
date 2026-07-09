@@ -341,13 +341,32 @@ export default function CustomerInvoicePage() {
 
                         <div className="p-6">
                             <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-4">Services Rendered</p>
-                            <div className="space-y-4">
-                                {invoice.services.map((svc, i) => (
-                                    <div key={i} className="flex justify-between items-center text-sm">
-                                        <span className="text-zinc-200 font-medium">{svc.name}</span>
-                                        <span className="text-zinc-100 font-mono">${Number(svc.price).toFixed(2)}</span>
-                                    </div>
-                                ))}
+                            <div className="space-y-2">
+                                {invoice.services.map((svc, i) => {
+                                    const isHeader = (svc.name || '').startsWith('---') && svc.price === 0;
+                                    
+                                    if (isHeader) {
+                                        const nextHeaderIndex = invoice.services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                        const sliceEnd = nextHeaderIndex === -1 ? invoice.services.length : nextHeaderIndex;
+                                        const sectionTotal = invoice.services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + Number(sx.price), 0);
+
+                                        return (
+                                            <div key={i} className="pt-4 pb-2 mb-2 border-b border-zinc-800/50">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-blue-400 font-black uppercase tracking-wider text-xs">{svc.name.replace(/---/g, '').trim()}</span>
+                                                    <span className="text-blue-400/80 font-mono text-xs">Subtotal: ${sectionTotal.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={i} className="flex justify-between items-center text-sm pl-2">
+                                            <span className="text-zinc-200 font-medium">{svc.name}</span>
+                                            <span className="text-zinc-100 font-mono">${Number(svc.price).toFixed(2)}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
