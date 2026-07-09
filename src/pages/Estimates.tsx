@@ -354,7 +354,9 @@ const Estimates = () => {
                 ? `${formatPart(vehicleObj.year)} ${formatPart(vehicleObj.make)} ${formatPart(vehicleObj.model)} ${vehicleObj.color ? `[Color: ${vehicleObj.color}]` : ''}`.replace(/\s+/g, ' ').trim()
                 : `${formatPart(customer.year)} ${formatPart(customer.vehicle)} ${formatPart(customer.model)}`.replace(/\s+/g, ' ').trim();
 
-            if (selectedVehicleId === "primary") {
+            if (selectedVehicleId === "multiple") {
+                vehicleStr = "Multiple Vehicles (Listed Below)";
+            } else if (selectedVehicleId === "primary") {
                 vehicleStr = `${vehicleStr} (Primary)`.trim();
             }
             if (!vehicleStr) vehicleStr = "Unknown Vehicle";
@@ -992,6 +994,7 @@ const Estimates = () => {
                                                      <SelectItem value="none" disabled>No vehicles in garage</SelectItem>
                                                  )))(customers.find(c => c.id === selectedCustomer))
                                              )}
+                                             <SelectItem value="multiple" className="font-bold text-amber-500">Multiple Vehicles (Listed Below)</SelectItem>
                                          </SelectContent>
                                      </Select>
                                  </div>
@@ -1196,6 +1199,68 @@ const Estimates = () => {
                                      })}
                                  </div>
                              </div>
+                            {/* Services List (MOVED UP FOR BETTER VISIBILITY) */}
+                            <div>
+                                <Label className="text-zinc-400 mb-2 block">Estimate Line Items & Scenarios</Label>
+                                <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
+                                    {services.map((s, i) => {
+                                        const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                        return (
+                                        <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4" : "text-zinc-300")}>
+                                            <Input 
+                                                value={s.name}
+                                                onChange={(e) => {
+                                                    const newServices = [...services];
+                                                    newServices[i].name = e.target.value;
+                                                    setServices(newServices);
+                                                }}
+                                                className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500" : "text-zinc-200")}
+                                                placeholder="Service, Vehicle Name, or Sub-Header"
+                                            />
+                                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                {!isHeader && <span className="text-zinc-500">$</span>}
+                                                <Input 
+                                                    type="number"
+                                                    value={s.price === 0 && (!s.name || s.name.includes("Custom") || isHeader) ? 0 : (s.price || '')}
+                                                    onChange={(e) => {
+                                                        const newServices = [...services];
+                                                        newServices[i].price = parseFloat(e.target.value) || 0;
+                                                        setServices(newServices);
+                                                    }}
+                                                    className={cn("bg-zinc-900 border-zinc-700 h-8 w-full sm:w-24 text-right font-mono", isHeader ? "opacity-50" : "")}
+                                                />
+                                                <Button variant="ghost" size="icon" onClick={() => {
+                                                    setServices(services.filter((_, idx) => idx !== i));
+                                                }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )})}
+                                    <div className="flex gap-2 w-full mt-4">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setServices([...services, { name: "Custom Line Item", price: 0 }])}
+                                            className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" /> Add Line Item
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => setServices([...services, { name: "--- Vehicle 1 ---", price: 0 }])}
+                                            className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
+                                        >
+                                            <FileText className="h-4 w-4 mr-2" /> Add Sub-Header
+                                        </Button>
+                                    </div>
+                                    <div className="border-t border-zinc-800 pt-3 mt-3 flex justify-between font-black text-white text-lg">
+                                        <span>Estimated Total</span>
+                                        <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
 
                              <div>
                                  <div className="flex items-center justify-between">
@@ -1224,66 +1289,6 @@ const Estimates = () => {
                                       className="w-full h-24 bg-zinc-950 border border-zinc-800 rounded-md p-2 text-white text-sm mt-2 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer hover:border-zinc-700 transition-colors"
                                   />
                              </div>
-
-                            {/* Services List */}
-                            <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
-                                {services.map((s, i) => {
-                                    const isHeader = (s.name || '').startsWith('---') && s.price === 0;
-                                    return (
-                                    <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4" : "text-zinc-300")}>
-                                        <Input 
-                                            value={s.name}
-                                            onChange={(e) => {
-                                                const newServices = [...services];
-                                                newServices[i].name = e.target.value;
-                                                setServices(newServices);
-                                            }}
-                                            className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500" : "text-zinc-200")}
-                                            placeholder="Service, Vehicle Name, or Sub-Header"
-                                        />
-                                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                                            {!isHeader && <span className="text-zinc-500">$</span>}
-                                            <Input 
-                                                type="number"
-                                                value={s.price === 0 && (!s.name || s.name.includes("Custom") || isHeader) ? 0 : (s.price || '')}
-                                                onChange={(e) => {
-                                                    const newServices = [...services];
-                                                    newServices[i].price = parseFloat(e.target.value) || 0;
-                                                    setServices(newServices);
-                                                }}
-                                                className={cn("bg-zinc-900 border-zinc-700 h-8 w-full sm:w-24 text-right font-mono", isHeader ? "opacity-50" : "")}
-                                            />
-                                            <Button variant="ghost" size="icon" onClick={() => {
-                                                setServices(services.filter((_, idx) => idx !== i));
-                                            }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )})}
-                                <div className="flex gap-2 w-full mt-4">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => setServices([...services, { name: "Custom Line Item", price: 0 }])}
-                                        className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
-                                    >
-                                        <Plus className="h-4 w-4 mr-2" /> Add Line Item
-                                    </Button>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        onClick={() => setServices([...services, { name: "--- Vehicle 1 ---", price: 0 }])}
-                                        className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
-                                    >
-                                        <FileText className="h-4 w-4 mr-2" /> Add Sub-Header
-                                    </Button>
-                                </div>
-                                <div className="border-t border-zinc-800 pt-3 mt-3 flex justify-between font-black text-white text-lg">
-                                    <span>Estimated Total</span>
-                                    <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
-                                </div>
-                            </div>
 
                             <div className="flex gap-2">
                                 <Button onClick={createEstimate} disabled={isSubmitting} className="flex-1 bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-60">
