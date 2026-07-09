@@ -594,30 +594,32 @@ export default function FollowUpCenter() {
                     />
                   </div>
                   
-                  <div className={cn("flex items-center gap-3 transition-opacity w-full sm:w-auto", !followUpSettings.active && "opacity-50 pointer-events-none")}>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 shrink-0">Trigger After</span>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      value={followUpSettings.threshold === 0 ? '' : followUpSettings.threshold}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        saveFollowUpSettings({ ...followUpSettings, threshold: val === '' ? ('' as any) : parseInt(val) });
-                      }}
-                      className="w-16 h-8 text-center font-mono font-bold bg-zinc-900 border-zinc-700 focus:border-indigo-500 text-sm"
-                    />
-                    <Select 
-                      value={followUpSettings.unit}
-                      onValueChange={(v: 'days' | 'months') => saveFollowUpSettings({ ...followUpSettings, unit: v })}
-                    >
-                      <SelectTrigger className="w-[100px] h-8 bg-zinc-900 border-zinc-700 text-[10px] font-black uppercase tracking-widest">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800">
-                        <SelectItem value="days" className="text-[10px] font-black uppercase tracking-widest">Days</SelectItem>
-                        <SelectItem value="months" className="text-[10px] font-black uppercase tracking-widest">Months</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className={cn("flex flex-wrap sm:flex-nowrap items-center gap-3 transition-opacity w-full sm:w-auto", !followUpSettings.active && "opacity-50 pointer-events-none")}>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 shrink-0 w-full sm:w-auto mb-1 sm:mb-0">Trigger After</span>
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <Input 
+                        type="number" 
+                        min="1"
+                        value={followUpSettings.threshold === 0 ? '' : followUpSettings.threshold}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          saveFollowUpSettings({ ...followUpSettings, threshold: val === '' ? ('' as any) : parseInt(val) });
+                        }}
+                        className="w-20 sm:w-16 h-10 sm:h-8 text-center font-mono font-bold bg-zinc-900 border-zinc-700 focus:border-indigo-500 text-sm flex-1 sm:flex-none"
+                      />
+                      <Select 
+                        value={followUpSettings.unit}
+                        onValueChange={(v: 'days' | 'months') => saveFollowUpSettings({ ...followUpSettings, unit: v })}
+                      >
+                        <SelectTrigger className="w-full sm:w-28 h-10 sm:h-8 bg-zinc-900 border-zinc-700 text-xs font-black uppercase tracking-widest flex-1 sm:flex-none">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                          <SelectItem value="days" className="text-[10px] font-black uppercase tracking-widest">Days</SelectItem>
+                          <SelectItem value="months" className="text-[10px] font-black uppercase tracking-widest">Months</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -625,13 +627,13 @@ export default function FollowUpCenter() {
           </Card>
 
           {followUpSettings.active && !followUpStatus.loading && (
-            <div className="flex items-center gap-2 mb-8 bg-zinc-900/40 p-1.5 rounded-xl border border-zinc-800 w-fit backdrop-blur-md relative z-20">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-8 bg-zinc-900/40 p-1.5 rounded-xl border border-zinc-800 w-full sm:w-fit backdrop-blur-md relative z-20">
               {(['all', 'customer', 'prospect'] as const).map(f => (
                 <button
                   key={f}
                   onClick={() => setFollowUpFilter(f)}
                   className={cn(
-                    "px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    "px-3 sm:px-6 py-2.5 sm:py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex-1 text-center",
                     followUpFilter === f 
                       ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]" 
                       : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
@@ -681,17 +683,18 @@ export default function FollowUpCenter() {
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {group.data.map(item => (
-                      <div key={item.customer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg">
-                        <div className="space-y-3 flex-1">
-                          <div>
+                      <div key={item.customer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg overflow-hidden">
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-3">
                               <h5 className="text-lg font-black uppercase tracking-tight text-zinc-200">{item.customer.name}</h5>
                               <Badge className={cn("text-[9px] uppercase font-black px-2 py-0.5 rounded-full border-none", item.customer.type === 'prospect' ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400")}>
                                 {item.customer.type === 'prospect' ? 'Prospect' : 'Customer'}
                               </Badge>
                             </div>
-                            <p className="text-xs text-zinc-500 font-bold truncate flex items-center gap-2">
-                              <Mail className="h-3 w-3 text-indigo-400" /> {item.customer.email || 'No email provided'}
+                            <p className="text-xs text-zinc-500 font-bold flex items-center gap-2 min-w-0 mt-2">
+                              <Mail className="h-3 w-3 text-indigo-400 shrink-0" /> 
+                              <span className="truncate">{item.customer.email || 'No email provided'}</span>
                             </p>
                           </div>
                           
