@@ -1963,7 +1963,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
                 
                 {/* Vehicle Class Performance Strip */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 w-full">
                     <div 
                         className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
                         onClick={() => { setSelectedChartJobs(vehicleClassStats.compact.jobs); setChartJobsModalTitle("Compact / Sedan Jobs"); setIsChartJobsModalOpen(true); }}
@@ -2018,7 +2018,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                     {/* CRM Follow-up Chip */}
                     <div 
-                        className={cn("bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer", !followUpStatus.active && "opacity-60")}
+                        className={cn("col-span-2 lg:col-span-1 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer", !followUpStatus.active && "opacity-60")}
                         onClick={() => navigate('/follow-up-center')}
                         title="Navigate to CRM Follow-up Center"
                     >

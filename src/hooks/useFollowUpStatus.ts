@@ -125,9 +125,11 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         ? addMonths(lastActivityDate, settings.threshold)
         : addDays(lastActivityDate, settings.threshold);
 
-      const isOverdue = isBefore(thresholdDate, now);
-      const isDueThisWeek = isWithinInterval(thresholdDate, { start: weekStart, end: weekEnd }) && !isOverdue;
-      const isDueThisMonth = isWithinInterval(thresholdDate, { start: monthStart, end: monthEnd }) && !isOverdue && !isDueThisWeek;
+      const daysUntilDue = differenceInDays(thresholdDate, now);
+      
+      const isOverdue = daysUntilDue < 0;
+      const isDueThisWeek = daysUntilDue >= 0 && daysUntilDue <= 7;
+      const isDueThisMonth = daysUntilDue > 7 && daysUntilDue <= 30;
       const daysSince = differenceInDays(now, lastActivityDate);
 
       return {
