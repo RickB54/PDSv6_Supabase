@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -1348,19 +1348,54 @@ const Estimates = () => {
                                                     )
                                                 )}
                                                 {isHeader && (
-                                                    <Button variant="ghost" size="icon" onClick={() => {
-                                                        const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
-                                                        const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
-                                                        const sectionToCopy = services.slice(i, sliceEnd).map((item, idx) => {
-                                                            if (idx === 0) return { ...item, name: item.name.replace(' ---', ' (Copy) ---') };
-                                                            return { ...item };
-                                                        });
-                                                        const newServices = [...services];
-                                                        newServices.splice(sliceEnd, 0, ...sectionToCopy);
-                                                        setServices(newServices);
-                                                    }} className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 shrink-0" title="Duplicate Vehicle Section">
-                                                        <Copy className="h-4 w-4" />
-                                                    </Button>
+                                                    <>
+                                                        <Button variant="ghost" size="icon" onClick={() => {
+                                                            let prevHeaderIndex = -1;
+                                                            for (let j = i - 1; j >= 0; j--) {
+                                                                if ((services[j].name || '').startsWith('---') && services[j].price === 0) {
+                                                                    prevHeaderIndex = j;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (prevHeaderIndex !== -1) {
+                                                                const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                                const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
+                                                                const newServices = [...services];
+                                                                const currentSection = newServices.splice(i, sliceEnd - i);
+                                                                newServices.splice(prevHeaderIndex, 0, ...currentSection);
+                                                                setServices(newServices);
+                                                            }
+                                                        }} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0" title="Move Section Up">
+                                                            <ArrowUp className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => {
+                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                            if (nextHeaderIndex !== -1) {
+                                                                const sliceEnd = nextHeaderIndex;
+                                                                const nextNextHeaderIndex = services.findIndex((sx, idx) => idx > nextHeaderIndex && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                                const nextSliceEnd = nextNextHeaderIndex === -1 ? services.length : nextNextHeaderIndex;
+                                                                const newServices = [...services];
+                                                                const currentSection = newServices.splice(i, sliceEnd - i);
+                                                                newServices.splice(i + (nextSliceEnd - nextHeaderIndex), 0, ...currentSection);
+                                                                setServices(newServices);
+                                                            }
+                                                        }} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0" title="Move Section Down">
+                                                            <ArrowDown className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" onClick={() => {
+                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                            const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
+                                                            const sectionToCopy = services.slice(i, sliceEnd).map((item, idx) => {
+                                                                if (idx === 0) return { ...item, name: item.name.replace(' ---', ' (Copy) ---') };
+                                                                return { ...item };
+                                                            });
+                                                            const newServices = [...services];
+                                                            newServices.splice(sliceEnd, 0, ...sectionToCopy);
+                                                            setServices(newServices);
+                                                        }} className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 shrink-0" title="Duplicate Vehicle Section">
+                                                            <Copy className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
                                                 )}
                                                 <Button variant="ghost" size="icon" onClick={() => {
                                                     const newServices = [...services];
