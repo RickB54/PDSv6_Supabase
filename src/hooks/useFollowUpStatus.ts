@@ -121,9 +121,10 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         if (eDate > lastActivityDate) lastActivityDate = eDate;
       });
 
+      const safeThreshold = Number(settings.threshold) || 1;
       const thresholdDate = settings.unit === 'months' 
-        ? addMonths(lastActivityDate, settings.threshold)
-        : addDays(lastActivityDate, settings.threshold);
+        ? addMonths(lastActivityDate, safeThreshold)
+        : addDays(lastActivityDate, safeThreshold);
 
       const daysUntilDue = differenceInDays(thresholdDate, now);
       

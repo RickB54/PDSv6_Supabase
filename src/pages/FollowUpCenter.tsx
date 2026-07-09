@@ -599,8 +599,11 @@ export default function FollowUpCenter() {
                     <Input 
                       type="number" 
                       min="1"
-                      value={followUpSettings.threshold}
-                      onChange={(e) => saveFollowUpSettings({ ...followUpSettings, threshold: parseInt(e.target.value) || 30 })}
+                      value={followUpSettings.threshold === 0 ? '' : followUpSettings.threshold}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        saveFollowUpSettings({ ...followUpSettings, threshold: val === '' ? ('' as any) : parseInt(val) });
+                      }}
                       className="w-16 h-8 text-center font-mono font-bold bg-zinc-900 border-zinc-700 focus:border-indigo-500 text-sm"
                     />
                     <Select 
