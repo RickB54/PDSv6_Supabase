@@ -1330,7 +1330,7 @@ const Estimates = () => {
                                                         <span className="text-zinc-500">$</span>
                                                         <Input 
                                                             type="number"
-                                                            title={deducedClass ? `Estimated Vehicle Class: ${deducedClass}` : undefined}
+                                                            title={deducedClass || undefined}
                                                             value={s.price === 0 && (!s.name || s.name.includes("Custom")) ? 0 : (s.price || '')}
                                                             onChange={(e) => {
                                                                 const newServices = [...services];
