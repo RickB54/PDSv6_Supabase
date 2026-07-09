@@ -627,10 +627,12 @@ const Estimates = () => {
                 doc.text(lines, 20, y + 2);
                 
                 // Calculate and print subtotal
-                const nextHeaderIndex = estimate.services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
-                const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
-                const sectionTotal = estimate.services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
-                doc.text(`Subtotal: $${sectionTotal.toFixed(2)}`, 180, y + 2, { align: "right" });
+                if (!isEstimateMenuMode) {
+                    const nextHeaderIndex = estimate.services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                    const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
+                    const sectionTotal = estimate.services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
+                    doc.text(`Subtotal: $${sectionTotal.toFixed(2)}`, 180, y + 2, { align: "right" });
+                }
 
                 doc.setFont("helvetica", "normal");
                 y += (lines.length * 7) + 2;
@@ -1288,6 +1290,28 @@ const Estimates = () => {
                                             sectionTotal = services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
                                         }
 
+                                        let deducedClass = "";
+                                        if (!isHeader) {
+                                            const pkg = servicePackages.find(p => p.name === s.name);
+                                            if (pkg && pkg.pricing) {
+                                                if (s.price === pkg.pricing.compact) deducedClass = "Compact";
+                                                else if (s.price === pkg.pricing.midsize) deducedClass = "Midsize";
+                                                else if (s.price === pkg.pricing.truck) deducedClass = "Truck/SUV";
+                                                else if (s.price === pkg.pricing.luxury) deducedClass = "Luxury";
+                                                else deducedClass = "Custom Modified Price";
+                                            } else {
+                                                const addon = addOns.find(a => a.name === s.name);
+                                                if (addon && addon.pricing) {
+                                                    if (s.price === addon.pricing.compact) deducedClass = "Compact";
+                                                    else if (s.price === addon.pricing.midsize) deducedClass = "Midsize";
+                                                    else if (s.price === addon.pricing.truck) deducedClass = "Truck/SUV";
+                                                    else if (s.price === addon.pricing.luxury) deducedClass = "Luxury";
+                                                    else if (s.price === addon.basePrice) deducedClass = "Standard Base Price";
+                                                    else deducedClass = "Custom Modified Price";
+                                                }
+                                            }
+                                        }
+
                                         return (
                                         <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4 bg-zinc-900/40 p-2 rounded-r" : "text-zinc-300")}>
                                             <Input 
@@ -1297,7 +1321,7 @@ const Estimates = () => {
                                                     newServices[i].name = e.target.value;
                                                     setServices(newServices);
                                                 }}
-                                                className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500 border-none bg-transparent px-0 focus-visible:ring-0" : "text-zinc-200")}
+                                                className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm transition-colors", isHeader ? "font-bold text-amber-500 border-none bg-transparent px-1 hover:bg-zinc-800/50 cursor-text rounded focus-visible:ring-1 focus-visible:ring-amber-500/50" : "text-zinc-200")}
                                                 placeholder="Service, Vehicle Name, or Sub-Header"
                                             />
                                             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1306,6 +1330,7 @@ const Estimates = () => {
                                                         <span className="text-zinc-500">$</span>
                                                         <Input 
                                                             type="number"
+                                                            title={deducedClass ? `Estimated Vehicle Class: ${deducedClass}` : undefined}
                                                             value={s.price === 0 && (!s.name || s.name.includes("Custom")) ? 0 : (s.price || '')}
                                                             onChange={(e) => {
                                                                 const newServices = [...services];
@@ -1316,9 +1341,11 @@ const Estimates = () => {
                                                         />
                                                     </>
                                                 ) : (
-                                                    <div className="text-amber-500 font-bold whitespace-nowrap text-sm pr-4">
-                                                        Subtotal: ${sectionTotal.toFixed(2)}
-                                                    </div>
+                                                    !isMenuMode && (
+                                                        <div className="text-amber-500 font-bold whitespace-nowrap text-sm pr-4">
+                                                            Subtotal: ${sectionTotal.toFixed(2)}
+                                                        </div>
+                                                    )
                                                 )}
                                                 <Button variant="ghost" size="icon" onClick={() => {
                                                     setServices(services.filter((_, idx) => idx !== i));
