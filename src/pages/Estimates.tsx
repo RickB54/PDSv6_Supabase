@@ -384,7 +384,7 @@ const Estimates = () => {
                 status: selectedStatus,
                 packageId: selectedPackage,
                 addonIds: selectedAddons,
-                vehicleId: selectedVehicleId || undefined,
+                vehicleId: (selectedVehicleId === "custom" || selectedVehicleId === "multiple" || selectedVehicleId === "primary") ? undefined : (selectedVehicleId || undefined),
                 vehicleType: selectedVehicleType,
                 discount,
                 discountType,
@@ -1043,6 +1043,12 @@ const Estimates = () => {
                                 <Label className="text-zinc-400">Quick Package Select</Label>
                                 <div className="grid grid-cols-2 gap-2 mt-2">
                                     <Select value="" onValueChange={(val) => {
+                                        if (val === "all_essential") {
+                                            const essentialPkgs = servicePackages.filter(p => p.name.includes("Essential"));
+                                            const newServices = essentialPkgs.map(pkg => ({ name: pkg.name, price: pkg.pricing[selectedVehicleType] || 0 }));
+                                            setServices([...services, ...newServices]);
+                                            return;
+                                        }
                                         const pkg = servicePackages.find(p => p.id === val);
                                         if (pkg) {
                                             const price = pkg.pricing[selectedVehicleType] || 0;
@@ -1050,7 +1056,14 @@ const Estimates = () => {
                                         }
                                     }}>
                                         <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue placeholder="Add Package..." /></SelectTrigger>
-                                        <SelectContent>{servicePackages.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                        <SelectContent>
+                                            {servicePackages.filter(p => p.name.includes('Essential')).map(p => (
+                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                            ))}
+                                            <SelectItem value="all_essential" className="font-bold text-amber-500 border-t border-zinc-800 mt-1 pt-1">
+                                                + Add All 3 Essential Packages
+                                            </SelectItem>
+                                        </SelectContent>
                                     </Select>
                                     <Select value={selectedVehicleType} onValueChange={(val: any) => {
                                         setSelectedVehicleType(val);

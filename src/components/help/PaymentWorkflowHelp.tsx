@@ -72,20 +72,20 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
       icon: <FileCheck className="w-5 h-5 text-blue-600" />,
       steps: [
         {
-          title: "1. Sending the Estimate",
-          desc: "Click the 'Copy Hosted Link' icon (chain link) on the estimate row to copy its secure URL. You can then paste and send this link directly to the customer via text or email."
+          title: "1. Options & Menus (New!)",
+          desc: "To quote multiple vehicles or show options, check 'Hide Grand Total (Menu Mode)'. This turns the PDF into a clean pricing menu without scaring the customer with a massive total."
         },
         {
-          title: "2. Quotes, Not Bills",
-          desc: "Estimates are non-binding proposals. No payments can be collected directly from an Estimate."
+          title: "2. Custom Vehicle Titles (New!)",
+          desc: "Select 'Custom / Write-in Vehicle' from the garage dropdown to type in custom titles like 'Lina's Fleet (6 Vehicles)' without cluttering your CRM."
         },
         {
-          title: "3. Customer Acceptance",
+          title: "3. Sending the Estimate",
+          desc: "Click the 'Copy Hosted Link' icon on the estimate row to copy its secure URL. You can then paste and send this link directly to the customer via text or email."
+        },
+        {
+          title: "4. Customer Acceptance",
           desc: "Track which estimates are 'Open', 'Accepted', or 'Declined'. When a customer accepts via the link, they will fill out a Pre-Check form with vehicle condition details."
-        },
-        {
-          title: "4. Reviewing Pre-Check",
-          desc: "Always read the Pre-Check notes (pet hair, damage) that the customer submitted upon acceptance before confirming their appointment."
         },
         {
           title: "5. Conversion to Invoice",
