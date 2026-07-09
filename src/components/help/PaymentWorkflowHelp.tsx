@@ -72,11 +72,19 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
       icon: <FileCheck className="w-5 h-5 text-blue-600" />,
       steps: [
         {
-          title: "1. Options & Menus (New!)",
+          title: "1. Generic Section Headers (Multi-Vehicle/Packages)",
+          desc: "You can click 'Add Section Header' to group line items by Vehicle (e.g. '--- F150 ---') or by Package (e.g. '--- Exterior ---'). Subtotals calculate automatically for whatever is underneath it!"
+        },
+        {
+          title: "2. Section Controls & Discounts",
+          desc: "Use the Up/Down arrows to reorder entire sections, the Blue Copy icon to duplicate them, and the Orange + icon to insert a negative line item (e.g. -50) for a discount."
+        },
+        {
+          title: "3. Options & Menus (Menu Mode)",
           desc: "To quote multiple vehicles or show options, check 'Hide Grand Total (Menu Mode)'. This turns the PDF into a clean pricing menu without scaring the customer with a massive total."
         },
         {
-          title: "2. Custom Vehicle Titles",
+          title: "4. Custom Vehicle Titles",
           desc: "Select 'Custom / Write-in Vehicle' from the garage dropdown to type in custom titles like 'Lina's Fleet (6 Vehicles)' without cluttering your CRM."
         },
         {
