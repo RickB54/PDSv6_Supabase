@@ -225,7 +225,7 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
           <HelpCircle className="w-4 h-4" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[500px] p-0 shadow-2xl border-blue-200 overflow-hidden" align="end">
+      <PopoverContent className="w-[95vw] max-w-[500px] p-0 shadow-2xl border-blue-200 overflow-hidden" align="end">
         <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center gap-3">
           <div className="bg-blue-100 p-2 rounded-lg">
             {pageContent.icon}
