@@ -1348,8 +1348,15 @@ const Estimates = () => {
                                                     )
                                                 )}
                                                 <Button variant="ghost" size="icon" onClick={() => {
+                                                    const newServices = [...services];
+                                                    newServices.splice(i + 1, 0, { name: "Custom Line Item", price: 0 });
+                                                    setServices(newServices);
+                                                }} className="h-8 w-8 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 shrink-0" title="Insert line item below">
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => {
                                                     setServices(services.filter((_, idx) => idx !== i));
-                                                }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0">
+                                                }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0" title="Delete">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
