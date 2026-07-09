@@ -1340,10 +1340,10 @@ const Estimates = () => {
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            onClick={() => setServices([...services, { name: "--- Vehicle 1 ---", price: 0 }])}
-                                            className="flex-1 border-dashed border-zinc-700 text-zinc-400 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
+                                            onClick={() => setServices([...services, { name: "--- [Type Vehicle Name Here] ---", price: 0 }])}
+                                            className="flex-1 border-dashed border-amber-700/50 text-amber-500/80 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
                                         >
-                                            <FileText className="h-4 w-4 mr-2" /> Add Sub-Header
+                                            <FileText className="h-4 w-4 mr-2" /> Add Vehicle Header
                                         </Button>
                                     </div>
                                     <div className="border-t border-zinc-800 pt-3 mt-3 flex flex-col sm:flex-row justify-between sm:items-center font-black text-white text-lg gap-3">
