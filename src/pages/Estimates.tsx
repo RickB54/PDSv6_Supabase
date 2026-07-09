@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -1346,6 +1346,21 @@ const Estimates = () => {
                                                             Subtotal: ${sectionTotal.toFixed(2)}
                                                         </div>
                                                     )
+                                                )}
+                                                {isHeader && (
+                                                    <Button variant="ghost" size="icon" onClick={() => {
+                                                        const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                        const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
+                                                        const sectionToCopy = services.slice(i, sliceEnd).map((item, idx) => {
+                                                            if (idx === 0) return { ...item, name: item.name.replace(' ---', ' (Copy) ---') };
+                                                            return { ...item };
+                                                        });
+                                                        const newServices = [...services];
+                                                        newServices.splice(sliceEnd, 0, ...sectionToCopy);
+                                                        setServices(newServices);
+                                                    }} className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 shrink-0" title="Duplicate Vehicle Section">
+                                                        <Copy className="h-4 w-4" />
+                                                    </Button>
                                                 )}
                                                 <Button variant="ghost" size="icon" onClick={() => {
                                                     const newServices = [...services];
