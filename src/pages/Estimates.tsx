@@ -617,7 +617,7 @@ const Estimates = () => {
         const isEstimateMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
 
         doc.setFontSize(10);
-        estimate.services.forEach((s) => {
+        estimate.services.forEach((s, i) => {
             const serviceName = s.name || 'Service';
             const isHeader = serviceName.startsWith('---') && s.price === 0;
             
@@ -625,6 +625,13 @@ const Estimates = () => {
                 doc.setFont("helvetica", "bold");
                 const lines = doc.splitTextToSize(serviceName, 140);
                 doc.text(lines, 20, y + 2);
+                
+                // Calculate and print subtotal
+                const nextHeaderIndex = estimate.services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
+                const sectionTotal = estimate.services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
+                doc.text(`Subtotal: $${sectionTotal.toFixed(2)}`, 180, y + 2, { align: "right" });
+
                 doc.setFont("helvetica", "normal");
                 y += (lines.length * 7) + 2;
             } else {
@@ -1087,7 +1094,7 @@ const Estimates = () => {
                                               <Select 
                                                   value={discountMethod} 
                                                   onValueChange={(val) => {
-                                                      setDiscountMethod(val as 'coupon' | 'manual');
+                                                      setDiscountMethod(val as 'coupon' | 'manual' | 'none');
                                                       if (val === 'coupon') {
                                                           const first = coupons.find(c => c.active)?.code || '';
                                                           setDiscountCode(first);
@@ -1099,8 +1106,12 @@ const Estimates = () => {
                                                               setDiscountType('amount');
                                                               setDiscount(0);
                                                           }
-                                                      } else {
+                                                      } else if (val === 'manual') {
                                                           setDiscountCode('CUSTOM');
+                                                          setDiscountType('amount');
+                                                          setDiscount(0);
+                                                      } else {
+                                                          setDiscountCode('');
                                                           setDiscountType('amount');
                                                           setDiscount(0);
                                                       }
@@ -1112,6 +1123,7 @@ const Estimates = () => {
                                                   <SelectContent>
                                                       <SelectItem value="coupon">Coupon Code</SelectItem>
                                                       <SelectItem value="manual">Manual Amount</SelectItem>
+                                                      <SelectItem value="none">No Discount</SelectItem>
                                                   </SelectContent>
                                               </Select>
 
@@ -1251,24 +1263,33 @@ const Estimates = () => {
                                  </div>
                              </div>
                             {/* Services List (MOVED UP FOR BETTER VISIBILITY) */}
-                            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mt-6 mb-4">
-                                <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
-                                    <Sparkles className="h-4 w-4" /> Multiple Vehicle & Options Guide
-                                </h4>
-                                <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
-                                    <li>Select <strong>Custom / Write-in Vehicle</strong> (above) and type a title like "Lina's Fleet".</li>
-                                    <li>Use <strong>+ Add Sub-Header</strong> below to type the first vehicle name (e.g. "--- 2024 Honda Civic ---").</li>
-                                    <li>Add the packages you want to offer for that vehicle underneath it.</li>
-                                    <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box so the customer sees options, not a massive total bill!</li>
-                                </ol>
-                            </div>
                             <div>
                                 <Label className="text-zinc-400 mb-2 block">Estimate Line Items & Scenarios</Label>
                                 <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
+                                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mb-4">
+                                        <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
+                                            <Sparkles className="h-4 w-4" /> Multiple Vehicle Guide
+                                        </h4>
+                                        <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
+                                            <li>Under "Quick Package Select" above, choose the vehicle size (e.g. <strong>Truck</strong>).</li>
+                                            <li>Click <strong>+ Add Sub-Header</strong> below to type the vehicle name (e.g. "--- 2024 F-150 ---").</li>
+                                            <li>Use the "Quick Package Select" to add packages for it!</li>
+                                            <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box to show options instead of a massive bill!</li>
+                                        </ol>
+                                    </div>
                                     {services.map((s, i) => {
                                         const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                        
+                                        // Calculate subtotal for this header
+                                        let sectionTotal = 0;
+                                        if (isHeader) {
+                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                            const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
+                                            sectionTotal = services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
+                                        }
+
                                         return (
-                                        <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4" : "text-zinc-300")}>
+                                        <div key={i} className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3", isHeader ? "border-l-2 border-amber-500 pl-3 mt-4 bg-zinc-900/40 p-2 rounded-r" : "text-zinc-300")}>
                                             <Input 
                                                 value={s.name}
                                                 onChange={(e) => {
@@ -1276,21 +1297,29 @@ const Estimates = () => {
                                                     newServices[i].name = e.target.value;
                                                     setServices(newServices);
                                                 }}
-                                                className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500" : "text-zinc-200")}
+                                                className={cn("bg-zinc-900 border-zinc-700 h-8 flex-1 text-sm", isHeader ? "font-bold text-amber-500 border-none bg-transparent px-0 focus-visible:ring-0" : "text-zinc-200")}
                                                 placeholder="Service, Vehicle Name, or Sub-Header"
                                             />
                                             <div className="flex items-center gap-2 w-full sm:w-auto">
-                                                {!isHeader && <span className="text-zinc-500">$</span>}
-                                                <Input 
-                                                    type="number"
-                                                    value={s.price === 0 && (!s.name || s.name.includes("Custom") || isHeader) ? 0 : (s.price || '')}
-                                                    onChange={(e) => {
-                                                        const newServices = [...services];
-                                                        newServices[i].price = parseFloat(e.target.value) || 0;
-                                                        setServices(newServices);
-                                                    }}
-                                                    className={cn("bg-zinc-900 border-zinc-700 h-8 w-full sm:w-24 text-right font-mono", isHeader ? "opacity-50" : "")}
-                                                />
+                                                {!isHeader ? (
+                                                    <>
+                                                        <span className="text-zinc-500">$</span>
+                                                        <Input 
+                                                            type="number"
+                                                            value={s.price === 0 && (!s.name || s.name.includes("Custom")) ? 0 : (s.price || '')}
+                                                            onChange={(e) => {
+                                                                const newServices = [...services];
+                                                                newServices[i].price = parseFloat(e.target.value) || 0;
+                                                                setServices(newServices);
+                                                            }}
+                                                            className="bg-zinc-900 border-zinc-700 h-8 w-full sm:w-24 text-right font-mono"
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <div className="text-amber-500 font-bold whitespace-nowrap text-sm pr-4">
+                                                        Subtotal: ${sectionTotal.toFixed(2)}
+                                                    </div>
+                                                )}
                                                 <Button variant="ghost" size="icon" onClick={() => {
                                                     setServices(services.filter((_, idx) => idx !== i));
                                                 }} className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10 shrink-0">
