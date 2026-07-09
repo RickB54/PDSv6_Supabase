@@ -1270,14 +1270,15 @@ const Estimates = () => {
                                 <div className="bg-zinc-950 p-4 rounded border border-zinc-800 space-y-3">
                                     <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl mb-4">
                                         <h4 className="text-amber-500 font-bold text-sm flex items-center gap-2 mb-2">
-                                            <Sparkles className="h-4 w-4" /> Multiple Vehicle Guide
+                                            <Sparkles className="h-4 w-4" /> Pro Tips & Advanced Features
                                         </h4>
-                                        <ol className="text-xs text-amber-200/80 space-y-2 list-decimal list-inside">
-                                            <li>Under "Quick Package Select" above, choose the vehicle size (e.g. <strong>Truck</strong>).</li>
-                                            <li>Click <strong>+ Add Sub-Header</strong> below to type the vehicle name (e.g. "--- 2024 F-150 ---").</li>
-                                            <li>Use the "Quick Package Select" to add packages for it!</li>
-                                            <li>Check the <strong>Hide Grand Total (Menu Mode)</strong> box to show options instead of a massive bill!</li>
-                                        </ol>
+                                        <ul className="text-xs text-amber-200/80 space-y-2 list-disc list-inside">
+                                            <li><strong>Generic Headers:</strong> Click <strong>+ Add Section Header</strong> to group by Vehicle (e.g., "--- F150 ---") OR by Package (e.g., "--- Exterior Detail ---"). Subtotals calculate automatically!</li>
+                                            <li><strong>Section Controls:</strong> Use the <strong>Up/Down arrows</strong> to swap sections, or the <strong>Blue Copy icon</strong> to instantly duplicate a full section.</li>
+                                            <li><strong>Per-Vehicle Discounts:</strong> Click the <strong>Orange + icon</strong> next to any row to insert an item below it. Name it "Discount" and use a negative price (e.g. <strong>-50</strong>).</li>
+                                            <li><strong>Hover Verification:</strong> Hover your mouse over any price box to secretly verify what vehicle class (Truck, Compact, etc.) it corresponds to.</li>
+                                            <li><strong>Menu Mode:</strong> Check the <strong>Hide Grand Total</strong> box below to hide the final bill and subtotals when presenting options.</li>
+                                        </ul>
                                     </div>
                                     {services.map((s, i) => {
                                         const isHeader = (s.name || '').startsWith('---') && s.price === 0;
