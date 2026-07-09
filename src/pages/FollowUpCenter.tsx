@@ -63,6 +63,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useFollowUpStatus, useFollowUpSettings } from "@/hooks/useFollowUpStatus";
 import { onSendReminderEmail, onSendProspectEmail, CLIENT_CAMPAIGNS, PROSPECT_CAMPAIGNS, EmailCampaign } from "@/lib/bookingsSync";
 import { toast } from "sonner";
 import supabase from "@/lib/supabase";
@@ -116,9 +117,13 @@ export default function FollowUpCenter() {
     toast.success("Mission marked as complete/dismissed for today.");
   };
   const [prospects, setProspects] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [loadingProspects, setLoadingProspects] = useState(false);
   const [dbLogs, setDbLogs] = useState<FollowUpLog[]>([]);
   const [loadingDbLogs, setLoadingDbLogs] = useState(false);
+
+  const followUpStatus = useFollowUpStatus(allCustomers, allBookings);
+  const { settings: followUpSettings, saveSettings: saveFollowUpSettings } = useFollowUpSettings();
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -143,6 +148,7 @@ export default function FollowUpCenter() {
     setLoadingProspects(true);
     try {
       const all = await getSupabaseCustomers();
+      setAllCustomers(all);
       const filtered = all.filter(c => c.type === 'prospect');
       setProspects(filtered);
     } catch (e) {
@@ -526,6 +532,11 @@ export default function FollowUpCenter() {
                Client Retention
                <Badge className="bg-black/40 text-blue-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.dueNow}</Badge>
             </TabsTrigger>
+            <TabsTrigger value="follow-ups" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
+               <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
+               CRM Follow-ups
+               <Badge className="bg-black/40 text-indigo-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{followUpStatus.overdue.length + followUpStatus.dueThisWeek.length}</Badge>
+            </TabsTrigger>
             <TabsTrigger value="prospects" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
                <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
                Potential Leads
@@ -557,6 +568,157 @@ export default function FollowUpCenter() {
             </button>
           )}
         </div>
+
+        <TabsContent value="follow-ups" className="mt-0 outline-none">
+          <Card className="bg-zinc-900/40 border-zinc-800 backdrop-blur-3xl shadow-2xl mb-10 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 blur-3xl rounded-full" />
+            <CardContent className="pt-6 pb-6 px-6 sm:px-8 relative z-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-indigo-400 mb-2 flex items-center gap-2">
+                    <Zap className="h-4 w-4" /> Global Timeline Settings
+                  </h3>
+                  <p className="text-xs text-zinc-500 font-bold max-w-xl leading-relaxed">
+                    Automatically trigger follow-ups when a customer has no recorded activity across all CRM channels (bookings, emails, letters, notes) for a specified duration.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 bg-zinc-950/50 p-4 rounded-2xl border border-zinc-800/50 w-full sm:w-auto">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start border-b sm:border-b-0 border-zinc-800 pb-4 sm:pb-0 sm:pr-6 sm:border-r">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">System Status</span>
+                    <Switch 
+                      checked={followUpSettings.active} 
+                      onCheckedChange={(v) => saveFollowUpSettings({ ...followUpSettings, active: v })}
+                      className="data-[state=checked]:bg-indigo-600"
+                    />
+                  </div>
+                  
+                  <div className={cn("flex items-center gap-3 transition-opacity w-full sm:w-auto", !followUpSettings.active && "opacity-50 pointer-events-none")}>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 shrink-0">Trigger After</span>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      value={followUpSettings.threshold}
+                      onChange={(e) => saveFollowUpSettings({ ...followUpSettings, threshold: parseInt(e.target.value) || 30 })}
+                      className="w-16 h-8 text-center font-mono font-bold bg-zinc-900 border-zinc-700 focus:border-indigo-500 text-sm"
+                    />
+                    <Select 
+                      value={followUpSettings.unit}
+                      onValueChange={(v: 'days' | 'months') => saveFollowUpSettings({ ...followUpSettings, unit: v })}
+                    >
+                      <SelectTrigger className="w-[100px] h-8 bg-zinc-900 border-zinc-700 text-[10px] font-black uppercase tracking-widest">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectItem value="days" className="text-[10px] font-black uppercase tracking-widest">Days</SelectItem>
+                        <SelectItem value="months" className="text-[10px] font-black uppercase tracking-widest">Months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {!followUpSettings.active ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/20 rounded-3xl border border-zinc-800 border-dashed">
+              <Zap className="h-12 w-12 text-zinc-700 mb-4" />
+              <h3 className="text-zinc-400 font-black uppercase tracking-widest">Timeline Follow-ups are paused</h3>
+              <p className="text-zinc-600 text-sm mt-2 font-bold max-w-sm text-center">Enable the system above to track inactivity across all communication channels.</p>
+            </div>
+          ) : followUpStatus.loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {[
+                { title: 'Overdue', data: followUpStatus.overdue, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+                { title: 'Due This Week', data: followUpStatus.dueThisWeek, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+                { title: 'Due This Month', data: followUpStatus.dueThisMonth, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
+              ].map(group => group.data.length > 0 && (
+                <div key={group.title} className="space-y-4">
+                  <div className="flex items-center gap-3 mb-6">
+                    <h4 className={cn("text-xs font-black uppercase tracking-widest", group.color)}>{group.title}</h4>
+                    <div className={cn("h-px flex-1", group.bg)} />
+                    <Badge className={cn("font-mono font-bold px-2 py-0.5 border-none", group.bg, group.color)}>{group.data.length}</Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {group.data.map(item => (
+                      <div key={item.customer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg">
+                        <div className="space-y-3 flex-1">
+                          <div>
+                            <h5 className="text-lg font-black uppercase tracking-tight text-zinc-200">{item.customer.name}</h5>
+                            <p className="text-xs text-zinc-500 font-bold truncate flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-indigo-400" /> {item.customer.email || 'No email provided'}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50 inline-flex">
+                            <div className="flex flex-col">
+                              <span className="text-[9px] uppercase font-black text-zinc-500 tracking-widest">Last Activity</span>
+                              <span className="text-xs font-bold text-zinc-300">{format(item.lastActivityDate, 'MMM d, yyyy')}</span>
+                            </div>
+                            <div className="w-px h-6 bg-zinc-800" />
+                            <div className="flex flex-col">
+                              <span className="text-[9px] uppercase font-black text-zinc-500 tracking-widest">Inactivity</span>
+                              <span className={cn("text-xs font-bold", group.color)}>{item.daysSince} Days</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex sm:flex-col gap-2 shrink-0">
+                          <Button 
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest h-10 px-4 rounded-xl flex-1 sm:flex-none shadow-[0_0_15px_rgba(79,70,229,0.3)]"
+                            onClick={() => {
+                              setSelectedCustomer({ ...item.customer, customer: item.customer.name, customerEmail: item.customer.email });
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            Outreach Hub
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="bg-zinc-900/50 border-zinc-700 hover:bg-zinc-800 hover:text-white text-zinc-400 font-black text-[10px] uppercase tracking-widest h-10 px-4 rounded-xl flex-1 sm:flex-none"
+                            onClick={async () => {
+                              try {
+                                const { error } = await supabase.from('engagements').insert({
+                                  customer_name: item.customer.name,
+                                  customer_email: item.customer.email,
+                                  customer_id: item.customer.id,
+                                  type: 'activity',
+                                  note: "Manual CRM Follow-up completed."
+                                });
+                                if (error) throw error;
+                                toast.success(`Follow-up completed for ${item.customer.name}`);
+                                if (followUpStatus.refresh) followUpStatus.refresh();
+                                loadDbLogs();
+                              } catch (e) {
+                                toast.error("Failed to mark follow-up complete");
+                              }
+                            }}
+                          >
+                            <CheckCircle2 className="h-3 w-3 sm:mr-2" />
+                            <span className="hidden sm:inline">Mark Complete</span>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {followUpStatus.overdue.length === 0 && followUpStatus.dueThisWeek.length === 0 && followUpStatus.dueThisMonth.length === 0 && (
+                <div className="text-center py-20 bg-zinc-900/20 rounded-3xl border border-zinc-800 border-dashed">
+                  <span className="text-emerald-500 font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                    <CheckCircle2 className="h-5 w-5" /> All Caught Up!
+                  </span>
+                  <p className="text-zinc-500 text-xs mt-2 font-bold">No customers are currently exceeding the inactivity threshold.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="opportunities" className="mt-0 outline-none">
           {/* Stats Cards */}

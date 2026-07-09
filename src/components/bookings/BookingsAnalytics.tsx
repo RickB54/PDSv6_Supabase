@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
+import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
@@ -60,6 +61,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [showProfitability, setShowProfitability] = useState(false);
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
+
+    const followUpStatus = useFollowUpStatus(customers, bookings);
 
     useEffect(() => {
         if (showProfitability) {
@@ -1960,7 +1963,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
                 
                 {/* Vehicle Class Performance Strip */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
                     <div 
                         className="bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer"
                         onClick={() => { setSelectedChartJobs(vehicleClassStats.compact.jobs); setChartJobsModalTitle("Compact / Sedan Jobs"); setIsChartJobsModalOpen(true); }}
@@ -2013,8 +2016,44 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </div>
                     </div>
+                    {/* CRM Follow-up Chip */}
+                    <div 
+                        className={cn("bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50 backdrop-blur-md relative overflow-hidden group cursor-pointer", !followUpStatus.active && "opacity-60")}
+                        onClick={() => navigate('/follow-up-center')}
+                        title="Navigate to CRM Follow-up Center"
+                    >
+                        <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col gap-1 h-full">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">CRM Follow-ups</span>
+                            {!followUpStatus.active ? (
+                                <div className="flex-1 flex items-center justify-center mt-2">
+                                    <span className="text-xs font-bold text-zinc-500 bg-zinc-800/50 px-3 py-1 rounded-full uppercase tracking-wider">Follow-ups Paused</span>
+                                </div>
+                            ) : followUpStatus.loading ? (
+                                <div className="flex-1 flex items-center justify-center mt-2">
+                                    <span className="text-xs text-zinc-500 animate-pulse">Loading...</span>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-1.5 mt-2 flex-1 justify-end">
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-red-400 font-bold">OVERDUE</span>
+                                        <span className="text-zinc-300 font-mono font-bold bg-red-500/10 px-1.5 rounded">{followUpStatus.overdue.length}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-amber-400 font-bold">THIS WEEK</span>
+                                        <span className="text-zinc-300 font-mono font-bold bg-amber-500/10 px-1.5 rounded">{followUpStatus.dueThisWeek.length}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-blue-400 font-bold">THIS MONTH</span>
+                                        <span className="text-zinc-300 font-mono font-bold bg-blue-500/10 px-1.5 rounded">{followUpStatus.dueThisMonth.length}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
+                {/* Goals & Performance Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Bookings */}
                     <div className="group cursor-pointer" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>
