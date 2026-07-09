@@ -659,7 +659,19 @@ export default function FollowUpCenter() {
                 { title: 'Overdue', data: followUpStatus.overdue.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
                 { title: 'Due This Week', data: followUpStatus.dueThisWeek.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
                 { title: 'Due This Month', data: followUpStatus.dueThisMonth.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
-              ].map(group => group.data.length > 0 && (
+              ].map((group, index, array) => {
+                const isCompletelyEmpty = array.every(g => g.data.length === 0);
+                if (index === 0 && isCompletelyEmpty) {
+                  return (
+                    <div key="empty" className="text-center py-20 bg-zinc-900/20 rounded-3xl border border-zinc-800 border-dashed">
+                      <span className="text-emerald-500 font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2">
+                        <CheckCircle2 className="h-5 w-5" /> All Caught Up!
+                      </span>
+                      <p className="text-zinc-500 text-xs mt-2 font-bold">No {followUpFilter === 'all' ? 'contacts' : followUpFilter === 'customer' ? 'customers' : 'prospects'} are currently exceeding the inactivity threshold.</p>
+                    </div>
+                  );
+                }
+                return group.data.length > 0 && (
                 <div key={group.title} className="space-y-4">
                   <div className="flex items-center gap-3 mb-6">
                     <h4 className={cn("text-xs font-black uppercase tracking-widest", group.color)}>{group.title}</h4>
@@ -735,15 +747,8 @@ export default function FollowUpCenter() {
                     ))}
                   </div>
                 </div>
-              ))}
-              {followUpStatus.overdue.length === 0 && followUpStatus.dueThisWeek.length === 0 && followUpStatus.dueThisMonth.length === 0 && (
-                <div className="text-center py-20 bg-zinc-900/20 rounded-3xl border border-zinc-800 border-dashed">
-                  <span className="text-emerald-500 font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2">
-                    <CheckCircle2 className="h-5 w-5" /> All Caught Up!
-                  </span>
-                  <p className="text-zinc-500 text-xs mt-2 font-bold">No customers are currently exceeding the inactivity threshold.</p>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </TabsContent>
