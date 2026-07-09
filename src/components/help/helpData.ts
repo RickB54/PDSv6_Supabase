@@ -816,6 +816,7 @@ export const adminMenuTopics: HelpTopic[] = [
       '⏱️ **4. Global Timeline CRM Follow-ups**',
       'The Retention Hub features a dedicated **CRM Follow-ups** system that actively monitors your unified communications timeline.',
       '  **Global Settings**: The threshold (e.g., 30 days) and active status toggle are configured directly within the Follow-up Center as a single source of truth.',
+      '  **Segmented Filtering**: Easily isolate and view only active Customers or Potential Prospects directly from the workspace using the filter toggles.',
       '  **Analytics Integration**: You can view a quick, live breakdown (Overdue, Due This Week, Due This Month) directly on your Analytics page via the CRM Follow-ups stat chip.',
       '  **Mark Complete**: Clicking "Mark Complete" logs a manual engagement directly into the timeline, instantly resetting the customer\'s inactivity clock.',
       '📧 **3. Resend Custom Domains & Sandbox Rules**',

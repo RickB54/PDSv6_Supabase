@@ -124,6 +124,7 @@ export default function FollowUpCenter() {
 
   const followUpStatus = useFollowUpStatus(allCustomers, allBookings);
   const { settings: followUpSettings, saveSettings: saveFollowUpSettings } = useFollowUpSettings();
+  const [followUpFilter, setFollowUpFilter] = useState<'all' | 'customer' | 'prospect'>('all');
 
   // Dialog State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -620,6 +621,25 @@ export default function FollowUpCenter() {
             </CardContent>
           </Card>
 
+          {followUpSettings.active && !followUpStatus.loading && (
+            <div className="flex items-center gap-2 mb-8 bg-zinc-900/40 p-1.5 rounded-xl border border-zinc-800 w-fit backdrop-blur-md relative z-20">
+              {(['all', 'customer', 'prospect'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFollowUpFilter(f)}
+                  className={cn(
+                    "px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    followUpFilter === f 
+                      ? "bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]" 
+                      : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                  )}
+                >
+                  {f === 'all' ? 'All Contacts' : f === 'customer' ? 'Customers Only' : 'Prospects Only'}
+                </button>
+              ))}
+            </div>
+          )}
+
           {!followUpSettings.active ? (
             <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/20 rounded-3xl border border-zinc-800 border-dashed">
               <Zap className="h-12 w-12 text-zinc-700 mb-4" />
@@ -633,9 +653,9 @@ export default function FollowUpCenter() {
           ) : (
             <div className="space-y-12">
               {[
-                { title: 'Overdue', data: followUpStatus.overdue, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
-                { title: 'Due This Week', data: followUpStatus.dueThisWeek, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
-                { title: 'Due This Month', data: followUpStatus.dueThisMonth, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
+                { title: 'Overdue', data: followUpStatus.overdue.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+                { title: 'Due This Week', data: followUpStatus.dueThisWeek.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+                { title: 'Due This Month', data: followUpStatus.dueThisMonth.filter(c => followUpFilter === 'all' || (followUpFilter === 'prospect' ? c.customer.type === 'prospect' : c.customer.type !== 'prospect')), color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' }
               ].map(group => group.data.length > 0 && (
                 <div key={group.title} className="space-y-4">
                   <div className="flex items-center gap-3 mb-6">
@@ -649,7 +669,12 @@ export default function FollowUpCenter() {
                       <div key={item.customer.id} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-5 flex flex-col sm:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg">
                         <div className="space-y-3 flex-1">
                           <div>
-                            <h5 className="text-lg font-black uppercase tracking-tight text-zinc-200">{item.customer.name}</h5>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <h5 className="text-lg font-black uppercase tracking-tight text-zinc-200">{item.customer.name}</h5>
+                              <Badge className={cn("text-[9px] uppercase font-black px-2 py-0.5 rounded-full border-none", item.customer.type === 'prospect' ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400")}>
+                                {item.customer.type === 'prospect' ? 'Prospect' : 'Customer'}
+                              </Badge>
+                            </div>
                             <p className="text-xs text-zinc-500 font-bold truncate flex items-center gap-2">
                               <Mail className="h-3 w-3 text-indigo-400" /> {item.customer.email || 'No email provided'}
                             </p>
