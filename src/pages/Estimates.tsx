@@ -126,6 +126,7 @@ const Estimates = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedVehicleId, setSelectedVehicleId] = useState("");
+    const [customVehicleName, setCustomVehicleName] = useState("");
     const [discount, setDiscount] = useState(0);
     const [discountMethod, setDiscountMethod] = useState<"coupon" | "manual">("manual");
     const [discountCode, setDiscountCode] = useState("");
@@ -350,6 +351,7 @@ const Estimates = () => {
                 setSelectedCustomer("");
                 setServices([]);
                 setIsMenuMode(false);
+                setCustomVehicleName("");
                 return;
             }
 
@@ -360,6 +362,8 @@ const Estimates = () => {
 
             if (selectedVehicleId === "multiple") {
                 vehicleStr = "Multiple Vehicles (Listed Below)";
+            } else if (selectedVehicleId === "custom") {
+                vehicleStr = customVehicleName || "Custom Vehicle";
             } else if (selectedVehicleId === "primary") {
                 vehicleStr = `${vehicleStr} (Primary)`.trim();
             }
@@ -439,6 +443,7 @@ const Estimates = () => {
             setEditIsSent(false);
             setEstimateDate(getLocalDateString());
             setIsMenuMode(false);
+            setCustomVehicleName("");
 
             // Background sync to reconcile with server (no await — UI already updated)
             loadData();
@@ -458,7 +463,16 @@ const Estimates = () => {
         setSelectedVehicleType((est.vehicleType as any) || "midsize");
         setSelectedAddons(est.addonIds || []);
         setSelectedStatus(est.status || "open");
-        setSelectedVehicleId((est as any).vehicleId || "");
+        let foundId = (est as any).vehicleId || "";
+        if (!foundId && est.vehicle) {
+            if (est.vehicle === "Multiple Vehicles (Listed Below)") {
+                foundId = "multiple";
+            } else {
+                foundId = "custom";
+                setCustomVehicleName(est.vehicle);
+            }
+        }
+        setSelectedVehicleId(foundId);
         setDiscount(est.discount || 0);
         setDiscountType(est.discountType || "percent");
         setIsMenuMode(est.notes?.includes('[MENU_MODE]') || false);
@@ -1006,8 +1020,21 @@ const Estimates = () => {
                                                  )))(customers.find(c => c.id === selectedCustomer))
                                              )}
                                              <SelectItem value="multiple" className="font-bold text-amber-500">Multiple Vehicles (Listed Below)</SelectItem>
+                                             <SelectItem value="custom" className="font-bold text-amber-500">Custom / Write-in Vehicle</SelectItem>
                                          </SelectContent>
                                      </Select>
+                                     
+                                     {selectedVehicleId === "custom" && (
+                                         <div className="mt-3 animate-in fade-in slide-in-from-top-1">
+                                             <Label className="text-zinc-400">Custom Vehicle Title</Label>
+                                             <Input 
+                                                 placeholder="e.g. Lina's Fleet (6 Vehicles) or 2024 Honda Civic" 
+                                                 value={customVehicleName} 
+                                                 onChange={(e) => setCustomVehicleName(e.target.value)}
+                                                 className="bg-zinc-950 border-zinc-800 mt-1"
+                                             />
+                                         </div>
+                                     )}
                                  </div>
                              )}
 
