@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { builtInPackages, getCustomPackages, builtInAddOns, getCustomAddOns, vehicleOptions } from '@/lib/services';
-import { getSavedPrices, getPackageMeta, getAddOnMeta } from '@/lib/servicesMeta';
+import { servicePackages as builtInPackages, addOns as builtInAddOns } from '@/lib/services';
+import { getSavedPrices, getPackageMeta, getAddOnMeta, getCustomPackages, getCustomAddOns } from '@/lib/servicesMeta';
+
+const vehicleOptions = ['compact', 'midsize', 'truck', 'luxury'];
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
