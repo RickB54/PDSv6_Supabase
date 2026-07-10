@@ -7,6 +7,10 @@ import { getPackageMeta, getAddOnMeta, getCustomPackages, getCustomAddOns } from
 const vehicleOptions = ['compact', 'midsize', 'truck', 'luxury'];
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
 
 const getMarketAverage = (name: string, size: string, isPackage: boolean): number => {
   const n = name.toLowerCase();
@@ -51,17 +55,24 @@ const getMarketAverage = (name: string, size: string, isPackage: boolean): numbe
 export default function MarketPricingAnalysis() {
   const [category, setCategory] = useState<'packages' | 'addons'>('packages');
   const [vehicleClass, setVehicleClass] = useState<string>('compact');
+  const [showArchived, setShowArchived] = useState(false);
   const [savedPrices, setSavedPrices] = useState<Record<string, string>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadData = async () => {
+    setIsRefreshing(true);
+    const data = await localforage.getItem<Record<string, string>>('savedPrices');
+    if (data) setSavedPrices(data);
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
 
   useEffect(() => {
-    localforage.getItem<Record<string, string>>('savedPrices').then((data) => {
-      if (data) setSavedPrices(data);
-    });
+    loadData();
   }, []);
 
   const data = useMemo(() => {
-    const pkgs = [...builtInPackages, ...getCustomPackages()].filter(p => getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted);
-    const addons = [...builtInAddOns, ...getCustomAddOns()].filter(a => getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted);
+    const pkgs = [...builtInPackages, ...getCustomPackages()].filter(p => showArchived ? !getPackageMeta(p.id)?.deleted : (getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted));
+    const addons = [...builtInAddOns, ...getCustomAddOns()].filter(a => showArchived ? !getAddOnMeta(a.id)?.deleted : (getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted));
     
     const items = category === 'packages' ? pkgs : addons;
     
@@ -87,7 +98,7 @@ export default function MarketPricingAnalysis() {
         isHigher: myPrice > mktPrice
       };
     });
-  }, [category, vehicleClass, savedPrices]);
+  }, [category, vehicleClass, savedPrices, showArchived]);
 
   const avgDiff = data.reduce((acc, curr) => acc + curr.difference, 0) / (data.length || 1);
 
@@ -99,6 +110,10 @@ export default function MarketPricingAnalysis() {
           <p className="text-sm text-zinc-400">Comparing your active rates vs Methuen, MA Area averages.</p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center space-x-2 mr-4">
+            <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+            <Label htmlFor="show-archived" className="text-zinc-400 cursor-pointer">Show Archived</Label>
+          </div>
           <Select value={category} onValueChange={(val: any) => setCategory(val)}>
             <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-700">
               <SelectValue placeholder="Category" />
@@ -118,6 +133,9 @@ export default function MarketPricingAnalysis() {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" size="icon" onClick={loadData} disabled={isRefreshing} className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800 ml-2">
+            <RotateCcw className={`h-4 w-4 text-zinc-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
       </div>
 
@@ -137,7 +155,7 @@ export default function MarketPricingAnalysis() {
         <Card className="p-4 bg-zinc-900/50 border-zinc-800">
           <div className="text-sm text-zinc-400 mb-1">Average Variance</div>
           <div className={`text-2xl font-black ${avgDiff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-            {avgDiff > 0 ? '+' : ''}{Math.round(avgDiff)}$
+            {avgDiff > 0 ? '+' : (avgDiff < 0 ? '-' : '')}${Math.abs(Math.round(avgDiff))}
           </div>
           <div className="text-xs text-zinc-500 mt-1">Difference per item</div>
         </Card>
