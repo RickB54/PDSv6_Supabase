@@ -1643,6 +1643,145 @@ export default function PackagePricing() {
   };
 
 
+  const downloadMarketAnalysisPDF = () => {
+    try {
+      const doc = new jsPDF({ orientation: 'l' }); // landscape
+      doc.setTextColor(200, 0, 0);
+      doc.setFontSize(20);
+      doc.text("Methuen, MA Market Pricing Analysis", 14, 20);
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(9);
+      doc.text(`Analysis Generated: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Legend: P = Prime Auto Detail | M = Methuen Market Average (Estimated)`, 14, 33);
+
+      const snapshot = liveSnapshot;
+      const pkgMeta = snapshot?.packageMeta || {};
+      const addonMeta = snapshot?.addOnMeta || {};
+      const saved = snapshot?.savedPrices || {};
+      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
+      if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
+      if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
+      const visiblePkgs = rawPkgs;
+      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
+
+      const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
+        const key = `${type}:${id}:${size}`;
+        const val = saved[key];
+        if (val !== undefined && val !== null && val !== "") return { value: parseFloat(val), isOverride: true };
+        const item = type === 'package'
+          ? [...builtInPackages, ...(snapshot?.customPackages || [])].find(p => p.id === id)
+          : [...builtInAddOns, ...(snapshot?.customAddOns || [])].find(a => a.id === id);
+        return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
+      };
+
+      const getMarketAverage = (name: string, size: string, isPackage: boolean): string => {
+        const n = name.toLowerCase();
+        let base = 50;
+        if (isPackage) {
+          if (n.includes('essential')) base = 60;
+          else if (n.includes('premium') || n.includes('exterior')) base = 120;
+          else if (n.includes('elite') || n.includes('full detail')) base = 250;
+          else base = 100;
+        } else {
+          if (n.includes('wheel')) base = 35;
+          else if (n.includes('clay')) base = 90;
+          else if (n.includes('headlight')) base = 125;
+          else if (n.includes('leather')) base = 60;
+          else if (n.includes('trim')) base = 80;
+          else if (n.includes('engine')) base = 100;
+          else if (n.includes('pet')) base = 80;
+          else if (n.includes('stain')) base = 75;
+          else if (n.includes('scratch')) base = 250;
+          else if (n.includes('deep interior')) base = 180;
+          else if (n.includes('sealant')) base = 100;
+          else if (n.includes('touch-up')) base = 85;
+          else if (n.includes('ceramic coating') && !n.includes('1-year') && !n.includes('2-year')) base = 600;
+          else if (n.includes('1-year')) base = 150;
+          else if (n.includes('2-year')) base = 400;
+          else if (n.includes('correction')) base = 400;
+          else if (n.includes('odor')) base = 100;
+          else base = 60;
+        }
+        let multiplier = 1;
+        if (size === 'midsize') multiplier = 1.15;
+        if (size === 'truck') multiplier = 1.35;
+        if (size === 'luxury') multiplier = 1.6;
+        return (base * multiplier).toFixed(0);
+      };
+
+      let y = 45;
+      const xPos = [90, 135, 180, 225];
+      
+      const checkPageBreak = (needed = 10) => {
+        if (y + needed > 195) {
+          doc.addPage();
+          y = 20;
+        }
+      };
+
+      const drawHeader = (title: string) => {
+        checkPageBreak(20);
+        doc.setFontSize(12);
+        doc.setTextColor(200, 0, 0);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, 14, y);
+        y += 8;
+        doc.setFillColor(240, 240, 240);
+        doc.rect(14, y - 6, 260, 8, "F");
+        doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Service", 18, y);
+        doc.text("Compact (P | M)", xPos[0], y, { align: 'right' });
+        doc.text("Midsize (P | M)", xPos[1], y, { align: 'right' });
+        doc.text("Truck (P | M)", xPos[2], y, { align: 'right' });
+        doc.text("Luxury (P | M)", xPos[3], y, { align: 'right' });
+        doc.setFont("helvetica", "normal");
+        y += 10;
+      };
+
+      const renderRows = (items: any[], isPkg: boolean) => {
+        items.forEach(item => {
+          checkPageBreak();
+          doc.setFontSize(9);
+          let printName = item.name;
+          if (printName.length > 35) printName = printName.substring(0, 32) + "...";
+          doc.text(printName, 18, y);
+          
+          vehicleOptions.forEach((v, i) => {
+            const { value } = getPrice(isPkg ? 'package' : 'addon', item.id, v);
+            const marketVal = getMarketAverage(item.name, v, isPkg);
+            const primeText = `$${value.toFixed(0)}`;
+            const mktText = `$${marketVal}`;
+            
+            doc.setTextColor(0, 0, 0);
+            doc.text(`${primeText} |`, xPos[i] - 10, y, { align: 'right' });
+            
+            const diff = value - parseFloat(marketVal);
+            if (diff > 0) doc.setTextColor(200, 0, 0);
+            else if (diff < 0) doc.setTextColor(0, 150, 0);
+            else doc.setTextColor(100, 100, 100);
+            doc.text(mktText, xPos[i], y, { align: 'right' });
+          });
+          doc.setTextColor(0, 0, 0);
+          y += 7;
+        });
+      };
+
+      drawHeader("Packages");
+      renderRows(visiblePkgs, true);
+      y += 5;
+      drawHeader("Add-Ons");
+      renderRows(visibleAddons, false);
+
+      const fileName = `methuen-market-analysis-${Date.now()}.pdf`;
+      doc.save(fileName);
+      toast.success("Market Analysis PDF downloaded successfully!");
+    } catch (err: any) {
+      toast.error("Failed to generate Market Analysis PDF");
+    }
+  };
+
   const handleModalPricingRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -3997,6 +4136,7 @@ export default function PackagePricing() {
               <div className="flex items-center gap-3">
               <Button variant="outline" onClick={printPrices}>Print</Button>
               <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
+              <Button variant="outline" onClick={downloadMarketAnalysisPDF}>Market Analysis PDF</Button>
               <Button variant="outline" onClick={downloadPricesJSON}>Backup as JSON</Button>
               <label>
                 <Button variant="outline" asChild>
