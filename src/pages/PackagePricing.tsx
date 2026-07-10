@@ -646,7 +646,7 @@ export default function PackagePricing() {
           customPackages: getCustomPackages(),
           customAddOns: getCustomAddOns(),
           label: `Historical Pricing: ${record.type.toUpperCase()}`,
-          timestamp: record.timestamp
+          timestamp: new Date(record.date).getTime()
         });
       }
     }
@@ -3933,7 +3933,7 @@ export default function PackagePricing() {
                     <SelectItem value="current">Current Live Pricing</SelectItem>
                     {priceHistory.map((rec, i) => (
                       <SelectItem key={i} value={i.toString()}>
-                        {new Date(rec.timestamp).toLocaleString()} - {rec.type.toUpperCase()}
+                        {new Date(rec.date).toLocaleString()} - {rec.type.toUpperCase()}
                       </SelectItem>
                     ))}
                   </SelectContent>
