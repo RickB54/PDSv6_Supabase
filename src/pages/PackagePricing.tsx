@@ -3949,6 +3949,7 @@ export default function PackagePricing() {
                 </Button>
                 <input type="file" accept=".json" className="hidden" onChange={handleModalPricingRestore} />
               </label>
+              </div>
             </div>
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
               <div>
