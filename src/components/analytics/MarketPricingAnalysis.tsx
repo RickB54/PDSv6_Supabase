@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import localforage from 'localforage';
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from '@/lib/services';
-import { getSavedPrices, getPackageMeta, getAddOnMeta, getCustomPackages, getCustomAddOns } from '@/lib/servicesMeta';
+import { getPackageMeta, getAddOnMeta, getCustomPackages, getCustomAddOns } from '@/lib/servicesMeta';
 
 const vehicleOptions = ['compact', 'midsize', 'truck', 'luxury'];
 import { Card } from '@/components/ui/card';
@@ -45,9 +46,15 @@ const getMarketAverage = (name: string, size: string, isPackage: boolean): numbe
 export default function MarketPricingAnalysis() {
   const [category, setCategory] = useState<'packages' | 'addons'>('packages');
   const [vehicleClass, setVehicleClass] = useState<string>('compact');
+  const [savedPrices, setSavedPrices] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    localforage.getItem<Record<string, string>>('savedPrices').then((data) => {
+      if (data) setSavedPrices(data);
+    });
+  }, []);
 
   const data = useMemo(() => {
-    const saved = getSavedPrices();
     const pkgs = [...builtInPackages, ...getCustomPackages()].filter(p => getPackageMeta(p.id)?.visible !== false && !getPackageMeta(p.id)?.deleted);
     const addons = [...builtInAddOns, ...getCustomAddOns()].filter(a => getAddOnMeta(a.id)?.visible !== false && !getAddOnMeta(a.id)?.deleted);
     
@@ -55,7 +62,7 @@ export default function MarketPricingAnalysis() {
     
     return items.map(item => {
       const key = `${category === 'packages' ? 'package' : 'addon'}:${item.id}:${vehicleClass}`;
-      let myPrice = parseFloat(saved[key]);
+      let myPrice = parseFloat(savedPrices[key]);
       if (isNaN(myPrice)) {
         myPrice = (item as any).pricing?.[vehicleClass] || 0;
       }
@@ -75,7 +82,7 @@ export default function MarketPricingAnalysis() {
         isHigher: myPrice > mktPrice
       };
     });
-  }, [category, vehicleClass]);
+  }, [category, vehicleClass, savedPrices]);
 
   const avgDiff = data.reduce((acc, curr) => acc + curr.difference, 0) / (data.length || 1);
 
