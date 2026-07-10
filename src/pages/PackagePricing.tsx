@@ -1679,9 +1679,14 @@ export default function PackagePricing() {
         const n = name.toLowerCase();
         let base = 50;
         if (isPackage) {
-          if (n.includes('essential')) base = 60;
+          if (n.includes('essential') && n.includes('full')) base = 250;
+          else if (n.includes('essential') && n.includes('interior')) base = 150;
+          else if (n.includes('essential') && n.includes('exterior')) base = 80;
+          else if (n.includes('elite') && n.includes('full')) base = 480;
+          else if (n.includes('elite') && n.includes('interior')) base = 350;
+          else if (n.includes('elite') && n.includes('exterior')) base = 150;
           else if (n.includes('premium') || n.includes('exterior')) base = 120;
-          else if (n.includes('elite') || n.includes('full detail')) base = 250;
+          else if (n.includes('full detail')) base = 250;
           else base = 100;
         } else {
           if (n.includes('wheel')) base = 35;
