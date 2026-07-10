@@ -146,6 +146,7 @@ export default function PackagePricing() {
   const [comparisonVehicle, setComparisonVehicle] = useState('compact');
   const [comparisonSelection, setComparisonSelection] = useState<Record<string, boolean>>({});
   const [liveSnapshot, setLiveSnapshot] = useState<any>(null);
+  const [viewAllPackageFilter, setViewAllPackageFilter] = useState<'both' | 'essential' | 'elite'>('both');
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<string>("current");
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
@@ -609,6 +610,7 @@ export default function PackagePricing() {
     const history = getPriceChangeHistory();
     setPriceHistory(history);
     setSelectedHistoryIndex("current");
+    setViewAllPackageFilter("both");
     // Use committed saved state instead of temporary unsaved test state
     const snapshot = {
       savedPrices: savedPrices,
@@ -747,7 +749,10 @@ export default function PackagePricing() {
     const pkgMeta = snapshot?.packageMeta || {};
     const addonMeta = snapshot?.addOnMeta || {};
     const saved = snapshot?.savedPrices || {};
-    const visiblePkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+    let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+    if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
+    if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
+    const visiblePkgs = rawPkgs;
     const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
 
     const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
@@ -822,7 +827,10 @@ export default function PackagePricing() {
       const pkgMeta = snapshot?.packageMeta || {};
       const addonMeta = snapshot?.addOnMeta || {};
       const saved = snapshot?.savedPrices || {};
-      const visiblePkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+      if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
+      if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
+      const visiblePkgs = rawPkgs;
       const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
@@ -3939,6 +3947,19 @@ export default function PackagePricing() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-zinc-400">Filter Packages:</span>
+                <Select value={viewAllPackageFilter} onValueChange={(val: any) => setViewAllPackageFilter(val)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Packages" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="both">All Packages</SelectItem>
+                    <SelectItem value="essential">Essential Packages</SelectItem>
+                    <SelectItem value="elite">Elite Packages</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-3">
               <Button variant="outline" onClick={printPrices}>Print</Button>
               <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
@@ -3974,7 +3995,12 @@ export default function PackagePricing() {
                         const visible = Array.from(new Map([...builtInPackages, ...(snap.customPackages || [])].map(p => [p.id, p])).values())
 
 
-                          .filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+                          .filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted)
+                          .filter(p => {
+                            if (viewAllPackageFilter === 'essential') return p.name.toLowerCase().includes('essential');
+                            if (viewAllPackageFilter === 'elite') return p.name.toLowerCase().includes('elite');
+                            return true;
+                          });
                         return visible.map(p => {
                           const getP = (sz: string) => {
                             const val = saved[liveGetKey('package', p.id, sz)];
