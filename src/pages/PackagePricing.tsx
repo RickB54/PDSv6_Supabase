@@ -740,7 +740,7 @@ export default function PackagePricing() {
 
     const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
     const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
-    const today = new Date().toLocaleDateString();
+    const today = new Date().toLocaleString();
 
     win.document.write(`
       <html>
@@ -780,7 +780,7 @@ export default function PackagePricing() {
 
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 
       const snapshot = liveSnapshot;
       const pkgMeta = snapshot?.packageMeta || {};
@@ -2741,6 +2741,21 @@ export default function PackagePricing() {
                       <History className="w-3 h-3 text-purple-500" /> Audit Log Records (Price Change History)
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-8 text-[10px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-500/10 gap-1.5"
+                        onClick={() => {
+                          const desc = window.prompt("Enter a description for your custom log entry:");
+                          if (desc && desc.trim()) {
+                            logPriceChange({ type: 'manual', description: desc.trim() });
+                            refreshHistory();
+                            toast.success("Custom log entry added.");
+                          }
+                        }}
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> ADD CUSTOM LOG ENTRY
+                      </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
