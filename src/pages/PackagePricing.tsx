@@ -1206,7 +1206,7 @@ export default function PackagePricing() {
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
-      doc.text("Tracking most recent price adjustments compared to previous states.", 14, 33);
+      doc.text("Tracking price evolution starting from 5/24/2026.", 14, 33);
 
       let yPos = 45;
 
