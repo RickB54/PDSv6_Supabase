@@ -146,6 +146,7 @@ export default function PackagePricing() {
   const [comparisonVehicle, setComparisonVehicle] = useState('compact');
   const [comparisonSelection, setComparisonSelection] = useState<Record<string, boolean>>({});
   const [liveSnapshot, setLiveSnapshot] = useState<any>(null);
+  const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<string>("current");
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(builtInSizes);
@@ -605,6 +606,9 @@ export default function PackagePricing() {
   };
 
   const openViewAllPrices = async () => {
+    const history = getPriceChangeHistory();
+    setPriceHistory(history);
+    setSelectedHistoryIndex("current");
     // Use committed saved state instead of temporary unsaved test state
     const snapshot = {
       savedPrices: savedPrices,
@@ -612,10 +616,41 @@ export default function PackagePricing() {
       addOnMeta: getAllAddOnMeta(),
       customPackages: getCustomPackages(),
       customAddOns: getCustomAddOns(),
+      label: "Current Live Pricing",
+      timestamp: new Date().getTime()
     };
     setLiveSnapshot(snapshot);
     setViewAllOpen(true);
   };
+
+  useEffect(() => {
+    if (!viewAllOpen) return;
+    if (selectedHistoryIndex === "current") {
+      setLiveSnapshot({
+        savedPrices: savedPrices,
+        packageMeta: getAllPackageMeta(),
+        addOnMeta: getAllAddOnMeta(),
+        customPackages: getCustomPackages(),
+        customAddOns: getCustomAddOns(),
+        label: "Current Live Pricing",
+        timestamp: new Date().getTime()
+      });
+    } else {
+      const idx = parseInt(selectedHistoryIndex);
+      if (!isNaN(idx) && priceHistory[idx]) {
+        const record = priceHistory[idx];
+        setLiveSnapshot({
+          savedPrices: record.snapshot || {},
+          packageMeta: getAllPackageMeta(),
+          addOnMeta: getAllAddOnMeta(),
+          customPackages: getCustomPackages(),
+          customAddOns: getCustomAddOns(),
+          label: `Historical Pricing: ${record.type.toUpperCase()}`,
+          timestamp: record.timestamp
+        });
+      }
+    }
+  }, [selectedHistoryIndex, savedPrices, priceHistory, viewAllOpen]);
 
   const generateAddOnsListPDF = async () => {
     try {
@@ -740,7 +775,8 @@ export default function PackagePricing() {
 
     const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
     const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
-    const today = new Date().toLocaleString();
+    const dateStr = new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString();
+    const titleStr = liveSnapshot?.label || 'Current Live Pricing';
 
     win.document.write(`
       <html>
@@ -758,8 +794,8 @@ export default function PackagePricing() {
           </style>
         </head>
         <body>
-          <h1>Current Live Pricing</h1>
-          <p>${today}</p>
+          <h1>${titleStr}</h1>
+          <p>Prices As Of: ${dateStr}</p>
           <h2>Packages</h2>
           <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${pkgRows}</tbody></table>
           <h2>Add-Ons</h2>
@@ -776,11 +812,11 @@ export default function PackagePricing() {
       const doc = new jsPDF({ orientation: 'p' });
       doc.setTextColor(200, 0, 0);
       doc.setFontSize(20);
-      doc.text("Current Live Pricing — Prime Auto Detail", 14, 20);
+      doc.text(liveSnapshot?.label || "Current Live Pricing — Prime Auto Detail", 14, 20);
 
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`Prices As Of: ${new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString()}`, 14, 28);
 
       const snapshot = liveSnapshot;
       const pkgMeta = snapshot?.packageMeta || {};
@@ -3884,9 +3920,26 @@ export default function PackagePricing() {
         <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
           <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Current Live Pricing — Prime Auto Detail</DialogTitle>
+              <DialogTitle>{liveSnapshot?.label || "Current Live Pricing — Prime Auto Detail"}</DialogTitle>
             </DialogHeader>
-            <div className="flex items-center justify-end gap-3 mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-zinc-400">View Snapshot:</span>
+                <Select value={selectedHistoryIndex} onValueChange={setSelectedHistoryIndex}>
+                  <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Current Live Pricing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current">Current Live Pricing</SelectItem>
+                    {priceHistory.map((rec, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        {new Date(rec.timestamp).toLocaleString()} - {rec.type.toUpperCase()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-3">
               <Button variant="outline" onClick={printPrices}>Print</Button>
               <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
               <Button variant="outline" onClick={downloadPricesJSON}>Backup as JSON</Button>
