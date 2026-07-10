@@ -1844,7 +1844,7 @@ export default function PackagePricing() {
   };
 
   // EXACT FUNCTIONS REQUESTED
-  const applyMaster = (target: 'packages' | 'addons' | 'both') => {
+  const applyMaster = (target: 'packages' | 'addons' | 'both' | 'essential' | 'elite') => {
     const pct = parseFloat(masterPct) || 0;
     if (pct === 0) return;
     const factor = 1 + (pct / 100);
@@ -1863,7 +1863,21 @@ export default function PackagePricing() {
     });
 
     allKeys.forEach(key => {
-      if (shouldUpdate(key, target)) {
+      let isTarget = false;
+      if (target === 'both') isTarget = true;
+      else if (target === 'packages') isTarget = key.startsWith('package:');
+      else if (target === 'addons') isTarget = key.startsWith('addon:');
+      else if (target === 'essential' || target === 'elite') {
+        if (key.startsWith('package:')) {
+          const pkgId = key.split(':')[1];
+          const p = allPkgs.find(x => x.id === pkgId);
+          if (p && p.name.toLowerCase().includes(target)) {
+            isTarget = true;
+          }
+        }
+      }
+
+      if (isTarget) {
         // Find current or default value
         let oldVal = parseFloat(savedPrices[key]);
         if (isNaN(oldVal) || oldVal === 0) {
@@ -2708,7 +2722,21 @@ export default function PackagePricing() {
                     className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-6"
                     onClick={() => applyMaster('packages')}
                   >
-                    Packages
+                    All Packages
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-6"
+                    onClick={() => applyMaster('essential')}
+                  >
+                    Essential Only
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium px-6"
+                    onClick={() => applyMaster('elite')}
+                  >
+                    Elite Only
                   </Button>
                   <Button
                     size="lg"
@@ -2722,7 +2750,7 @@ export default function PackagePricing() {
                     className="bg-red-600 hover:bg-red-700 text-white font-bold px-8"
                     onClick={() => applyMaster('both')}
                   >
-                    Both
+                    Everything
                   </Button>
                 </div>
               </AccordionContent>
