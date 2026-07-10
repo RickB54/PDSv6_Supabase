@@ -6,6 +6,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -1797,9 +1803,35 @@ export default function PackagePricing() {
     if (pct === 0) return;
     const factor = 1 + (pct / 100);
     const updated: PriceMap = { ...currentPrices };
-    Object.keys(savedPrices).forEach(key => {
+    
+    // Generate all possible keys to ensure we capture defaults that aren't in savedPrices
+    const allKeys: string[] = [];
+    const allPkgs = [...builtInPackages, ...getCustomPackages()];
+    const allAddons = [...builtInAddOns, ...getCustomAddOns()];
+    
+    allPkgs.forEach(pkg => {
+      vehicleOptions.forEach(sz => allKeys.push(getKey('package', pkg.id, sz)));
+    });
+    allAddons.forEach(addon => {
+      vehicleOptions.forEach(sz => allKeys.push(getKey('addon', addon.id, sz)));
+    });
+
+    allKeys.forEach(key => {
       if (shouldUpdate(key, target)) {
-        const oldVal = parseFloat(savedPrices[key]) || 0;
+        // Find current or default value
+        let oldVal = parseFloat(savedPrices[key]);
+        if (isNaN(oldVal) || oldVal === 0) {
+          const parts = key.split(':');
+          if (parts[0] === 'package') {
+            const p = allPkgs.find(x => x.id === parts[1]);
+            if (p) oldVal = (p.pricing as any)[parts[2]] || 0;
+          } else {
+            const a = allAddons.find(x => x.id === parts[1]);
+            if (a) oldVal = (a.pricing as any)[parts[2]] || 0;
+          }
+        }
+        
+        oldVal = oldVal || 0;
         const preciseValue = Math.round(oldVal * factor * 100) / 100;
         updated[key] = String(Math.ceil(preciseValue));
       }
@@ -1814,8 +1846,31 @@ export default function PackagePricing() {
     if (pct === 0) return;
     const factor = 1 + (pct / 100);
     const updated: PriceMap = { ...currentPrices };
-    Object.keys(savedPrices).forEach(key => {
-      const oldVal = parseFloat(savedPrices[key]) || 0;
+    
+    const allKeys: string[] = [];
+    const allPkgs = [...builtInPackages, ...getCustomPackages()];
+    const allAddons = [...builtInAddOns, ...getCustomAddOns()];
+    
+    allPkgs.forEach(pkg => {
+      vehicleOptions.forEach(sz => allKeys.push(getKey('package', pkg.id, sz)));
+    });
+    allAddons.forEach(addon => {
+      vehicleOptions.forEach(sz => allKeys.push(getKey('addon', addon.id, sz)));
+    });
+
+    allKeys.forEach(key => {
+      let oldVal = parseFloat(savedPrices[key]);
+      if (isNaN(oldVal) || oldVal === 0) {
+        const parts = key.split(':');
+        if (parts[0] === 'package') {
+          const p = allPkgs.find(x => x.id === parts[1]);
+          if (p) oldVal = (p.pricing as any)[parts[2]] || 0;
+        } else {
+          const a = allAddons.find(x => x.id === parts[1]);
+          if (a) oldVal = (a.pricing as any)[parts[2]] || 0;
+        }
+      }
+      oldVal = oldVal || 0;
       const preciseValue = Math.round(oldVal * factor * 100) / 100;
       updated[key] = String(Math.ceil(preciseValue));
     });
@@ -2561,12 +2616,32 @@ export default function PackagePricing() {
             {/* Increase % Section */}
             <AccordionItem value="increase" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-red-900/30 group">
               <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-red-400 data-[state=open]:text-red-400 transition-colors">
-                <span className="text-lg font-semibold flex items-center gap-3">
-                  <span className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-lg font-semibold flex items-center gap-3">
+                    <span className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </span>
+                    Increase % by Category
                   </span>
-                  Increase % by Category
-                </span>
+                  
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help" onClick={e => e.stopPropagation()}>
+                          <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-red-400" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[300px] text-sm bg-zinc-900 border-zinc-700 text-white p-3 shadow-xl">
+                        <p className="font-bold text-red-400 mb-1">Step-by-Step Instructions:</p>
+                        <ol className="list-decimal pl-4 space-y-1 text-zinc-300">
+                          <li>Type a number (e.g. 10) in the input.</li>
+                          <li>Click 'Packages' or 'Add-Ons' to instantly preview the increase in the editor below.</li>
+                          <li>Click the red <strong>Save All</strong> button below the menu to publish the changes online!</li>
+                        </ol>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex items-center gap-4 flex-wrap">
@@ -2618,18 +2693,19 @@ export default function PackagePricing() {
                     View & Export Pricing
                   </span>
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-zinc-500 hover:text-white h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setHelpModalOpen(true);
-                    }}
-                    title="Pricing Help"
-                  >
-                    <HelpCircle className="w-5 h-5" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help" onClick={e => e.stopPropagation()}>
+                          <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-blue-400" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[300px] text-sm bg-zinc-900 border-zinc-700 text-white p-3 shadow-xl">
+                        <p className="font-bold text-blue-400 mb-1">What does this do?</p>
+                        <p className="text-zinc-300">Click here to print a beautiful breakdown of all your live prices, compare prices across services, or view your automated price change history log!</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-6 space-y-6">
@@ -2737,12 +2813,28 @@ export default function PackagePricing() {
             {/* Show Services Section */}
             <AccordionItem value="show-services" className="border border-zinc-800 rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-900/50 to-zinc-950/80 shadow-sm transition-all hover:border-emerald-900/30 group">
               <AccordionTrigger className="px-6 py-4 text-white hover:no-underline hover:text-emerald-400 data-[state=open]:text-emerald-400 transition-colors">
-                <span className="text-lg font-semibold flex items-center gap-3">
-                  <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <div className="flex justify-between items-center w-full pr-4">
+                  <span className="text-lg font-semibold flex items-center gap-3">
+                    <span className="p-2 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    Show Services
                   </span>
-                  Show Services
-                </span>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help" onClick={e => e.stopPropagation()}>
+                          <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-emerald-400" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[300px] text-sm bg-zinc-900 border-zinc-700 text-white p-3 shadow-xl">
+                        <p className="font-bold text-emerald-400 mb-1">Filter Your View:</p>
+                        <p className="text-zinc-300">Use these buttons to toggle between viewing Packages, Add-Ons, or Both. You can also toggle the switch to view 'Hidden/Archived' services.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </AccordionTrigger>
               <AccordionContent className="px-4 pb-4">
                 <div className="flex flex-col gap-6">
