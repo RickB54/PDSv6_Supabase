@@ -147,6 +147,7 @@ export default function PackagePricing() {
   const [comparisonSelection, setComparisonSelection] = useState<Record<string, boolean>>({});
   const [liveSnapshot, setLiveSnapshot] = useState<any>(null);
   const [viewAllPackageFilter, setViewAllPackageFilter] = useState<'both' | 'essential' | 'elite'>('both');
+  const [showArchivedInViewAll, setShowArchivedInViewAll] = useState(false);
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<string>("current");
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
@@ -611,6 +612,7 @@ export default function PackagePricing() {
     setPriceHistory(history);
     setSelectedHistoryIndex("current");
     setViewAllPackageFilter("both");
+    setShowArchivedInViewAll(false);
     // Use committed saved state instead of temporary unsaved test state
     const snapshot = {
       savedPrices: savedPrices,
@@ -749,11 +751,11 @@ export default function PackagePricing() {
     const pkgMeta = snapshot?.packageMeta || {};
     const addonMeta = snapshot?.addOnMeta || {};
     const saved = snapshot?.savedPrices || {};
-    let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+    let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
     if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
     if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
     const visiblePkgs = rawPkgs;
-    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
 
     const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
       const key = `${type}:${id}:${size}`;
@@ -781,7 +783,7 @@ export default function PackagePricing() {
     const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
     const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
     const dateStr = new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString();
-    const titleStr = liveSnapshot?.label || 'Current Live Pricing';
+    const titleStr = liveSnapshot?.label?.replace("Current Live Pricing", "Current Pricing") || 'Current Pricing';
 
     win.document.write(`
       <html>
@@ -817,7 +819,7 @@ export default function PackagePricing() {
       const doc = new jsPDF({ orientation: 'p' });
       doc.setTextColor(200, 0, 0);
       doc.setFontSize(20);
-      doc.text(liveSnapshot?.label || "Current Live Pricing — Prime Auto Detail", 14, 20);
+      doc.text(liveSnapshot?.label?.replace("Current Live Pricing", "Current Pricing") || "Current Pricing — Prime Auto Detail", 14, 20);
 
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
@@ -827,11 +829,11 @@ export default function PackagePricing() {
       const pkgMeta = snapshot?.packageMeta || {};
       const addonMeta = snapshot?.addOnMeta || {};
       const saved = snapshot?.savedPrices || {};
-      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted);
+      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
       if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
       if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
       const visiblePkgs = rawPkgs;
-      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
         const key = `${type}:${id}:${size}`;
@@ -3928,7 +3930,7 @@ export default function PackagePricing() {
         <Dialog open={viewAllOpen} onOpenChange={setViewAllOpen}>
           <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{liveSnapshot?.label || "Current Live Pricing — Prime Auto Detail"}</DialogTitle>
+              <DialogTitle>{liveSnapshot?.label?.replace("Current Live Pricing", "Current Pricing") || "Current Pricing — Prime Auto Detail"}</DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
               <div className="flex items-center gap-2">
@@ -3959,6 +3961,10 @@ export default function PackagePricing() {
                     <SelectItem value="elite">Elite Packages</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center gap-2 mr-4">
+                <Switch checked={showArchivedInViewAll} onCheckedChange={setShowArchivedInViewAll} />
+                <span className="text-sm font-semibold text-zinc-400">Show Archived</span>
               </div>
               <div className="flex items-center gap-3">
               <Button variant="outline" onClick={printPrices}>Print</Button>
@@ -3995,7 +4001,7 @@ export default function PackagePricing() {
                         const visible = Array.from(new Map([...builtInPackages, ...(snap.customPackages || [])].map(p => [p.id, p])).values())
 
 
-                          .filter(p => (pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted)
+                          .filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted))
                           .filter(p => {
                             if (viewAllPackageFilter === 'essential') return p.name.toLowerCase().includes('essential');
                             if (viewAllPackageFilter === 'elite') return p.name.toLowerCase().includes('elite');
@@ -4050,7 +4056,7 @@ export default function PackagePricing() {
                         const visible = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
 
 
-                          .filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+                          .filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
                         return visible.map(a => {
                           const getP = (sz: string) => {
                             const val = saved[liveGetKey('addon', a.id, sz)];
