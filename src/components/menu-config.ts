@@ -111,6 +111,7 @@ export const getMenuGroups = (counts: {
                 { title: "Estimates", url: "/estimates", role: "admin", key: "estimates", highlight: "green", icon: FileText, helpTopicId: 'estimates' },
                 { title: "Invoicing", url: "/invoicing", role: "admin", key: "invoicing", icon: FileText, helpTopicId: 'invoicing' },
                 { title: "Time & Profitability", url: "/time-profitability", role: "admin", key: "time-profitability", icon: DollarSign, iconColor: "text-emerald-500", helpTopicId: 'time-profitability' },
+                { title: "Market Pricing Analysis", url: "/bookings-analytics?tab=profitability&scroll=market", role: "admin", key: "market-analysis", icon: Target, helpTopicId: 'analytics' },
                 { title: "Payments", url: "/payments", role: "admin", key: "payments", icon: DollarSign, helpTopicId: 'payments' },
                 { title: "Accounting", url: "/accounting", role: "admin", key: "accounting", icon: Calculator, helpTopicId: 'accounting' },
                 { title: "Mileage", url: "/mileage", key: "mileage", icon: Truck, helpTopicId: 'mileage' },

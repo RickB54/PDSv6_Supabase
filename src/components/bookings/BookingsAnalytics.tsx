@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Label } from "@/components/ui/label";
 import { useTasksStore } from "@/store/tasks";
 import { useDemoMode } from "@/contexts/DemoContext";
+import MarketPricingAnalysis from "../analytics/MarketPricingAnalysis";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -58,7 +59,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [isChartJobsModalOpen, setIsChartJobsModalOpen] = useState(false);
     const [chartJobsModalTitle, setChartJobsModalTitle] = useState("");
 
-    const [showProfitability, setShowProfitability] = useState(false);
+    const [showProfitability, setShowProfitability] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'profitability');
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
 
@@ -67,6 +68,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     useEffect(() => {
         if (showProfitability) {
             getConsumptionHistory().then(data => setConsumptionData(data));
+            if (new URLSearchParams(window.location.search).get('scroll') === 'market') {
+                setTimeout(() => {
+                    document.getElementById('market-analysis-section')?.scrollIntoView({ behavior: 'smooth' });
+                }, 500);
+            }
         }
     }, [showProfitability]);
 
@@ -1821,6 +1827,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Market Pricing Analysis */}
+                <div id="market-analysis-section" className="pt-6 mt-6 border-t border-zinc-800/50">
+                    <MarketPricingAnalysis />
+                </div>
             </div>
         );
     }
