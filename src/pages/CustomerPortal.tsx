@@ -1162,7 +1162,7 @@ const CustomerPortal = () => {
               </div>
               <div className="flex-1">
                 <p className="text-[11px] text-blue-200/70 font-bold uppercase tracking-widest leading-tight">
-                  Professional service enhancement performed on-site
+                  PROFESSIONAL ADD-ON SERVICE
                 </p>
               </div>
             </div>
