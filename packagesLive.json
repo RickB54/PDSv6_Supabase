@@ -33,10 +33,10 @@
       "addon:ceramic-trim-coat:midsize": "83",
       "addon:ceramic-trim-coat:truck": "105",
       "addon:ceramic-trim-coat:luxury": "138",
-      "addon:clay-bar:compact": "88",
-      "addon:clay-bar:midsize": "99",
-      "addon:clay-bar:truck": "110",
-      "addon:clay-bar:luxury": "132",
+      "addon:clay-bar:compact": "80",
+      "addon:clay-bar:midsize": "90",
+      "addon:clay-bar:truck": "100",
+      "addon:clay-bar:luxury": "120",
       "addon:clay-bar-decon:compact": "65",
       "addon:clay-bar-decon:midsize": "80",
       "addon:clay-bar-decon:truck": "95",
@@ -144,7 +144,10 @@
       "addon:3rd-row-seating:compact": "55",
       "addon:3rd-row-seating:midsize": "55",
       "addon:3rd-row-seating:truck": "55",
-      "addon:3rd-row-seating:luxury": "55"
+      "addon:3rd-row-seating:luxury": "55",
+      "addon:large-wheel-cleaning:midsize": "35",
+      "addon:large-wheel-cleaning:truck": "50",
+      "addon:large-wheel-cleaning:luxury": "65"
     },
     "packageMeta": {
       "basic-exterior": {
@@ -357,12 +360,13 @@
       },
       "large-wheel-cleaning": {
         "id": "large-wheel-cleaning",
-        "visible": false
+        "visible": false,
+        "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1783779048865
+    "version": 1783781267470
   },
   "vehicleTypesLive": [
     {
