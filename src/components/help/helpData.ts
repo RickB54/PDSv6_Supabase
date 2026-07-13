@@ -748,7 +748,31 @@ export const timeProfitabilityHelpTopic: HelpTopic = {
   section: 'dashboard',
 };
 
+export const compensationPayrollTopic: HelpTopic = {
+  id: 'compensation-payroll',
+  title: 'Compensation & Payroll',
+  summary: 'Intelligently calculate employee compensation based on Labor Revenue to protect business profitability.',
+  content: [
+    '**Compensation & Payroll**: This module allows you to calculate fair employee compensation based on Labor Revenue rather than Gross Job Price.',
+    '',
+    '🧮 **1. The Live Calculator**',
+    'The core of the system is the Live Calculator. It ensures employees are paid from the remaining Labor Revenue after all real business costs (materials, shop supplies, stripe fees) have been deducted.',
+    '• **Employee Stripe Share**: You can adjust what percentage of the credit card processing fee is absorbed by the employee versus the company before their commission is calculated.',
+    '',
+    '👥 **2. Active Employees**',
+    'Manage your team\\'s base compensation structures. You can assign different roles (Standard Tech, Lead Tech, Independent Contractor) which carry recommended commission ranges.',
+    '',
+    '📑 **3. Templates & Settings**',
+    'Create standardized pay templates for common job types to speed up payroll processing. Use Company Settings to define your default shop costs and target profit margins.',
+    '',
+    '💡 **Philosophy**: The system enforces the rule that Employee Pay should never be calculated from Total Customer Price, protecting the profitability of the business.'
+  ],
+  route: '/compensation-payroll',
+  section: 'dashboard',
+};
+
 export const adminMenuTopics: HelpTopic[] = [
+  compensationPayrollTopic,
   timeProfitabilityHelpTopic,
   stickyNotesHelpTopic,
   intakeWorkflowsTopic,
