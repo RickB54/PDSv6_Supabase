@@ -760,7 +760,7 @@ export const compensationPayrollTopic: HelpTopic = {
     '• **Employee Stripe Share**: You can adjust what percentage of the credit card processing fee is absorbed by the employee versus the company before their commission is calculated.',
     '',
     '👥 **2. Active Employees**',
-    'Manage your team\\'s base compensation structures. You can assign different roles (Standard Tech, Lead Tech, Independent Contractor) which carry recommended commission ranges.',
+    'Manage your team\'s base compensation structures. You can assign different roles (Standard Tech, Lead Tech, Independent Contractor) which carry recommended commission ranges.',
     '',
     '📑 **3. Templates & Settings**',
     'Create standardized pay templates for common job types to speed up payroll processing. Use Company Settings to define your default shop costs and target profit margins.',

@@ -667,8 +667,8 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="truncate">{item.title}</span>
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="line-clamp-2 break-words text-left leading-tight">{item.title}</span>
                                 {item.badge !== undefined && item.badge > 0 && (
                                   <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white animate-in zoom-in duration-300">
                                     {item.badge}
@@ -701,8 +701,8 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                           <item.icon className={cn(`h-4 w-4 shrink-0`, { 'mr-0': open, 'text-red-500': isChatAlert }, item.iconColor)} />
                           {(open || openMobile) && (
                             <div className="flex items-center justify-between flex-1 min-w-0">
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="truncate">{item.title}</span>
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="line-clamp-2 break-words text-left leading-tight">{item.title}</span>
                                 {item.badge !== undefined && item.badge > 0 && (
                                   <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-black text-white animate-in zoom-in duration-300">
                                     {item.badge}
@@ -815,7 +815,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
-                                        <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
                                         {item.helpTopicId && (
                                           <div
                                             role="button"
@@ -854,7 +854,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
-                                        <span className={cn("truncate", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
                                         {item.helpTopicId && (
                                           <div
                                             role="button"
