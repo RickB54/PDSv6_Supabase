@@ -177,6 +177,7 @@ export const getMenuGroups = (counts: {
             items: [
                 { title: "Staff Schedule", url: "/staff-schedule", role: "admin", key: "staff-schedule", icon: CalendarDays, helpTopicId: 'staff-schedule' },
                 { title: "Company Employees", url: "/company-employees", role: "admin", key: "company-employees", icon: Users, helpTopicId: 'company-employees' },
+                { title: "Compensation & Payroll", url: "/compensation-payroll", role: "admin", key: "compensation-payroll", icon: DollarSign, helpTopicId: 'compensation-payroll' },
                 { title: "App Team Chat", url: "/team-chat", role: "admin", key: "team-chat", icon: Users, helpTopicId: 'team-chat' },
             ]
         },

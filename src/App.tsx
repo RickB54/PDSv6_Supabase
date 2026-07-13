@@ -121,6 +121,7 @@ import ProceduresBooklet from "./pages/ProceduresBooklet";
 import { PerspectiveBanner } from "./components/PerspectiveBanner";
 import CustomerEstimatePage from "./pages/CustomerEstimatePage";
 import CustomerInvoicePage from "./pages/CustomerInvoicePage";
+import CompensationPayroll from "./pages/CompensationPayroll";
 
 const queryClient = new QueryClient();
 
@@ -406,6 +407,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/user-management" element={<ProtectedRoute user={user} allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="/admin-users" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
           <Route path="/company-employees" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
+          <Route path="/compensation-payroll" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompensationPayroll /></ProtectedRoute>} />
           <Route path="/exam/:examId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ExamPage /></ProtectedRoute>} />
           <Route path="/exam-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />
           <Route path="/certificate/:id" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Certificate /></ProtectedRoute>} />

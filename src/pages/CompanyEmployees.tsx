@@ -100,7 +100,7 @@ const CompanyEmployees = () => {
       return;
     }
     loadData();
-  }, [user]);
+  }, [user?.id, user?.role, isDemoMode]);
 
   const loadData = async () => {
     const merged = await getSupabaseEmployees();

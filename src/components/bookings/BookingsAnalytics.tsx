@@ -35,6 +35,7 @@ import autoTable from "jspdf-autotable";
 import localforage from "localforage";
 
 import { CustomerIntelligence360Modal } from "./CustomerIntelligence360Modal";
+import { EmployeeCompensationAnalytics } from "../compensation/EmployeeCompensationAnalytics";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -61,6 +62,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const [showProfitability, setShowProfitability] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'profitability');
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
+    const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'employee-analytics');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
 
     const followUpStatus = useFollowUpStatus(customers, bookings);
@@ -1643,6 +1645,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs, hasMileageData };
     }, [serviceDetailsData, consumptionData, filteredPerfBookings]);
 
+    if (showEmployeeAnalytics) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
+                <div className="flex justify-between items-center mb-4">
+                    <Button variant="outline" onClick={() => setShowEmployeeAnalytics(false)} className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
+                        <ArrowLeft className="w-4 h-4" /> Back to Analytics
+                    </Button>
+                </div>
+                <EmployeeCompensationAnalytics bookings={bookings} employees={employees} />
+            </div>
+        );
+    }
+
     if (showProfitability) {
         return (
             <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
@@ -1885,6 +1900,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation & Payroll</Button>
                 </div>
             </div>
 
