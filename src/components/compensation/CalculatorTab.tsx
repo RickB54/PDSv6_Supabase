@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, Info } from "lucide-react";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export const CalculatorTab = () => {
   const [jobPrice, setJobPrice] = useState(350);
@@ -20,17 +21,15 @@ export const CalculatorTab = () => {
 
   // Derived values
   const effectiveStripeDeduction = stripeFee * (employeeStripeShare / 100);
-  const totalDeductions = materials + consumables + otherCosts + effectiveStripeDeduction;
+  const companyStripeShare = stripeFee - effectiveStripeDeduction;
+  
+  const totalDeductions = materials + consumables + otherCosts + companyStripeShare;
   const laborRevenue = Math.max(0, jobPrice - totalDeductions);
-  const employeePay = laborRevenue * (commissionPercent / 100);
-  const companyKeeps = jobPrice - totalDeductions - employeePay; // Note: company actually pays full stripe fee, so let's be precise:
   
-  // Real company profit calculation:
-  // Company Revenue = Job Price
-  // Company Expenses = Materials + Consumables + Other + FULL Stripe Fee + Employee Pay
-  // Employee Pay = (Job Price - Materials - Consumables - Other - (Stripe Fee * Share)) * Commission%
+  const grossEmployeeCommission = laborRevenue * (commissionPercent / 100);
+  const employeePay = Math.max(0, grossEmployeeCommission - effectiveStripeDeduction);
   
-  const companyProfit = jobPrice - (materials + consumables + otherCosts + stripeFee) - employeePay;
+  const companyProfit = jobPrice - totalDeductions - employeePay;
   const profitMargin = jobPrice > 0 ? (companyProfit / jobPrice) * 100 : 0;
   
   const getRecommendedRange = (type: string) => {
@@ -47,7 +46,10 @@ export const CalculatorTab = () => {
       <div className="space-y-6">
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-xl text-white">Job Details & Deductions</CardTitle>
+            <CardTitle className="text-xl text-white flex items-center gap-2">
+              Job Details & Deductions
+              <PaymentWorkflowHelp variant="compensation-calculator" />
+            </CardTitle>
             <CardDescription>Enter the job price and direct costs to determine Labor Revenue.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -163,6 +165,12 @@ export const CalculatorTab = () => {
                 <span>Total Deductions</span>
                 <span className="text-red-400">-${totalDeductions.toFixed(2)}</span>
               </div>
+              {effectiveStripeDeduction > 0 && (
+                <div className="flex justify-between text-zinc-500 text-sm">
+                  <span>Employee Stripe Deduction</span>
+                  <span className="text-red-400/80">-${effectiveStripeDeduction.toFixed(2)}</span>
+                </div>
+              )}
               <div className="pt-2 border-t border-zinc-800 flex justify-between font-bold text-lg">
                 <span className="text-zinc-300">Labor Revenue</span>
                 <span className="text-blue-400">${laborRevenue.toFixed(2)}</span>

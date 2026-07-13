@@ -14,7 +14,8 @@ export type HelpVariant =
   | 'service-checklist'
   | 'checkout'
   | 'payments-dashboard'
-  | 'payment-success';
+  | 'payment-success'
+  | 'compensation-calculator';
 
 interface Props {
   variant?: HelpVariant;
@@ -208,6 +209,48 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
         {
           title: "4. Handing Back the Keys",
           desc: "Once verified and the review is requested, you are clear to hand the keys back to the customer."
+        }
+      ]
+    },
+    'compensation-calculator': {
+      title: 'Compensation Calculator',
+      icon: <FileText className="w-5 h-5 text-blue-600" />,
+      steps: [
+        {
+          title: "1. Total Customer Price",
+          desc: "This is the full amount the customer paid, before any deductions."
+        },
+        {
+          title: "2. Materials & Direct Costs",
+          desc: "These are real per-job hard costs deducted before labor revenue is calculated. Accurate entries here directly affect what's fair to pay the employee."
+        },
+        {
+          title: "3. Stripe Processing Fee",
+          desc: "The actual Stripe fee on the transaction. It's split between company and employee based on the slider below it."
+        },
+        {
+          title: "4. Employee Stripe Fee Share",
+          desc: "This percentage of the Stripe fee is deducted from the employee's earnings, not yours. At 0%, you absorb the full fee. At 100%, the employee absorbs it entirely."
+        },
+        {
+          title: "5. Employee Type",
+          desc: "Each type has a recommended commission range based on skill level. Ranges are guidance, not hard limits."
+        },
+        {
+          title: "6. Commission Percentage",
+          desc: "This percentage applies ONLY to Labor Revenue (after deductions), never to the full Customer Price — this is the core philosophy."
+        },
+        {
+          title: "7. Labor Revenue",
+          desc: "What's left after real business costs are removed, and it's the true base for calculating fair employee pay."
+        },
+        {
+          title: "8. Employee Earnings",
+          desc: "Commission % of Labor Revenue, minus the employee's Stripe fee share if applicable."
+        },
+        {
+          title: "9. Company Gross Profit",
+          desc: "What remains to cover overhead (rent, insurance, marketing, equipment) — it is NOT take-home profit."
         }
       ]
     }
