@@ -21,7 +21,11 @@ import { EmployeesTab } from "@/components/compensation/EmployeesTab";
 import { TemplatesTab } from "@/components/compensation/TemplatesTab";
 import { SettingsTab } from "@/components/compensation/SettingsTab";
 
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+
 const CompensationPayroll = () => {
+  const [activeTab, setActiveTab] = useState("calculator");
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -29,17 +33,18 @@ const CompensationPayroll = () => {
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
             <DollarSign className="w-8 h-8 text-purple-500" />
             Compensation & Payroll
+            <PaymentWorkflowHelp variant="compensation-calculator" />
           </h1>
           <p className="text-zinc-400 mt-1">
             Intelligent compensation management based on Labor Revenue.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-purple-500/20 hover:bg-purple-500/10 text-purple-400">
+          <Button variant="outline" className="border-purple-500/20 hover:bg-purple-500/10 text-purple-400" onClick={() => setActiveTab("settings")}>
             <Settings className="w-4 h-4 mr-2" />
             Company Settings
           </Button>
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => setActiveTab("calculator")}>
             <Calculator className="w-4 h-4 mr-2" />
             Live Calculator
           </Button>
@@ -87,7 +92,7 @@ const CompensationPayroll = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="calculator" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-4 lg:w-[600px] bg-zinc-900 border border-zinc-800">
           <TabsTrigger value="calculator">Calculator</TabsTrigger>
           <TabsTrigger value="employees">Employees</TabsTrigger>

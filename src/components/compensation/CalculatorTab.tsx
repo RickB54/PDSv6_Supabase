@@ -6,7 +6,6 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, Info } from "lucide-react";
-import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export const CalculatorTab = () => {
   const [jobPrice, setJobPrice] = useState(350);
@@ -46,10 +45,7 @@ export const CalculatorTab = () => {
       <div className="space-y-6">
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-xl text-white flex items-center gap-2">
-              Job Details & Deductions
-              <PaymentWorkflowHelp variant="compensation-calculator" />
-            </CardTitle>
+            <CardTitle className="text-xl text-white">Job Details & Deductions</CardTitle>
             <CardDescription>Enter the job price and direct costs to determine Labor Revenue.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
