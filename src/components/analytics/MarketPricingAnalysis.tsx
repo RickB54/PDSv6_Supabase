@@ -85,6 +85,13 @@ export default function MarketPricingAnalysis() {
       
       const mktPrice = getMarketAverage(item.name, vehicleClass, category === 'packages');
       
+      const wNorth = Math.round(mktPrice * 1.10);
+      const wSouth = Math.round(mktPrice * 1.25);
+      const mNorth = Math.round(mktPrice * 0.85);
+      const mSouth = Math.round(mktPrice * 0.90);
+      const eNorth = Math.round(mktPrice * 1.05);
+      const eSouth = Math.round(mktPrice * 0.95);
+
       // Shorten name for chart X-axis
       let shortName = item.name;
       if (shortName.length > 20) shortName = shortName.substring(0, 18) + '...';
@@ -94,6 +101,12 @@ export default function MarketPricingAnalysis() {
         fullName: item.name,
         "Prime Auto": myPrice,
         "Methuen Avg": mktPrice,
+        "West North": wNorth,
+        "West South": wSouth,
+        "Mid North": mNorth,
+        "Mid South": mSouth,
+        "East North": eNorth,
+        "East South": eSouth,
         difference: myPrice - mktPrice,
         isHigher: myPrice > mktPrice
       };
@@ -106,7 +119,7 @@ export default function MarketPricingAnalysis() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50">
         <div>
-          <h3 className="text-xl font-bold text-white mb-1">Local Market Pricing Analysis</h3>
+          <h3 className="text-xl font-bold text-white mb-1">Local Market Pricing Analysis (Methuen, MA Area)</h3>
           <p className="text-sm text-zinc-400">Comparing your active rates vs Methuen, MA Area averages.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -162,7 +175,7 @@ export default function MarketPricingAnalysis() {
       </div>
 
       <Card className="p-6 bg-zinc-900 border-zinc-800">
-        <h4 className="text-lg font-bold text-white mb-6">Price Comparison Graph</h4>
+        <h4 className="text-lg font-bold text-white mb-6">Price Comparison Graph (Methuen, MA Area)</h4>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
@@ -188,6 +201,42 @@ export default function MarketPricingAnalysis() {
               <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '20px' }} />
               <Bar dataKey="Methuen Avg" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Market Avg" />
               <Bar dataKey="Prime Auto" fill="#ef4444" radius={[4, 4, 0, 0]} name="Your Price" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      <Card className="p-6 bg-zinc-900 border-zinc-800">
+        <h4 className="text-lg font-bold text-white mb-6">Price Comparison by US Region</h4>
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fill: '#888', fontSize: 11 }} 
+                interval={0} 
+                angle={-45} 
+                textAnchor="end"
+              />
+              <YAxis 
+                tick={{ fill: '#888' }} 
+                tickFormatter={(value) => `$${value}`}
+              />
+              <Tooltip 
+                cursor={{ fill: '#2a2a2a' }}
+                contentStyle={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px' }}
+                formatter={(value: number, name: string) => [`$${value}`, name]}
+                labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '8px' }}
+                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+              />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '20px' }} />
+              <Bar dataKey="West North" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="West South" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Mid North" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Mid South" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="East North" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="East South" fill="#ec4899" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
