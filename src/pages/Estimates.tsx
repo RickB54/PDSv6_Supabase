@@ -886,7 +886,10 @@ const Estimates = () => {
         const customer = customers.find(c => c.id === est.customerId);
         const firstName = customer?.name?.split(' ')[0] || 'Customer';
         
-        let summaryText = `Total Estimate: $${est.total.toFixed(2)}`;
+        const isMenuMode = (est.notes || '').includes('[MENU_MODE]');
+        let summaryText = isMenuMode
+            ? "Multiple vehicles listed with customizable package options"
+            : `Total Estimate: $${est.total.toFixed(2)}`;
         
         const draft = `Hi ${firstName}!
 
