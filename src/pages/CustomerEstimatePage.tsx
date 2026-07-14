@@ -381,6 +381,8 @@ export default function CustomerEstimatePage() {
                             </div>
 
                             {(() => {
+                                if (!(estimate.notes || '').includes('[SHOW_CATEGORY_SUBTOTALS]')) return null;
+                                
                                 const nameMap: Record<string, number> = {};
                                 let duplicateFound = false;
                                 estimate.services.forEach(s => {

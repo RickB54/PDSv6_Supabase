@@ -1249,6 +1249,9 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                     virtualVehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
                     return false;
                 }
+                if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
+                    return false;
+                }
                 return true;
             });
 
