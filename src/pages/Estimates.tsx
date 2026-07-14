@@ -1937,7 +1937,7 @@ Precision. Protection. Perfection.`;
 
             {/* Full Page Notes Editor Overlay */}
             {isNotesFullScreen && (
-                <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col p-6 md:p-8 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="fixed inset-0 bg-black/95 z-[200] flex flex-col pt-16 px-6 pb-6 md:px-8 md:pb-8 backdrop-blur-md animate-in fade-in duration-200">
                     <div className="max-w-6xl w-full mx-auto flex-1 flex flex-col min-h-0">
                         
                         {/* Header */}
