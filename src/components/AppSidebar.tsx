@@ -815,7 +815,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
-                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.title === 'Quick Pay' && !isActive ? 'text-emerald-500 font-bold' : '')}>{item.title}</span>
                                         {item.helpTopicId && (
                                           <div
                                             role="button"
@@ -854,7 +854,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     >
                                       <div className="flex items-center gap-2 flex-1 min-w-0 pr-1">
                                         {item.icon && <item.icon className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-blue-500" : (item.iconColor ? item.iconColor : "text-zinc-500"))} />}
-                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.iconColor && !isActive && item.iconColor)}>{item.title}</span>
+                                        <span className={cn("line-clamp-2 break-words text-left leading-tight", item.title === 'Quick Pay' && !isActive ? 'text-emerald-500 font-bold' : '')}>{item.title}</span>
                                         {item.helpTopicId && (
                                           <div
                                             role="button"

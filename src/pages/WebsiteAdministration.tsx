@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
+  ArrowUp,
+  ArrowDown,
   Facebook, 
   Pencil, 
   Trash2, 
@@ -2098,11 +2100,31 @@ export default function WebsiteAdministration() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {faqs.map((fq: any) => (
+                      {faqs.map((fq: any, index: number) => (
                         <TableRow key={fq.id} className="border-zinc-800">
                           <TableCell className="text-white font-medium text-sm">{fq.question}</TableCell>
                           <TableCell className="text-zinc-400 text-sm max-w-xs truncate">{fq.answer}</TableCell>
                           <TableCell className="text-right flex justify-end gap-1">
+                            <Button disabled={index === 0} size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={async () => {
+                              if (!ensureNotDemo("reordering")) return;
+                              const newFaqs = [...faqs];
+                              const temp = newFaqs[index - 1];
+                              newFaqs[index - 1] = newFaqs[index];
+                              newFaqs[index] = temp;
+                              setFaqs(newFaqs);
+                              await Promise.all(newFaqs.map((f: any, i: number) => contentService.upsertFaq({ id: f.id, question: f.question, answer: f.answer, sort_order: i })));
+                              notifyChange('faqs');
+                            }}><ArrowUp className="h-3 w-3" /></Button>
+                            <Button disabled={index === faqs.length - 1} size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={async () => {
+                              if (!ensureNotDemo("reordering")) return;
+                              const newFaqs = [...faqs];
+                              const temp = newFaqs[index + 1];
+                              newFaqs[index + 1] = newFaqs[index];
+                              newFaqs[index] = temp;
+                              setFaqs(newFaqs);
+                              await Promise.all(newFaqs.map((f: any, i: number) => contentService.upsertFaq({ id: f.id, question: f.question, answer: f.answer, sort_order: i })));
+                              notifyChange('faqs');
+                            }}><ArrowDown className="h-3 w-3" /></Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-white" onClick={() => setEditFaq(fq)}><Pencil className="h-3 w-3" /></Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={async () => {
                               if (!ensureNotDemo("deletion")) return;
