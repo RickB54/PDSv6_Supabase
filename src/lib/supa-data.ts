@@ -1342,8 +1342,9 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             ...(p.services || []),
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
             ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : []),
-            ...((p.vehicle && vehicleId === undefined) ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : [])
-        ], 
+            ...(p.vehicle ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : []),
+            ...((p.customerName || p.customer?.full_name) ? [{ name: `VIRTUAL_CUSTOMER:${p.customerName || p.customer?.full_name}`, price: 0 }] : [])
+        ],
         total: p.total,
         date: p.date,
         status: p.status || 'open',
