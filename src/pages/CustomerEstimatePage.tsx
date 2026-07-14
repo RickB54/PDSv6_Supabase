@@ -413,23 +413,26 @@ export default function CustomerEstimatePage() {
                                 );
                             })()}
 
-                            <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
-                                <div className="flex justify-between items-center text-sm text-zinc-400">
-                                    <span>Subtotal</span>
-                                    <span className="font-mono">${estimate.total.toFixed(2)}</span>
-                                </div>
-                                {discountAmount > 0 && (
-                                    <div className="flex justify-between items-center text-sm text-emerald-400">
-                                        <span>Discount {estimate.discountType === 'percent' ? `(${estimate.discount}%)` : ''}</span>
-                                        <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+                            {!(estimate.notes || '').includes('[MENU_MODE]') && (
+                                <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
+                                    <div className="flex justify-between items-center text-sm text-zinc-400">
+                                        <span>Subtotal</span>
+                                        <span className="font-mono">${estimate.total.toFixed(2)}</span>
                                     </div>
-                                )}
-                                <div className="flex justify-between items-end pt-4">
-                                    <span className="text-lg font-bold text-white uppercase tracking-wider">Estimated Total</span>
-                                    <span className="text-3xl font-black text-amber-400 font-mono">${finalTotal.toFixed(2)}</span>
+                                    {discountAmount > 0 && (
+                                        <div className="flex justify-between items-center text-sm text-emerald-400">
+                                            <span>Discount {estimate.discountType === 'percent' ? `(${estimate.discount}%)` : ''}</span>
+                                            <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-end pt-4">
+                                        <span className="text-lg font-bold text-white uppercase tracking-wider">Estimated Total</span>
+                                        <span className="text-3xl font-black text-amber-400 font-mono">${finalTotal.toFixed(2)}</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
+
                     </CardContent>
 
                     <CardFooter className="flex-col items-start bg-zinc-950 p-6 border-t border-zinc-800 space-y-4">
