@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -2001,7 +2001,7 @@ Precision. Protection. Perfection.`;
                                         "h-4 w-4 rounded border flex items-center justify-center transition-colors",
                                         selectedEstimate.isSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
                                     )}>
-                                        {selectedEstimate.isSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
+                                        {selectedEstimate.isSent && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                                     </div>
                                     I have sent this estimate to the customer
                                 </Button>
