@@ -117,7 +117,7 @@ const NOTE_TEMPLATES: { label: string; text: string }[] = [
     },
     {
         label: "🚙🚙 Multi-Vehicle (Menu Mode)",
-        text: "Thank you for reaching out, [Customer Name]! It was great speaking with you.\n\nBelow you will find individual pricing options for each of your vehicles. This estimate is designed as a MENU — each vehicle is listed separately with three package tiers to choose from:\n\n   ✦ EXTERIOR ONLY — Outside wash, decontamination, tire shine & protection\n   ✦ INTERIOR ONLY — Full interior detail - vacuum, protection & cleaning\n   ✦ FULL DETAIL   — Complete exterior + interior package (best value)\n\nHOW TO READ THIS ESTIMATE:\nLook at each vehicle section (e.g., '--- 2021 Ford Bronco ---') and pick ONE of the three price lines that fits your needs for that vehicle. You do NOT pay all three — just the one you select per vehicle!\n\nTO ACCEPT: Click the ACCEPT button below. A short form will appear — use the Special Requests / Notes field to tell me which service you'd like for each vehicle and I will confirm everything before your appointment.\n\nQuestions? Call or text me anytime at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
+        text: "Thank you for reaching out, [Customer Name]! It was great speaking with you.\n\nBelow you will find individual pricing options for each of your vehicles. This estimate is designed as a MENU — each vehicle is listed separately with three package tiers to choose from:\n\n   - EXTERIOR ONLY — Outside wash, decontamination, tire shine & protection\n   - INTERIOR ONLY — Full interior detail - vacuum, protection & cleaning\n   - FULL DETAIL   — Complete exterior + interior package (best value)\n\nHOW TO READ THIS ESTIMATE:\nLook at each vehicle section (e.g., '--- 2021 Ford Bronco ---') and pick ONE of the three price lines that fits your needs for that vehicle. You do NOT pay all three — just the one you select per vehicle!\n\nTO ACCEPT: Click the ACCEPT button below. A short form will appear — use the Special Requests / Notes field to tell me which service you'd like for each vehicle and I will confirm everything before your appointment.\n\nQuestions? Call or text me anytime at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
     },
     {
         label: "👑 VIP / Returning Customer",
@@ -794,7 +794,9 @@ const Estimates = () => {
             y += 12;
         }
 
-        const publicNotesText = getPublicNotes(estimate.notes || "").trim();
+        const publicNotesText = getPublicNotes(estimate.notes || "")
+            .replace(/✦/g, '-')
+            .trim();
         if (publicNotesText) {
             const splitNotes = doc.splitTextToSize(publicNotesText, 170);
             const labelH = 8;
