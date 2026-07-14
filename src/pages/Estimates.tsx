@@ -1953,61 +1953,59 @@ Precision. Protection. Perfection.`;
                                     variant="ghost" 
                                     size="sm" 
                                     onClick={async () => {
-                                        const newIsSent = !editIsSent;
-                                        setEditIsSent(newIsSent);
-                                        // Auto-save the sent status when toggled from the detail modal
-                                        if (selectedEstimate) {
-                                            const newStatusText = newIsSent && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' 
-                                                ? 'sent' 
-                                                : (!newIsSent && selectedEstimate.status === 'sent' ? 'open' : selectedEstimate.status);
+                                        if (!selectedEstimate) return;
+                                        const newIsSent = !selectedEstimate.isSent;
+                                        
+                                        const newStatusText = newIsSent && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' 
+                                            ? 'sent' 
+                                            : (!newIsSent && selectedEstimate.status === 'sent' ? 'open' : selectedEstimate.status);
 
-                                            const updated = {
-                                                ...selectedEstimate,
-                                                isSent: newIsSent,
-                                                status: newStatusText,
-                                                sentDate: newIsSent ? new Date().toISOString() : undefined
-                                            };
-                                            try {
-                                                await upsertSupabaseEstimate(updated as any);
-                                                setSelectedEstimate(updated);
-                                                
-                                                if (newIsSent && updated.customerId) {
-                                                    try {
-                                                        await supabase.from('engagements').insert({
-                                                            customer_id: updated.customerId,
-                                                            customer_name: updated.customerName,
-                                                            type: 'correspondence',
-                                                            note: `Estimate Sent: #${updated.estimateNumber}\nTotal: $${(updated.total || 0).toFixed(2)}\nServices: ${updated.services?.map(s => s.name).join(', ') || 'N/A'}`
-                                                        });
-                                                    } catch (e) {}
-                                                }
-                                                
-                                                toast({
-                                                    title: newIsSent ? "Marked as Sent" : "Marked as Unsent",
-                                                    description: "Sent status updated successfully."
-                                                });
-                                                loadData();
-                                            } catch (err) {
-                                                console.error("Failed to update sent status", err);
+                                        const updated = {
+                                            ...selectedEstimate,
+                                            isSent: newIsSent,
+                                            status: newStatusText,
+                                            sentDate: newIsSent ? new Date().toISOString() : undefined
+                                        };
+                                        try {
+                                            await upsertSupabaseEstimate(updated as any);
+                                            setSelectedEstimate(updated);
+                                            
+                                            if (newIsSent && updated.customerId) {
+                                                try {
+                                                    await supabase.from('engagements').insert({
+                                                        customer_id: updated.customerId,
+                                                        customer_name: updated.customerName,
+                                                        type: 'correspondence',
+                                                        note: `Estimate Sent: #${updated.estimateNumber}\nTotal: $${(updated.total || 0).toFixed(2)}\nServices: ${updated.services?.map(s => s.name).join(', ') || 'N/A'}`
+                                                    });
+                                                } catch (e) {}
                                             }
+                                            
+                                            toast({
+                                                title: newIsSent ? "Marked as Sent" : "Marked as Unsent",
+                                                description: "Sent status updated successfully."
+                                            });
+                                            loadData();
+                                        } catch (err) {
+                                            console.error("Failed to update sent status", err);
                                         }
                                     }}
                                     className={cn(
                                         "gap-2 font-bold text-[11px] uppercase tracking-wider",
-                                        editIsSent 
+                                        selectedEstimate.isSent 
                                             ? "text-blue-400 hover:text-blue-300 hover:bg-blue-400/10" 
                                             : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
                                     )}
                                 >
                                     <div className={cn(
                                         "h-4 w-4 rounded border flex items-center justify-center transition-colors",
-                                        editIsSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
+                                        selectedEstimate.isSent ? "bg-blue-500 border-blue-400" : "bg-zinc-950 border-zinc-700"
                                     )}>
-                                        {editIsSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
+                                        {selectedEstimate.isSent && <CheckCircle className="h-3 w-3 text-white fill-white" />}
                                     </div>
                                     I have sent this estimate to the customer
                                 </Button>
-                                {editIsSent && selectedEstimate.sentDate && (
+                                {selectedEstimate.isSent && selectedEstimate.sentDate && (
                                     <span className="text-[10px] text-zinc-500 italic ml-auto">
                                         Marked sent on {new Date(selectedEstimate.sentDate).toLocaleDateString()}
                                     </span>
