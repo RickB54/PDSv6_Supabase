@@ -363,6 +363,14 @@ export default function CustomerEstimatePage() {
                                 {estimate.services.map((svc, i) => {
                                     // Skip virtual internal services
                                     if (svc.name.startsWith('VIRTUAL_')) return null;
+                                    const isHeader = svc.name.startsWith('---') && svc.price === 0;
+                                    if (isHeader) {
+                                        return (
+                                            <div key={i} className="pt-4 pb-1">
+                                                <span className="text-emerald-400 font-bold uppercase tracking-wider text-xs">{svc.name.replace(/-/g, '').trim()}</span>
+                                            </div>
+                                        );
+                                    }
                                     return (
                                         <div key={i} className="flex justify-between items-center text-sm">
                                             <span className="text-zinc-300 font-medium">{svc.name}</span>
@@ -371,6 +379,37 @@ export default function CustomerEstimatePage() {
                                     );
                                 })}
                             </div>
+
+                            {(() => {
+                                const nameMap: Record<string, number> = {};
+                                let duplicateFound = false;
+                                estimate.services.forEach(s => {
+                                    if (s.price > 0 && s.name && !s.name.startsWith('VIRTUAL_') && !s.name.startsWith('---')) {
+                                        if (nameMap[s.name] !== undefined) {
+                                            nameMap[s.name] += s.price;
+                                            duplicateFound = true;
+                                        } else {
+                                            nameMap[s.name] = s.price;
+                                        }
+                                    }
+                                });
+
+                                if (!duplicateFound) return null;
+
+                                return (
+                                    <div className="mt-8 pt-6 border-t border-zinc-800 border-dashed">
+                                        <p className="text-xs text-amber-500 font-bold uppercase tracking-wider mb-4">Fleet / Category Subtotals (All Vehicles)</p>
+                                        <div className="space-y-3">
+                                            {Object.keys(nameMap).map((key, i) => (
+                                                <div key={i} className="flex justify-between items-center text-sm text-amber-200/80">
+                                                    <span>Total for all {key}</span>
+                                                    <span className="font-mono">${nameMap[key].toFixed(2)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
                                 <div className="flex justify-between items-center text-sm text-zinc-400">

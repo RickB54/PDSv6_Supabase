@@ -657,6 +657,46 @@ const Estimates = () => {
         doc.line(20, y, 190, y);
         y += 8;
 
+        // CALCULATE CATEGORY SUBTOTALS FOR MULTI-VEHICLE
+        const nameMap: Record<string, number> = {};
+        let duplicateFound = false;
+        
+        estimate.services.forEach(s => {
+            if (s.price > 0 && s.name && !s.name.startsWith('VIRTUAL_') && !s.name.startsWith('---')) {
+                if (nameMap[s.name] !== undefined) {
+                    nameMap[s.name] += s.price;
+                    duplicateFound = true;
+                } else {
+                    nameMap[s.name] = s.price;
+                }
+            }
+        });
+        
+        if (duplicateFound) {
+            if (y > 230) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Fleet / Category Subtotals (All Vehicles):", 20, y);
+            y += 8;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            
+            Object.keys(nameMap).forEach(key => {
+                const pTotal = nameMap[key];
+                doc.text(`Total for all ${key}:`, 25, y);
+                doc.text(`$${pTotal.toFixed(2)}`, 180, y, { align: "right" });
+                y += 6;
+            });
+            
+            y += 4;
+            doc.line(20, y, 190, y);
+            y += 8;
+        }
+
         if (!isEstimateMenuMode) {
             doc.setFontSize(12);
             
