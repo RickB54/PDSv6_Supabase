@@ -794,21 +794,39 @@ const Estimates = () => {
             y += 12;
         }
 
-                if (estimate.notes) {
-            if (y > 230) {
+        const publicNotesText = getPublicNotes(estimate.notes || "").trim();
+        if (publicNotesText) {
+            const splitNotes = doc.splitTextToSize(publicNotesText, 170);
+            const labelH = 8;
+            const lineH = 5;
+            const totalNotesH = labelH + (splitNotes.length * lineH) + 6;
+
+            // Always start notes on a fresh area — add page if not enough room
+            if (y + totalNotesH > 275) {
                 doc.addPage();
                 y = 20;
             }
+
             doc.setFontSize(10);
-            doc.setTextColor(60, 60, 60); 
+            doc.setTextColor(60, 60, 60);
             doc.setFont("helvetica", "bold");
             doc.text("Notes & Conversation Details:", 20, y);
+            y += labelH;
             doc.setFont("helvetica", "normal");
             doc.setTextColor(80, 80, 80);
-            const splitNotes = doc.splitTextToSize(getPublicNotes(estimate.notes || ""), 170);
-            doc.text(splitNotes, 20, y + 5);
-            y += (splitNotes.length * 5) + 10;
+
+            // Print lines, adding a new page whenever we reach the bottom
+            splitNotes.forEach((line: string) => {
+                if (y > 275) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(line, 20, y);
+                y += lineH;
+            });
+            y += 6;
         }
+
 
                 y += 10;
         doc.setTextColor(100);

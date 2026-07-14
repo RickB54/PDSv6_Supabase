@@ -432,7 +432,25 @@ export default function CustomerEstimatePage() {
                         </div>
                     </CardContent>
 
-                    <CardFooter className="flex-col items-start bg-zinc-950 p-6 border-t border-zinc-800">
+                    <CardFooter className="flex-col items-start bg-zinc-950 p-6 border-t border-zinc-800 space-y-4">
+                        {(() => {
+                            const rawNotes = (estimate.notes || '');
+                            const publicNotes = rawNotes
+                                .replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '')
+                                .replace('[HIDE_VEHICLE_SUBTOTALS]\n', '').replace('[HIDE_VEHICLE_SUBTOTALS]', '')
+                                .replace('[SHOW_CATEGORY_SUBTOTALS]\n', '').replace('[SHOW_CATEGORY_SUBTOTALS]', '')
+                                .split('[ACCEPTED_BY_CUSTOMER]')[0]
+                                .split('[PRE_CHECK_DATA]:')[0]
+                                .split('=== INTERNAL HISTORY LOG ===')[0]
+                                .trim();
+                            if (!publicNotes) return null;
+                            return (
+                                <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                                    <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500 mb-2">📝 Notes from Prime Auto Detail</p>
+                                    <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{publicNotes}</p>
+                                </div>
+                            );
+                        })()}
                         <p className="text-[11px] text-zinc-500 italic leading-relaxed w-full text-center">
                             This is an estimate for detailing services. Prices may vary based on actual vehicle condition upon arrival.
                         </p>
