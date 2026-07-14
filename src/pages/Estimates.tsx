@@ -90,6 +90,8 @@ const getPublicNotes = (notes: string): string => {
     if (clean.includes("[ACCEPTED_BY_CUSTOMER]")) clean = clean.split("[ACCEPTED_BY_CUSTOMER]")[0];
     if (clean.includes("[PRE_CHECK_DATA]:")) clean = clean.split("[PRE_CHECK_DATA]:")[0];
     clean = clean.replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '');
+    clean = clean.replace('[HIDE_VEHICLE_SUBTOTALS]\n', '').replace('[HIDE_VEHICLE_SUBTOTALS]', '');
+    clean = clean.replace('[SHOW_CATEGORY_SUBTOTALS]\n', '').replace('[SHOW_CATEGORY_SUBTOTALS]', '');
     let divider = "=== INTERNAL HISTORY LOG ===";
     if (clean.includes(divider)) return clean.split(divider)[0].trim();
     if (clean.includes("[VEHICLE INFO]")) return clean.split("[VEHICLE INFO]")[0].trim();
@@ -134,6 +136,8 @@ const Estimates = () => {
     const [discountCode, setDiscountCode] = useState("");
     const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
     const [isMenuMode, setIsMenuMode] = useState(false);
+    const [isHideVehicleSubtotals, setIsHideVehicleSubtotals] = useState(false);
+    const [isShowCategorySubtotals, setIsShowCategorySubtotals] = useState(false);
     
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailRecipient, setEmailRecipient] = useState("");
@@ -379,7 +383,12 @@ const Estimates = () => {
             if (!vehicleStr) vehicleStr = "Unknown Vehicle";
 
             const isEditing = !!editingEstimateId;
-            const finalNotes = isMenuMode ? `[MENU_MODE]\n${notes}` : notes.replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '');
+            const finalNotes = [
+                isMenuMode ? '[MENU_MODE]' : null,
+                isHideVehicleSubtotals ? '[HIDE_VEHICLE_SUBTOTALS]' : null,
+                isShowCategorySubtotals ? '[SHOW_CATEGORY_SUBTOTALS]' : null,
+                notes
+            ].filter(Boolean).join('\n');
             const estimateData: any = {
                 id: editingEstimateId || undefined,
                 estimateNumber: isEditing ? estimates.find(e => e.id === editingEstimateId)?.estimateNumber : (currentEstimateNumber || generateInvoiceNumber()),
@@ -485,7 +494,13 @@ const Estimates = () => {
         setDiscount(est.discount || 0);
         setDiscountType(est.discountType || "percent");
         setIsMenuMode(est.notes?.includes('[MENU_MODE]') || false);
-        setNotes(est.notes?.replace('[MENU_MODE]\n', '')?.replace('[MENU_MODE]', '') || "");
+        setIsHideVehicleSubtotals(est.notes?.includes('[HIDE_VEHICLE_SUBTOTALS]') || false);
+        setIsShowCategorySubtotals(est.notes?.includes('[SHOW_CATEGORY_SUBTOTALS]') || false);
+        const cleanNotes = (est.notes || '')
+            .replace('[MENU_MODE]\n', '').replace('[MENU_MODE]', '')
+            .replace('[HIDE_VEHICLE_SUBTOTALS]\n', '').replace('[HIDE_VEHICLE_SUBTOTALS]', '')
+            .replace('[SHOW_CATEGORY_SUBTOTALS]\n', '').replace('[SHOW_CATEGORY_SUBTOTALS]', '');
+        setNotes(cleanNotes);
         setEditIsSent(est.isSent || false);
         setEstimateDate(est.estimateDate || getLocalDateString());
         setShowCreateForm(true);
@@ -1640,17 +1655,41 @@ Precision. Protection. Perfection.`;
                                             <FileText className="h-4 w-4 mr-2" /> Add Section Header
                                         </Button>
                                     </div>
-                                    <div className="border-t border-zinc-800 pt-3 mt-3 flex flex-col sm:flex-row justify-between sm:items-center font-black text-white text-lg gap-3">
-                                        <div className="flex items-center gap-2">
-                                            <Checkbox 
-                                                id="menu-mode" 
-                                                checked={isMenuMode} 
-                                                onCheckedChange={(checked) => setIsMenuMode(!!checked)}
-                                                className="border-zinc-700 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
-                                            />
-                                            <label htmlFor="menu-mode" className="text-sm font-normal text-zinc-400 cursor-pointer select-none">
-                                                Hide Grand Total (Menu Mode)
-                                            </label>
+                                    <div className="border-t border-zinc-800 pt-3 mt-3 flex flex-col sm:flex-row justify-between sm:items-start font-black text-white text-lg gap-3">
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox 
+                                                    id="menu-mode" 
+                                                    checked={isMenuMode} 
+                                                    onCheckedChange={(checked) => setIsMenuMode(!!checked)}
+                                                    className="border-zinc-700 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                                />
+                                                <label htmlFor="menu-mode" className="text-sm font-normal text-zinc-400 cursor-pointer select-none">
+                                                    Hide Grand Total (Menu Mode)
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Checkbox 
+                                                    id="hide-vehicle-subtotals" 
+                                                    checked={isHideVehicleSubtotals} 
+                                                    onCheckedChange={(checked) => setIsHideVehicleSubtotals(!!checked)}
+                                                    className="border-zinc-700 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                                />
+                                                <label htmlFor="hide-vehicle-subtotals" className="text-sm font-normal text-zinc-400 cursor-pointer select-none">
+                                                    Hide Vehicle Subtotals
+                                                </label>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Checkbox 
+                                                    id="show-category-subtotals" 
+                                                    checked={isShowCategorySubtotals} 
+                                                    onCheckedChange={(checked) => setIsShowCategorySubtotals(!!checked)}
+                                                    className="border-zinc-700 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                                                />
+                                                <label htmlFor="show-category-subtotals" className="text-sm font-normal text-amber-500/80 cursor-pointer select-none">
+                                                    Show Fleet Category Subtotals
+                                                </label>
+                                            </div>
                                         </div>
                                         {!isMenuMode && (
                                             <div className="flex gap-4">
@@ -1731,7 +1770,12 @@ Precision. Protection. Perfection.`;
                                             status: selectedStatus,
                                             discount,
                                             discountType,
-                                            notes: notes,
+                                            notes: [
+                                                isMenuMode ? '[MENU_MODE]' : null,
+                                                isHideVehicleSubtotals ? '[HIDE_VEHICLE_SUBTOTALS]' : null,
+                                                isShowCategorySubtotals ? '[SHOW_CATEGORY_SUBTOTALS]' : null,
+                                                notes
+                                            ].filter(Boolean).join('\n'),
                                         };
                                         generatePDF(tempEst, 'print');
                                     }}
