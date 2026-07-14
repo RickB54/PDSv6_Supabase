@@ -77,14 +77,31 @@ export default function CustomerEstimatePage() {
                 }
             }
 
+            let virtualVehicle = null;
+            let virtualCustomer = null;
+            
+            const finalServices = parsedServices.filter((s: any) => {
+                if (s.name?.startsWith("VIRTUAL_SENT:")) return false;
+                if (s.name?.startsWith("VIRTUAL_SENT_DATE:")) return false;
+                if (s.name?.startsWith("VIRTUAL_VEHICLE:")) {
+                    virtualVehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+                    return false;
+                }
+                if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
+                    virtualCustomer = s.name.replace("VIRTUAL_CUSTOMER:", "").trim();
+                    return false;
+                }
+                return true;
+            });
+
             const est: Estimate = {
                 id: data.id,
                 estimateNumber: data.estimate_number,
                 customerId: data.customer_id,
-                customerName: data.customers?.full_name || data.customer_name || 'Unknown',
+                customerName: data.customers?.full_name || virtualCustomer || data.customer_name || 'Unknown',
                 vehicleId: data.vehicle_id,
-                vehicle: data.vehicle_type || 'Unknown',
-                services: parsedServices,
+                vehicle: virtualVehicle || data.vehicle_type || 'Unknown',
+                services: finalServices,
                 total: data.total || 0,
                 date: data.date,
                 estimateDate: data.estimate_date,
