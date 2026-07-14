@@ -633,12 +633,13 @@ export default function CustomerEstimatePage() {
                                     </div>
                                     
                                     <div className="space-y-3 pt-4">
-                                        <Label className="text-sm text-zinc-300">Special Requests or Notes</Label>
+                                        <Label className="text-sm font-bold text-amber-400">📝 Special Requests or Notes</Label>
+                                        <p className="text-[11px] text-zinc-500">For multi-vehicle estimates: please specify which service (Exterior Only, Interior Only, or Full Detail) you'd like for each vehicle.</p>
                                         <Textarea 
-                                            placeholder="Anything else we should know?" 
+                                            placeholder="e.g. Ford Bronco → Full Detail, Mini Cooper → Exterior Only, Audi Q7 → Interior Only... or any other requests!" 
                                             value={formData.specialRequests}
                                             onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
-                                            className="bg-zinc-950 border-zinc-800 min-h-[100px] text-zinc-100 placeholder:text-zinc-600"
+                                            className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-100 placeholder:text-zinc-600"
                                         />
                                     </div>
                                 </div>
