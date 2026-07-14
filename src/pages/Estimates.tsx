@@ -109,6 +109,34 @@ const getInternalNotes = (notes: string): string => {
     return "";
 };
 
+// ─── Estimate Note Templates ──────────────────────────────────────────────────
+const NOTE_TEMPLATES: { label: string; text: string }[] = [
+    {
+        label: "🚗 Standard Single Vehicle",
+        text: "Thank you for choosing Prime Auto Detail, [Customer Name]!\n\nHere is your personalized estimate for your [Vehicle Year/Make/Model]. The prices listed below reflect the services we discussed during our call.\n\nSimply choose the package that works best for you and click ACCEPT below. If you have any questions before committing, feel free to reach out and I will walk you through everything personally.\n\nAll prices are valid for 30 days from the estimate date. Final pricing may vary slightly based on actual vehicle condition at time of service.\n\n— Rick Berube | Prime Auto Detail | 978-566-1008"
+    },
+    {
+        label: "🚙🚙 Multi-Vehicle (Menu Mode)",
+        text: "Thank you for reaching out, [Customer Name]! It was great speaking with you.\n\nBelow you will find individual pricing options for each of your vehicles. This estimate is designed as a MENU — each vehicle is listed separately with three package tiers to choose from:\n\n   ✦ EXTERIOR ONLY — Outside wash, decontamination, tire shine & protection\n   ✦ INTERIOR ONLY — Full interior detail, vacuum, steam & conditioning\n   ✦ FULL DETAIL   — Complete exterior + interior package (best value)\n\nHOW TO READ THIS ESTIMATE:\nLook at each vehicle section (e.g., '--- 2021 Ford Bronco ---') and pick ONE of the three price lines that fits your needs for that vehicle. You do NOT pay all three — just the one you select per vehicle!\n\nOnce you decide which services you'd like for each vehicle, simply reply with your choices and I will send you a final itemized invoice before your appointment.\n\nQuestions? Call or text me anytime at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
+    },
+    {
+        label: "👑 VIP / Returning Customer",
+        text: "Welcome back, [Customer Name]! It's always a pleasure taking care of you.\n\nAs a valued returning client, you are receiving our best available pricing. The estimate below reflects exactly what we discussed — no surprises, no hidden fees.\n\nYour vehicles are in great hands. Simply click ACCEPT and I will reach out to confirm your preferred appointment date and time.\n\nThank you for your continued trust in Prime Auto Detail. We look forward to seeing you soon!\n\n— Rick Berube | 978-566-1008 | PrimeAutoDetail.net"
+    },
+    {
+        label: "🏢 Fleet / Business Account",
+        text: "Thank you for considering Prime Auto Detail for your fleet, [Company Name]!\n\nBelow is a full breakdown of pricing for each vehicle. Each vehicle is listed individually so you can mix and match service levels based on your needs and budget.\n\nHOW THIS WORKS:\n1. Review the pricing for each vehicle section below\n2. Choose which service tier best fits each vehicle (Exterior Only, Interior Only, or Full Detail)\n3. Reply with your selections — OR click ACCEPT to confirm the full fleet package\n4. We will coordinate scheduling to minimize downtime for your vehicles\n\nFleet scheduling priority is guaranteed for accounts with 3+ vehicles.\n\nReady to get started? Click ACCEPT below or call me directly at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
+    },
+    {
+        label: "📋 Simple / No-Frills",
+        text: "Hi [Customer Name],\n\nHere is your estimate from Prime Auto Detail. Prices reflect what we discussed.\n\nClick ACCEPT to confirm, or call/text 978-566-1008 with any questions.\n\nThank you!\n— Rick"
+    },
+    {
+        label: "✏️ Blank — Start from Scratch",
+        text: ""
+    }
+];
+
 const Estimates = () => {
     const { toast } = useToast();
     const [estimates, setEstimates] = useState<Estimate[]>([]);
@@ -138,6 +166,7 @@ const Estimates = () => {
     const [isMenuMode, setIsMenuMode] = useState(false);
     const [isHideVehicleSubtotals, setIsHideVehicleSubtotals] = useState(false);
     const [isShowCategorySubtotals, setIsShowCategorySubtotals] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState("");
     
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailRecipient, setEmailRecipient] = useState("");
@@ -1956,11 +1985,37 @@ Precision. Protection. Perfection.`;
                             
                             {/* Left Side: Customer-Facing Notes (Editable) */}
                             <div className="flex flex-col min-h-[300px] lg:min-h-0 h-full">
-                                <div className="mb-2 flex items-center justify-between">
-                                    <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                <div className="mb-2 flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5 mr-auto">
                                         ✍️ Customer-Facing Notes (Prints on PDF)
                                     </span>
+                                    {/* Template Picker — inline, compact */}
+                                    <select
+                                        value={selectedTemplate}
+                                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                                        className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-zinc-300 text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer max-w-[200px]"
+                                    >
+                                        <option value="">📋 Use a template…</option>
+                                        {NOTE_TEMPLATES.map((t, i) => (
+                                            <option key={i} value={String(i)}>{t.label}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        disabled={selectedTemplate === ""}
+                                        onClick={() => {
+                                            const idx = parseInt(selectedTemplate);
+                                            if (!isNaN(idx) && NOTE_TEMPLATES[idx]) {
+                                                setFullScreenPublicText(NOTE_TEMPLATES[idx].text);
+                                                setSelectedTemplate("");
+                                            }
+                                        }}
+                                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-amber-600 hover:bg-amber-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                    >
+                                        Insert
+                                    </button>
                                 </div>
+
                                 <textarea 
                                     value={fullScreenPublicText}
                                     onChange={(e) => setFullScreenPublicText(e.target.value)}
