@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -132,6 +134,13 @@ const Estimates = () => {
     const [discountCode, setDiscountCode] = useState("");
     const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
     const [isMenuMode, setIsMenuMode] = useState(false);
+    
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailRecipient, setEmailRecipient] = useState("");
+    const [emailSubject, setEmailSubject] = useState("");
+    const [emailBody, setEmailBody] = useState("");
+    const [emailEstimateId, setEmailEstimateId] = useState<string | null>(null);
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     
     useEffect(() => {
         refreshCoupons();
@@ -763,9 +772,163 @@ const Estimates = () => {
     const openCount = filteredEstimates.filter(e => (e.status || 'open') === 'open').length;
     const acceptedCount = filteredEstimates.filter(e => (e.status || 'open') === 'accepted').length;
 
+    const openEmailModal = (est: Estimate) => {
+        const customer = customers.find(c => c.id === est.customerId);
+        const firstName = customer?.name?.split(' ')[0] || 'Customer';
+        
+        let summaryText = `Total Estimate: $${est.total.toFixed(2)}`;
+        
+        const draft = `Hi ${firstName}!
+
+Thank you for considering Prime Auto Detail for your vehicle. I have put together an estimate based on your request.
+
+Service Summary:
+${summaryText}
+
+You can view your detailed estimate and accept/decline online by clicking the link below:
+https://primeautodetail.net/estimate/${est.id}
+
+If you have any questions or would like to adjust the services, please let me know. 
+
+Best regards,
+Rick Berube
+Prime Auto Detail
+Precision. Protection. Perfection.`;
+
+        setEmailSubject(`Service Estimate #${est.estimateNumber || 'N/A'} from Prime Auto Detail`);
+        setEmailRecipient(customer?.email || "");
+        setEmailBody(draft);
+        setEmailEstimateId(est.id || null);
+        setIsEmailModalOpen(true);
+    };
+
+    const handleSendEmail = async () => {
+        if (!emailEstimateId) return;
+        setIsSendingEmail(true);
+
+        try {
+            const selectedEst = estimates.find(e => e.id === emailEstimateId);
+            const toEmail = emailRecipient.trim();
+
+            if (!toEmail) {
+                throw new Error("Please provide a recipient email address.");
+            }
+
+            const htmlBody = emailBody.replace(/\n/g, '<br/>');
+
+            const { error } = await supabase.functions.invoke('send-booking-email', {
+                body: {
+                    to: toEmail,
+                    subject: emailSubject,
+                    html: `
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #333; line-height: 1.6;">
+                            <div style="background: #000; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+                                <h1 style="color: #fff; margin: 0; font-size: 24px;">Prime Auto Detail</h1>
+                            </div>
+                            <div style="padding: 30px; border: 1px solid #eee; border-top: none; border-radius: 0 0 10px 10px; background: #fff;">
+                                ${htmlBody}
+                            </div>
+                            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #888;">
+                                &copy; ${new Date().getFullYear()} Prime Auto Detail. All rights reserved.
+                            </div>
+                        </div>
+                    `,
+                    customerName: customers.find(c => c.id === selectedEst?.customerId)?.name || 'Customer',
+                    price: selectedEst?.total || 0,
+                    date: selectedEst?.date || new Date().toLocaleDateString(),
+                    service: 'Service Estimate'
+                }
+            });
+
+            if (error) throw error;
+            
+            if (selectedEst) {
+                const updated = { ...selectedEst, isSent: true, status: selectedEst.status !== 'accepted' && selectedEst.status !== 'declined' ? 'sent' : selectedEst.status, sentDate: new Date().toISOString() };
+                await upsertSupabaseEstimate(updated as any);
+                loadData();
+            }
+
+            toast({ title: "Email Sent", description: `Estimate successfully emailed to ${toEmail}` });
+            setIsEmailModalOpen(false);
+        } catch (err: any) {
+            console.error("Email send failed:", err);
+            toast({ 
+                title: "Failed to send email", 
+                description: err.message || "Unknown error occurred", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background pb-20 overflow-x-hidden w-full">
             <PageHeader title="Estimates" />
+
+            <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-amber-500" />
+                            Email Estimate
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Personalize the message before sending it to the customer.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Recipient Email</Label>
+                            <Input 
+                                value={emailRecipient}
+                                onChange={e => setEmailRecipient(e.target.value)}
+                                placeholder="customer@example.com"
+                                className="bg-zinc-900 border-zinc-800 text-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Subject</Label>
+                            <Input 
+                                value={emailSubject}
+                                onChange={e => setEmailSubject(e.target.value)}
+                                className="bg-zinc-900 border-zinc-800 text-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Message Body</Label>
+                            <Textarea 
+                                value={emailBody}
+                                onChange={e => setEmailBody(e.target.value)}
+                                className="bg-zinc-900 border-zinc-800 text-white min-h-[200px] text-sm leading-relaxed"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-3 justify-end pt-4">
+                        <Button variant="ghost" onClick={() => setIsEmailModalOpen(false)} className="text-zinc-400 hover:text-white">
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleSendEmail} 
+                            disabled={isSendingEmail}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold min-w-[120px]"
+                        >
+                            {isSendingEmail ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Sending...
+                                </>
+                            ) : (
+                                <>
+                                    <Send className="h-4 w-4 mr-2" />
+                                    Send Email
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6 w-full">
 
                 {/* Stats Card */}
@@ -1610,6 +1773,9 @@ const Estimates = () => {
                                             </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(est, 'download')} title="Download PDF">
                                                 <Save className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/20" onClick={() => openEmailModal(est)} title="Email Estimate">
+                                                <Mail className="h-4 w-4" />
                                             </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => handleCopyLink(est.id!)} title="Copy Hosted Link">
                                                 <LinkIcon className="h-4 w-4" />
