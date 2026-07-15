@@ -1100,7 +1100,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             const bDate = b.date?.split('T')[0];
             const match = invoices.find(inv => {
                 const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
-                const isCustMatch = inv.customerId === b.customerId || inv.customerName === b.customer;
+                const isCustMatch = (inv.customerId && inv.customerId === b.customerId) || 
+                                    (inv.customerName && b.customer && inv.customerName.toLowerCase() === b.customer.toLowerCase());
                 return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
             });
             if (match) {
@@ -1121,6 +1122,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         return {
             id: b.id,
+            customerId: b.customerId || customer?.id,
+            invoiceId: match ? match.id : null,
             date: b.date,
             customer: b.customer,
             address: address,
@@ -1154,13 +1157,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return qualServiceDetailsData
             .filter(s => s.revenue === 0)
             .map(s => {
-                const sDate = s.date?.split('T')[0];
-                const matchedInv = invoices.find(inv => {
-                    const invDate = (inv.serviceDate || inv.date || inv.createdAt || '').split('T')[0];
-                    const isCustMatch = inv.customerId === s.id || inv.customerName === s.customer;
-                    return isCustMatch && (invDate === sDate || Math.abs(new Date(invDate).getTime() - new Date(sDate).getTime()) < 86400000 * 2);
-                });
-                return { ...s, invoiceId: matchedInv?.id || null };
+                // We already matched the invoice in mapBookingToServiceDetail, but we can do a robust fallback just in case
+                let invId = (s as any).invoiceId;
+                if (!invId) {
+                    const sDate = s.date?.split('T')[0];
+                    const matchedInv = invoices.find(inv => {
+                        const invDate = (inv.serviceDate || inv.date || inv.createdAt || '').split('T')[0];
+                        // FIXED: Compare with s.customerId instead of s.id (which was the booking ID)
+                        const isCustMatch = (inv.customerId && inv.customerId === (s as any).customerId) || 
+                                            (inv.customerName && s.customer && inv.customerName.toLowerCase() === s.customer.toLowerCase());
+                        
+                        if (!isCustMatch) return false;
+                        if (!sDate || !invDate) return true; // match loosely if dates are missing
+                        return Math.abs(new Date(invDate).getTime() - new Date(sDate).getTime()) < 86400000 * 3;
+                    });
+                    invId = matchedInv?.id || null;
+                }
+                return { ...s, invoiceId: invId };
             });
     }, [qualServiceDetailsData, invoices]);
 
