@@ -83,7 +83,7 @@ export function mapAlert(a: AdminAlert): UIAlert {
       break;
     case "admin_message":
       if (a.message?.toLowerCase().includes("estimate") || a.title?.toLowerCase().includes("estimate")) {
-        href = "/bookings-analytics#estimates-tracker";
+        href = a.payload?.customerId ? `/estimates?customerId=${a.payload.customerId}` : "/estimates";
       } else {
         href = a.payload?.recordType ? `/file-manager?category=${encodeURIComponent(String(a.payload.recordType))}` : "/admin-dashboard";
       }

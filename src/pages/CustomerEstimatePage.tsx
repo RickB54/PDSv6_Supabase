@@ -183,7 +183,11 @@ export default function CustomerEstimatePage() {
         setSubmitting(true);
         try {
             const isMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
-            const menuVehicles = estimate.services.filter(s => s.name.startsWith('---') && s.price === 0).map(s => s.name.replace(/-/g, '').trim());
+            const menuVehicles = estimate.services.map((s, index) => ({
+                name: s.name.replace(/-/g, '').trim(),
+                originalIndex: String(index),
+                isHeader: s.name.startsWith('---') && s.price === 0
+            })).filter(v => v.isHeader);
             const hasMenuVehicles = isMenuMode && menuVehicles.length > 0;
 
             let newNotes = `${estimate.notes || ''}\n\n[ACCEPTED_BY_CUSTOMER]\n`;
@@ -191,21 +195,23 @@ export default function CustomerEstimatePage() {
 
             if (hasMenuVehicles) {
                 // Validate that all vehicles have a selection
-                const missing = menuVehicles.filter(v => !vehicleSelections[v]);
+                const missing = menuVehicles.filter(v => !vehicleSelections[v.originalIndex]);
                 if (missing.length > 0) {
                     throw new Error("Please select a service package for all vehicles.");
                 }
                 const selectionString = menuVehicles.map(v => {
-                    const pkg = vehicleSelections[v];
-                    const note = vehicleNotes[v] ? `\n  Note: ${vehicleNotes[v]}` : '';
-                    return `${v}: ${pkg}${note}`;
+                    const pkg = vehicleSelections[v.originalIndex];
+                    const note = vehicleNotes[v.originalIndex] ? `\n  Note: ${vehicleNotes[v.originalIndex]}` : '';
+                    return `${v.name}: ${pkg}${note}`;
                 }).join('\n');
-                newNotes += `[VEHICLE_SELECTIONS]:\n${selectionString}\n\n[NOTES]: ${formData.specialRequests}`;
+                
+                const selectionDataJSON = JSON.stringify(vehicleSelections);
+                newNotes += `[VEHICLE_SELECTIONS_JSON]: ${selectionDataJSON}\n[VEHICLE_SELECTIONS]:\n${selectionString}\n\n[NOTES]: ${formData.specialRequests}`;
                 
                 formSummaryHtml = `
                     <h3>Selected Packages:</h3>
                     <ul>
-                        ${menuVehicles.map(v => `<li><strong>${v}:</strong> ${vehicleSelections[v]}${vehicleNotes[v] ? `<br/><span style="color: #666; font-size: 0.9em;"><em>Note: ${vehicleNotes[v]}</em></span>` : ''}</li>`).join('')}
+                        ${menuVehicles.map(v => `<li><strong>${v.name}:</strong> ${vehicleSelections[v.originalIndex]}${vehicleNotes[v.originalIndex] ? `<br/><span style="color: #666; font-size: 0.9em;"><em>Note: ${vehicleNotes[v.originalIndex]}</em></span>` : ''}</li>`).join('')}
                     </ul>
                     <h3>Special Requests / Notes (General):</h3>
                     <p>${formData.specialRequests || 'None'}</p>
@@ -245,6 +251,15 @@ export default function CustomerEstimatePage() {
                 .eq('id', id);
 
             if (updateError) throw updateError;
+
+            // Immediately update local state so the view updates
+            setEstimate({
+                ...estimate,
+                status: 'accepted',
+                notes: newNotes
+            });
+            setIsAccepted(true);
+            setShowPreCheck(false);
 
             // Log engagement
             await supabase.from('engagements').insert({
@@ -302,16 +317,61 @@ export default function CustomerEstimatePage() {
         );
     }
 
+    let displayServices = estimate.services;
+    let displayTotal = estimate.total;
+    let isAcceptedMenuMode = false;
+
+    if (isAccepted && (estimate.notes || '').includes('[MENU_MODE]') && (estimate.notes || '').includes('[VEHICLE_SELECTIONS_JSON]')) {
+        isAcceptedMenuMode = true;
+        try {
+            const jsonMatch = estimate.notes.match(/\[VEHICLE_SELECTIONS_JSON\]:\s*({.*})/);
+            if (jsonMatch && jsonMatch[1]) {
+                const parsedSelections = JSON.parse(jsonMatch[1]);
+                const filteredServices: any[] = [];
+                let currentSelectedPackage: string | null = null;
+                let newTotal = 0;
+
+                estimate.services.forEach((svc, index) => {
+                    if (svc.name.startsWith('VIRTUAL_')) return;
+                    
+                    if (svc.name.startsWith('---') && svc.price === 0) {
+                        currentSelectedPackage = parsedSelections[String(index)];
+                        filteredServices.push(svc); // Keep header
+                    } else if (currentSelectedPackage) {
+                        const sName = svc.name.toLowerCase();
+                        const pkg = currentSelectedPackage.toLowerCase();
+                        let isMatch = false;
+                        
+                        if (pkg === 'exterior only') isMatch = sName.includes('exterior');
+                        else if (pkg === 'interior only') isMatch = sName.includes('interior');
+                        else if (pkg === 'full detail') isMatch = sName.includes('full');
+                        else isMatch = sName.includes(pkg);
+
+                        if (isMatch) {
+                            filteredServices.push(svc);
+                            newTotal += svc.price;
+                        }
+                    }
+                });
+                
+                displayServices = filteredServices;
+                displayTotal = newTotal;
+            }
+        } catch (e) {
+            console.error("Failed to parse vehicle selections", e);
+        }
+    }
+
     // Calculate actual total applying any discount
-    let finalTotal = estimate.total;
+    let finalTotal = displayTotal;
     let discountAmount = 0;
     if (estimate.discount && estimate.discount > 0) {
         if (estimate.discountType === 'percent') {
-            discountAmount = estimate.total * (estimate.discount / 100);
+            discountAmount = displayTotal * (estimate.discount / 100);
         } else {
             discountAmount = estimate.discount;
         }
-        finalTotal = Math.max(0, estimate.total - discountAmount);
+        finalTotal = Math.max(0, displayTotal - discountAmount);
     }
 
     return (
@@ -390,7 +450,7 @@ export default function CustomerEstimatePage() {
                         <div className="p-6">
                             <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-4">Proposed Services</p>
                             <div className="space-y-3">
-                                {estimate.services.map((svc, i) => {
+                                {displayServices.map((svc, i) => {
                                     // Skip virtual internal services
                                     if (svc.name.startsWith('VIRTUAL_')) return null;
                                     const isHeader = svc.name.startsWith('---') && svc.price === 0;
@@ -415,7 +475,7 @@ export default function CustomerEstimatePage() {
                                 
                                 const nameMap: Record<string, number> = {};
                                 let duplicateFound = false;
-                                estimate.services.forEach(s => {
+                                displayServices.forEach(s => {
                                     if (s.price > 0 && s.name && !s.name.startsWith('VIRTUAL_') && !s.name.startsWith('---')) {
                                         if (nameMap[s.name] !== undefined) {
                                             nameMap[s.name] += s.price;
@@ -443,11 +503,11 @@ export default function CustomerEstimatePage() {
                                 );
                             })()}
 
-                            {!(estimate.notes || '').includes('[MENU_MODE]') && (
+                            {(!(estimate.notes || '').includes('[MENU_MODE]') || isAcceptedMenuMode) && (
                                 <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
                                     <div className="flex justify-between items-center text-sm text-zinc-400">
                                         <span>Subtotal</span>
-                                        <span className="font-mono">${estimate.total.toFixed(2)}</span>
+                                        <span className="font-mono">${displayTotal.toFixed(2)}</span>
                                     </div>
                                     {discountAmount > 0 && (
                                         <div className="flex justify-between items-center text-sm text-emerald-400">
@@ -491,22 +551,29 @@ export default function CustomerEstimatePage() {
                 </Card>
 
                 {(!isAccepted && !isDeclined && !showPreCheck) && (
-                    <div className="mt-8 grid md:grid-cols-2 gap-4">
-                        <Button 
-                            onClick={handleAccept} 
-                            disabled={submitting}
-                            className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-xl shadow-emerald-900/20"
-                        >
-                            <CheckCircle2 className="w-5 h-5 mr-2" /> ACCEPT THIS ESTIMATE
-                        </Button>
-                        <Button 
-                            onClick={handleDecline} 
-                            disabled={submitting}
-                            variant="outline"
-                            className="w-full h-14 border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-red-950 hover:text-red-400 hover:border-red-900 font-bold text-lg transition-colors"
-                        >
-                            {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><XCircle className="w-5 h-5 mr-2" /> DECLINE ESTIMATE</>}
-                        </Button>
+                    <div className="mt-8">
+                        {((estimate.notes || '').includes('[MENU_MODE]')) && (
+                            <p className="text-sm text-zinc-400 mb-3 text-center italic">
+                                Clicking Accept will open a short form where you'll choose a package for each vehicle individually — you're not committing to one option for all vehicles.
+                            </p>
+                        )}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Button 
+                                onClick={handleAccept} 
+                                disabled={submitting}
+                                className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-xl shadow-emerald-900/20"
+                            >
+                                <CheckCircle2 className="w-5 h-5 mr-2" /> ACCEPT THIS ESTIMATE
+                            </Button>
+                            <Button 
+                                onClick={handleDecline} 
+                                disabled={submitting}
+                                variant="outline"
+                                className="w-full h-14 border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-red-950 hover:text-red-400 hover:border-red-900 font-bold text-lg transition-colors"
+                            >
+                                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><XCircle className="w-5 h-5 mr-2" /> DECLINE ESTIMATE</>}
+                            </Button>
+                        </div>
                     </div>
                 )}
                 
@@ -549,7 +616,11 @@ export default function CustomerEstimatePage() {
                                 
                                 {(() => {
                                     const isMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
-                                    const menuVehicles = estimate.services.filter(s => s.name.startsWith('---') && s.price === 0).map(s => s.name.replace(/-/g, '').trim());
+                                    const menuVehicles = estimate.services.map((s, index) => ({
+                                        name: s.name.replace(/-/g, '').trim(),
+                                        originalIndex: String(index),
+                                        isHeader: s.name.startsWith('---') && s.price === 0
+                                    })).filter(v => v.isHeader);
                                     
                                     if (isMenuMode && menuVehicles.length > 0) {
                                         return (
@@ -559,8 +630,8 @@ export default function CustomerEstimatePage() {
                                                 
                                                 {menuVehicles.map((v, idx) => (
                                                     <div key={idx} className="space-y-3 pt-4 pb-4 border-b border-zinc-800/50 last:border-0">
-                                                        <Label className="text-sm font-bold text-zinc-200">{v} *</Label>
-                                                        <Select value={vehicleSelections[v] || ''} onValueChange={(val) => setVehicleSelections({...vehicleSelections, [v]: val})}>
+                                                        <Label className="text-sm font-bold text-zinc-200">{v.name} *</Label>
+                                                        <Select value={vehicleSelections[v.originalIndex] || ''} onValueChange={(val) => setVehicleSelections({...vehicleSelections, [v.originalIndex]: val})}>
                                                             <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
                                                                 <SelectValue placeholder="Select package..." />
                                                             </SelectTrigger>
@@ -573,9 +644,9 @@ export default function CustomerEstimatePage() {
                                                         
                                                         <div className="pt-2">
                                                             <Input 
-                                                                placeholder={`Optional notes for this ${v.split(' ').pop()} (e.g. heavy pet hair, focus on interior)`}
-                                                                value={vehicleNotes[v] || ''}
-                                                                onChange={(e) => setVehicleNotes({...vehicleNotes, [v]: e.target.value})}
+                                                                placeholder={`Optional notes for this ${v.name.split(' ').pop()} (e.g. heavy pet hair, focus on interior)`}
+                                                                value={vehicleNotes[v.originalIndex] || ''}
+                                                                onChange={(e) => setVehicleNotes({...vehicleNotes, [v.originalIndex]: e.target.value})}
                                                                 className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 placeholder:text-zinc-600 h-10 text-xs"
                                                             />
                                                         </div>

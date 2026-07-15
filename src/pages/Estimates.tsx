@@ -117,7 +117,7 @@ const NOTE_TEMPLATES: { label: string; text: string }[] = [
     },
     {
         label: "🚙🚙 Multi-Vehicle (Menu Mode)",
-        text: "Thank you for reaching out, [Customer Name]! It was great speaking with you.\n\nBelow you will find individual pricing options for each of your vehicles. This estimate is designed as a MENU — each vehicle is listed separately with three package tiers to choose from:\n\n   - EXTERIOR ONLY — Outside wash, decontamination, tire shine & protection\n   - INTERIOR ONLY — Full interior detail - vacuum, protection & cleaning\n   - FULL DETAIL   — Complete exterior + interior package (best value)\n\nHOW TO READ THIS ESTIMATE:\nLook at each vehicle section (e.g., '--- 2021 Ford Bronco ---') and pick ONE of the three price lines that fits your needs for that vehicle. You do NOT pay all three — just the one you select per vehicle!\n\nTO ACCEPT: Click the ACCEPT button below. A short form will appear — use the Special Requests / Notes field to tell me which service you'd like for each vehicle and I will confirm everything before your appointment.\n\nQuestions? Call or text me anytime at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
+        text: "Thank you for reaching out! It was great speaking with you.\n\nBelow you will find individual pricing options for each of your vehicles. This estimate is designed as a MENU — each vehicle is listed separately with three package tiers to choose from:\n\n✦ EXTERIOR ONLY — Outside wash, decontamination, tire shine & protection\n✦ INTERIOR ONLY — Full interior detail - vacuum, protection & cleaning\n✦ FULL DETAIL   — Complete exterior + interior package (best value)\n\nHOW TO READ THIS ESTIMATE: Look at each vehicle section (e.g., '--- 2021 Ford Bronco ---') and pick ONE of the three price lines that fits your needs for that vehicle. You do NOT pay all three — just the one you select per vehicle!\n\nPLEASE NOTE: The pricing below reflects our standard rates for each service tier. Since this covers multiple vehicles I haven't yet inspected in person, I'll do a quick walk-around of each one before your appointment to confirm everything lines up — this just accounts for things like heavier dirt, pet hair, or extra buildup that can vary vehicle to vehicle. Any adjustment (if needed at all) will be confirmed with you before I start any work, so there won't be surprises.\n\nON SCHEDULING: Once you accept this estimate, let me know in the Special Requests / Notes field what timeline works best for you — whether you'd like all vehicles completed by a specific date, or would prefer them spread across multiple visits. I'll do my best to accommodate your preference when confirming your appointment.\n\nTO ACCEPT: Click the ACCEPT button below. On the acceptance form, you'll see each vehicle listed with its own dropdown — please select which package (Exterior Only, Interior Only, or Full Detail) you'd like for each vehicle individually before submitting. Use the Special Requests / Notes field at the bottom for any additional details or your preferred timeline.\n\nQuestions? Call or text me anytime at 978-566-1008.\n— Rick Berube | Prime Auto Detail"
     },
     {
         label: "👑 VIP / Returning Customer",
@@ -1335,6 +1335,32 @@ Precision. Protection. Perfection.`;
                                             setServices([...services, ...newServices]);
                                             return;
                                         }
+                                        if (val === "menu_mode_template") {
+                                            const newServices = [
+                                                { name: '--- Compact ---', price: 0 },
+                                                { name: 'Prime Essential Exterior', price: 90 },
+                                                { name: 'Prime Essential Interior', price: 180 },
+                                                { name: 'Prime Essential Full Detail', price: 260 },
+                                                { name: '--- Midsize ---', price: 0 },
+                                                { name: 'Prime Essential Exterior', price: 110 },
+                                                { name: 'Prime Essential Interior', price: 200 },
+                                                { name: 'Prime Essential Full Detail', price: 270 },
+                                                { name: '--- Truck/SUV ---', price: 0 },
+                                                { name: 'Prime Essential Exterior', price: 120 },
+                                                { name: 'Prime Essential Interior', price: 210 },
+                                                { name: 'Prime Essential Full Detail', price: 290 },
+                                                { name: '--- Luxury ---', price: 0 },
+                                                { name: 'Prime Essential Exterior', price: 130 },
+                                                { name: 'Prime Essential Interior', price: 240 },
+                                                { name: 'Prime Essential Full Detail', price: 320 }
+                                            ];
+                                            setServices([...services, ...newServices]);
+                                            if (!notes.trim()) {
+                                                const menuModeNote = NOTE_TEMPLATES.find(t => t.label.includes("Multi-Vehicle (Menu Mode)"))?.text;
+                                                if (menuModeNote) setNotes(menuModeNote);
+                                            }
+                                            return;
+                                        }
                                         const pkg = servicePackages.find(p => p.id === val);
                                         if (pkg) {
                                             const price = pkg.pricing[selectedVehicleType] || 0;
@@ -1348,6 +1374,9 @@ Precision. Protection. Perfection.`;
                                             ))}
                                             <SelectItem value="all_essential" className="font-bold text-amber-500 border-t border-zinc-800 mt-1 pt-1">
                                                 + Add All 3 Essential Packages
+                                            </SelectItem>
+                                            <SelectItem value="menu_mode_template" className="font-bold text-emerald-500 border-t border-zinc-800">
+                                                + Add 4-Vehicle Menu Mode Template
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -1702,7 +1731,15 @@ Precision. Protection. Perfection.`;
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
-                                            onClick={() => setServices([...services, { name: "--- [Type Section Name Here] ---", price: 0 }])}
+                                            onClick={() => {
+                                                const newServices = [...services, { name: "--- [Type Section Name Here] ---", price: 0 }];
+                                                setServices(newServices);
+                                                const headerCount = newServices.filter(s => s.name.startsWith('---') && s.price === 0).length;
+                                                if (headerCount > 1 && !notes.trim()) {
+                                                    const menuModeNote = NOTE_TEMPLATES.find(t => t.label.includes("Multi-Vehicle (Menu Mode)"))?.text;
+                                                    if (menuModeNote) setNotes(menuModeNote);
+                                                }
+                                            }}
                                             className="flex-1 border-dashed border-amber-700/50 text-amber-500/80 hover:text-amber-400 hover:border-amber-500 hover:bg-amber-500/10"
                                         >
                                             <FileText className="h-4 w-4 mr-2" /> Add Section Header
@@ -1904,7 +1941,7 @@ Precision. Protection. Perfection.`;
                                                 <Send className={cn("h-4 w-4", est.isSent && "fill-blue-400/20")} />
                                             </Button>
                                         </div>
-                                        <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
+                                        <div className="flex flex-wrap justify-end gap-2 items-center" onClick={e => e.stopPropagation()}>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
