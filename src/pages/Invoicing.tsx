@@ -183,6 +183,7 @@ const Invoicing = () => {
   const [customNotes, setCustomNotes] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editIsSent, setEditIsSent] = useState(false);
+  const [editSentDate, setEditSentDate] = useState<string | undefined>(undefined);
   const [invoiceStyle, setInvoiceStyle] = useState<'original' | 'professional'>('original');
 
   const location = useLocation();
@@ -729,6 +730,7 @@ const Invoicing = () => {
     setEditVehicle(resolvedVehicle);
     setEditNotes(inv.notes || "");
     setEditIsSent(inv.isSent || false);
+    setEditSentDate(inv.sentDate);
     setServiceDate(inv.serviceDate || inv.date || new Date().toISOString().split('T')[0]);
     
     setEditHoursWorked(inv.hoursWorked !== undefined ? String(inv.hoursWorked) : "");
@@ -783,7 +785,7 @@ const Invoicing = () => {
       vehicle: editVehicle,
       notes: editNotes,
       isSent: editIsSent,
-      sentDate: editIsSent && !selectedInvoice.isSent ? new Date().toISOString() : selectedInvoice.sentDate,
+      sentDate: editSentDate,
       serviceDate: serviceDate,
       total: newTotal,
       priceLocked: editPriceLocked,
@@ -2143,7 +2145,7 @@ Precision. Protection. Perfection.`;
                           const cust = customers.find(c => c.id === invoice.customerId);
                           if (cust && cust.email) {
                               const subject = encodeURIComponent(`Invoice #${invoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`);
-                              const body = encodeURIComponent(`Hi ${invoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${invoice.id}\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
+                              const body = encodeURIComponent(`Hi ${invoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${invoice.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
                               window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`, '_blank');
                           } else {
                               toast({ title: "No Email Found", description: "This customer does not have an email address on file.", variant: "destructive" });
@@ -2268,7 +2270,7 @@ Precision. Protection. Perfection.`;
                       const cust = customers.find(c => c.id === selectedInvoice.customerId);
                       if (cust && cust.email) {
                           const subject = encodeURIComponent(`Invoice #${selectedInvoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`);
-                          const body = encodeURIComponent(`Hi ${selectedInvoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
+                          const body = encodeURIComponent(`Hi ${selectedInvoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
                           return (
                               <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
                                   <Mail className="h-3 w-3" />
@@ -2626,7 +2628,19 @@ Precision. Protection. Perfection.`;
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => setEditIsSent(!editIsSent)}
+                    onClick={() => {
+                        const newIsSent = !editIsSent;
+                        if (newIsSent) {
+                            if (editSentDate) {
+                                if (window.confirm(`This invoice already has a sent date of ${new Date(editSentDate).toLocaleDateString()}.\n\nDo you want to update the sent date to today? (Click 'Cancel' to keep original date)`)) {
+                                    setEditSentDate(new Date().toISOString());
+                                }
+                            } else {
+                                setEditSentDate(new Date().toISOString());
+                            }
+                        }
+                        setEditIsSent(newIsSent);
+                    }}
                     className={cn(
                       "gap-2 font-bold text-[11px] uppercase tracking-wider",
                       editIsSent 
@@ -2642,9 +2656,9 @@ Precision. Protection. Perfection.`;
                     </div>
                     I have sent this invoice to the customer
                   </Button>
-                  {editIsSent && selectedInvoice.sentDate && (
+                  {editIsSent && editSentDate && (
                     <span className="text-[10px] text-zinc-500 italic ml-auto">
-                      Marked sent on {new Date(selectedInvoice.sentDate).toLocaleDateString()}
+                      Marked sent on {new Date(editSentDate).toLocaleDateString()}
                     </span>
                   )}
                 </div>
