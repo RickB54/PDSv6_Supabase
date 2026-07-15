@@ -12,6 +12,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from '@/components/ui/textarea';
 import { getCurrentUser } from '@/lib/auth';
+import { Checkbox } from '@/components/ui/checkbox';
+import { addOns, getAddOnPrice } from '@/lib/services';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import servicesQrCode from "@/assets/services-qr.png";
 
@@ -48,6 +50,7 @@ export default function CustomerEstimatePage() {
 
     const [vehicleSelections, setVehicleSelections] = useState<Record<string, string>>({});
     const [vehicleNotes, setVehicleNotes] = useState<Record<string, string>>({});
+    const [vehicleAddons, setVehicleAddons] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
         setUser(getCurrentUser());
@@ -113,7 +116,8 @@ export default function CustomerEstimatePage() {
                 created_at: data.created_at,
                 notes: data.notes || '',
                 discount: data.discount || 0,
-                discountType: data.discount_type
+                discountType: data.discount_type,
+                vehicleType: data.vehicle_type
             };
 
             setEstimate(est);
@@ -201,17 +205,25 @@ export default function CustomerEstimatePage() {
                 }
                 const selectionString = menuVehicles.map(v => {
                     const pkg = vehicleSelections[v.originalIndex];
+                    const addons = vehicleAddons[v.originalIndex] || [];
+                    const addonsStr = addons.length > 0 ? `\n  Add-ons: ${addons.map(a => addOns.find(x => x.id === a)?.name).join(', ')}` : '';
                     const note = vehicleNotes[v.originalIndex] ? `\n  Note: ${vehicleNotes[v.originalIndex]}` : '';
-                    return `${v.name}: ${pkg}${note}`;
+                    return `${v.name}: ${pkg}${addonsStr}${note}`;
                 }).join('\n');
                 
                 const selectionDataJSON = JSON.stringify(vehicleSelections);
-                newNotes += `[VEHICLE_SELECTIONS_JSON]: ${selectionDataJSON}\n[VEHICLE_SELECTIONS]:\n${selectionString}\n\n[NOTES]: ${formData.specialRequests}`;
+                const addonsDataJSON = JSON.stringify(vehicleAddons);
+                newNotes += `[VEHICLE_SELECTIONS_JSON]: ${selectionDataJSON}\n[VEHICLE_ADDONS_JSON]: ${addonsDataJSON}\n[VEHICLE_SELECTIONS]:\n${selectionString}\n\n[NOTES]: ${formData.specialRequests}`;
                 
                 formSummaryHtml = `
-                    <h3>Selected Packages:</h3>
+                    <h3>Selected Packages & Add-ons:</h3>
                     <ul>
-                        ${menuVehicles.map(v => `<li><strong>${v.name}:</strong> ${vehicleSelections[v.originalIndex]}${vehicleNotes[v.originalIndex] ? `<br/><span style="color: #666; font-size: 0.9em;"><em>Note: ${vehicleNotes[v.originalIndex]}</em></span>` : ''}</li>`).join('')}
+                        ${menuVehicles.map(v => {
+                            const addons = vehicleAddons[v.originalIndex] || [];
+                            const addonHtml = addons.length > 0 ? `<br/><span style="color: #4ade80; font-size: 0.9em;"><em>+ Add-ons: ${addons.map(a => addOns.find(x => x.id === a)?.name).join(', ')}</em></span>` : '';
+                            const noteHtml = vehicleNotes[v.originalIndex] ? `<br/><span style="color: #666; font-size: 0.9em;"><em>Note: ${vehicleNotes[v.originalIndex]}</em></span>` : '';
+                            return `<li><strong>${v.name}:</strong> ${vehicleSelections[v.originalIndex]}${addonHtml}${noteHtml}</li>`;
+                        }).join('')}
                     </ul>
                     <h3>Special Requests / Notes (General):</h3>
                     <p>${formData.specialRequests || 'None'}</p>
@@ -650,6 +662,41 @@ export default function CustomerEstimatePage() {
                                                                 className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 placeholder:text-zinc-600 h-10 text-xs"
                                                             />
                                                         </div>
+                                                        
+                                                        {/* Add-ons multi-select */}
+                                                        {vehicleSelections[v.originalIndex] && (
+                                                            <div className="pt-4 space-y-2">
+                                                                <Label className="text-xs font-bold text-zinc-400">Optional Add-Ons (Select multiple if desired)</Label>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                                                    {addOns.map(addon => {
+                                                                        const currentAddons = vehicleAddons[v.originalIndex] || [];
+                                                                        const isSelected = currentAddons.includes(addon.id);
+                                                                        const vType = (estimate.vehicleType || 'midsize') as any;
+                                                                        const price = getAddOnPrice(addon.id, vType);
+                                                                        return (
+                                                                            <div key={addon.id} className="flex items-start space-x-2 bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
+                                                                                <Checkbox 
+                                                                                    id={`addon-${v.originalIndex}-${addon.id}`}
+                                                                                    checked={isSelected}
+                                                                                    onCheckedChange={(c) => {
+                                                                                        const newAddons = c ? [...currentAddons, addon.id] : currentAddons.filter(id => id !== addon.id);
+                                                                                        setVehicleAddons({...vehicleAddons, [v.originalIndex]: newAddons});
+                                                                                    }}
+                                                                                />
+                                                                                <div className="grid gap-1.5 leading-none cursor-pointer flex-1" onClick={() => {
+                                                                                        const newAddons = !isSelected ? [...currentAddons, addon.id] : currentAddons.filter(id => id !== addon.id);
+                                                                                        setVehicleAddons({...vehicleAddons, [v.originalIndex]: newAddons});
+                                                                                }}>
+                                                                                    <label htmlFor={`addon-${v.originalIndex}-${addon.id}`} className="text-[11px] font-medium leading-tight cursor-pointer text-zinc-300">
+                                                                                        {addon.name} <span className="text-emerald-500 font-mono ml-1">+${price}</span>
+                                                                                    </label>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
 
@@ -689,6 +736,20 @@ export default function CustomerEstimatePage() {
                                                                 currentDynamicTotal += svc.price;
                                                             }
                                                         }
+                                                    });
+
+                                                    // Inject Add-ons total
+                                                    const vType = (estimate.vehicleType || 'midsize') as any;
+                                                    Object.keys(vehicleAddons).forEach(vIndex => {
+                                                        const addons = vehicleAddons[vIndex];
+                                                        addons.forEach(aId => {
+                                                            const addonDef = addOns.find(x => x.id === aId);
+                                                            if (addonDef) {
+                                                                const price = getAddOnPrice(aId, vType);
+                                                                currentDynamicTotal += price;
+                                                                selectedServices.push({ name: addonDef.name, price: price });
+                                                            }
+                                                        });
                                                     });
 
                                                     if (selectedServices.length === 0) return null;
