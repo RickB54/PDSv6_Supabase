@@ -932,8 +932,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         let unpaid = 0;
         
         filteredInvoices.forEach((inv: any) => {
-            const status = inv.paymentStatus || 'unpaid';
-            if (status === 'paid' || (inv.paidAmount && inv.total && inv.paidAmount >= inv.total)) {
+            const status = (inv.paymentStatus || 'unpaid').toLowerCase();
+            if (status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total)) {
                 paid++;
             } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
                 partiallyPaid++;
@@ -1457,7 +1457,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         });
 
         // 3. Unpaid Invoices
-        invoices.filter(inv => inv.status !== 'Paid' && inv.status !== 'Draft').forEach(inv => {
+        invoices.filter(inv => {
+            const status = (inv.paymentStatus || 'unpaid').toLowerCase();
+            const isPaid = status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total);
+            const isDraft = (inv.status || '').toLowerCase() === 'draft';
+            return !isPaid && !isDraft;
+        }).forEach(inv => {
             reminders.push({
                 id: `unpaid-${inv.id}`,
                 type: 'unpaid_invoice',
@@ -2732,11 +2737,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     ) : (
                                         filteredInvoices.map((inv) => {
                                             const isSent = inv.isSent;
-                                            const status = inv.paymentStatus || 'unpaid';
+                                            const status = (inv.paymentStatus || 'unpaid').toLowerCase();
                                             
                                             let outcomeDisplay = 'Unpaid';
                                             let outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
-                                            if (status === 'paid' || (inv.paidAmount && inv.total && inv.paidAmount >= inv.total)) {
+                                            if (status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total)) {
                                                 outcomeDisplay = 'Paid';
                                                 outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
                                             } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
@@ -3381,8 +3386,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </CardContent>
+        </Card>
 
 
 
