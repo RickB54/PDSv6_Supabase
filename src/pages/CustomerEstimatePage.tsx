@@ -46,6 +46,9 @@ export default function CustomerEstimatePage() {
         lastDetail: ''
     });
 
+    const [vehicleSelections, setVehicleSelections] = useState<Record<string, string>>({});
+    const [vehicleNotes, setVehicleNotes] = useState<Record<string, string>>({});
+
     useEffect(() => {
         setUser(getCurrentUser());
         if (id) {
@@ -179,15 +182,58 @@ export default function CustomerEstimatePage() {
         if (!estimate || !id) return;
         setSubmitting(true);
         try {
-            // Validate dropdowns
-            if (!formData.exteriorPaint || !formData.interiorCondition || !formData.tireCondition || !formData.lastDetail) {
-                throw new Error("Please complete all dropdown selections in the form.");
-            }
+            const isMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
+            const menuVehicles = estimate.services.filter(s => s.name.startsWith('---') && s.price === 0).map(s => s.name.replace(/-/g, '').trim());
+            const hasMenuVehicles = isMenuMode && menuVehicles.length > 0;
 
-            const preCheckString = JSON.stringify(formData);
-            
-            // Append hidden meta to notes
-            const newNotes = `${estimate.notes || ''}\n\n[ACCEPTED_BY_CUSTOMER]\n[PRE_CHECK_DATA]: ${preCheckString}`;
+            let newNotes = `${estimate.notes || ''}\n\n[ACCEPTED_BY_CUSTOMER]\n`;
+            let formSummaryHtml = '';
+
+            if (hasMenuVehicles) {
+                // Validate that all vehicles have a selection
+                const missing = menuVehicles.filter(v => !vehicleSelections[v]);
+                if (missing.length > 0) {
+                    throw new Error("Please select a service package for all vehicles.");
+                }
+                const selectionString = menuVehicles.map(v => {
+                    const pkg = vehicleSelections[v];
+                    const note = vehicleNotes[v] ? `\n  Note: ${vehicleNotes[v]}` : '';
+                    return `${v}: ${pkg}${note}`;
+                }).join('\n');
+                newNotes += `[VEHICLE_SELECTIONS]:\n${selectionString}\n\n[NOTES]: ${formData.specialRequests}`;
+                
+                formSummaryHtml = `
+                    <h3>Selected Packages:</h3>
+                    <ul>
+                        ${menuVehicles.map(v => `<li><strong>${v}:</strong> ${vehicleSelections[v]}${vehicleNotes[v] ? `<br/><span style="color: #666; font-size: 0.9em;"><em>Note: ${vehicleNotes[v]}</em></span>` : ''}</li>`).join('')}
+                    </ul>
+                    <h3>Special Requests / Notes (General):</h3>
+                    <p>${formData.specialRequests || 'None'}</p>
+                `;
+            } else {
+                // Validate dropdowns for standard single vehicle
+                if (!formData.exteriorPaint || !formData.interiorCondition || !formData.tireCondition || !formData.lastDetail) {
+                    throw new Error("Please complete all dropdown selections in the form.");
+                }
+                const preCheckString = JSON.stringify(formData);
+                newNotes += `[PRE_CHECK_DATA]: ${preCheckString}\n[NOTES]: ${formData.specialRequests}`;
+
+                formSummaryHtml = `
+                    <h3>Pre-Check Information:</h3>
+                    <ul>
+                        <li><strong>Pet Hair:</strong> ${formData.petHair ? 'Yes' : 'No'}</li>
+                        <li><strong>Stains:</strong> ${formData.stains ? 'Yes (' + formData.stainDesc + ')' : 'No'}</li>
+                        <li><strong>Odors:</strong> ${formData.odors ? 'Yes (' + formData.odorDesc + ')' : 'No'}</li>
+                        <li><strong>Exterior Paint:</strong> ${formData.exteriorPaint}</li>
+                        <li><strong>Scratches/Swirls:</strong> ${formData.paintScratches ? 'Yes (' + formData.scratchDesc + ')' : 'No'}</li>
+                        <li><strong>Interior Condition:</strong> ${formData.interiorCondition}</li>
+                        <li><strong>Tires/Wheels:</strong> ${formData.tireCondition}</li>
+                        <li><strong>Known Damage:</strong> ${formData.knownDamage ? 'Yes (' + formData.damageDesc + ')' : 'No'}</li>
+                        <li><strong>Last Detail:</strong> ${formData.lastDetail}</li>
+                        <li><strong>Special Requests:</strong> ${formData.specialRequests || 'None'}</li>
+                    </ul>
+                `;
+            }
 
             // Update estimate
             const { error: updateError } = await supabase
@@ -205,28 +251,11 @@ export default function CustomerEstimatePage() {
                 customer_id: estimate.customerId,
                 customer_name: estimate.customerName,
                 type: 'Estimate Pre-Check',
-                note: `[ACCEPTED_BY_CUSTOMER] Estimate #${estimate.estimateNumber || ''} ACCEPTED online. Customer completed the Pre-Check Form.`
+                note: `[ACCEPTED_BY_CUSTOMER] Estimate #${estimate.estimateNumber || ''} ACCEPTED online. Customer completed the acceptance form.`
             });
 
             // Send Email Notification to Admin
             try {
-                // Create a readable HTML summary for the email
-                let formSummaryHtml = `
-                    <h3>Pre-Check Information:</h3>
-                    <ul>
-                        <li><strong>Pet Hair:</strong> ${formData.petHair ? 'Yes' : 'No'}</li>
-                        <li><strong>Stains:</strong> ${formData.stains ? 'Yes (' + formData.stainDesc + ')' : 'No'}</li>
-                        <li><strong>Odors:</strong> ${formData.odors ? 'Yes (' + formData.odorDesc + ')' : 'No'}</li>
-                        <li><strong>Exterior Paint:</strong> ${formData.exteriorPaint}</li>
-                        <li><strong>Scratches/Swirls:</strong> ${formData.paintScratches ? 'Yes (' + formData.scratchDesc + ')' : 'No'}</li>
-                        <li><strong>Interior Condition:</strong> ${formData.interiorCondition}</li>
-                        <li><strong>Tires/Wheels:</strong> ${formData.tireCondition}</li>
-                        <li><strong>Known Damage:</strong> ${formData.knownDamage ? 'Yes (' + formData.damageDesc + ')' : 'No'}</li>
-                        <li><strong>Last Detail:</strong> ${formData.lastDetail}</li>
-                        <li><strong>Special Requests:</strong> ${formData.specialRequests || 'None'}</li>
-                    </ul>
-                `;
-
                 await supabase.functions.invoke('send-booking-email', {
                     body: {
                         to: 'rick.primeautodetail@gmail.com',
@@ -518,160 +547,213 @@ export default function CustomerEstimatePage() {
                             </CardHeader>
                             <CardContent className="p-6 space-y-8">
                                 
-                                {/* BASIC CONDITION */}
-                                <div className="space-y-6">
-                                    <h3 className="text-xs font-black tracking-widest text-zinc-500 uppercase">Basic Condition</h3>
+                                {(() => {
+                                    const isMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
+                                    const menuVehicles = estimate.services.filter(s => s.name.startsWith('---') && s.price === 0).map(s => s.name.replace(/-/g, '').trim());
                                     
-                                    <div className="flex items-center justify-between">
-                                        <Label className="text-base text-zinc-200 cursor-pointer">Pet Hair Present?</Label>
-                                        <Switch checked={formData.petHair} onCheckedChange={(c) => setFormData({...formData, petHair: c})} />
-                                    </div>
+                                    if (isMenuMode && menuVehicles.length > 0) {
+                                        return (
+                                            <div className="space-y-6">
+                                                <h3 className="text-xs font-black tracking-widest text-zinc-500 uppercase">Service Selection</h3>
+                                                <p className="text-sm text-zinc-300">Please select the detailing package you would like for each vehicle below.</p>
+                                                
+                                                {menuVehicles.map((v, idx) => (
+                                                    <div key={idx} className="space-y-3 pt-4 pb-4 border-b border-zinc-800/50 last:border-0">
+                                                        <Label className="text-sm font-bold text-zinc-200">{v} *</Label>
+                                                        <Select value={vehicleSelections[v] || ''} onValueChange={(val) => setVehicleSelections({...vehicleSelections, [v]: val})}>
+                                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
+                                                                <SelectValue placeholder="Select package..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                                <SelectItem value="Exterior Only">Exterior Only</SelectItem>
+                                                                <SelectItem value="Interior Only">Interior Only</SelectItem>
+                                                                <SelectItem value="Full Detail">Full Detail</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        
+                                                        <div className="pt-2">
+                                                            <Input 
+                                                                placeholder={`Optional notes for this ${v.split(' ').pop()} (e.g. heavy pet hair, focus on interior)`}
+                                                                value={vehicleNotes[v] || ''}
+                                                                onChange={(e) => setVehicleNotes({...vehicleNotes, [v]: e.target.value})}
+                                                                className="bg-zinc-950/50 border-zinc-800/50 text-zinc-300 placeholder:text-zinc-600 h-10 text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
 
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-base text-zinc-200 cursor-pointer">Stains Present?</Label>
-                                            <Switch checked={formData.stains} onCheckedChange={(c) => setFormData({...formData, stains: c})} />
-                                        </div>
-                                        {formData.stains && (
-                                            <div className="pl-4 border-l-2 border-zinc-800">
-                                                <Input 
-                                                    placeholder="Please describe location and type of stains..." 
-                                                    value={formData.stainDesc} 
-                                                    onChange={e => setFormData({...formData, stainDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
-                                                />
+                                                <div className="space-y-3 pt-6 border-t border-zinc-800">
+                                                    <Label className="text-sm font-bold text-amber-400">📝 General Requests or Notes</Label>
+                                                    <p className="text-[11px] text-zinc-500">Have any other vehicles, specific timeline preferences, or additional details we should know about?</p>
+                                                    <Textarea 
+                                                        placeholder="e.g. Any special requests, timelines, or additional vehicle info..." 
+                                                        value={formData.specialRequests}
+                                                        onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
+                                                        className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-100 placeholder:text-zinc-600"
+                                                    />
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
+                                        );
+                                    }
 
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-base text-zinc-200 cursor-pointer">Odors Present?</Label>
-                                            <Switch checked={formData.odors} onCheckedChange={(c) => setFormData({...formData, odors: c})} />
-                                        </div>
-                                        {formData.odors && (
-                                            <div className="pl-4 border-l-2 border-zinc-800">
-                                                <Input 
-                                                    placeholder="Please describe the odor (e.g. smoke, pet)..." 
-                                                    value={formData.odorDesc} 
-                                                    onChange={e => setFormData({...formData, odorDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
-                                                />
+                                    return (
+                                        <>
+                                            {/* BASIC CONDITION */}
+                                            <div className="space-y-6">
+                                                <h3 className="text-xs font-black tracking-widest text-zinc-500 uppercase">Basic Condition</h3>
+                                                
+                                                <div className="flex items-center justify-between">
+                                                    <Label className="text-base text-zinc-200 cursor-pointer">Pet Hair Present?</Label>
+                                                    <Switch checked={formData.petHair} onCheckedChange={(c) => setFormData({...formData, petHair: c})} />
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-base text-zinc-200 cursor-pointer">Stains Present?</Label>
+                                                        <Switch checked={formData.stains} onCheckedChange={(c) => setFormData({...formData, stains: c})} />
+                                                    </div>
+                                                    {formData.stains && (
+                                                        <div className="pl-4 border-l-2 border-zinc-800">
+                                                            <Input 
+                                                                placeholder="Please describe location and type of stains..." 
+                                                                value={formData.stainDesc} 
+                                                                onChange={e => setFormData({...formData, stainDesc: e.target.value})}
+                                                                className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-base text-zinc-200 cursor-pointer">Odors Present?</Label>
+                                                        <Switch checked={formData.odors} onCheckedChange={(c) => setFormData({...formData, odors: c})} />
+                                                    </div>
+                                                    {formData.odors && (
+                                                        <div className="pl-4 border-l-2 border-zinc-800">
+                                                            <Input 
+                                                                placeholder="Please describe the odor (e.g. smoke, pet)..." 
+                                                                value={formData.odorDesc} 
+                                                                onChange={e => setFormData({...formData, odorDesc: e.target.value})}
+                                                                className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
 
-                                {/* DETAILED CONDITION */}
-                                <div className="space-y-6 pt-6 border-t border-zinc-800">
-                                    <h3 className="text-xs font-black tracking-widest text-zinc-500 uppercase">Detailed Condition</h3>
-                                    
-                                    <div className="space-y-3">
-                                        <Label className="text-sm text-zinc-300">Exterior Paint Condition *</Label>
-                                        <Select value={formData.exteriorPaint} onValueChange={(v) => setFormData({...formData, exteriorPaint: v})}>
-                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
-                                                <SelectValue placeholder="Select condition..." />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="Excellent">Excellent</SelectItem>
-                                                <SelectItem value="Good">Good</SelectItem>
-                                                <SelectItem value="Fair">Fair (some wear)</SelectItem>
-                                                <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
+                                            {/* DETAILED CONDITION */}
+                                            <div className="space-y-6 pt-6 border-t border-zinc-800">
+                                                <h3 className="text-xs font-black tracking-widest text-zinc-500 uppercase">Detailed Condition</h3>
+                                                
+                                                <div className="space-y-3">
+                                                    <Label className="text-sm text-zinc-300">Exterior Paint Condition *</Label>
+                                                    <Select value={formData.exteriorPaint} onValueChange={(v) => setFormData({...formData, exteriorPaint: v})}>
+                                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
+                                                            <SelectValue placeholder="Select condition..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                            <SelectItem value="Excellent">Excellent</SelectItem>
+                                                            <SelectItem value="Good">Good</SelectItem>
+                                                            <SelectItem value="Fair">Fair (some wear)</SelectItem>
+                                                            <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
 
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-base text-zinc-200 cursor-pointer">Paint Scratches or Swirl Marks?</Label>
-                                            <Switch checked={formData.paintScratches} onCheckedChange={(c) => setFormData({...formData, paintScratches: c})} />
-                                        </div>
-                                        {formData.paintScratches && (
-                                            <div className="pl-4 border-l-2 border-zinc-800">
-                                                <Input 
-                                                    placeholder="Please describe..." 
-                                                    value={formData.scratchDesc} 
-                                                    onChange={e => setFormData({...formData, scratchDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
-                                                />
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-base text-zinc-200 cursor-pointer">Paint Scratches or Swirl Marks?</Label>
+                                                        <Switch checked={formData.paintScratches} onCheckedChange={(c) => setFormData({...formData, paintScratches: c})} />
+                                                    </div>
+                                                    {formData.paintScratches && (
+                                                        <div className="pl-4 border-l-2 border-zinc-800">
+                                                            <Input 
+                                                                placeholder="Please describe..." 
+                                                                value={formData.scratchDesc} 
+                                                                onChange={e => setFormData({...formData, scratchDesc: e.target.value})}
+                                                                className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <Label className="text-sm text-zinc-300">Interior Condition *</Label>
+                                                    <Select value={formData.interiorCondition} onValueChange={(v) => setFormData({...formData, interiorCondition: v})}>
+                                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
+                                                            <SelectValue placeholder="Select condition..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                            <SelectItem value="Excellent">Excellent</SelectItem>
+                                                            <SelectItem value="Good">Good</SelectItem>
+                                                            <SelectItem value="Fair">Fair (some wear)</SelectItem>
+                                                            <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <Label className="text-sm text-zinc-300">Tire and Wheel Condition *</Label>
+                                                    <Select value={formData.tireCondition} onValueChange={(v) => setFormData({...formData, tireCondition: v})}>
+                                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
+                                                            <SelectValue placeholder="Select condition..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                            <SelectItem value="Excellent">Excellent</SelectItem>
+                                                            <SelectItem value="Good">Good</SelectItem>
+                                                            <SelectItem value="Fair">Fair (some wear)</SelectItem>
+                                                            <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-base text-zinc-200 cursor-pointer">Any Known Damage to Report?</Label>
+                                                        <Switch checked={formData.knownDamage} onCheckedChange={(c) => setFormData({...formData, knownDamage: c})} />
+                                                    </div>
+                                                    {formData.knownDamage && (
+                                                        <div className="pl-4 border-l-2 border-zinc-800">
+                                                            <Input 
+                                                                placeholder="Please describe..." 
+                                                                value={formData.damageDesc} 
+                                                                onChange={e => setFormData({...formData, damageDesc: e.target.value})}
+                                                                className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    <Label className="text-sm text-zinc-300">How long since last professional detail? *</Label>
+                                                    <Select value={formData.lastDetail} onValueChange={(v) => setFormData({...formData, lastDetail: v})}>
+                                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
+                                                            <SelectValue placeholder="Select duration..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                            <SelectItem value="Never">Never</SelectItem>
+                                                            <SelectItem value="Less than 6 months">Less than 6 months</SelectItem>
+                                                            <SelectItem value="6-12 months">6-12 months</SelectItem>
+                                                            <SelectItem value="Over 1 year">Over 1 year</SelectItem>
+                                                            <SelectItem value="Over 2 years">Over 2 years</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                
+                                                <div className="space-y-3 pt-4 border-t border-zinc-800">
+                                                    <Label className="text-sm font-bold text-amber-400">📝 Special Requests or Notes</Label>
+                                                    <Textarea 
+                                                        placeholder="Any special requests or additional details we should know about?" 
+                                                        value={formData.specialRequests}
+                                                        onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
+                                                        className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-100 placeholder:text-zinc-600"
+                                                    />
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label className="text-sm text-zinc-300">Interior Condition *</Label>
-                                        <Select value={formData.interiorCondition} onValueChange={(v) => setFormData({...formData, interiorCondition: v})}>
-                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
-                                                <SelectValue placeholder="Select condition..." />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="Excellent">Excellent</SelectItem>
-                                                <SelectItem value="Good">Good</SelectItem>
-                                                <SelectItem value="Fair">Fair (some wear)</SelectItem>
-                                                <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label className="text-sm text-zinc-300">Tire and Wheel Condition *</Label>
-                                        <Select value={formData.tireCondition} onValueChange={(v) => setFormData({...formData, tireCondition: v})}>
-                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
-                                                <SelectValue placeholder="Select condition..." />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="Excellent">Excellent</SelectItem>
-                                                <SelectItem value="Good">Good</SelectItem>
-                                                <SelectItem value="Fair">Fair (some wear)</SelectItem>
-                                                <SelectItem value="Poor">Poor (heavy wear)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-base text-zinc-200 cursor-pointer">Any Known Damage to Report?</Label>
-                                            <Switch checked={formData.knownDamage} onCheckedChange={(c) => setFormData({...formData, knownDamage: c})} />
-                                        </div>
-                                        {formData.knownDamage && (
-                                            <div className="pl-4 border-l-2 border-zinc-800">
-                                                <Input 
-                                                    placeholder="Please describe..." 
-                                                    value={formData.damageDesc} 
-                                                    onChange={e => setFormData({...formData, damageDesc: e.target.value})}
-                                                    className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-600"
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label className="text-sm text-zinc-300">How long since last professional detail? *</Label>
-                                        <Select value={formData.lastDetail} onValueChange={(v) => setFormData({...formData, lastDetail: v})}>
-                                            <SelectTrigger className="bg-zinc-950 border-zinc-800 h-12">
-                                                <SelectValue placeholder="Select duration..." />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="Never">Never</SelectItem>
-                                                <SelectItem value="Less than 6 months">Less than 6 months</SelectItem>
-                                                <SelectItem value="6-12 months">6-12 months</SelectItem>
-                                                <SelectItem value="Over 1 year">Over 1 year</SelectItem>
-                                                <SelectItem value="Over 2 years">Over 2 years</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    
-                                    <div className="space-y-3 pt-4">
-                                        <Label className="text-sm font-bold text-amber-400">📝 Special Requests or Notes</Label>
-                                        <p className="text-[11px] text-zinc-500">For multi-vehicle estimates: please specify which service (Exterior Only, Interior Only, or Full Detail) you'd like for each vehicle.</p>
-                                        <Textarea 
-                                            placeholder="e.g. Ford Bronco → Full Detail, Mini Cooper → Exterior Only, Audi Q7 → Interior Only... or any other requests!" 
-                                            value={formData.specialRequests}
-                                            onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
-                                            className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-100 placeholder:text-zinc-600"
-                                        />
-                                    </div>
-                                </div>
+                                        </>
+                                    );
+                                })()}
                             </CardContent>
                             <CardFooter className="bg-zinc-950 border-t border-zinc-800 p-6">
                                 <Button 
