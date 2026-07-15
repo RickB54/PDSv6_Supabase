@@ -1095,6 +1095,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         let value = Number(b.price || 0);
         let mappedServiceTitle = b.title;
         let hoursWorked = 0;
+        let matchId = null;
         
         if (true) {
             const bDate = b.date?.split('T')[0];
@@ -1105,6 +1106,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
             });
             if (match) {
+                matchId = match.id;
                 revenue = match.total || 0;
                 hoursWorked = match.hoursWorked || 0;
                 value = match.services?.reduce((acc: number, s: any) => acc + (Number(s.price) || 0), 0) || revenue;
@@ -1123,7 +1125,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return {
             id: b.id,
             customerId: b.customerId || customer?.id,
-            invoiceId: match ? match.id : null,
+            invoiceId: matchId,
             date: b.date,
             customer: b.customer,
             address: address,

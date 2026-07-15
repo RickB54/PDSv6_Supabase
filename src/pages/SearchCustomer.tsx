@@ -1010,6 +1010,25 @@ const SearchCustomer = () => {
                          <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer, 'notes'); }} className="h-8 w-8 p-0 text-yellow-500 hover:text-yellow-400" title="Quick Notes">
                            <FileText className="h-4 w-4" />
                          </Button>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             if (!customer.email) {
+                               toast({ title: "No Email", description: "This customer does not have an email address on file.", variant: "destructive" });
+                               return;
+                             }
+                             const subject = encodeURIComponent(`Message from Prime Auto Detail`);
+                             const firstName = (customer.name || 'Customer').split(' ')[0];
+                             const body = encodeURIComponent(`Hi ${firstName},\n\n\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
+                             window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(customer.email)}&su=${subject}&body=${body}`, '_blank');
+                           }}
+                           className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
+                           title="Email Customer (Gmail)"
+                         >
+                           <Mail className="h-4 w-4" />
+                         </Button>
                          <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                          {isAdmin && (
                            <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
@@ -1223,7 +1242,28 @@ const SearchCustomer = () => {
                                 </Button>
                               </div>
                               <div className="space-y-3">
-                                 <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div><div className="text-zinc-300 text-sm font-semibold truncate">{customer.email || '—'}</div></div>
+                                 <div className="flex gap-2 items-center">
+                                   <div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Email</div>
+                                   <div className="text-zinc-300 text-sm font-semibold truncate">
+                                     {customer.email ? (
+                                       <button
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           const subject = encodeURIComponent(`Message from Prime Auto Detail`);
+                                           const firstName = (customer.name || 'Customer').split(' ')[0];
+                                           const body = encodeURIComponent(`Hi ${firstName},\n\n\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
+                                           window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(customer.email)}&su=${subject}&body=${body}`, '_blank');
+                                         }}
+                                         className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded-md border border-blue-500/20"
+                                       >
+                                         <Mail className="h-3 w-3" />
+                                         {customer.email}
+                                       </button>
+                                     ) : (
+                                       '—'
+                                     )}
+                                   </div>
+                                 </div>
                                  <div className="flex gap-2 items-center"><div className="w-20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">Address</div><div className="text-zinc-300 text-sm flex items-center gap-2">{customer.address || '—'} {customer.address && (<Button variant="ghost" size="sm" className="h-5 px-2 text-xs text-blue-400" onClick={async (e) => { e.stopPropagation(); toggleMap(customer.id!); }}><MapPin className="h-3 w-3 mr-1" />{openMaps.includes(customer.id!) ? "Hide Map" : "Map"}</Button>)}</div></div>
                                  <div className="pt-4 border-t border-zinc-800/50">
                                    <div className="flex items-center justify-between mb-2">
