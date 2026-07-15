@@ -2714,8 +2714,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
-                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                    <div className="flex flex-col">
+                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -2777,7 +2777,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Table>
                         </div>
                         <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
-                            <div className="w-full flex flex-col items-center">
+                            <div className="w-full max-w-[400px] flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
                                 <div className="h-[200px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -2805,7 +2805,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                            <div className="w-full flex flex-col items-center">
+                            <div className="w-full max-w-[400px] flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Invoice Outcomes</h4>
                                 <div className="h-[200px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -2932,8 +2932,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
-                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                    <div className="flex flex-col">
+                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -2976,7 +2976,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
                                                     </TableCell>
                                                     <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
-                                                    <TableCell className="text-zinc-300">{Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}</TableCell>
+                                                    <TableCell>
+                                                        <div className="text-zinc-300 line-clamp-3 text-xs leading-relaxed max-w-[300px]">
+                                                            {Array.isArray(q.services) ? q.services.map((s:any)=>s.name).join(', ') : (q.service || 'N/A')}
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell className="text-emerald-400 font-mono font-bold">${(q.total || 0).toFixed(2)}</TableCell>
                                                     <TableCell className="text-center">
                                                         <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
@@ -2996,7 +3000,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Table>
                         </div>
                         <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
-                            <div className="w-full flex flex-col items-center">
+                            <div className="w-full max-w-[400px] flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
                                 <div className="h-[200px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -3024,7 +3028,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </ResponsiveContainer>
                                 </div>
                             </div>
-                            <div className="w-full flex flex-col items-center">
+                            <div className="w-full max-w-[400px] flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Estimate Outcomes</h4>
                                 <div className="h-[200px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">

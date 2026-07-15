@@ -2243,12 +2243,29 @@ Precision. Protection. Perfection.`;
             <div className="p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                    Invoice #{selectedInvoice.invoiceNumber}
-                    {(selectedInvoice.paymentStatus === 'paid') && <CheckCircle className="h-5 w-5 text-emerald-500" />}
-                  </h2>
-                  <p className="text-zinc-400">Prime Auto Detail</p>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-white tracking-tight">Invoice #{selectedInvoice.invoiceNumber || selectedInvoice.id?.slice(0,8).toUpperCase()}</h2>
+                    <div className="flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 rounded-full h-7 w-7">
+                        <CheckCircle className="h-4 w-4 text-emerald-400" />
+                    </div>
+                  </div>
+                  <p className="text-zinc-400 mb-2">Prime Auto Detail</p>
                   
+                  {(() => {
+                      const cust = customers.find(c => c.id === selectedInvoice.customerId);
+                      if (cust && cust.email) {
+                          const subject = encodeURIComponent(`Invoice #${selectedInvoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`);
+                          const body = encodeURIComponent(`Hi ${selectedInvoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\nThank you,\nPrime Auto Detail`);
+                          return (
+                              <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
+                                  <Mail className="h-3 w-3" />
+                                  Email Invoice (Gmail)
+                              </a>
+                          );
+                      }
+                      return null;
+                  })()}
+                    
                   {selectedInvoice.notes?.includes('[PAID_VIA_STRIPE]') && (
                     <div className="mt-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-emerald-400" />
