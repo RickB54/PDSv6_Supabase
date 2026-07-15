@@ -790,6 +790,7 @@ export default function BookingsPage() {
             vehicleMake: booking.vehicleMake || matchingCust?.vehicle || "",
             vehicleModel: booking.vehicleModel || matchingCust?.model || "",
             vehicleColor: booking.vehicleColor || "",
+            vehicleCondition: booking.vehicleCondition || "",
             address: booking.address || "",
             time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
             endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
@@ -1011,6 +1012,7 @@ export default function BookingsPage() {
       vehicleMake: "",
       vehicleModel: "",
       vehicleColor: "",
+      vehicleCondition: "",
       address: "",
       time: "09:00",
       endTime: "17:00",
@@ -1533,6 +1535,7 @@ export default function BookingsPage() {
           vehicleMake: "",
           vehicleModel: "",
           vehicleColor: "",
+          vehicleCondition: "",
           address: "",
           time: "09:00",
           endTime: "17:00",
@@ -1604,6 +1607,7 @@ export default function BookingsPage() {
       vehicleMake: booking.vehicleMake || "",
       vehicleModel: booking.vehicleModel || "",
       vehicleColor: booking.vehicleColor || "",
+      vehicleCondition: booking.vehicleCondition || "",
       address: booking.address || "",
       time: "09:00", // Default time for new booking
       endTime: "17:00",
@@ -2152,13 +2156,13 @@ export default function BookingsPage() {
                             <div className="flex items-center gap-1 text-xs mt-0.5 opacity-90 font-medium">
                               <span className="uppercase">{booking.status || (booking.type === 'manual-block' ? 'Blocked' : 'Event')}</span>
                             </div>
-                            {booking.type === 'booking' && (((booking as Booking).customerEmail || (booking as Booking).email) || ((booking as Booking).customerPhone || (booking as Booking).phone)) && (
+                            {booking.type === 'booking' && (((booking as Booking).customerEmail || (booking as any).email) || ((booking as Booking).customerPhone || (booking as any).phone)) && (
                               <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-zinc-400 font-medium">
-                                {((booking as Booking).customerEmail || (booking as Booking).email) && (
-                                  <div>📧 {((booking as Booking).customerEmail || (booking as Booking).email)}</div>
+                                {((booking as Booking).customerEmail || (booking as any).email) && (
+                                  <div>📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
                                 )}
-                                {((booking as Booking).customerPhone || (booking as Booking).phone) && (
-                                  <div>📞 {((booking as Booking).customerPhone || (booking as Booking).phone)}</div>
+                                {((booking as Booking).customerPhone || (booking as any).phone) && (
+                                  <div>📞 {((booking as Booking).customerPhone || (booking as any).phone)}</div>
                                 )}
                               </div>
                             )}
@@ -2345,11 +2349,11 @@ export default function BookingsPage() {
                                       <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
                                       {booking.assignedEmployee && <span className="text-zinc-400">👤 {booking.assignedEmployee}</span>}
                                     </div>
-                                    {((booking as Booking).customerEmail || (booking as Booking).email) && (
-                                      <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as Booking).email)}</div>
+                                    {((booking as Booking).customerEmail || (booking as any).email) && (
+                                      <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
                                     )}
-                                    {((booking as Booking).customerPhone || (booking as Booking).phone) && (
-                                      <div className="text-[10px] text-zinc-400">📞 {((booking as Booking).customerPhone || (booking as Booking).phone)}</div>
+                                    {((booking as Booking).customerPhone || (booking as any).phone) && (
+                                      <div className="text-[10px] text-zinc-400">📞 {((booking as Booking).customerPhone || (booking as any).phone)}</div>
                                     )}
                                     {(booking as Booking).vehicleMake && (
                                       <div className="text-[10px] text-blue-300 font-semibold px-1 py-0.5 bg-blue-500/10 rounded border border-blue-500/20">
@@ -2408,7 +2412,7 @@ export default function BookingsPage() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={handleSave}
+                    onClick={() => handleSave(false)}
                     className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
                     title="Save Changes"
                   >
