@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { getSupabaseInvoices, upsertSupabaseInvoice } from "@/lib/supa-data";
-import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle, Database } from "lucide-react";
+import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle, Database, Info } from "lucide-react";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TimeProfitabilityHelp } from "@/components/help/TimeProfitabilityHelp";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function TimeProfitabilityPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -122,6 +123,41 @@ export default function TimeProfitabilityPage() {
     byCustomer[cust].push(inv);
   });
 
+  const probonoFiltered = invoices.filter(inv => {
+    if (!inv.hoursWorked || inv.hoursWorked <= 0) return false;
+    if ((inv.total || 0) > 0) return false;
+
+    const invDateStr = inv.serviceDate || inv.date || inv.createdAt;
+    const invDate = invDateStr ? new Date(invDateStr) : new Date();
+    const now = new Date();
+
+    let passQuick = true;
+    if (dateFilter === "daily") passQuick = invDate.toDateString() === now.toDateString();
+    else if (dateFilter === "weekly") passQuick = invDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    else if (dateFilter === "monthly") passQuick = invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear();
+    else if (dateFilter === "yearly") passQuick = invDate.getFullYear() === now.getFullYear();
+
+    let passRange = true;
+    if (dateRange.from) passRange = invDate >= new Date(dateRange.from.setHours(0, 0, 0, 0));
+    if (passRange && dateRange.to) passRange = invDate <= new Date(dateRange.to.setHours(23, 59, 59, 999));
+
+    let passCustomer = true;
+    if (customerFilter !== "all") {
+      const cust = inv.customerName || "Unknown Customer";
+      passCustomer = cust === customerFilter;
+    }
+
+    return passQuick && passRange && passCustomer;
+  });
+
+  const probonoByMonth: Record<string, any[]> = {};
+  probonoFiltered.forEach(inv => {
+    const d = inv.serviceDate ? new Date(inv.serviceDate) : (inv.date ? new Date(inv.date) : new Date());
+    const mStr = d.toLocaleString('default', { month: 'short', year: 'numeric' });
+    if (!probonoByMonth[mStr]) probonoByMonth[mStr] = [];
+    probonoByMonth[mStr].push(inv);
+  });
+
   // Calculate worst performing jobs (Drag List)
   const dragList = [...filtered].sort((a, b) => {
     const aRevHr = (a.total || 0) / (a.hoursWorked || 1);
@@ -185,32 +221,32 @@ export default function TimeProfitabilityPage() {
         )}
 
         <div className="md:ml-auto w-full md:w-auto mt-4 md:mt-0 flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
+          <Popover>
+            <PopoverTrigger asChild>
               <Button variant="outline" className="w-full md:w-auto bg-zinc-900 border-zinc-700 hover:bg-zinc-800 text-white">
-                <Database className="w-4 h-4 mr-2 text-blue-400" />
-                Backfill Historical Data
+                <Info className="w-4 h-4 mr-2 text-blue-400" />
+                How to Mark Time
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl bg-zinc-950 border-zinc-800 text-white max-h-[85vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Backfill Time & Profitability Data</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-zinc-400 mb-4">
-                This list shows all past jobs that are missing hours-worked data. Enter the hours below and save individually to instantly update your analytics.
+            </PopoverTrigger>
+            <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 text-zinc-300 p-4" align="end">
+              <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-400" /> Marking Job Time
+              </h4>
+              <p className="text-sm mb-3 text-zinc-400">
+                To accurately track your profitability, you need to log the hours worked for each job. Follow these exact steps:
               </p>
-              <div className="flex-1 overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-                {invoices.filter(i => (!i.hoursWorked || i.hoursWorked <= 0) && (i.total || 0) > 0).sort((a,b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime()).map(inv => (
-                  <BackfillRow key={inv.id} invoice={inv} onUpdate={(updated) => {
-                    setInvoices(prev => prev.map(p => p.id === updated.id ? updated : p));
-                  }} />
-                ))}
-                {invoices.filter(i => (!i.hoursWorked || i.hoursWorked <= 0) && (i.total || 0) > 0).length === 0 && (
-                  <div className="text-center text-zinc-500 italic py-8">All your invoices have hours tracked! 🎉</div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+              <ol className="text-sm space-y-2 list-decimal list-inside text-zinc-400">
+                <li>Go to the <Link to="/invoicing" className="text-blue-400 hover:text-blue-300 hover:underline font-bold">Invoicing</Link> page.</li>
+                <li>Find and click on the specific invoice for the completed job.</li>
+                <li>In the edit invoice view, locate the <strong className="text-white">Hours Worked</strong> field.</li>
+                <li>Enter the total actual hours spent completing the service.</li>
+                <li>Click <strong className="text-white">Save Invoice</strong>.</li>
+              </ol>
+              <p className="text-xs mt-3 text-emerald-400/90 bg-emerald-900/20 p-2 rounded border border-emerald-900/50">
+                Tip: You can also track Product Cost in the same place for perfect profit margins.
+              </p>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -543,6 +579,56 @@ export default function TimeProfitabilityPage() {
           )}
         </div>
       </Card>
+      {/* Probono Time Tracking Section */}
+      <div className="mt-12 space-y-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="h-6 w-6 text-pink-400" />
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Probono Time Tracking</h2>
+        </div>
+        
+        <Card className="p-6 bg-pink-900/10 border-pink-500/20">
+          <h3 className="text-lg font-bold text-white mb-4">Time Spent on Probono Jobs (Monthly)</h3>
+          <div className="space-y-3">
+            {Object.keys(probonoByMonth).length === 0 ? (
+              <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No probono hours tracked for the selected period.</div>
+            ) : (
+              <>
+                <div className="h-64 w-full mb-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={Object.entries(probonoByMonth).map(([month, list]) => ({ name: month, Hours: list.reduce((acc, inv) => acc + (inv.hoursWorked || 0), 0) }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                      <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                        itemStyle={{ color: '#e4e4e7' }}
+                        formatter={(value: number) => [`${Number(value).toFixed(1)} hrs`, 'Hours Spent']}
+                      />
+                      <Bar dataKey="Hours" name="Hours Spent" fill="#ec4899" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {Object.entries(probonoByMonth).map(([month, list]) => {
+                  const totalHrs = list.reduce((acc, inv) => acc + (inv.hoursWorked || 0), 0);
+                  const count = list.length;
+                  return (
+                    <div key={month} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800/50">
+                      <div>
+                        <div className="text-white font-medium">{month}</div>
+                        <div className="text-xs text-zinc-500">{count} probono jobs</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Total Time</div>
+                        <div className="text-pink-400 font-mono font-bold">{totalHrs.toFixed(1)} hrs</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </Card>
+      </div>
 
     </div>
   );

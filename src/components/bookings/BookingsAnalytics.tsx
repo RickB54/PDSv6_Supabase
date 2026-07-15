@@ -1093,6 +1093,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         
         let revenue = Number(b.price || 0);
         let value = Number(b.price || 0);
+        let mappedServiceTitle = b.title;
+        let hoursWorked = 0;
         
         if (true) {
             const bDate = b.date?.split('T')[0];
@@ -1103,7 +1105,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             });
             if (match) {
                 revenue = match.total || 0;
+                hoursWorked = match.hoursWorked || 0;
                 value = match.services?.reduce((acc: number, s: any) => acc + (Number(s.price) || 0), 0) || revenue;
+                
+                if (match.services && match.services.length > 0) {
+                    const primaryService = [...match.services].sort((s1: any, s2: any) => (Number(s2.price) || 0) - (Number(s1.price) || 0))[0];
+                    if (primaryService && (primaryService.name || primaryService.title)) {
+                        mappedServiceTitle = primaryService.name || primaryService.title;
+                    }
+                } else if (match.serviceTitle) {
+                    mappedServiceTitle = match.serviceTitle;
+                }
             }
         }
 
@@ -1113,7 +1125,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             customer: b.customer,
             address: address,
             locationType: isShop ? "Shop" : "Mobile",
-            service: b.title,
+            service: mappedServiceTitle,
+            assignedEmployee: b.assignedEmployee,
+            hoursWorked: hoursWorked,
             probonoReason: b.probonoReason,
             probonoPrimaryReason: b.probonoPrimaryReason,
             probonoReasons: b.probonoReasons,
@@ -3209,6 +3223,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <TableHead>Date</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead>Service</TableHead>
+                                        <TableHead>Employee</TableHead>
+                                        <TableHead>Hours</TableHead>
                                         <TableHead>Reason</TableHead>
                                         <TableHead className="text-right">Job Value</TableHead>
                                         <TableHead className="text-right">Revenue</TableHead>
@@ -3239,6 +3255,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 </TableCell>
                                                 <TableCell className="font-semibold text-zinc-200">{job.customer}</TableCell>
                                                 <TableCell className="text-zinc-400 text-xs">{job.service}</TableCell>
+                                                <TableCell className="text-zinc-400 text-xs">{job.assignedEmployee || "Rick Berube"}</TableCell>
+                                                <TableCell className="text-zinc-400 text-xs font-mono">{job.hoursWorked ? `${job.hoursWorked}h` : "-"}</TableCell>
                                                 <TableCell>
                                                     <Popover>
                                                         <PopoverTrigger asChild>

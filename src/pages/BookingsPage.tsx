@@ -599,6 +599,8 @@ export default function BookingsPage() {
             ...prev, 
             assignedEmployee: rick.id || rick.name 
           }));
+        } else if (!formData.assignedEmployee) {
+          setFormData(prev => ({ ...prev, assignedEmployee: "rberube54" }));
         }
       } catch (err) {
         console.error('Failed to fetch employees:', err);

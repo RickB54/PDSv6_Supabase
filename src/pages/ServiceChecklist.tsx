@@ -284,7 +284,7 @@ const ServiceChecklist = () => {
       e.name?.toLowerCase().includes('rberube54')
     ) || employees[0];
     
-    setEmployeeAssigned(defaultEmp ? String(defaultEmp.id || defaultEmp.name || '') : "");
+    setEmployeeAssigned(defaultEmp ? String(defaultEmp.id || defaultEmp.name || '') : "rberube54");
     
     setCustomerSearch("");
     setGenericCustomerName("");

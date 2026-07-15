@@ -466,7 +466,7 @@ const Invoicing = () => {
         hoursWorked: editHoursWorked !== "" ? parseFloat(editHoursWorked) : undefined,
         hoursMethod: editHoursMethod !== "" ? editHoursMethod : undefined,
         includeTravelTime: editIncludeTravelTime,
-        employeeId: editEmployeeId || undefined,
+        employeeId: editEmployeeId || "rberube54",
         productCost: editProductCost !== "" ? parseFloat(editProductCost) : undefined,
         stripeNetPayout: editStripeNetPayout !== "" ? parseFloat(editStripeNetPayout) : undefined,
         stripeFee: editStripeFee !== "" ? parseFloat(editStripeFee) : undefined,
