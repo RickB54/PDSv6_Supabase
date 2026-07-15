@@ -2771,7 +2771,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8 overflow-y-auto max-h-[500px]">
+                        <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
                             <div className="w-full flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
                                 <div className="h-[200px] w-full">
@@ -2990,7 +2990,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-start border-l border-zinc-800 gap-8">
+                        <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
                             <div className="w-full flex flex-col items-center">
                                 <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Delivery Status</h4>
                                 <div className="h-[200px] w-full">
@@ -3215,8 +3215,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-3">
-                        <div className="lg:col-span-2 overflow-x-auto border-r border-zinc-800">
+                    <div className="flex flex-col">
+                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -3339,9 +3339,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableBody>
                             </Table>
                         </div>
-                        <div className="lg:col-span-1 p-4 bg-zinc-900 flex flex-col items-center justify-center border-l border-zinc-800">
-                            <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Paid vs Free Comparison</h4>
-                            <div className="h-[250px] w-full">
+                        <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
+                            <div className="flex flex-col items-center justify-center p-6 bg-zinc-950/50 border border-zinc-800 rounded-xl min-w-[250px]">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Total Free Time Given</h4>
+                                <div className="text-5xl font-black text-pink-400 mb-2">
+                                    {probonoJobs.reduce((sum, job) => sum + (job.hoursWorked || 0), 0).toFixed(1)} <span className="text-2xl text-zinc-500">hrs</span>
+                                </div>
+                                <div className="text-xs text-zinc-500 uppercase tracking-widest">Across {probonoJobs.length} Jobs</div>
+                            </div>
+                            <div className="flex flex-col items-center w-full max-w-[400px]">
+                                <h4 className="text-xs uppercase font-black text-zinc-500 tracking-widest mb-4">Paid vs Free Comparison</h4>
+                                <div className="h-[250px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
@@ -3766,7 +3774,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             Not enough price change data to display a trend graph yet. Make a few price adjustments to see this populate.
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {/* Exterior Graph */}
                             <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/80">
                                 <h3 className="text-sm font-bold text-zinc-300 mb-4 text-center">Prime Essential Exterior</h3>
