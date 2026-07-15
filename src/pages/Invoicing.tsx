@@ -2313,36 +2313,6 @@ Precision. Protection. Perfection.`;
                 </div>
               </div>
 
-              <div className="bg-zinc-900/30 p-4 border-b border-zinc-800 flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <Label className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">PDF Header Style</Label>
-                  <p className="text-[10px] text-zinc-600 italic">Toggle between the original center-logo or professional side-logo with contact info.</p>
-                </div>
-                <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 shadow-inner">
-                  <Button 
-                    variant={invoiceStyle === 'original' ? 'default' : 'ghost'} 
-                    size="sm" 
-                    onClick={() => setInvoiceStyle('original')}
-                    className={cn(
-                      "rounded-lg text-[10px] font-black tracking-tighter h-7 px-3 uppercase transition-all",
-                      invoiceStyle === 'original' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-500 hover:text-zinc-300"
-                    )}
-                  >
-                    Original
-                  </Button>
-                  <Button 
-                    variant={invoiceStyle === 'professional' ? 'default' : 'ghost'} 
-                    size="sm" 
-                    onClick={() => setInvoiceStyle('professional')}
-                    className={cn(
-                      "rounded-lg text-[10px] font-black tracking-tighter h-7 px-3 uppercase transition-all",
-                      invoiceStyle === 'professional' ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20" : "text-zinc-500 hover:text-zinc-300"
-                    )}
-                  >
-                    Professional
-                  </Button>
-                </div>
-              </div>
 
               <div className="py-6 space-y-6">
                 <div className="p-4 rounded-lg bg-zinc-900/50 border border-zinc-800">
