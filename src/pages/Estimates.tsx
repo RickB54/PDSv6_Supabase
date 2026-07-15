@@ -1910,7 +1910,7 @@ Precision. Protection. Perfection.`;
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-6 justify-between md:justify-end w-full md:w-auto">
+                                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 sm:gap-6 justify-between md:justify-end w-full md:w-auto mt-4 md:mt-0">
                                         <div className="text-right">
                                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Total</div>
                                             <div className="text-xl font-bold text-white">${(est.total || 0).toFixed(2)}</div>
@@ -1941,7 +1941,7 @@ Precision. Protection. Perfection.`;
                                                 <Send className={cn("h-4 w-4", est.isSent && "fill-blue-400/20")} />
                                             </Button>
                                         </div>
-                                        <div className="flex flex-wrap justify-end gap-2 items-center" onClick={e => e.stopPropagation()}>
+                                        <div className="flex flex-wrap gap-1.5 items-center justify-end w-full sm:w-auto" onClick={e => e.stopPropagation()}>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
