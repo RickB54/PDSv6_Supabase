@@ -857,21 +857,6 @@ const Accounting = () => {
                 <TrendingUp className="h-6 w-6 text-primary" />
                 Revenue Tracking (Invoices + Income)
               </h2>
-              
-              <div className="flex gap-2 items-center flex-wrap bg-background/50 p-1.5 rounded-lg border border-border/50">
-                <span className="text-xs font-semibold text-muted-foreground mr-1 ml-2">LEDGER FILTER:</span>
-                <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="daily">Today</SelectItem>
-                    <SelectItem value="weekly">This Week</SelectItem>
-                    <SelectItem value="monthly">This Month</SelectItem>
-                    <SelectItem value="yearly">This Year</SelectItem>
-                  </SelectContent>
-                </Select>
-                <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
-              </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -902,7 +887,7 @@ const Accounting = () => {
             </p>
             <p className="mt-1 text-[10px] text-blue-400 flex items-center gap-2 italic">
               <HelpCircle className="h-3 w-3 text-blue-400" />
-              Note: The filter above applies to the "Filtered Range" box and all Ledgers below. Break-Even and Profit/Loss always show All-Time totals.
+              Note: The "Filtered Range" box is controlled by the Ledger Filter in the Transaction Ledger section below. Break-Even and Profit/Loss always show All-Time totals.
             </p>
           </Card>
 
@@ -1145,8 +1130,18 @@ const Accounting = () => {
                         )}
                       </div>
                       <div className="flex gap-4 items-center">
-                        <div className="flex gap-2 items-center">
-                          <Label className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">Date Range:</Label>
+                        <div className="flex gap-2 items-center flex-wrap bg-background/50 p-1.5 rounded-lg border border-border/50">
+                          <span className="text-xs font-semibold text-muted-foreground mr-1 ml-2">LEDGER FILTER:</span>
+                          <Select value={dateFilter} onValueChange={setDateFilter}>
+                            <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Time</SelectItem>
+                              <SelectItem value="daily">Today</SelectItem>
+                              <SelectItem value="weekly">This Week</SelectItem>
+                              <SelectItem value="monthly">This Month</SelectItem>
+                              <SelectItem value="yearly">This Year</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <DateRangeFilter value={dateRange} onChange={setDateRange} storageKey="accounting-range" />
                         </div>
                         <div className="flex gap-2 items-center">
