@@ -1916,7 +1916,19 @@ Precision. Protection. Perfection.`;
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(est, 'download')} title="Download PDF">
                                                 <Save className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/20" onClick={() => openEmailModal(est)} title="Email Estimate">
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 border border-amber-500/20" onClick={() => openEmailModal(est)} title="Send via System">
+                                                <Mail className="h-4 w-4" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => {
+                                                const cust = customers.find(c => c.id === est.customerId);
+                                                if (cust && cust.email) {
+                                                    const subject = encodeURIComponent(`Estimate #${est.estimateNumber} - Prime Auto Detail`);
+                                                    const body = encodeURIComponent(`Hi ${est.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${est.id}\n\nThank you,\nPrime Auto Detail`);
+                                                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`, '_blank');
+                                                } else {
+                                                    toast({ title: "No Email Found", description: "This customer does not have an email address on file.", variant: "destructive" });
+                                                }
+                                            }} title="Compose in Gmail">
                                                 <Mail className="h-4 w-4" />
                                             </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => handleCopyLink(est.id!)} title="Copy Hosted Link">

@@ -2138,6 +2138,18 @@ Precision. Protection. Perfection.`;
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => generatePDF(invoice, true)} title="Download PDF">
                         <Save className="h-3.5 w-3.5" />
                       </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => {
+                          const cust = customers.find(c => c.id === invoice.customerId);
+                          if (cust && cust.email) {
+                              const subject = encodeURIComponent(`Invoice #${invoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`);
+                              const body = encodeURIComponent(`Hi ${invoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${invoice.id}\n\nThank you,\nPrime Auto Detail`);
+                              window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`, '_blank');
+                          } else {
+                              toast({ title: "No Email Found", description: "This customer does not have an email address on file.", variant: "destructive" });
+                          }
+                      }} title="Compose in Gmail">
+                        <Mail className="h-3.5 w-3.5" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20" onClick={() => handleCopyLink(invoice.id!)} title="Copy Hosted Link">
                         <LinkIcon className="h-3.5 w-3.5" />
                       </Button>
