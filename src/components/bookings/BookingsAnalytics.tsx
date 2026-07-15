@@ -3269,8 +3269,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 onClick={() => {
                                                     if (job.invoiceId) {
                                                         navigate(`/invoicing?editId=${job.invoiceId}`);
+                                                    } else if (job.customerId) {
+                                                        navigate(`/invoicing?customerId=${job.customerId}`);
                                                     } else {
-                                                        navigate(`/bookings?customer=${encodeURIComponent(job.customer)}`);
+                                                        navigate(`/invoicing?search=${encodeURIComponent(job.customer)}`);
                                                     }
                                                 }}
                                             >
