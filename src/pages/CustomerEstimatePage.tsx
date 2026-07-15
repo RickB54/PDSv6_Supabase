@@ -494,8 +494,8 @@ export default function CustomerEstimatePage() {
                     <p className="text-[11px] font-bold text-zinc-300 uppercase tracking-widest mb-1.5">
                         Scan with your phone to view options
                     </p>
-                    <a href="https://primeautodetail.net" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-xs font-mono break-all mb-6 transition-colors">
-                        primeautodetail.net
+                    <a href="https://primeautodetail.net/services" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-xs font-mono break-all mb-6 transition-colors">
+                        primeautodetail.net/services
                     </a>
                     
                     <div className="w-12 h-1 bg-zinc-800 rounded-full mb-6"></div>
