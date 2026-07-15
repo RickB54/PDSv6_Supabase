@@ -798,6 +798,7 @@ export async function onSendProspectEstimateEmail(prospect: any, estimate: any) 
         
         <div style="background-color: #111827; padding: 30px; text-align: center; color: #6b7280;">
           <p style="margin: 0; font-size: 11px; line-height: 1.5;">This estimate is a professional price proposal for automotive detailing services. Final pricing may be refined based on actual vehicle inspection upon arrival.</p>
+          <p style="margin: 10px 0 0; font-size: 11px; line-height: 1.5; font-style: italic;">Please note: To ensure you receive all future updates, please add us to your safe senders list. If you do not see expected emails in your inbox, kindly check your Spam or Junk folder.</p>
           <p style="margin: 10px 0 0; color: #4b5563; font-size: 11px;">&copy; ${year} Prime Auto Detail. All rights reserved.</p>
         </div>
       </div>

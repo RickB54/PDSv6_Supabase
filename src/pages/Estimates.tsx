@@ -942,6 +942,7 @@ Precision. Protection. Perfection.`;
                                 ${htmlBody}
                             </div>
                             <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #888;">
+                                <p style="margin-bottom: 10px; font-style: italic;">Please note: To ensure you receive all future updates, please add us to your safe senders list. If you do not see expected emails in your inbox, kindly check your Spam or Junk folder.</p>
                                 &copy; ${new Date().getFullYear()} Prime Auto Detail. All rights reserved.
                             </div>
                         </div>
