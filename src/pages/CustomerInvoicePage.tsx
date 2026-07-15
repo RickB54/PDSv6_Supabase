@@ -389,11 +389,13 @@ export default function CustomerInvoicePage() {
                         </div>
                     </CardContent>
 
-                    <CardFooter className="flex-col items-center bg-zinc-950 p-6 border-t border-zinc-800">
-                        <p className="text-xs text-zinc-500 italic text-center font-medium max-w-sm">
-                            Thank you for trusting Prime Auto Detail with your vehicle. We truly appreciate your business!
-                        </p>
-                    </CardFooter>
+                    {!isPaid && (
+                        <CardFooter className="flex-col items-center bg-zinc-950 p-6 border-t border-zinc-800">
+                            <p className="text-xs text-zinc-500 italic text-center font-medium max-w-sm">
+                                Thank you for trusting Prime Auto Detail with your vehicle. We truly appreciate your business!
+                            </p>
+                        </CardFooter>
+                    )}
                 </Card>
 
                 {/* ACTION BUTTON */}
