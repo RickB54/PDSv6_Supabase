@@ -1355,6 +1355,7 @@ Precision. Protection. Perfection.`;
                                                 { name: 'Prime Essential Full Detail', price: 320 }
                                             ];
                                             setServices([...services, ...newServices]);
+                                            setIsMenuMode(true);
                                             if (!notes.trim()) {
                                                 const menuModeNote = NOTE_TEMPLATES.find(t => t.label.includes("Multi-Vehicle (Menu Mode)"))?.text;
                                                 if (menuModeNote) setNotes(menuModeNote);

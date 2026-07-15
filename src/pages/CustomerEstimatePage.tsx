@@ -233,9 +233,16 @@ export default function CustomerEstimatePage() {
                 if (!formData.exteriorPaint || !formData.interiorCondition || !formData.tireCondition || !formData.lastDetail) {
                     throw new Error("Please complete all dropdown selections in the form.");
                 }
+                const singleAddons = vehicleAddons['single'] || [];
+                const singleAddonsStr = singleAddons.length > 0
+                    ? `\n[SELECTED_ADDONS]: ${singleAddons.map(a => addOns.find(x => x.id === a)?.name).join(', ')}`
+                    : '';
                 const preCheckString = JSON.stringify(formData);
-                newNotes += `[PRE_CHECK_DATA]: ${preCheckString}\n[NOTES]: ${formData.specialRequests}`;
+                newNotes += `[PRE_CHECK_DATA]: ${preCheckString}${singleAddonsStr}\n[NOTES]: ${formData.specialRequests}`;
 
+                const singleAddonsHtml = singleAddons.length > 0
+                    ? `<li><strong>Selected Add-Ons:</strong> <span style="color:#4ade80">${singleAddons.map(a => addOns.find(x => x.id === a)?.name).join(', ')}</span></li>`
+                    : '';
                 formSummaryHtml = `
                     <h3>Pre-Check Information:</h3>
                     <ul>
@@ -249,6 +256,7 @@ export default function CustomerEstimatePage() {
                         <li><strong>Known Damage:</strong> ${formData.knownDamage ? 'Yes (' + formData.damageDesc + ')' : 'No'}</li>
                         <li><strong>Last Detail:</strong> ${formData.lastDetail}</li>
                         <li><strong>Special Requests:</strong> ${formData.specialRequests || 'None'}</li>
+                        ${singleAddonsHtml}
                     </ul>
                 `;
             }
@@ -668,7 +676,7 @@ export default function CustomerEstimatePage() {
                                                             <div className="pt-4 space-y-2">
                                                                 <Label className="text-xs font-bold text-zinc-400">Optional Add-Ons (Select multiple if desired)</Label>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                                                                    {addOns.map(addon => {
+                                                                    {addOns.filter(addon => addon.active !== false).map(addon => {
                                                                         const currentAddons = vehicleAddons[v.originalIndex] || [];
                                                                         const isSelected = currentAddons.includes(addon.id);
                                                                         const vType = (estimate.vehicleType || 'midsize') as any;
@@ -960,6 +968,39 @@ export default function CustomerEstimatePage() {
                                                     </Select>
                                                 </div>
                                                 
+                                                <div className="space-y-3 pt-6 border-t border-zinc-800">
+                                                    <Label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Optional Add-Ons</Label>
+                                                    <p className="text-[11px] text-zinc-500">Select any additional services you'd like included. These are fully optional.</p>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                                        {addOns.filter(addon => addon.active !== false).map(addon => {
+                                                            const currentSingleAddons = vehicleAddons['single'] || [];
+                                                            const isSelected = currentSingleAddons.includes(addon.id);
+                                                            const vType = (estimate.vehicleType || 'midsize') as any;
+                                                            const price = getAddOnPrice(addon.id, vType);
+                                                            return (
+                                                                <div key={addon.id} className="flex items-start space-x-2 bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
+                                                                    <Checkbox
+                                                                        id={`single-addon-${addon.id}`}
+                                                                        checked={isSelected}
+                                                                        onCheckedChange={(c) => {
+                                                                            const newAddons = c ? [...currentSingleAddons, addon.id] : currentSingleAddons.filter(id => id !== addon.id);
+                                                                            setVehicleAddons({...vehicleAddons, single: newAddons});
+                                                                        }}
+                                                                    />
+                                                                    <div className="grid gap-1.5 leading-none cursor-pointer flex-1" onClick={() => {
+                                                                        const newAddons = !isSelected ? [...currentSingleAddons, addon.id] : currentSingleAddons.filter(id => id !== addon.id);
+                                                                        setVehicleAddons({...vehicleAddons, single: newAddons});
+                                                                    }}>
+                                                                        <label htmlFor={`single-addon-${addon.id}`} className="text-[11px] font-medium leading-tight cursor-pointer text-zinc-300">
+                                                                            {addon.name} <span className="text-emerald-500 font-mono ml-1">+${price}</span>
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
                                                 <div className="space-y-3 pt-4 border-t border-zinc-800">
                                                     <Label className="text-sm font-bold text-amber-400">📝 Special Requests or Notes</Label>
                                                     <Textarea 
