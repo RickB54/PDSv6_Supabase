@@ -1335,6 +1335,13 @@ Precision. Protection. Perfection.`;
                                             setServices([...services, ...newServices]);
                                             return;
                                         }
+                                        if (val === "header_and_all_essential") {
+                                            const essentialPkgs = servicePackages.filter(p => p.name.includes("Essential"));
+                                            const header = { name: '--- [Type Section Name Here] ---', price: 0 };
+                                            const pkgRows = essentialPkgs.map(pkg => ({ name: pkg.name, price: pkg.pricing[selectedVehicleType] || 0 }));
+                                            setServices([...services, header, ...pkgRows]);
+                                            return;
+                                        }
                                         if (val === "menu_mode_template") {
                                             const newServices = [
                                                 { name: '--- Compact ---', price: 0 },
@@ -1375,6 +1382,9 @@ Precision. Protection. Perfection.`;
                                             ))}
                                             <SelectItem value="all_essential" className="font-bold text-amber-500 border-t border-zinc-800 mt-1 pt-1">
                                                 + Add All 3 Essential Packages
+                                            </SelectItem>
+                                            <SelectItem value="header_and_all_essential" className="font-bold text-blue-400 border-t border-zinc-800">
+                                                + Add Header + All 3 Packages
                                             </SelectItem>
                                             <SelectItem value="menu_mode_template" className="font-bold text-emerald-500 border-t border-zinc-800">
                                                 + Add 4-Vehicle Menu Mode Template
