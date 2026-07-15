@@ -1923,7 +1923,7 @@ Precision. Protection. Perfection.`;
                                                 const cust = customers.find(c => c.id === est.customerId);
                                                 if (cust && cust.email) {
                                                     const subject = encodeURIComponent(`Estimate #${est.estimateNumber} - Prime Auto Detail`);
-                                                    const body = encodeURIComponent(`Hi ${est.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${est.id}\n\nThank you,\nPrime Auto Detail`);
+                                                    const body = encodeURIComponent(`Hi ${est.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${est.id}\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
                                                     window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`, '_blank');
                                                 } else {
                                                     toast({ title: "No Email Found", description: "This customer does not have an email address on file.", variant: "destructive" });
@@ -2118,7 +2118,7 @@ Precision. Protection. Perfection.`;
                                         const cust = customers.find(c => c.id === selectedEstimate.customerId);
                                         if (cust && cust.email) {
                                             const subject = encodeURIComponent(`Estimate #${selectedEstimate.estimateNumber} - Prime Auto Detail`);
-                                            const body = encodeURIComponent(`Hi ${selectedEstimate.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\nThank you,\nPrime Auto Detail`);
+                                            const body = encodeURIComponent(`Hi ${selectedEstimate.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
                                             return (
                                                 <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
                                                     <Mail className="h-3 w-3" />

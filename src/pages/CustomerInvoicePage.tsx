@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldAlert, Loader2, Car, DollarSign, CreditCard } from 
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser } from '@/lib/auth';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import qrCode from "@/assets/review-qr.png";
 
 interface Invoice {
   id?: string;
@@ -412,6 +413,33 @@ export default function CustomerInvoicePage() {
                         </Button>
                     )}
                 </div>
+
+                {isPaid && (
+                    <div className="mt-8 bg-zinc-900/50 border border-zinc-800 p-8 rounded-2xl text-center shadow-2xl flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                        <h3 className="text-xl font-black text-white uppercase tracking-wider mb-3">Help Us Grow!</h3>
+                        <p className="text-sm text-zinc-400 mb-6 max-w-sm leading-relaxed">
+                            Your feedback is extremely valuable and plays a vital role in helping small businesses like mine continue to grow and reach new customers.
+                        </p>
+                        
+                        <div className="bg-white p-3 rounded-2xl mb-5 shadow-[0_0_30px_-5px_rgba(59,130,246,0.3)] border border-blue-500/20">
+                            <img src={qrCode} alt="Google Review QR Code" className="w-32 h-32" />
+                        </div>
+                        
+                        <p className="text-[11px] font-bold text-zinc-300 uppercase tracking-widest mb-1.5">
+                            Scan with your phone to leave a Google Review
+                        </p>
+                        <a href="https://g.page/r/CUaXyAfwdcv1EBM/review" target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 text-xs font-mono break-all mb-6 transition-colors">
+                            https://g.page/r/CUaXyAfwdcv1EBM/review
+                        </a>
+                        
+                        <div className="w-12 h-1 bg-zinc-800 rounded-full mb-6"></div>
+                        
+                        <p className="text-sm text-zinc-300 italic font-medium max-w-md">
+                            Thank you for trusting Prime Auto Detail with your vehicle!<br/>
+                            We truly appreciate your business and look forward to serving you again.
+                        </p>
+                    </div>
+                )}
 
             </main>
         </div>
