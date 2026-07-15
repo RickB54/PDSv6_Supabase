@@ -663,6 +663,93 @@ export default function CustomerEstimatePage() {
                                                         className="bg-zinc-950 border-zinc-800 min-h-[120px] text-zinc-100 placeholder:text-zinc-600"
                                                     />
                                                 </div>
+
+                                                {(() => {
+                                                    const selectedServices: any[] = [];
+                                                    let currentDynamicTotal = 0;
+                                                    let currentSelectedPackage: string | null = null;
+
+                                                    estimate.services.forEach((svc, index) => {
+                                                        if (svc.name.startsWith('VIRTUAL_')) return;
+                                                        
+                                                        if (svc.name.startsWith('---') && svc.price === 0) {
+                                                            currentSelectedPackage = vehicleSelections[String(index)];
+                                                        } else if (currentSelectedPackage) {
+                                                            const sName = svc.name.toLowerCase();
+                                                            const pkg = currentSelectedPackage.toLowerCase();
+                                                            let isMatch = false;
+                                                            
+                                                            if (pkg === 'exterior only') isMatch = sName.includes('exterior');
+                                                            else if (pkg === 'interior only') isMatch = sName.includes('interior');
+                                                            else if (pkg === 'full detail') isMatch = sName.includes('full');
+                                                            else isMatch = sName.includes(pkg);
+
+                                                            if (isMatch) {
+                                                                selectedServices.push(svc);
+                                                                currentDynamicTotal += svc.price;
+                                                            }
+                                                        }
+                                                    });
+
+                                                    if (selectedServices.length === 0) return null;
+
+                                                    const showSubtotals = (estimate.notes || '').includes('[SHOW_CATEGORY_SUBTOTALS]');
+                                                    const nameMap: Record<string, number> = {};
+                                                    let duplicateFound = false;
+                                                    selectedServices.forEach(s => {
+                                                        if (nameMap[s.name] !== undefined) {
+                                                            nameMap[s.name] += s.price;
+                                                            duplicateFound = true;
+                                                        } else {
+                                                            nameMap[s.name] = s.price;
+                                                        }
+                                                    });
+
+                                                    let dynamicFinalTotal = currentDynamicTotal;
+                                                    let dynamicDiscountAmount = 0;
+                                                    if (estimate.discount && estimate.discount > 0) {
+                                                        if (estimate.discountType === 'percent') {
+                                                            dynamicDiscountAmount = currentDynamicTotal * (estimate.discount / 100);
+                                                        } else {
+                                                            dynamicDiscountAmount = estimate.discount;
+                                                        }
+                                                        dynamicFinalTotal = Math.max(0, currentDynamicTotal - dynamicDiscountAmount);
+                                                    }
+
+                                                    return (
+                                                        <div className="mt-8 pt-6 border-t border-zinc-800 border-dashed">
+                                                            {(showSubtotals && duplicateFound) && (
+                                                                <div className="mb-6">
+                                                                    <p className="text-xs text-amber-500 font-bold uppercase tracking-wider mb-4">Fleet / Category Subtotals (Selected)</p>
+                                                                    <div className="space-y-3 pb-6 border-b border-zinc-800/50">
+                                                                        {Object.keys(nameMap).map((key, i) => (
+                                                                            <div key={i} className="flex justify-between items-center text-sm text-amber-200/80">
+                                                                                <span>Total for all {key}</span>
+                                                                                <span className="font-mono">${nameMap[key].toFixed(2)}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-center text-sm text-zinc-400">
+                                                                    <span>Running Subtotal</span>
+                                                                    <span className="font-mono">${currentDynamicTotal.toFixed(2)}</span>
+                                                                </div>
+                                                                {dynamicDiscountAmount > 0 && (
+                                                                    <div className="flex justify-between items-center text-sm text-emerald-400">
+                                                                        <span>Discount {estimate.discountType === 'percent' ? `(${estimate.discount}%)` : ''}</span>
+                                                                        <span className="font-mono">-${dynamicDiscountAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex justify-between items-end pt-2">
+                                                                    <span className="text-lg font-bold text-white uppercase tracking-wider">Current Total</span>
+                                                                    <span className="text-3xl font-black text-amber-400 font-mono">${dynamicFinalTotal.toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         );
                                     }
