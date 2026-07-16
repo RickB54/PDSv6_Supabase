@@ -397,8 +397,9 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     
     // Role check for top items
     const isStrictView = isViewingAsCustomer || isViewingAsEmployee;
+    const isNativeEmployee = user?.role === 'employee';
     if (item.role === 'admin' && (!isAdmin || isStrictView)) return false;
-    if (item.role === 'employee' && !isAdmin && !isStrictView) return false;
+    if (item.role === 'employee' && !isAdmin && !isStrictView && !isNativeEmployee) return false;
 
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
@@ -463,9 +464,10 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         // Strict role filtering based on current view mode
         const isStrictEmployeeView = isViewingAsEmployee;
         const isAdminCheck = isAdmin || isDemoMode;
+        const isNativeEmployee = user?.role === 'employee';
         
         if (item.role === 'admin' && (!isAdminCheck || isStrictEmployeeView)) return false;
-        if (item.role === 'employee' && !isStrictEmployeeView && !isAdminCheck) return false;
+        if (item.role === 'employee' && !isStrictEmployeeView && !isAdminCheck && !isNativeEmployee) return false;
         
         // Match item if it contains search OR if its group matches
         if (searchQuery && !groupMatches && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
