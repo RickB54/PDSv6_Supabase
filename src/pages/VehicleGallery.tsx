@@ -348,7 +348,8 @@ function CustomerCard({
     onDelete,
     showBackLink = false,
     returnTarget = "",
-    canAddMedia = false
+    canAddMedia = false,
+    isAdmin = false
 }: { 
     customer: Customer; 
     onOpen: (items: MediaItem[], idx: number) => void; 
@@ -358,6 +359,7 @@ function CustomerCard({
     showBackLink?: boolean;
     returnTarget?: string;
     canAddMedia?: boolean;
+    isAdmin?: boolean;
 }) {
     const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);

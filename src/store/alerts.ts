@@ -17,11 +17,7 @@ interface AlertsState {
 }
 
 export function mapAlert(a: AdminAlert): UIAlert {
-  // Show percent-only for exam progress outcomes, keep destination appropriate
-  const isExamOutcome = a.type === "exam_passed" || a.type === "exam_failed";
-  const title = isExamOutcome
-    ? (typeof a.payload?.percent === "number" ? `${a.payload.percent}%` : a.message || "Exam")
-    : (a.message || a.type.replace(/_/g, " "));
+  const title = a.message || a.type.replace(/_/g, " ");
   let href = "/admin-dashboard";
   switch (a.type) {
     case "exam_started":

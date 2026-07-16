@@ -4275,6 +4275,7 @@ export default function BookingsPage() {
         onOpenChange={setIsCustomerModalOpen}
         initial={customerToEdit}
         onSave={onSaveCustomer}
+        canAddMedia={isAdmin || unifiedEvents.some(e => e.type === 'booking' && (e.customerId === customerToEdit?.id || e.customerEmail === customerToEdit?.email) && e.assignedEmployee === getCurrentUser()?.id)}
       />
 
       <VehicleSelectorModal 

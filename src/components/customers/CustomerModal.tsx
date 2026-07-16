@@ -37,9 +37,10 @@ interface Props {
   onSave: (data: Customer) => Promise<void> | void;
   defaultType?: 'customer' | 'prospect';
   initialTab?: string;
+  canAddMedia?: boolean;
 }
 
-export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer', initialTab = 'profile' }: Props) {
+export default function CustomerModal({ open, onOpenChange, initial, onSave, defaultType = 'customer', initialTab = 'profile', canAddMedia = false }: Props) {
   const [vehicleSelectorOpen, setVehicleSelectorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -778,15 +779,16 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                             <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-300">{vLabel}</h4>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <MediaUploadField label="Before Photos" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                            <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
-                            <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} />
+                            <MediaUploadField label="Before Photos" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                            <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                            <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
                           </div>
                           <div className="pt-4 border-t border-zinc-800/50">
                             <VideoLinkField 
                               videos={vehicle.videoUrls || []} 
                               onAdd={(url, desc) => handleAddVideo(url, desc, vIdx)} 
-                              onRemove={(idx) => handleRemoveVideo(idx, vIdx)} 
+                              onRemove={(idx) => handleRemoveVideo(idx, vIdx)}
+                              canEdit={isAdmin || canAddMedia}
                             />
                           </div>
                         </div>
@@ -800,15 +802,16 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         <span className="text-[9px] text-zinc-600 font-bold ml-2">(no vehicle linked — add one in Profile tab to organize by vehicle)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
-                        <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
-                        <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} />
+                        <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                        <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                        <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
                       </div>
                       <div className="pt-4 border-t border-zinc-800/50">
                         <VideoLinkField 
                           videos={form.videoUrl ? [form.videoNote ? `${form.videoUrl}:::${form.videoNote}` : form.videoUrl] : []} 
                           onAdd={(url, desc) => handleAddVideo(url, desc, -1)} 
                           onRemove={() => handleRemoveVideo(0, -1)} 
+                          canEdit={isAdmin || canAddMedia}
                         />
                       </div>
                     </div>
@@ -915,9 +918,11 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                  <Calendar className="w-4 h-4 mr-2" /> Book Appointment
               </Button>
             )}
-            <Button onClick={handleSubmit} disabled={loading} className="bg-blue-600 hover:bg-blue-700 min-w-[120px]">
-              {loading ? 'Processing...' : `Save ${isProspect ? 'Prospect' : 'Customer'}`}
-            </Button>
+            {(isAdmin || canAddMedia) && (
+              <Button onClick={handleSubmit} disabled={loading} className="bg-blue-600 hover:bg-blue-700 min-w-[120px]">
+                {loading ? 'Processing...' : `Save ${isProspect ? 'Prospect' : 'Customer'}`}
+              </Button>
+            )}
           </DialogFooter>
         </Tabs>
       </DialogContent>
@@ -948,9 +953,10 @@ interface MediaUploadFieldProps {
   vIdx: number;
   onUpload: (files: FileList | File[], type: 'generalPhotos'|'beforePhotos'|'afterPhotos', vIdx: number) => void;
   onRemove: (type: 'generalPhotos'|'beforePhotos'|'afterPhotos', index: number, vIdx: number) => void;
+  canEdit?: boolean;
 }
 
-function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: MediaUploadFieldProps) {
+function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, canEdit = true }: MediaUploadFieldProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const currentPhotos = photos || [];
@@ -971,34 +977,38 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove }: Med
         {currentPhotos.map((url, idx) => (
           <div key={idx} className="relative aspect-square rounded bg-zinc-950 border border-zinc-800 overflow-hidden group">
             <img src={url} className="w-full h-full object-cover" />
-            <button onClick={() => onRemove(type, idx, vIdx)} className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <X className="w-2 h-2 text-white" />
-            </button>
+            {canEdit && (
+              <button onClick={() => onRemove(type, idx, vIdx)} className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                <X className="w-2 h-2 text-white" />
+              </button>
+            )}
           </div>
         ))}
-        <div
-          className="relative aspect-square rounded border border-dashed border-zinc-800 flex items-center justify-center bg-zinc-950/40 hover:bg-zinc-900 transition-colors cursor-pointer"
-          onClick={() => fileRef.current?.click()}
-        >
-          <Plus className="w-4 h-4 text-zinc-700" />
-          {/* Gallery / file picker */}
-          <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFile} />
-          {/* Camera capture - separate input, button stops propagation so only camera fires */}
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
-            className="absolute bottom-1 right-1 p-1 bg-blue-600 rounded-full"
+        {canEdit && (
+          <div
+            className="relative aspect-square rounded border border-dashed border-zinc-800 flex items-center justify-center bg-zinc-950/40 hover:bg-zinc-900 transition-colors cursor-pointer"
+            onClick={() => fileRef.current?.click()}
           >
-            <Camera className="w-3 h-3 text-white" />
-          </button>
-        </div>
+            <Plus className="w-4 h-4 text-zinc-700" />
+            {/* Gallery / file picker */}
+            <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFile} />
+            {/* Camera capture - separate input, button stops propagation so only camera fires */}
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); cameraRef.current?.click(); }}
+              className="absolute bottom-1 right-1 p-1 bg-blue-600 rounded-full"
+            >
+              <Camera className="w-3 h-3 text-white" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function VideoLinkField({ videos, onAdd, onRemove }: { videos: string[], onAdd: (url: string, desc: string) => void, onRemove: (idx: number) => void }) {
+function VideoLinkField({ videos, onAdd, onRemove, canEdit = true }: { videos: string[], onAdd: (url: string, desc: string) => void, onRemove: (idx: number) => void, canEdit?: boolean }) {
   const [url, setUrl] = useState("");
   const [desc, setDesc] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -1009,9 +1019,11 @@ function VideoLinkField({ videos, onAdd, onRemove }: { videos: string[], onAdd: 
         <Label className="text-[10px] text-zinc-500 uppercase font-black flex items-center gap-2">
           <Video className="w-3 h-3 text-pink-500" /> Embedded Videos ({videos.length})
         </Label>
-        <Button variant="ghost" size="sm" className="h-6 text-[9px] text-blue-400 font-bold" onClick={() => setIsAdding(!isAdding)}>
-          {isAdding ? "CANCEL" : "ADD VIDEO LINK"}
-        </Button>
+        {canEdit && (
+          <Button variant="ghost" size="sm" className="h-6 text-[9px] text-blue-400 font-bold" onClick={() => setIsAdding(!isAdding)}>
+            {isAdding ? "CANCEL" : "ADD VIDEO LINK"}
+          </Button>
+        )}
       </div>
 
       {isAdding && (
@@ -1056,9 +1068,11 @@ function VideoLinkField({ videos, onAdd, onRemove }: { videos: string[], onAdd: 
                   <p className="text-[10px] text-zinc-300 font-bold truncate">{vUrl}</p>
                   {vDesc && <p className="text-[9px] text-zinc-500 italic truncate mt-0.5">"{vDesc}"</p>}
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-red-500" onClick={() => onRemove(i)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                {canEdit && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-red-500" onClick={() => onRemove(i)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </div>
             );
           })}
