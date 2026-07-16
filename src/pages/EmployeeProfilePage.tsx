@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { getSupabaseEmployees, type Employee } from '@/lib/supa-data';
+import { getCurrentUser } from '@/lib/auth';
 
 const TABS = [
   { id: 'personal',     label: 'Personal',     icon: User },
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'compensation', label: 'Compensation', icon: DollarSign },
   { id: 'performance',  label: 'Performance',  icon: Activity },
   { id: 'admin',        label: 'Admin',        icon: FileText },
+  { id: 'history',      label: 'Change History',icon: Clock },
 ];
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -32,10 +34,13 @@ export default function EmployeeProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const user = getCurrentUser();
   const [emp, setEmp] = useState<any>(null);
+  const [originalEmp, setOriginalEmp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [auditLog, setAuditLog] = useState<any[]>([]);
 
   useEffect(() => { load(); }, [id]);
 
@@ -55,13 +60,25 @@ export default function EmployeeProfilePage() {
       if (found) {
         const { data: full } = await supabase.from('app_users').select('*').eq('id', found.id!).maybeSingle();
         setEmp(full || found);
+        setOriginalEmp(JSON.parse(JSON.stringify(full || found)));
       } else {
         toast({ title: 'Employee not found', variant: 'destructive' });
         navigate('/company-employees');
       }
     } else {
       setEmp(data);
+      setOriginalEmp(JSON.parse(JSON.stringify(data)));
     }
+
+    if (data?.id) {
+      const { data: auditData } = await supabase
+        .from('employee_profile_audit_log')
+        .select('*')
+        .eq('employee_id', data.id)
+        .order('changed_at', { ascending: false });
+      setAuditLog(auditData || []);
+    }
+
     setLoading(false);
   };
 
@@ -70,7 +87,8 @@ export default function EmployeeProfilePage() {
   const handleSave = async () => {
     if (!emp?.id) return;
     setSaving(true);
-    const { error } = await supabase.from('app_users').update({
+
+    const updatePayload = {
       name: emp.name,
       full_legal_name: emp.full_legal_name || null,
       phone: emp.phone || null,
@@ -80,27 +98,61 @@ export default function EmployeeProfilePage() {
       emergency_contact_phone: emp.emergency_contact_phone || null,
       job_title: emp.job_title || null,
       employee_type: emp.employee_type || null,
+      employment_type: emp.employment_type || null,
+      weekly_availability: emp.weekly_availability || null,
       status: emp.status || null,
       hire_date: emp.hire_date || null,
       termination_date: emp.termination_date || null,
       tax_classification: emp.tax_classification || null,
       payment_method_notes: emp.payment_method_notes || null,
       skill_rating: emp.skill_rating ? Number(emp.skill_rating) : null,
+      next_review_date: emp.next_review_date || null,
       work_ethic_notes: emp.work_ethic_notes || null,
       customer_feedback_score: emp.customer_feedback_score ? Number(emp.customer_feedback_score) : null,
       incident_log: emp.incident_log || null,
       tier_promotion_history: emp.tier_promotion_history || null,
       internal_notes: emp.internal_notes || null,
       documents_on_file: emp.documents_on_file || null,
+      documents_with_expiry: emp.documents_with_expiry || null,
+      equipment_issued: emp.equipment_issued || null,
       updated_at: new Date().toISOString(),
-    }).eq('id', emp.id);
+    };
 
-    setSaving(false);
+    const diffs: any[] = [];
+    Object.keys(updatePayload).forEach(key => {
+      if (key === 'updated_at') return;
+      const oldVal = originalEmp[key];
+      const newVal = (updatePayload as any)[key];
+      
+      const strOld = typeof oldVal === 'object' && oldVal !== null ? JSON.stringify(oldVal) : String(oldVal || '');
+      const strNew = typeof newVal === 'object' && newVal !== null ? JSON.stringify(newVal) : String(newVal || '');
+
+      if (strOld !== strNew) {
+        diffs.push({
+          employee_id: emp.id,
+          changed_by: user?.email || 'System',
+          field_name: key,
+          old_value: strOld,
+          new_value: strNew,
+        });
+      }
+    });
+
+    const { error } = await supabase.from('app_users').update(updatePayload).eq('id', emp.id);
+
     if (error) {
       toast({ title: 'Save failed', description: error.message, variant: 'destructive' });
     } else {
+      if (diffs.length > 0) {
+        const { error: auditError } = await supabase.from('employee_profile_audit_log').insert(diffs);
+        if (auditError) console.error("Audit log error:", auditError);
+      }
+      
       toast({ title: '✓ Profile saved', description: `${emp.name}'s profile has been updated.` });
+      // Reload to grab fresh audit log and reset originalEmp
+      load();
     }
+    setSaving(false);
   };
 
   if (loading) return (
@@ -253,6 +305,17 @@ export default function EmployeeProfilePage() {
                     </SelectContent>
                   </Select>
                 </Field>
+                <Field label="Employment Type">
+                  <Select value={emp.employment_type || ''} onValueChange={v => set('employment_type', v)}>
+                    <SelectTrigger className={inputCls}><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-Time">Full-Time</SelectItem>
+                      <SelectItem value="Part-Time">Part-Time</SelectItem>
+                      <SelectItem value="Seasonal">Seasonal</SelectItem>
+                      <SelectItem value="On-Call">On-Call</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
                 <Field label="Employment Status">
                   <Select value={emp.status || 'Active'} onValueChange={v => set('status', v)}>
                     <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
@@ -278,6 +341,11 @@ export default function EmployeeProfilePage() {
                 <Field label="Termination Date">
                   <Input type="date" value={emp.termination_date || ''} onChange={e => set('termination_date', e.target.value)} className={inputCls} />
                 </Field>
+                <div className="md:col-span-2">
+                  <Field label="Typical Weekly Availability/Hours">
+                    <Input value={emp.weekly_availability || ''} onChange={e => set('weekly_availability', e.target.value)} className={inputCls} placeholder="e.g. Mon-Fri 9am-5pm" />
+                  </Field>
+                </div>
               </div>
             </div>
           )}
@@ -331,6 +399,9 @@ export default function EmployeeProfilePage() {
                 <Field label="Avg Customer Feedback Score">
                   <Input type="number" step="0.1" min="1" max="5" value={emp.customer_feedback_score || ''} onChange={e => set('customer_feedback_score', e.target.value)} className={inputCls} placeholder="e.g. 4.8" />
                 </Field>
+                <Field label="Next Review Due Date">
+                  <Input type="date" value={emp.next_review_date || ''} onChange={e => set('next_review_date', e.target.value)} className={inputCls} />
+                </Field>
                 <div className="md:col-span-2">
                   <Field label="Work Ethic & General Performance Notes">
                     <Textarea value={emp.work_ethic_notes || ''} onChange={e => set('work_ethic_notes', e.target.value)} className={`${inputCls} h-32`} placeholder="Reliability, attitude, strengths, areas for improvement…" />
@@ -368,12 +439,28 @@ export default function EmployeeProfilePage() {
                   <Textarea value={emp.internal_notes || ''} onChange={e => set('internal_notes', e.target.value)}
                     className={`${inputCls} h-36`} placeholder="Private notes visible only to admins — HR considerations, hire context, any sensitive info…" />
                 </Field>
-                <Field label="Documents on File">
+                
+                <Field label="Document Expiration Tracking (JSON)">
+                  <Textarea value={emp.documents_with_expiry ? JSON.stringify(emp.documents_with_expiry, null, 2) : '[]'}
+                    onChange={e => { try { set('documents_with_expiry', JSON.parse(e.target.value)); } catch {} }}
+                    className={`${inputCls} h-28 font-mono text-xs`} />
+                  <p className="text-xs text-zinc-600 mt-1">Format: <code className="text-zinc-500">[{`{"name":"Driver's License","expiry_date":"2028-05-15"}`}]</code></p>
+                </Field>
+
+                <Field label="Uniform/Equipment/Tools Issued (JSON)">
+                  <Textarea value={emp.equipment_issued ? JSON.stringify(emp.equipment_issued, null, 2) : '[]'}
+                    onChange={e => { try { set('equipment_issued', JSON.parse(e.target.value)); } catch {} }}
+                    className={`${inputCls} h-20 font-mono text-xs`} />
+                  <p className="text-xs text-zinc-600 mt-1">Format: <code className="text-zinc-500">["Shop Keys", "Prime Uniform Shirt - L", "Detailing Tablet"]</code></p>
+                </Field>
+
+                <Field label="General Documents on File (JSON)">
                   <Textarea value={emp.documents_on_file ? JSON.stringify(emp.documents_on_file, null, 2) : '[]'}
                     onChange={e => { try { set('documents_on_file', JSON.parse(e.target.value)); } catch {} }}
-                    className={`${inputCls} h-28 font-mono text-xs`} />
-                  <p className="text-xs text-zinc-600 mt-1">e.g. <code className="text-zinc-500">["W-4","Driver's License","I-9","Direct Deposit Form"]</code></p>
+                    className={`${inputCls} h-20 font-mono text-xs`} />
+                  <p className="text-xs text-zinc-600 mt-1">e.g. <code className="text-zinc-500">["W-4","I-9","Direct Deposit Form"]</code></p>
                 </Field>
+
                 <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-2">
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Account Metadata</p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-500">
@@ -387,6 +474,42 @@ export default function EmployeeProfilePage() {
               </div>
             </div>
           )}
+
+          {/* HISTORY */}
+          {activeTab === 'history' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-white mb-1">Change History (Audit Log)</h2>
+                <p className="text-xs text-zinc-500">System-generated immutable record of profile edits.</p>
+              </div>
+              <div className="space-y-3">
+                {auditLog.length === 0 ? (
+                  <p className="text-sm text-zinc-500 py-8 text-center bg-zinc-900/50 rounded-lg border border-zinc-800">No changes recorded yet.</p>
+                ) : (
+                  auditLog.map(log => (
+                    <div key={log.id} className="bg-zinc-950 border border-zinc-800 p-4 rounded-lg flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-indigo-400">{log.field_name}</span>
+                        <span className="text-[10px] text-zinc-500">{new Date(log.changed_at).toLocaleString()}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-xs font-mono bg-black/40 p-2 rounded">
+                        <div>
+                          <p className="text-[10px] text-zinc-600 mb-1">Previous</p>
+                          <p className="text-red-400/80 break-words line-clamp-3">{log.old_value || 'null'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-zinc-600 mb-1">New</p>
+                          <p className="text-emerald-400/80 break-words line-clamp-3">{log.new_value || 'null'}</p>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-1">Changed by: <span className="text-zinc-300">{log.changed_by}</span></div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
