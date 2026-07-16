@@ -3897,8 +3897,12 @@ export function makeToc(role: 'admin' | 'employee' | 'customer', _blockedIds: st
     return [welcome, ...customerTopics];
   }
 
-  // Employees: only show requested items in two sections
-  return [...employeeMenuTopics, ...employeeDashboardTopics];
+  // Employees: show requested items plus full access to admin topics to ensure all Help icons can resolve their topic IDs.
+  // We'll put employee topics first, then append any admin topics not already included.
+  const employeeCombined = [...employeeMenuTopics, ...employeeDashboardTopics];
+  const employeeIds = new Set(employeeCombined.map(t => t.id));
+  const additionalAdminTopics = adminTopics.filter(t => !employeeIds.has(t.id));
+  return [...employeeCombined, ...additionalAdminTopics];
 }
 
 

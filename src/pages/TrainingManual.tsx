@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
+import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -21,7 +22,6 @@ import {
     type TrainingModule, type TrainingProgress, type TrainingBadge
 } from "@/lib/supa-data";
 
-interface ProTip { id: string; title: string; content: string; createdAt: number; }
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
 declare global {
@@ -144,7 +144,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     const [modules, setModules] = useState<TrainingModule[]>([]);
     const [progress, setProgress] = useState<TrainingProgress[]>([]);
     const [badges, setBadges] = useState<TrainingBadge[]>([]);
-    const [tips, setTips] = useState<ProTip[]>([]);
+    // Removed local tips state
 
     // UI State
     const [searchParams, setSearchParams] = useSearchParams();
@@ -192,20 +192,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
             setProgress(prog);
         }
 
-        // Load Tips
-        const savedTips = await localforage.getItem<ProTip[]>("rick_pro_tips");
-        if (savedTips) setTips(savedTips);
-        else {
-            // Seed default checks if empty
-            const defaults: ProTip[] = [
-                { id: '1', title: 'Always Verify Water Source', content: 'Run spigot 10s before hooking up.', createdAt: Date.now() },
-                { id: '2', title: 'Emblem Cleaning', content: 'Use soft boar hair brush while foamed.', createdAt: Date.now() }
-            ];
-            // Only set if truly empty/null to avoid overwrite
-            if (savedTips === null) {
-                setTips(defaults); localforage.setItem("rick_pro_tips", defaults);
-            }
-        }
+        // Rick's Tips loaded globally, no local load needed here
     };
 
     // --- LOGIC: LOCKING & PROGRESS ---
@@ -617,7 +604,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                         </section>
 
                                         <section className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-                                            <h3 className="font-bold text-zinc-300 mb-2">Pro Tips for Admins</h3>
+                                            <h3 className="font-bold text-zinc-300 mb-2">Rick's Tips for Admins</h3>
                                             <ul className="space-y-2 text-xs text-zinc-400">
                                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-500" /> Use <strong>YouTube Unlisted</strong> videos so public users can't find your training content.</li>
                                                 <li className="flex items-center gap-2"><CheckCircle2 className="w-3 h-3 text-green-500" /> Keep quizzes short (3-5 questions) to keep engagement high.</li>
@@ -631,7 +618,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                     </div>
                     <div className="flex gap-2">
                         {isAdmin && <Button onClick={() => openEditor()} className="bg-purple-600 hover:bg-purple-700"><Plus className="w-4 h-4 mr-2" /> New Module</Button>}
-                        <Button onClick={() => setTipsOpen(true)} variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-200"><Lightbulb className="w-4 h-4 mr-2 text-yellow-500" /> Pro Tips</Button>
+                        <Button onClick={() => setTipsOpen(true)} variant="outline" className="border-zinc-700 hover:bg-zinc-800 text-zinc-200"><Lightbulb className="w-4 h-4 mr-2 text-yellow-500" /> Rick's Tips</Button>
                     </div>
                 </div>
 
@@ -1013,19 +1000,8 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                 </DialogContent>
             </Dialog>
 
-            {/* PRO TIPS (Simple Viewer) */}
-            <Dialog open={tipsOpen} onOpenChange={setTipsOpen}>
-                <DialogContent className="bg-zinc-950 border-zinc-800 text-white"><DialogTitle>Pro Tips</DialogTitle>
-                    <ScrollArea className="h-[50vh]">
-                        {tips.map(t => (
-                            <div key={t.id} className="mb-4 bg-zinc-900 p-3 rounded border border-zinc-800">
-                                <h4 className="font-bold text-yellow-500">{t.title}</h4>
-                                <p className="text-zinc-300 text-sm">{t.content}</p>
-                            </div>
-                        ))}
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
+            {/* Rick's Tips Modal */}
+            <RicksTipsModal open={tipsOpen} onOpenChange={setTipsOpen} />
         </div>
     );
 };

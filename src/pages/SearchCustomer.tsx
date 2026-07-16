@@ -379,7 +379,23 @@ const SearchCustomer = () => {
       }
     }
     
-    return matchesSearch && filterByDate(customer) && matchesStatus;
+    // Employee Role Restriction Check
+    let hasEmployeeAccess = true;
+    const currentUser = getCurrentUser();
+    if (currentUser?.role === 'employee') {
+      const isCreator = (customer as any).created_by === currentUser.email || (customer as any).created_by === currentUser.name || (customer as any).createdBy === currentUser.id;
+      const isAssigned = allBookings.some(bk => 
+        ((bk.customer && customer.name && bk.customer.toLowerCase() === customer.name.toLowerCase()) ||
+         (bk.customerEmail && customer.email && bk.customerEmail.toLowerCase() === customer.email.toLowerCase()) ||
+         (bk.customerPhone && customer.phone && bk.customerPhone === customer.phone)) &&
+        bk.assignedEmployee === currentUser.id
+      );
+      if (!isCreator && !isAssigned) {
+        hasEmployeeAccess = false;
+      }
+    }
+    
+    return matchesSearch && filterByDate(customer) && matchesStatus && hasEmployeeAccess;
   });
 
   const handleDelete = async () => {

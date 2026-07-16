@@ -143,7 +143,7 @@ export const getMenuGroups = (counts: {
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker, helpTopicId: 'chemical-workflow' },
                 { title: "Rick's Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-tips' },
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc-chem", icon: Calculator, helpTopicId: 'dilution-calc' },
-                { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", role: "admin", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
+                { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
             ]
         },
         {
@@ -168,7 +168,7 @@ export const getMenuGroups = (counts: {
             title: "Prime Learning Center", icon: GraduationCap, iconColor: "text-indigo-400",
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield, helpTopicId: 'employee-certification' },
-                { title: "Interactive App Demo", url: "/learning-library?tab=demo", key: "interactive-demo", icon: Globe, highlight: "green", helpTopicId: "interactive-training-demo" },
+
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator, helpTopicId: 'dilution-calc' },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen, helpTopicId: 'learn-lib' },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus, helpTopicId: 'orientation' },
@@ -187,7 +187,7 @@ export const getMenuGroups = (counts: {
             title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400",
             items: [
                 { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
-                { title: "Free-Form Letter", url: "/letter-maker", key: "letter-maker", icon: Mail, helpTopicId: 'letter-maker' },
+
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
                 { title: "Business Card Stickers", url: `/sticker-maker`, key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper, helpTopicId: 'blog' },
