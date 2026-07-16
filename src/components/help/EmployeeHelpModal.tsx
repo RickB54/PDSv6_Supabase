@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, Info } from 'lucide-react';
 
@@ -82,9 +82,9 @@ const EMPLOYEE_TOPICS = [
     content: 'View tasks explicitly assigned to you by the management team. This includes a calendar and list view so you know exactly what needs to be accomplished each day.'
   },
   {
-    id: 'app-manual',
-    title: 'App Manual',
-    content: 'The comprehensive guide on how to use this internal software application. If you aren\'t sure how a software feature works, you will find the answer here.'
+    id: 'show-help',
+    title: 'Show Help',
+    content: 'This very modal you are looking at. It contains the comprehensive guide on how to use every feature in the Employee Dashboard.'
   },
   {
     id: 'notify-admin',
@@ -116,7 +116,7 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-3xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-3xl h-[90dvh] md:h-auto md:max-h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800/50 bg-zinc-900/50">
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <HelpCircle className="w-6 h-6 text-indigo-400" />
@@ -128,7 +128,7 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col relative">
-          <ScrollArea className="h-full">
+          <div className="h-full overflow-y-auto overscroll-contain">
             <div className="p-6">
               <Accordion 
                 type="single" 
@@ -160,7 +160,7 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
                 ))}
               </Accordion>
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

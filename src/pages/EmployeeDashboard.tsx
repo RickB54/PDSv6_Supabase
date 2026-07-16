@@ -315,8 +315,9 @@ const EmployeeDashboard = () => {
             />
 
             <DashboardTile 
-              href="/app-manual" title="APP MANUAL" desc="Learn how to use the app effectively." bgColor="bg-slate-700"
-              infoTitle="App Manual" infoContent="Open the full documentation guide for the Prime Auto Detail internal application to learn how every feature works."
+              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'show-help' }))}
+              title="SHOW HELP" desc="Open the full documentation guide." bgColor="bg-slate-700"
+              infoTitle="Show Help" infoContent="Open the comprehensive guide on how to use every feature on the Employee Dashboard."
             />
 
             <DashboardTile 
