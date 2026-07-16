@@ -502,7 +502,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Contact Info</h3>
                 <div className="grid gap-3">
                   <div className="grid grid-cols-2 gap-3">
-                    <Select value={form.accountType || 'Individual'} onValueChange={(val) => handleChange("accountType", val)}>
+                    <Select value={form.accountType || 'Individual'} onValueChange={(val) => handleChange("accountType", val)} disabled={!isAdmin}>
                       <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-300">
                         <SelectValue placeholder="Account Type" />
                       </SelectTrigger>
@@ -517,6 +517,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         className="bg-zinc-900 border-zinc-800 text-white"
                         value={form.companyName || ''}
                         onChange={(e) => handleChange("companyName", e.target.value)}
+                        disabled={!isAdmin}
                       />
                     )}
                   </div>
@@ -525,17 +526,20 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                     className="bg-zinc-900 border-zinc-800 text-white"
                     value={form.name || ''}
                     onChange={(e) => handleChange("name", e.target.value)}
+                    disabled={!isAdmin}
                   />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <ContactInput
                       type="phone"
                       value={form.phone}
                       onChange={(val) => handleChange("phone", val)}
+                      disabled={!isAdmin}
                     />
                     <ContactInput
                       type="email"
                       value={form.email}
                       onChange={(val) => handleChange("email", val)}
+                      disabled={!isAdmin}
                     />
                   </div>
                   <div className="flex items-center justify-between p-3 bg-zinc-900/40 rounded-lg border border-zinc-800/50">
@@ -547,6 +551,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       checked={form.has_google_review || false}
                       onCheckedChange={(checked) => setForm(prev => ({ ...prev, has_google_review: checked }))}
                       className="data-[state=checked]:bg-blue-600 scale-90"
+                      disabled={!isAdmin}
                      />
                   </div>
 
@@ -573,6 +578,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                           checked={isProspect}
                           onCheckedChange={(checked) => setForm(prev => ({ ...prev, type: checked ? 'prospect' : 'customer' }))}
                           className="data-[state=checked]:bg-orange-600 scale-90"
+                          disabled={!isAdmin}
                         />
                         <span 
                           className={cn("text-[10px] font-bold uppercase cursor-pointer", isProspect ? "text-orange-400" : "text-zinc-600")}
@@ -588,6 +594,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       className="flex-1 bg-zinc-900 border-zinc-800 text-white"
                       value={form.address}
                       onChange={(e) => handleChange("address", e.target.value)}
+                      disabled={!isAdmin}
                     />
                     {form.address && (
                       <Button variant="outline" size="icon" onClick={() => setShowMap(true)} className="border-zinc-800 text-zinc-400">
@@ -603,6 +610,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       className="bg-zinc-900 border-zinc-800 min-h-[100px] text-zinc-200 text-sm"
                       value={form.notes}
                       onChange={(e) => handleChange("notes", e.target.value)}
+                      disabled={!isAdmin}
                     />
                   </div>
 
@@ -614,6 +622,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         className="bg-zinc-900 border-zinc-800 text-white h-10"
                         value={form.date_of_contact ? (form.date_of_contact.includes('T') ? form.date_of_contact.slice(0, 16) : `${form.date_of_contact}T12:00`) : ""}
                         onChange={(e) => handleChange("date_of_contact", e.target.value)}
+                        disabled={!isAdmin}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -623,6 +632,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         onValueChange={(val) => {
                           setForm(f => ({ ...f, howFound: val }));
                         }}
+                        disabled={!isAdmin}
                       >
                         <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-300 h-10">
                           <SelectValue placeholder="Select Source" />
@@ -643,6 +653,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                           className="mt-2 bg-zinc-900 border-zinc-800 text-white h-8 text-xs"
                           value={form.howFoundOther || ""}
                           onChange={(e) => setForm(f => ({ ...f, howFoundOther: e.target.value }))}
+                          disabled={!isAdmin}
                         />
                       )}
                     </div>
@@ -664,9 +675,11 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       />
                     </span>
                   </h3>
-                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] bg-zinc-900 border-zinc-700" onClick={addVehicleRow}>
-                    <Plus className="h-3 w-3 mr-1" /> Add Row
-                  </Button>
+                  {isAdmin && (
+                    <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] bg-zinc-900 border-zinc-700" onClick={addVehicleRow}>
+                      <Plus className="h-3 w-3 mr-1" /> Add Row
+                    </Button>
+                  )}
                 </div>
 
                 <div className="space-y-6">
@@ -674,22 +687,24 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                     <div key={vIdx} className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-xl space-y-4">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <Input size={1} placeholder="Year" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.year} onChange={(e) => updateVehicleRow(vIdx, { year: e.target.value })} />
-                          <Input size={1} placeholder="Make" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.make} onChange={(e) => updateVehicleRow(vIdx, { make: e.target.value })} />
-                          <Input size={1} placeholder="Model" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.model} onChange={(e) => updateVehicleRow(vIdx, { model: e.target.value })} />
-                          <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-500" onClick={() => { setCurrentVehicleIdx(vIdx); setVehicleSelectorOpen(true); }}><Search className="h-4 w-4" /></Button>
+                          <Input size={1} placeholder="Year" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.year} onChange={(e) => updateVehicleRow(vIdx, { year: e.target.value })} disabled={!isAdmin} />
+                          <Input size={1} placeholder="Make" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.make} onChange={(e) => updateVehicleRow(vIdx, { make: e.target.value })} disabled={!isAdmin} />
+                          <Input size={1} placeholder="Model" className="bg-zinc-950 border-zinc-800 text-zinc-300" value={vehicle.model} onChange={(e) => updateVehicleRow(vIdx, { model: e.target.value })} disabled={!isAdmin} />
+                          <Button variant="ghost" size="icon" className="h-9 w-9 text-blue-500" onClick={() => { setCurrentVehicleIdx(vIdx); setVehicleSelectorOpen(true); }} disabled={!isAdmin}><Search className="h-4 w-4" /></Button>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={() => removeVehicleRow(vIdx)}><Trash2 className="h-4 w-4" /></Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-red-500" onClick={() => removeVehicleRow(vIdx)}><Trash2 className="h-4 w-4" /></Button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                          <div className="space-y-1">
                             <Label className="text-[10px] text-zinc-500 uppercase font-black">Color</Label>
-                            <Input placeholder="Color" className="h-8 text-xs bg-zinc-950 border-zinc-800" value={vehicle.color} onChange={(e) => updateVehicleRow(vIdx, { color: e.target.value })} />
+                            <Input placeholder="Color" className="h-8 text-xs bg-zinc-950 border-zinc-800" value={vehicle.color} onChange={(e) => updateVehicleRow(vIdx, { color: e.target.value })} disabled={!isAdmin} />
                          </div>
                          <div className="space-y-1">
                             <Label className="text-[10px] text-zinc-500 uppercase font-black">Mileage</Label>
-                            <Input placeholder="Mileage" className="h-8 text-xs bg-zinc-950 border-zinc-800" value={vehicle.mileage} onChange={(e) => updateVehicleRow(vIdx, { mileage: e.target.value })} />
+                            <Input placeholder="Mileage" className="h-8 text-xs bg-zinc-950 border-zinc-800" value={vehicle.mileage} onChange={(e) => updateVehicleRow(vIdx, { mileage: e.target.value })} disabled={!isAdmin} />
                          </div>
                          <div className="space-y-1">
                             <Label className="text-[10px] text-zinc-500 uppercase font-black">Body Type</Label>
@@ -697,6 +712,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                               type="button"
                               className="h-8 w-full text-xs bg-zinc-950 border border-zinc-800 rounded-md px-3 text-left hover:border-blue-500 transition-colors flex items-center justify-between gap-2"
                               onClick={() => { setCurrentVehicleIdx(vIdx); setVehicleSelectorOpen(true); }}
+                              disabled={!isAdmin}
                             >
                               <span className={vehicle.type ? 'text-zinc-200' : 'text-zinc-600'}>{vehicle.type || 'Click to classify...'}</span>
                               <Search className="h-3 w-3 text-zinc-500 shrink-0" />
@@ -887,6 +903,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                 className="bg-zinc-900 border-zinc-800 min-h-[200px] text-zinc-200"
                 value={form.notes}
                 onChange={(e) => handleChange("notes", e.target.value)}
+                disabled={!isAdmin}
                />
             </TabsContent>
           </div>

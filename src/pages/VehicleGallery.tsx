@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import {
-    getSupabaseCustomers, Customer
+    getSupabaseCustomers, Customer, getSupabaseBookings
 } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/contexts/DemoContext";
@@ -345,10 +345,10 @@ function CustomerCard({
     customer, 
     onOpen, 
     onAddMedia, 
-    isAdmin = false, 
     onDelete,
     showBackLink = false,
-    returnTarget = ""
+    returnTarget = "",
+    canAddMedia = false
 }: { 
     customer: Customer; 
     onOpen: (items: MediaItem[], idx: number) => void; 
@@ -357,6 +357,7 @@ function CustomerCard({
     onDelete: (item: MediaItem) => void;
     showBackLink?: boolean;
     returnTarget?: string;
+    canAddMedia?: boolean;
 }) {
     const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
@@ -437,24 +438,28 @@ function CustomerCard({
                     <div className="flex items-center gap-1 shrink-0">
                         {/* Action Buttons (Restored to top) */}
                         <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 text-pink-400 hover:bg-pink-500/10"
-                                onClick={() => setShowVideoInput(p => !p)}
-                                title="Add Video"
-                            >
-                                <Video className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-7 w-7 text-emerald-400 hover:bg-emerald-500/10"
-                                onClick={() => onAddMedia(customer)}
-                                title="Add Photos"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                            </Button>
+                            {canAddMedia && (
+                                <>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-7 w-7 text-pink-400 hover:bg-pink-500/10"
+                                        onClick={() => setShowVideoInput(p => !p)}
+                                        title="Add Video"
+                                    >
+                                        <Video className="w-3.5 h-3.5" />
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-7 w-7 text-emerald-400 hover:bg-emerald-500/10"
+                                        onClick={() => onAddMedia(customer)}
+                                        title="Add Photos"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </Button>
+                                </>
+                            )}
                         </div>
 
                         <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[8px] px-1 py-0.5 min-w-[1.2rem] justify-center">
@@ -574,6 +579,7 @@ export default function VehicleGallery() {
 
     const [loading, setLoading] = useState(true);
     const [customers, setCustomers] = useState<Customer[]>([]);
+    const [allBookings, setAllBookings] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<"customers" | "general">("customers");
 
@@ -592,8 +598,12 @@ export default function VehicleGallery() {
     const refreshData = async () => {
         setLoading(true);
         try {
-            const data = await getSupabaseCustomers();
-            setCustomers(data);
+            const [custData, bookingsData] = await Promise.all([
+                getSupabaseCustomers(),
+                getSupabaseBookings(false)
+            ]);
+            setCustomers(custData);
+            setAllBookings(bookingsData);
         } catch (err) {
             toast({ title: "Error", description: "Failed to reload media.", variant: "destructive" });
         } finally {
@@ -672,8 +682,12 @@ export default function VehicleGallery() {
         (async () => {
             setLoading(true);
             try {
-                const data = await getSupabaseCustomers();
-                setCustomers(data);
+                const [custData, bookingsData] = await Promise.all([
+                    getSupabaseCustomers(),
+                    getSupabaseBookings(false)
+                ]);
+                setCustomers(custData);
+                setAllBookings(bookingsData);
             } catch (err) {
                 toast({ title: "Error", description: "Failed to load customer media.", variant: "destructive" });
             } finally {
@@ -845,6 +859,7 @@ export default function VehicleGallery() {
                                             }}
                                             isAdmin={isAdmin}
                                             onDelete={(item) => setPhotoToDelete({ item })}
+                                            canAddMedia={isAdmin || allBookings.some(b => (b.customerEmail === c.email || b.customerId === c.id) && b.assignedEmployee === user?.id)}
                                             showBackLink={!!showBack}
                                             returnTarget={showBack ? `${target}?search=${encodeURIComponent(search || '')}` : ""}
                                         />

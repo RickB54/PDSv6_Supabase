@@ -1955,7 +1955,7 @@ export const upsertTrainingProgress = async (progress: Partial<TrainingProgress>
 };
 
 export const getOrientationExamModule = async (): Promise<TrainingModule | null> => {
-    const { data } = await supabase.from('training_modules').select('*').eq('title', 'Final Orientation Exam').single();
+    const { data } = await supabase.from('training_modules').select('*').eq('title', 'Final Orientation Exam').maybeSingle();
     return data;
 };
 

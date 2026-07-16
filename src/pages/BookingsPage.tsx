@@ -997,6 +997,7 @@ export default function BookingsPage() {
   const handleToday = () => setCurrentDate(new Date());
 
   const handleDayClick = (day: Date) => {
+    if (!isAdmin) return;
     setSelectedDate(day);
     setSelectedBooking(null);
     setSelectedCustomer(null);
@@ -1226,6 +1227,10 @@ export default function BookingsPage() {
 
   const handleSave = async (triggerEmailSend: boolean = false) => {
     console.log("!!! SAVE BUTTON CLICKED !!!", { triggerEmailSend });
+    if (!isAdmin) {
+      toast.error('Employees cannot edit or save bookings.');
+      return;
+    }
     
     // 1. Validation Logic
     if (isDemoMode) {
@@ -1957,13 +1962,15 @@ export default function BookingsPage() {
               </TooltipProvider>
 
               {/* New Booking Button */}
-              <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold shadow-sm w-full sm:w-auto" onClick={() => {
-                setSelectedDate(new Date());
-                setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
-                setIsAddModalOpen(true);
-              }}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> New
-              </Button>
+              {isAdmin && (
+                <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold shadow-sm w-full sm:w-auto" onClick={() => {
+                  setSelectedDate(new Date());
+                  setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
+                  setIsAddModalOpen(true);
+                }}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> New
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -2409,15 +2416,17 @@ export default function BookingsPage() {
 
                 {/* HEADER ACTIONS (CLEANER SAVE/CLOSE) */}
                 <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => handleSave(false)}
-                    className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
-                    title="Save Changes"
-                  >
-                    <Save className="h-6 w-6" />
-                  </Button>
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleSave(false)}
+                      className="h-10 w-10 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                      title="Save Changes"
+                    >
+                      <Save className="h-6 w-6" />
+                    </Button>
+                  )}
 
                   <Button 
                     variant="ghost" 
@@ -3142,7 +3151,7 @@ export default function BookingsPage() {
 
             <DialogFooter className="px-4 sm:px-6 py-4 shrink-0 border-t border-zinc-800 bg-zinc-900/50 mt-auto">
               <div className="flex flex-wrap items-center gap-2 w-full">
-                {selectedBooking && selectedBooking.status !== 'cancelled' && (
+                {selectedBooking && selectedBooking.status !== 'cancelled' && isAdmin && (
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -3196,7 +3205,7 @@ export default function BookingsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {formData.status !== 'cancelled' && (
+                {formData.status !== 'cancelled' && isAdmin && (
                   <Button 
                     variant="secondary" 
                     size="sm" 
@@ -3207,14 +3216,16 @@ export default function BookingsPage() {
                   </Button>
                 )}
 
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
-                >
-                  <Save className="mr-1.5 h-4 w-4" /> Save Booking
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
+                  >
+                    <Save className="mr-1.5 h-4 w-4" /> Save Booking
+                  </Button>
+                )}
 
                 <Button 
                   variant="secondary" 
@@ -3225,14 +3236,16 @@ export default function BookingsPage() {
                   <Wrench className="mr-1.5 h-4 w-4 text-purple-400" /> Start Job
                 </Button>
 
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
-                  onClick={() => handleDuplicate(selectedBooking)} 
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
-                >
-                  <Copy className="mr-1.5 h-4 w-4 opacity-50" /> Duplicate
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => handleDuplicate(selectedBooking)} 
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
+                  >
+                    <Copy className="mr-1.5 h-4 w-4 opacity-50" /> Duplicate
+                  </Button>
+                )}
               </div>
             </DialogFooter>
           </DialogContent>

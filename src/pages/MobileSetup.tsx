@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ import {
   SetupCategory,
 } from "@/lib/inventory-data";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/contexts/DemoContext";
 import {
   Dialog,
   DialogContent,
@@ -85,6 +87,9 @@ import {
 const MobileSetup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const user = getCurrentUser();
+  const { isDemoMode } = useDemoMode();
+  const isAdmin = user?.role === 'admin' || isDemoMode;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data
@@ -430,13 +435,15 @@ const MobileSetup = () => {
               >
                 <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
               </Button>
-              <Button
-                variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
-                onClick={() => navigate("/shop-setup")}
-              >
-                <Warehouse className="h-4 w-4 md:h-5 md:w-5" /> Switch to Shop
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
+                  onClick={() => navigate("/shop-setup")}
+                >
+                  <Warehouse className="h-4 w-4 md:h-5 md:w-5" /> Switch to Shop
+                </Button>
+              )}
               <Button
                 disabled={uploading}
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
@@ -466,15 +473,17 @@ const MobileSetup = () => {
             <div className="flex flex-col md:flex-row items-center gap-4 p-5 md:p-6 bg-zinc-900/60 border border-zinc-800 rounded-3xl w-full relative z-10">
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Quick Gear Tag:</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-zinc-600 hover:text-indigo-400 bg-black/20"
-                  onClick={() => setCatManagerOpen(true)}
-                  title="Manage Categories"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-zinc-600 hover:text-indigo-400 bg-black/20"
+                    onClick={() => setCatManagerOpen(true)}
+                    title="Manage Categories"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 items-center">
                 <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
@@ -593,8 +602,8 @@ const MobileSetup = () => {
                           <MediaCard
                             item={item}
                             categories={categories}
-                            onDelete={removeMedia}
-                            onReassign={handleReassign}
+                            onDelete={isAdmin ? removeMedia : undefined}
+                            onReassign={isAdmin ? handleReassign : undefined}
                             onOpenGallery={() => openLightbox(item.id)}
                           />
                         </div>
@@ -631,9 +640,11 @@ const MobileSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
                   <Wrench className="h-5 w-5 text-indigo-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">Tools & Hardware</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {tools.map((tool) => (
@@ -659,9 +670,11 @@ const MobileSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
                   <FlaskConical className="h-5 w-5 text-emerald-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">Fluid Systems</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {chemicals.map((chem) => (
@@ -687,9 +700,11 @@ const MobileSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
                   <Package className="h-5 w-5 text-amber-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-200">Consumables</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {materials.map((mat) => (
@@ -858,14 +873,14 @@ const MobileSetup = () => {
         initialIndex={currentMediaIndex}
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
-        isAdmin={true}
-        onDelete={(idx) => {
+        isAdmin={isAdmin}
+        onDelete={isAdmin ? (idx) => {
           const item = visualMedia[idx];
           if (item && confirm('Delete this photo?')) {
             removeMedia(item.id);
             setLightboxOpen(false);
           }
-        }}
+        } : undefined}
       />
     </div>
   );
@@ -883,8 +898,8 @@ function MediaCard({
 }: {
   item: SetupMedia;
   categories: SetupCategory[];
-  onDelete: (id: string) => void;
-  onReassign: (id: string, catId: string) => void;
+  onDelete?: (id: string) => void;
+  onReassign?: (id: string, catId: string) => void;
   onOpenGallery: () => void;
 }) {
   return (

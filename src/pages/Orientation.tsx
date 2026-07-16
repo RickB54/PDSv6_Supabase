@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,39 @@ import OrientationModal from "@/components/training/OrientationModal";
 export default function Orientation() {
     const [open, setOpen] = useState(false);
     const [startExam, setStartExam] = useState(false);
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        const updateProgress = () => {
+            let totalScore = 0;
+            try {
+                // Handbook progress (50% weight)
+                const handbookData = localStorage.getItem("handbook_progress");
+                if (handbookData) {
+                    const parsed = JSON.parse(handbookData);
+                    if (parsed.sectionsRead && Array.isArray(parsed.sectionsRead)) {
+                        const readCount = parsed.sectionsRead.filter(Boolean).length;
+                        const totalSections = parsed.sectionsRead.length || 1;
+                        totalScore += (readCount / totalSections) * 50;
+                    }
+                }
+                
+                // Exam progress (50% weight)
+                const examData = localStorage.getItem("training_exam_progress");
+                if (examData) {
+                    const parsed = JSON.parse(examData);
+                    if (parsed.answers && Array.isArray(parsed.answers)) {
+                        const answeredCount = parsed.answers.filter((a: any) => a !== -1).length;
+                        const totalQuestions = parsed.answers.length || 50;
+                        totalScore += (answeredCount / totalQuestions) * 50;
+                    }
+                }
+            } catch (e) {}
+            setProgress(Math.round(totalScore));
+        };
+
+        updateProgress();
+    }, [open]);
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -56,9 +89,9 @@ export default function Orientation() {
                         <h2 className="text-2xl font-bold text-white mb-2">My Orientation Progress</h2>
                         <p className="text-zinc-400 mb-6">Track your onboarding completion status.</p>
                         <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden mb-2">
-                            <div className="bg-green-500 h-full w-[0%]"></div>
+                            <div className="bg-green-500 h-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                         </div>
-                        <p className="text-xs text-zinc-500">0% Completed</p>
+                        <p className="text-xs text-zinc-500">{progress}% Completed</p>
                     </Card>
                 </div>
             </main>

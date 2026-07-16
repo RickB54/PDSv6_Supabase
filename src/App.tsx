@@ -368,7 +368,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/goals" element={<ProtectedRoute user={user} allowedRoles={[]}><Goals /></ProtectedRoute>} />
           <Route path="/search-customer" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/demo/search-customer" element={<ProtectedRoute user={user} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
-          <Route path="/prospects" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Prospects /></ProtectedRoute>} />
+          <Route path="/prospects" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Prospects /></ProtectedRoute>} />
           <Route path="/demo/prospects" element={<ProtectedRoute user={user} allowedRoles={[]}><Prospects /></ProtectedRoute>} />
           <Route path="/service-checklist" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
@@ -390,11 +390,11 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/package-pricing" element={<ProtectedRoute user={user} allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
           <Route path="/mileage" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
           <Route path="/taxes" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
-          <Route path="/inventory-control" element={<ProtectedRoute user={user} allowedRoles={['admin']}><InventoryControl /></ProtectedRoute>} />
+          <Route path="/inventory-control" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><InventoryControl /></ProtectedRoute>} />
           <Route path="/demo/inventory-control" element={<ProtectedRoute user={user} allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
           <Route path="/file-manager" element={<ProtectedRoute user={user} allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
-          <Route path="/mobile-setup" element={<ProtectedRoute user={user} allowedRoles={['admin']}><MobileSetup /></ProtectedRoute>} />
-          <Route path="/shop-setup" element={<ProtectedRoute user={user} allowedRoles={['admin']}><ShopSetup /></ProtectedRoute>} />
+          <Route path="/mobile-setup" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><MobileSetup /></ProtectedRoute>} />
+          <Route path="/shop-setup" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ShopSetup /></ProtectedRoute>} />
           <Route path="/detailing-vendors" element={<ProtectedRoute user={user} allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
           <Route path="/training-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
           <Route path="/chemical-training" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
@@ -432,9 +432,9 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/reports" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/demo/reports" element={<ProtectedRoute user={user} allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/follow-up-center" element={<ProtectedRoute user={user} allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
-                    <Route path="/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/demo/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
-          <Route path="/letter-maker" element={<ProtectedRoute user={user} allowedRoles={['admin']}><LetterMaker /></ProtectedRoute>} />
+          <Route path="/letter-maker" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><LetterMaker /></ProtectedRoute>} />
           <Route path="/elite-master" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
           <Route path="/procedures-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ProceduresBooklet /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<Navigate to="/elite-master" replace />} />

@@ -655,6 +655,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
             <>
               {(TOP_ITEMS || []).map((item: any) => {
                 if (item.role === 'admin' && !isAdmin) return null;
+                if (item.role === 'employee' && user?.role === 'admin' && !isViewingAsEmployee) return null;
                 const targetUrl = getUrl(item.url);
                 const isActive = location.pathname === targetUrl;
                 const isChatAlert = item.url === '/team-chat' && chatUnread;

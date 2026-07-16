@@ -59,6 +59,7 @@ export const TOP_ITEMS: MenuItem[] = [
     { title: "Time & Profitability", url: "/time-profitability", role: "admin", key: "time-profitability", icon: DollarSign, iconColor: "text-emerald-500", helpTopicId: 'time-profitability' },
     { title: "Business Goals", url: "/goals", role: "admin", key: "goals", icon: Target, iconColor: "text-emerald-400", helpTopicId: 'business-goals' },
     { title: "Website Administration", url: "/website-admin", role: "admin", key: "website-admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
+    { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'employee-dashboard' },
 ];
 
 // Note: Badge counts like todoCount, payrollDueCount, etc. are dynamic and passed from the component.
@@ -100,7 +101,7 @@ export const getMenuGroups = (counts: {
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck, helpTopicId: 'service-checklist' },
                 { title: "Tasks", url: "/tasks", key: "tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare, helpTopicId: 'tasks' },
                 { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users, helpTopicId: 'search-customer' },
-                { title: "Prospects", url: "/prospects", key: "prospects", icon: Users, helpTopicId: 'prospects' },
+                { title: "Prospects", url: "/prospects", role: "admin", key: "prospects", icon: Users, helpTopicId: 'prospects' },
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users, helpTopicId: 'user-mgmt' }
             ]
         },
@@ -141,7 +142,8 @@ export const getMenuGroups = (counts: {
                 { title: "Dilution Ratio Chart", url: "/inventory-control?chart=reference", key: "dilution-chart-reference", icon: Printer, helpTopicId: 'dilution-chart-reference' },
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker, helpTopicId: 'chemical-workflow' },
                 { title: "Rick's Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-tips' },
-                { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
+                { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc-chem", icon: Calculator, helpTopicId: 'dilution-calc' },
+                { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", role: "admin", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
             ]
         },
         {
@@ -156,9 +158,9 @@ export const getMenuGroups = (counts: {
             title: "Inventory & Assets", icon: Package, iconColor: "text-cyan-400",
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
-                { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
-                { title: "Mobile Setup", url: "/mobile-setup", role: "admin", key: "mobile-setup", icon: Package, helpTopicId: 'mobile-setup' },
-                { title: "Shop Setup", url: "/shop-setup", role: "admin", key: "shop-setup", icon: Package, helpTopicId: 'shop-setup' },
+                { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", role: "admin", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
+                { title: "Mobile Setup", url: "/mobile-setup", key: "mobile-setup", icon: Package, helpTopicId: 'mobile-setup' },
+                { title: "Shop Setup", url: "/shop-setup", key: "shop-setup", icon: Package, helpTopicId: 'shop-setup' },
                 { title: "Detailing Vendors", url: "/detailing-vendors", role: "admin", key: "detailing-vendors", icon: Users, helpTopicId: 'detailing-vendors' },
             ]
         },
@@ -185,9 +187,9 @@ export const getMenuGroups = (counts: {
             title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400",
             items: [
                 { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
-                { title: "Free-Form Letter", url: "/letter-maker", role: "admin", key: "letter-maker", icon: Mail, helpTopicId: 'letter-maker' },
+                { title: "Free-Form Letter", url: "/letter-maker", key: "letter-maker", icon: Mail, helpTopicId: 'letter-maker' },
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
-                { title: "Business Card Stickers", url: `/sticker-maker`, role: "admin", key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
+                { title: "Business Card Stickers", url: `/sticker-maker`, key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
                 { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper, helpTopicId: 'blog' },
                 { title: "Elite Story Master", url: "/elite-master", role: "admin", key: "elite-master", icon: ListOrdered, helpTopicId: 'blog-reorder' },
             ]
@@ -195,7 +197,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Settings", icon: Settings, iconColor: "text-zinc-500",
             items: [
-                { title: "Application Settings", url: "/settings", key: "settings", icon: Settings, helpTopicId: 'application-settings' },
+                { title: "Application Settings", url: "/settings", role: "admin", key: "settings", icon: Settings, helpTopicId: 'application-settings' },
                 { title: "My Profile", url: "/user-settings", key: "user-settings", icon: UserCircle, helpTopicId: 'user-profile' },
             ]
         }

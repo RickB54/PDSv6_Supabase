@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ import {
   SHOP_SETUP_KEY
 } from "@/lib/inventory-data";
 import { useToast } from "@/hooks/use-toast";
+import { useDemoMode } from "@/contexts/DemoContext";
 import {
   Dialog,
   DialogContent,
@@ -89,6 +91,9 @@ import {
 const ShopSetup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const user = getCurrentUser();
+  const { isDemoMode } = useDemoMode();
+  const isAdmin = user?.role === 'admin' || isDemoMode;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const CONTEXT_KEY = SHOP_SETUP_KEY;
 
@@ -487,13 +492,15 @@ const ShopSetup = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full lg:w-auto">
-              <Button
-                variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
-                onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
-              >
-                <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
+                  onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
+                >
+                  <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
@@ -501,16 +508,18 @@ const ShopSetup = () => {
               >
                 <Truck className="h-4 w-4 md:h-5 md:w-5" /> Switch to Mobile
               </Button>
-              <Button
-                disabled={uploading}
-                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all w-full sm:w-auto"
-              >
-                {uploading && uploadProgress
-                  ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
-                  : <><Plus className="mr-2 h-5 w-5 md:h-6 md:w-6" />Add Shop Photos</>
-                }
-              </Button>
+              {isAdmin && (
+                <Button
+                  disabled={uploading}
+                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all w-full sm:w-auto"
+                >
+                  {uploading && uploadProgress
+                    ? <><span className="mr-2 animate-bounce">⏳</span> {uploadProgress.done}/{uploadProgress.total}</>
+                    : <><Plus className="mr-2 h-5 w-5 md:h-6 md:w-6" />Add Shop Photos</>
+                  }
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -535,15 +544,17 @@ const ShopSetup = () => {
             <div className="flex flex-col md:flex-row items-center gap-4 p-5 md:p-6 bg-zinc-900/60 border border-zinc-800 rounded-3xl w-full relative z-10">
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">Facility Filter:</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 text-indigo-400 hover:text-white bg-indigo-500/10 border border-indigo-500/20"
-                  onClick={() => setCatManagerOpen(true)}
-                  title="Manage Shop Categories"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {isAdmin && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-indigo-400 hover:text-white bg-indigo-500/10 border border-indigo-500/20"
+                    onClick={() => setCatManagerOpen(true)}
+                    title="Manage Shop Categories"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               <div className="flex-1 w-full flex flex-col sm:flex-row gap-4 items-center">
                 <Select value={selectedCategoryForUpload} onValueChange={setSelectedCategoryForUpload}>
@@ -558,14 +569,16 @@ const ShopSetup = () => {
                     <SelectItem value="none" className="text-sm text-zinc-500">— General Area —</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button
-                  size="lg"
-                  disabled={uploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto border border-zinc-800"
-                >
-                  {uploading ? `Processing ${uploadProgress?.done}...` : "Select From Device"}
-                </Button>
+                {isAdmin && (
+                  <Button
+                    size="lg"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto border border-zinc-800"
+                  >
+                    {uploading ? `Processing ${uploadProgress?.done}...` : "Select From Device"}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -668,8 +681,8 @@ const ShopSetup = () => {
                           <MediaCard
                             item={item}
                             categories={categories}
-                            onDelete={removeMedia}
-                            onReassign={handleReassign}
+                            onDelete={isAdmin ? removeMedia : undefined}
+                            onReassign={isAdmin ? handleReassign : undefined}
                             onOpenGallery={() => openLightbox(item.id)}
                             setViewingDoc={setViewingDoc}
                           />
@@ -677,7 +690,7 @@ const ShopSetup = () => {
                       );
                     })}
                     {/* Add-to-this-category slot */}
-                    {!isUncategorized && (
+                    {!isUncategorized && isAdmin && (
                       <button
                         onClick={() => {
                           setSelectedCategoryForUpload(cat.id);
@@ -704,9 +717,11 @@ const ShopSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
                   <Wrench className="h-5 w-5 text-indigo-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">Shop Tools</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {tools.map((tool) => (
@@ -731,9 +746,11 @@ const ShopSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
                   <FlaskConical className="h-5 w-5 text-emerald-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">Shop Chemical Feed</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {chemicals.map((chem) => (
@@ -758,9 +775,11 @@ const ShopSetup = () => {
                 <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
                   <Package className="h-5 w-5 text-amber-400" />
                   <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-200">Fixed Inventory</h3>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {materials.map((mat) => (
@@ -793,13 +812,15 @@ const ShopSetup = () => {
                   <p className="text-zinc-400 text-sm font-medium">Digital repository for MSDS sheets, shop procedures, and equipment manuals.</p>
                 </div>
               </div>
-              <Button
-                size="lg"
-                onClick={() => setDocUploadOpen(true)}
-                className="relative z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/40 active:scale-95 transition-all"
-              >
-                <Plus className="mr-2 h-5 w-5" /> Add Business Document
-              </Button>
+              {isAdmin && (
+                <Button
+                  size="lg"
+                  onClick={() => setDocUploadOpen(true)}
+                  className="relative z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/40 active:scale-95 transition-all"
+                >
+                  <Plus className="mr-2 h-5 w-5" /> Add Business Document
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -1022,14 +1043,14 @@ const ShopSetup = () => {
         initialIndex={currentMediaIndex}
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
-        isAdmin={true}
-        onDelete={(idx) => {
+        isAdmin={isAdmin}
+        onDelete={isAdmin ? (idx) => {
           const item = visualMedia[idx];
           if (item && confirm('Delete this photo?')) {
             removeMedia(item.id);
             setLightboxOpen(false);
           }
-        }}
+        } : undefined}
       />
 
       {/* ── DOCUMENT UPLOAD DIALOG (Updated) ────────────────── */}
@@ -1278,55 +1299,59 @@ function MediaCard({ item, categories, onDelete, onReassign, onOpenGallery, setV
         </span>
 
         <div className="flex gap-0.5 shrink-0 pointer-events-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); }}>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10">
-                <MoreVertical className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="end" 
-              className="bg-zinc-900 border-zinc-800 text-white text-xs min-w-[160px]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <p className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Move to area</p>
-              <DropdownMenuSeparator className="bg-zinc-800" />
-              {categories.map((cat: any) => (
-                <DropdownMenuItem
-                  key={cat.id}
+          {onReassign && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => { e.stopPropagation(); }}>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="end" 
+                className="bg-zinc-900 border-zinc-800 text-white text-xs min-w-[160px]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-zinc-500">Move to area</p>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                {categories.map((cat: any) => (
+                  <DropdownMenuItem
+                    key={cat.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReassign(item.id, cat.id);
+                    }}
+                    className={`cursor-pointer font-bold text-xs ${item.category === cat.id ? "text-indigo-400" : "text-white"}`}
+                  >
+                    {item.category === cat.id && "✓ "}{cat.name}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onReassign(item.id, cat.id);
-                  }}
-                  className={`cursor-pointer font-bold text-xs ${item.category === cat.id ? "text-indigo-400" : "text-white"}`}
+                    onReassign(item.id, "none");
+                  }} 
+                  className="text-zinc-500 cursor-pointer text-xs"
                 >
-                  {item.category === cat.id && "✓ "}{cat.name}
+                  — Uncategorized
                 </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator className="bg-zinc-800" />
-              <DropdownMenuItem 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReassign(item.id, "none");
-                }} 
-                className="text-zinc-500 cursor-pointer text-xs"
-              >
-                — Uncategorized
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(item.id);
+              }}
+              className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

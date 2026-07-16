@@ -1944,6 +1944,22 @@ const InventoryControl = () => {
     );
   };
 
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <RatiosOnlyChart open={isRatiosOnlyModalOpen} onOpenChange={(v) => { setIsRatiosOnlyModalOpen(v); if(!v) navigate('/dashboard/employee'); }} chemicals={filteredChemicals} />
+        {!isRatiosOnlyModalOpen && (
+          <div className="flex flex-col items-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+            <p className="text-zinc-400 mb-6 text-center">You do not have permission to view the Inventory Control page.</p>
+            <Button onClick={() => navigate('/dashboard/employee')}>Return to Dashboard</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <ThumbnailZoomContext.Provider value={{ activeId: activeThumbnailId }}>
       <div className="min-h-screen bg-background pb-20">

@@ -8,6 +8,7 @@ interface ContactInputProps {
   type: 'phone' | 'email';
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const LABELS = {
@@ -15,7 +16,7 @@ const LABELS = {
   email: ['Personal', 'Work', 'Other']
 };
 
-export function ContactInput({ value, onChange, type, placeholder, className }: ContactInputProps) {
+export function ContactInput({ value, onChange, type, placeholder, className, disabled }: ContactInputProps) {
   const [currentLabel, setCurrentLabel] = useState<string>('Personal');
   
   // Parse value string into a map
@@ -65,7 +66,7 @@ export function ContactInput({ value, onChange, type, placeholder, className }: 
 
   return (
     <div className={`flex gap-2 ${className || ''}`}>
-      <Select value={currentLabel} onValueChange={setCurrentLabel}>
+      <Select value={currentLabel} onValueChange={setCurrentLabel} disabled={disabled}>
         <SelectTrigger className="w-[120px] shrink-0 bg-zinc-900 border-zinc-800 text-white">
           <SelectValue />
         </SelectTrigger>
@@ -85,6 +86,7 @@ export function ContactInput({ value, onChange, type, placeholder, className }: 
         onChange={handleValueChange}
         placeholder={placeholder || (type === 'phone' ? 'Phone Number' : 'Email Address')}
         className="flex-1 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
+        disabled={disabled}
       />
     </div>
   );
