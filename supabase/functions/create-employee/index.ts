@@ -53,7 +53,7 @@ serve(async (req) => {
   try {
     const { error } = await supabase
       .from('app_users')
-      .upsert({ id: createdUserId, email, role: 'employee', name, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      .upsert({ id: createdUserId, email, role: 'employee', name, updated_at: new Date().toISOString() }, { onConflict: 'id' });
     if (error) throw error;
   } catch (e) {
     return Response.json({ ok: false, error: `app_users_upsert_failed:${String((e as any)?.message || e)}` }, { status: 500 });

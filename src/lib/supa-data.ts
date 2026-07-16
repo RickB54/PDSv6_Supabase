@@ -29,6 +29,33 @@ export interface Employee {
     paymentByJob?: boolean;
     jobRates?: Record<string, number>;
     lastPaid?: string;
+
+    // Full Profile Fields (New)
+    // Employment Info
+    employee_type?: 'Standard Detail Technician' | 'Lead Detail Technician' | 'Independent Contractor' | 'Shop Manager';
+    status?: 'Active' | 'Inactive' | 'Terminated';
+    hire_date?: string;
+    termination_date?: string;
+    tax_classification?: 'W-2' | '1099';
+    
+    // Personal/Contact
+    full_legal_name?: string;
+    phone?: string;
+    home_address?: string;
+    dob?: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+
+    // Performance
+    skill_rating?: number; // 1-5
+    work_ethic_notes?: string;
+    customer_feedback_score?: number;
+    incident_log?: any[]; // Array of {date, note}
+    tier_promotion_history?: any[]; // Array of {date, previous_type, new_type}
+
+    // Admin
+    internal_notes?: string;
+    documents_on_file?: string[]; // Array of document types
 }
 
 export interface Vehicle {
@@ -188,7 +215,27 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
                 bonuses: localData?.bonuses,
                 paymentByJob: localData?.paymentByJob,
                 jobRates: localData?.jobRates,
-                lastPaid: localData?.lastPaid
+                lastPaid: localData?.lastPaid,
+                
+                // Full Profile fields
+                employee_type: localData?.employee_type,
+                status: localData?.status || 'Active',
+                hire_date: localData?.hire_date,
+                termination_date: localData?.termination_date,
+                tax_classification: localData?.tax_classification,
+                full_legal_name: localData?.full_legal_name,
+                phone: localData?.phone,
+                home_address: localData?.home_address,
+                dob: localData?.dob,
+                emergency_contact_name: localData?.emergency_contact_name,
+                emergency_contact_phone: localData?.emergency_contact_phone,
+                skill_rating: localData?.skill_rating,
+                work_ethic_notes: localData?.work_ethic_notes,
+                customer_feedback_score: localData?.customer_feedback_score,
+                incident_log: localData?.incident_log || [],
+                tier_promotion_history: localData?.tier_promotion_history || [],
+                internal_notes: localData?.internal_notes,
+                documents_on_file: localData?.documents_on_file || []
             });
 
             seenEmails.add(email);

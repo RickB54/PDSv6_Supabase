@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,7 @@ const CompanyEmployees = () => {
     email: string;
     role: string;
     password?: string; // Added for Auth creation
+    originalEmail?: string; // Added to track original email during edits
     flatRate: string;
     bonuses: string;
     paymentByJob: boolean;
@@ -255,7 +257,7 @@ const CompanyEmployees = () => {
 
   const openEdit = (emp: Employee) => {
     setForm({
-      name: emp.name, email: emp.email, role: emp.role,
+      name: emp.name, email: emp.email, originalEmail: emp.email, role: emp.role,
       flatRate: emp.flatRate?.toString() || "", bonuses: emp.bonuses?.toString() || "",
       paymentByJob: !!emp.paymentByJob,
       jobRates: Object.fromEntries(Object.entries(emp.jobRates || {}).map(([k, v]) => [k, String(v)]))
@@ -265,36 +267,46 @@ const CompanyEmployees = () => {
   };
 
   const openAdd = () => {
-    setForm({ name: "", email: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
+    setForm({ name: "", email: "", originalEmail: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
     setIsEditMode(false);
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    // 1. Auth Creation (New Users)
-    if (!isEditMode && form.email && form.password) {
+    if (!form.name || !form.email) {
+      toast({ title: "Missing Information", description: "Please provide both a Name and Email address. The app requires an email to link their payroll and account.", variant: "destructive" });
+      return;
+    }
+
+    // 1. Sync with Supabase Auth & app_users
+    let userExistsInDb = false;
+    if (form.email) {
+      const { data: existingUser } = await supabase.from('app_users').select('id').eq('email', form.email).maybeSingle();
+      userExistsInDb = !!existingUser;
+    }
+
+    if (!userExistsInDb && form.email) {
       try {
         const { data, error } = await supabase.functions.invoke("create-employee", {
           body: { name: form.name, email: form.email, password: form.password, role: form.role.toLowerCase() },
         });
         if (error || !data?.ok) throw error || new Error("create_employee_failed");
         toast({ title: "Auth Created", description: "User account created in Supabase Auth." });
+        userExistsInDb = true;
       } catch (e) {
         console.error("Auth Create Error", e);
         toast({ title: "Auth Note", description: "Created local profile, but Auth creation failed (or requires Admin API)." });
       }
     }
 
-    // 2. Profile Data (DB)
-    // We try to upsert to 'app_users' directly to ensure data persistence beyond local
+    // 2. Update existing Profile Data (DB)
     try {
-      if (form.email) {
-        await supabase.from('app_users').upsert({
-          email: form.email,
+      if (userExistsInDb && form.email) {
+        await supabase.from('app_users').update({
           name: form.name,
           role: form.role.toLowerCase(),
           updated_at: new Date().toISOString()
-        }, { onConflict: 'email' });
+        }).eq('email', form.email);
       }
     } catch { }
 
@@ -307,7 +319,8 @@ const CompanyEmployees = () => {
     };
 
     const next = [...employees];
-    const idx = next.findIndex(e => e.email === payload.email);
+    const targetEmail = isEditMode && form.originalEmail ? form.originalEmail : payload.email;
+    const idx = next.findIndex(e => e.email === targetEmail);
     if (idx >= 0) next[idx] = payload;
     else next.push(payload);
 
@@ -360,13 +373,19 @@ const CompanyEmployees = () => {
               <SelectTrigger className="w-[200px] bg-zinc-950 border-zinc-800"><SelectValue placeholder="All Staff" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Staff</SelectItem>
-                {employees.map(e => <SelectItem key={e.email} value={e.email}>{e.name}</SelectItem>)}
+                {employees.map(e => <SelectItem key={e.email || `no-email-${e.name}`} value={e.email || `no-email-${e.name}`}>{e.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="flex gap-2 w-full md:w-auto justify-end">
+          <div className="flex gap-2 w-full md:w-auto justify-end items-center">
             <DateRangeFilter value={workHistoryDateRange} onChange={setWorkHistoryDateRange} />
-            <Button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="h-4 w-4 mr-2" /> Add Employee</Button>
+            <div className="relative group">
+              <Button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="h-4 w-4 mr-2" /> Add Employee</Button>
+              <div className="absolute top-full right-0 mt-2 w-64 bg-zinc-800 text-xs text-zinc-300 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                <span className="font-bold text-white block mb-1">Tip: Proper Employee Onboarding</span>
+                Always enter employees here to properly set up their pay rates and payroll tracking. This will simultaneously create their app login.
+              </div>
+            </div>
           </div>
         </div>
 
@@ -433,8 +452,9 @@ const CompanyEmployees = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 mt-auto pt-2 border-t border-zinc-800">
+                <div className="grid grid-cols-4 gap-2 mt-auto pt-2 border-t border-zinc-800">
                   <Button variant="ghost" size="sm" className="h-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => openEdit(emp)}><Edit className="h-3 w-3 mr-1" /> Edit</Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 hover:bg-blue-950/20" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-3 w-3 mr-1" /> Profile</Button>
                   <Button variant="ghost" size="sm" className="h-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/20" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-3 w-3 mr-1" /> Pay</Button>
                   <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-red-400 hover:bg-red-950/20" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-3 w-3 mr-1" /> Del</Button>
                 </div>
@@ -491,7 +511,7 @@ const CompanyEmployees = () => {
           <DialogHeader><DialogTitle>{isEditMode ? "Edit Employee" : "Add Employee"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div><Label className="text-zinc-400">Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
-            <div><Label className="text-zinc-400">Email</Label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-zinc-950 border-zinc-800" disabled={isEditMode} /></div>
+            <div><Label className="text-zinc-400">Email</Label><Input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
             {!isEditMode && (
               <div><Label className="text-zinc-400">Initial Password</Label><Input value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })} className="bg-zinc-950 border-zinc-800" placeholder="For App Login" /></div>
             )}
@@ -501,8 +521,17 @@ const CompanyEmployees = () => {
                 <SelectContent><SelectItem value="Employee">Employee</SelectItem><SelectItem value="Admin">Admin</SelectItem></SelectContent>
               </Select>
             </div>
+            <div><Label className="text-zinc-400">Pay Structure</Label>
+              <Select value={form.paymentByJob ? "job" : "hourly"} onValueChange={(v) => setForm({ ...form, paymentByJob: v === "job" })}>
+                <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Hourly / Flat Rate</SelectItem>
+                  <SelectItem value="job">Pay by the Job</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-zinc-400">Flat Rate ($)</Label><Input type="number" value={form.flatRate} onChange={e => setForm({ ...form, flatRate: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
+              <div><Label className="text-zinc-400">Flat Rate ($)</Label><Input type="number" value={form.flatRate} onChange={e => setForm({ ...form, flatRate: e.target.value })} className="bg-zinc-950 border-zinc-800" disabled={form.paymentByJob} /></div>
               <div><Label className="text-zinc-400">Bonuses ($)</Label><Input type="number" value={form.bonuses} onChange={e => setForm({ ...form, bonuses: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
             </div>
           </div>

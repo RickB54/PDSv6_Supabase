@@ -47,6 +47,7 @@ import TrainingManual from "./pages/TrainingManual";
 import Certificate from "./pages/Certificate";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import CompanyEmployees from "./pages/CompanyEmployees";
+import EmployeeProfilePage from "./pages/EmployeeProfilePage";
 import UserManagement from "./pages/UserManagement";
 import StaffSchedule from "./pages/StaffSchedule";
 import FileManager from "./pages/FileManager";
