@@ -1308,6 +1308,10 @@ const InventoryControl = () => {
   };
 
   const handleChartCellEdit = async (chemicalId: string, soilLevel: string, field: 'ratio' | 'chem' | 'water', newValue: string, ozSize?: number) => {
+    if (!isAdmin) {
+      toast({ title: 'Access Denied', description: 'Only admins can edit chart values.', variant: 'destructive' });
+      return;
+    }
     const chem = chemicals.find(c => c.id === chemicalId);
     if (!chem) return;
 
@@ -3307,6 +3311,7 @@ const InventoryControl = () => {
                           <div className="flex items-center no-print">
                             <input 
                               type="number"
+                              disabled={!isAdmin}
                               step="0.1"
                               value={gallonSize / 128}
                               onChange={(e) => {
@@ -3388,6 +3393,7 @@ const InventoryControl = () => {
                                {r ? (
                                  <input 
                                    defaultValue={displayVal}
+                                   disabled={!isAdmin}
                                    onBlur={(e) => {
                                        if (e.target.value !== displayVal) {
                                          if (window.confirm("Are you sure you want to change this value? This will update the system's dilution ratio for this chemical.")) {
@@ -3416,6 +3422,7 @@ const InventoryControl = () => {
                                        <input 
                                           key={`${c.id}-${soilLevel}-${ozSize}-chem`}
                                           defaultValue={amts?.chem || ''}
+                                          disabled={!isAdmin}
                                           onBlur={(e) => {
                                               if (e.target.value !== (amts?.chem || '')) {
                                                 if (window.confirm("Are you sure you want to change this value?")) {
@@ -3433,6 +3440,7 @@ const InventoryControl = () => {
                                        <input 
                                           key={`${c.id}-${soilLevel}-${ozSize}-water`}
                                           defaultValue={amts?.water || ''}
+                                          disabled={!isAdmin}
                                           onBlur={(e) => {
                                               if (e.target.value !== (amts?.water || '')) {
                                                 if (window.confirm("Are you sure you want to change this value?")) {
@@ -3483,6 +3491,7 @@ const InventoryControl = () => {
                            <td className="p-0 border-l-4 border-r border-zinc-300 group align-middle">
                               <input 
                                  defaultValue={standard ? transformRatio(standard.ratio) : '-'}
+                                 disabled={!isAdmin}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'standard', 'ratio', e.target.value)}
                                  className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(standard as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
@@ -3495,6 +3504,7 @@ const InventoryControl = () => {
                            <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
                                  defaultValue={heavy ? transformRatio(heavy.ratio) : '-'}
+                                 disabled={!isAdmin}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'heavy', 'ratio', e.target.value)}
                                  className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(heavy as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />
@@ -3507,6 +3517,7 @@ const InventoryControl = () => {
                            <td className="p-0 border-l-4 border-zinc-300 group align-middle bg-zinc-50/5">
                               <input 
                                  defaultValue={light ? transformRatio(light.ratio) : '-'}
+                                 disabled={!isAdmin}
                                  onBlur={(e) => handleChartCellEdit(c.id, 'maintenance', 'ratio', e.target.value)}
                                  className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[12px] py-4 focus:bg-indigo-50 ${(light as any)?.custom ? 'text-indigo-600' : 'text-zinc-700'}`}
                               />

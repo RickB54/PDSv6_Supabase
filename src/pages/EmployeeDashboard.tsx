@@ -164,118 +164,121 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          {/* Big cards arranged in two rows (2 columns on md+) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Unified Dashboard Grid (3 columns on Desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            
             <Link to="/service-checklist" className="block h-full">
-              <Card className="p-6 bg-green-700 text-white rounded-xl h-full">
+              <Card className="p-6 bg-green-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">SERVICE CHECKLIST</div>
                 <div className="text-sm opacity-90">Start Job • View Active Jobs</div>
-                <div className="mt-3 inline-block px-3 py-1 rounded-full bg-green-900 text-xs">[ 0 Active Jobs ]</div>
               </Card>
             </Link>
 
             <Link to="/staff-schedule" className="block h-full">
-              <Card className="p-6 bg-teal-700 text-white rounded-xl h-full">
+              <Card className="p-6 bg-teal-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">WORK SCHEDULE</div>
                 <div className="text-sm opacity-90">View your upcoming shifts and times.</div>
               </Card>
             </Link>
 
-            {/* Orientation box (orange) */}
-            {/* Prime Training Center */}
             <Link to="/training-manual" className="block text-left h-full">
-              <Card className="p-6 bg-purple-700 text-white rounded-xl hover:bg-purple-800 transition-colors h-full">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="text-2xl font-bold">PRIME TRAINING CENTER</div>
-                </div>
+              <Card className="p-6 bg-purple-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">PRIME TRAINING CENTER</div>
                 <div className="text-sm opacity-90">Video Courses • SOPs • Certification</div>
-                <div className="mt-3 inline-block px-3 py-1 rounded-full bg-purple-900 text-xs">Learn & Grow</div>
               </Card>
             </Link>
 
-            <Link to="/exam" className="block text-left h-full">
-              <Card className="p-6 bg-orange-600 text-white rounded-xl h-full">
+            <Link to="/learning-library" className="block text-left h-full">
+              <Card className="p-6 bg-indigo-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">LEARNING LIBRARY</div>
+                <div className="text-sm opacity-90">Company knowledge base & resources.</div>
+              </Card>
+            </Link>
+
+            <button type="button" onClick={() => setOrientationOpen(true)} className="block text-left h-full w-full">
+              <Card className="p-6 bg-orange-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">ORIENTATION (EXAM)</div>
                 <div className="text-sm opacity-90">Company overview • Policies • Final Exam</div>
-                <div className="mt-3 inline-block px-3 py-1 rounded-full bg-orange-800 text-xs">New Employee</div>
               </Card>
-            </Link>
+            </button>
 
             <Link to="/services" className="block h-full">
-              <Card className="p-6 bg-blue-700 text-white rounded-xl h-full">
+              <Card className="p-6 bg-blue-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">VIEW WEBSITE</div>
-                <div className="text-sm opacity-90">To view our current package pricelist, add-ons and other website tools.</div>
+                <div className="text-sm opacity-90">To view our current package pricelist.</div>
               </Card>
             </Link>
 
-            {/* Rick's Tips (purple) */}
-            <button type="button" onClick={() => setTipsOpen(true)} className="block text-left h-full">
-              <Card className="p-6 bg-purple-700 text-white rounded-xl h-full">
+            <button type="button" onClick={() => setTipsOpen(true)} className="block text-left h-full w-full">
+              <Card className="p-6 bg-purple-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">RICK’S TIPS</div>
                 <div className="text-sm opacity-90">Quick professional reminders to reduce rework.</div>
               </Card>
             </button>
 
-            {/* App Team Chat (green) */}
             <Link to="/team-chat" className="block h-full">
-              <Card className="p-6 bg-green-700 text-white rounded-xl h-full">
+              <Card className="p-6 bg-green-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">APP TEAM CHAT</div>
                 <div className="text-sm opacity-90">Communicate with your team in real-time.</div>
               </Card>
             </Link>
 
-            {/* Sticky Notes (yellow) */}
             <Link to="/sticky-notes" className="block h-full">
-              <Card className="p-6 bg-yellow-600 text-white rounded-xl h-full">
+              <Card className="p-6 bg-yellow-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">STICKY NOTES</div>
-                <div className="text-sm opacity-90">Your personal workspace for notes, lists, and reminders.</div>
+                <div className="text-sm opacity-90">Your personal workspace for notes & lists.</div>
               </Card>
             </Link>
 
-            {/* Chemical Cards (cyan/blue) */}
             <Link to="/chemicals" className="block h-full">
-              <Card className="p-6 bg-cyan-700 text-white rounded-xl h-full">
+              <Card className="p-6 bg-cyan-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
                 <div className="text-2xl font-bold">CHEMICAL CARDS</div>
-                <div className="text-sm opacity-90">Browse products, dilution ratios, and usage guides.</div>
-              </Card>
-            </Link>
-          </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <Link to="/tasks" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
-                <div className="font-semibold text-white">Todo</div>
-                <div className="text-xs text-muted-foreground">(Calendar)</div>
-              </Card>
-            </Link>
-            <Link to="/search-customer" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
-                <div className="font-semibold text-white">ADD CUSTOMER</div>
-              </Card>
-            </Link>
-            <Link to="/book-now" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
-                <div className="font-semibold text-white">NEW BOOKING</div>
-              </Card>
-            </Link>
-            <Link to="/app-manual" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
-                <div className="font-semibold text-white">APP MANUAL</div>
-              </Card>
-            </Link>
-            <Link to="/f150-setup" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl">
-                <div className="font-semibold text-white">BLOG</div>
+                <div className="text-sm opacity-90">Browse products, dilution ratios, and usage.</div>
               </Card>
             </Link>
 
-            <Link to="/sticky-notes" className="block">
-              <Card className="p-4 text-center bg-muted/30 hover:bg-muted/50 transition rounded-xl border border-yellow-900/50">
-                <div className="font-semibold text-yellow-500">STICKY NOTES</div>
-                <div className="text-xs text-muted-foreground">(Private Dashboard)</div>
+            <button type="button" onClick={() => window.dispatchEvent(new Event('open-quick-pay'))} className="block text-left h-full w-full">
+              <Card className="p-6 bg-emerald-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">QUICK PAY</div>
+                <div className="text-sm opacity-90">Receive an in-person payment quickly.</div>
+              </Card>
+            </button>
+
+            <Link to="/tasks" className="block h-full">
+              <Card className="p-6 bg-amber-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">TODO LIST</div>
+                <div className="text-sm opacity-90">View your assigned tasks and calendar.</div>
               </Card>
             </Link>
+
+            <Link to="/search-customer?add=1" className="block h-full">
+              <Card className="p-6 bg-blue-600 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">ADD CUSTOMER</div>
+                <div className="text-sm opacity-90">Intake a brand new customer profile.</div>
+              </Card>
+            </Link>
+
+            <Link to="/book-now" className="block h-full">
+              <Card className="p-6 bg-indigo-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">NEW BOOKING</div>
+                <div className="text-sm opacity-90">Schedule a new service appointment.</div>
+              </Card>
+            </Link>
+
+            <Link to="/app-manual" className="block h-full">
+              <Card className="p-6 bg-slate-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">APP MANUAL</div>
+                <div className="text-sm opacity-90">Learn how to use the app effectively.</div>
+              </Card>
+            </Link>
+
+            <Link to="/blog" className="block h-full">
+              <Card className="p-6 bg-pink-700 text-white rounded-xl h-full transition-transform hover:scale-[1.02]">
+                <div className="text-2xl font-bold">PRIME BLOG</div>
+                <div className="text-sm opacity-90">Read the latest company updates and articles.</div>
+              </Card>
+            </Link>
+
           </div>
 
           {/* Notify Admin */}
