@@ -62,6 +62,7 @@ interface JobRecord {
 const CompanyEmployees = () => {
   const { isDemoMode, mockUser } = useDemoMode();
   const user = getCurrentUser() || (isDemoMode ? mockUser : null);
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
