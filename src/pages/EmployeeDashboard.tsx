@@ -116,7 +116,6 @@ const EmployeeDashboard = () => {
   const { toast } = useToast();
   const user = getCurrentUser();
   const [certifiedDate, setCertifiedDate] = useState<string | null>(null);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [orientationOpen, setOrientationOpen] = useState(false);
   const [startExamOnOpen, setStartExamOnOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
@@ -223,7 +222,7 @@ const EmployeeDashboard = () => {
                 variant="ghost"
                 size="icon"
                 className="rounded-full h-8 w-8 text-muted-foreground hover:text-primary hover:bg-muted"
-                onClick={() => setHelpOpen(true)}
+                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'dashboard-overview' }))}
                 title="Help"
               >
                 <HelpCircle className="h-5 w-5" />

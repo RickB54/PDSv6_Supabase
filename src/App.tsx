@@ -115,6 +115,7 @@ import Availability from "./pages/Availability";
 import MileageTracking from "./pages/MileageTracking";
 import Taxes from "./pages/Taxes";
 import HelpModal from "@/components/help/HelpModal";
+import EmployeeHelpModal from "@/components/help/EmployeeHelpModal";
 import FollowUpCenter from "./pages/FollowUpCenter";
 import StickerMaker from "./pages/StickerMaker";
 import LetterMaker from "./pages/LetterMaker";
@@ -451,7 +452,11 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<DefaultRedirect user={user} />} />
         </Routes>
-        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
+        {(helpRole || effectiveUser?.role || 'admin') === 'employee' ? (
+          <EmployeeHelpModal open={helpOpen} onOpenChange={setHelpOpen} initialTopicId={helpId} />
+        ) : (
+          <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
+        )}
       </div>
       {effectiveUser?.role !== 'customer' && (
         <div className="dark-theme min-h-screen">
