@@ -408,6 +408,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/user-management" element={<ProtectedRoute user={user} allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
           <Route path="/admin-users" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
           <Route path="/company-employees" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
+          <Route path="/employee-profile/:id" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EmployeeProfilePage /></ProtectedRoute>} />
           <Route path="/compensation-payroll" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompensationPayroll /></ProtectedRoute>} />
           <Route path="/exam/:examId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ExamPage /></ProtectedRoute>} />
           <Route path="/exam-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />

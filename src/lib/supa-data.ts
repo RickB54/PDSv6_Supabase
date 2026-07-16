@@ -167,7 +167,7 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
 
         const { data: supaUsers, error } = await anonClient
             .from('app_users')
-            .select('*');
+            .select('id, email, name, role, created_at, updated_at, full_legal_name, phone, home_address, dob, emergency_contact_name, emergency_contact_phone, job_title, employee_type, status, hire_date, termination_date, tax_classification, payment_method_notes, skill_rating, work_ethic_notes, customer_feedback_score, incident_log, tier_promotion_history, internal_notes, documents_on_file');
 
         if (error) {
             console.error('Supabase fetch error (app_users):', error);
@@ -206,36 +206,37 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
             const localData = localMap.get(email);
 
             mergedEmployees.push({
-                id: supaUser.id, // Supabase ID
+                id: supaUser.id,
                 email: supaUser.email,
-                name: supaUser.name || supaUser.email, // Fallback to email if name missing
+                name: supaUser.name || supaUser.email,
                 role: normalizedRole,
-                // Merge local fields
+                // Local metadata
                 flatRate: localData?.flatRate,
                 bonuses: localData?.bonuses,
                 paymentByJob: localData?.paymentByJob,
                 jobRates: localData?.jobRates,
                 lastPaid: localData?.lastPaid,
-                
-                // Full Profile fields
-                employee_type: localData?.employee_type,
-                status: localData?.status || 'Active',
-                hire_date: localData?.hire_date,
-                termination_date: localData?.termination_date,
-                tax_classification: localData?.tax_classification,
-                full_legal_name: localData?.full_legal_name,
-                phone: localData?.phone,
-                home_address: localData?.home_address,
-                dob: localData?.dob,
-                emergency_contact_name: localData?.emergency_contact_name,
-                emergency_contact_phone: localData?.emergency_contact_phone,
-                skill_rating: localData?.skill_rating,
-                work_ethic_notes: localData?.work_ethic_notes,
-                customer_feedback_score: localData?.customer_feedback_score,
-                incident_log: localData?.incident_log || [],
-                tier_promotion_history: localData?.tier_promotion_history || [],
-                internal_notes: localData?.internal_notes,
-                documents_on_file: localData?.documents_on_file || []
+                // Profile fields — sourced directly from Supabase
+                full_legal_name: supaUser.full_legal_name,
+                phone: supaUser.phone,
+                home_address: supaUser.home_address,
+                dob: supaUser.dob,
+                emergency_contact_name: supaUser.emergency_contact_name,
+                emergency_contact_phone: supaUser.emergency_contact_phone,
+                job_title: supaUser.job_title,
+                employee_type: supaUser.employee_type,
+                status: supaUser.status || 'Active',
+                hire_date: supaUser.hire_date,
+                termination_date: supaUser.termination_date,
+                tax_classification: supaUser.tax_classification,
+                payment_method_notes: supaUser.payment_method_notes,
+                skill_rating: supaUser.skill_rating,
+                work_ethic_notes: supaUser.work_ethic_notes,
+                customer_feedback_score: supaUser.customer_feedback_score,
+                incident_log: supaUser.incident_log || [],
+                tier_promotion_history: supaUser.tier_promotion_history || [],
+                internal_notes: supaUser.internal_notes,
+                documents_on_file: supaUser.documents_on_file || [],
             });
 
             seenEmails.add(email);
