@@ -467,6 +467,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         const isNativeEmployee = user?.role === 'employee';
         
         if (item.role === 'admin' && (!isAdminCheck || isStrictEmployeeView)) return false;
+        if (item.role === 'employee' && user?.role === 'admin' && !isStrictEmployeeView) return false;
         if (item.role === 'employee' && !isStrictEmployeeView && !isAdminCheck && !isNativeEmployee) return false;
         
         // Match item if it contains search OR if its group matches

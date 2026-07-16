@@ -198,6 +198,7 @@ export const getMenuGroups = (counts: {
             title: "Help", icon: HelpCircle, iconColor: "text-blue-400",
             items: [
                 { title: "Employee Help Center", url: "#help-employee", role: "employee", key: "help-center-employee", icon: HelpCircle, helpTopicId: 'show-help' },
+                { title: "Contextual Help Guide", url: "#help-admin", role: "admin", key: "help-center-admin", icon: HelpCircle, helpTopicId: 'show-help' },
             ]
         },
         {

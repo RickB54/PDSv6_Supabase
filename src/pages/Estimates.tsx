@@ -2154,8 +2154,8 @@ Precision. Protection. Perfection.`;
 
             {/* Estimate Detail Modal */}
             {selectedEstimate && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedEstimate(null)}>
-                    <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-start sm:items-center justify-center p-4 pt-20 sm:p-4 backdrop-blur-sm overflow-y-auto" onClick={() => setSelectedEstimate(null)}>
+                    <Card className="max-w-2xl w-full max-h-[calc(100vh-6rem)] sm:max-h-[90vh] my-auto overflow-y-auto bg-zinc-950 border-zinc-800 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="p-6">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
