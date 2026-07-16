@@ -241,21 +241,9 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
             seenEmails.add(email);
         }
 
-        // B. Add Local-Only Employees (Fallback for when Supabase is out of sync or offline)
-        localEmployees.forEach(localEmp => {
-            const email = (localEmp.email || '').toLowerCase();
-            if (!email) return;
-            if (seenEmails.has(email)) return; // Already added from Supabase
-
-            // Add local-only employee
-            mergedEmployees.push({
-                ...localEmp,
-                id: localEmp.id || `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // ensure ID
-                name: localEmp.name || localEmp.email,
-                role: localEmp.role || 'Employee'
-            });
-            seenEmails.add(email);
-        });
+        // NOTE: Local-only employee fallback intentionally removed.
+        // Supabase app_users is the single source of truth.
+        // Stale localforage entries (ghosts/orphans) are intentionally excluded.
 
         // Sort by name
         return mergedEmployees.sort((a, b) => a.name.localeCompare(b.name));
