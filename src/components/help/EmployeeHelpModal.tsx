@@ -85,6 +85,11 @@ const EMPLOYEE_TOPICS = [
     id: 'app-manual',
     title: 'App Manual',
     content: 'The comprehensive guide on how to use this internal software application. If you aren\'t sure how a software feature works, you will find the answer here.'
+  },
+  {
+    id: 'notify-admin',
+    title: 'Notify Admin',
+    content: 'Send an immediate alert directly to management regarding an urgent issue, a customer request, or any other matter that needs administrative attention.'
   }
 ];
 

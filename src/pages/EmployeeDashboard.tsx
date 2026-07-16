@@ -119,6 +119,7 @@ const EmployeeDashboard = () => {
   const [orientationOpen, setOrientationOpen] = useState(false);
   const [startExamOnOpen, setStartExamOnOpen] = useState(false);
   const [tipsOpen, setTipsOpen] = useState(false);
+  const [notifyAdminOpen, setNotifyAdminOpen] = useState(false);
 
   // Admin Edit State
   const [editingTip, setEditingTip] = useState<ProTip | null>(null);
@@ -200,6 +201,7 @@ const EmployeeDashboard = () => {
 
       toast({ title: "Sent", description: "Your message was prepared; PDF saved in File Manager." });
       setSubject(""); setMessage(""); setPriority("URGENT");
+      setNotifyAdminOpen(false);
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || String(err), variant: "destructive" });
     } finally {
@@ -317,32 +319,42 @@ const EmployeeDashboard = () => {
               infoTitle="App Manual" infoContent="Open the full documentation guide for the Prime Auto Detail internal application to learn how every feature works."
             />
 
-          </div>
+            <DashboardTile 
+              onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
+              infoTitle="Notify Admin" infoContent="Use this to send an immediate alert to management regarding an urgent issue or customer request. The message will be securely sent directly to administrators."
+            />
 
-          {/* Notify Admin */}
-          <Card className="p-6 bg-gradient-card border-border">
-            <div className="text-xl font-bold text-foreground mb-4">NOTIFY ADMIN</div>
-            <form onSubmit={handleNotifyAdmin} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
-                <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="URGENT">URGENT</SelectItem>
-                    <SelectItem value="Normal">Normal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Textarea placeholder="Message" value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-[140px]" />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={sending} className="bg-red-600 hover:bg-red-700">
-                  {sending ? "Sending..." : "Send"}
-                </Button>
-              </div>
-            </form>
-          </Card>
+          </div>
         </div>
       </main>
+
+      {/* Notify Admin Modal */}
+      <Dialog open={notifyAdminOpen} onOpenChange={setNotifyAdminOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-500">NOTIFY ADMIN</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleNotifyAdmin} className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 gap-3">
+              <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-zinc-900 border-zinc-700 text-white" />
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="URGENT">URGENT</SelectItem>
+                  <SelectItem value="Normal">Normal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea placeholder="Message" value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-[140px] bg-zinc-900 border-zinc-700 text-white" />
+            <div className="flex justify-end">
+              <Button type="submit" disabled={sending} className="bg-red-600 hover:bg-red-700 text-white">
+                {sending ? "Sending..." : "Send Message"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Orientation Modal */}
       <OrientationModal open={orientationOpen} onOpenChange={setOrientationOpen} startExamOnOpen={startExamOnOpen} />
 
