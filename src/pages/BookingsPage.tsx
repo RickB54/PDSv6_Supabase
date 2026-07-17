@@ -1199,7 +1199,7 @@ export default function BookingsPage() {
     addLine('Details:', `${formData.vehicleYear} ${formData.vehicleMake} ${formData.vehicleModel}`);
 
     y += 4;
-    addLine('Assigned To:', formData.assignedEmployee);
+    addLine('Assigned To:', getEmployeeName(formData.assignedEmployee!));
 
     if (formData.notes) {
       y += 4;
@@ -1223,6 +1223,12 @@ export default function BookingsPage() {
       { fileName }
     );
     toast.success('PDF saved to File Manager (Bookings)');
+  };
+
+  const getEmployeeName = (idOrName: string) => {
+    if (!idOrName || idOrName === 'Unassigned') return '';
+    const emp = employees.find(e => e.id === idOrName);
+    return emp ? emp.name : idOrName;
   };
 
   const handleSave = async (triggerEmailSend: boolean = false) => {
@@ -2177,7 +2183,7 @@ export default function BookingsPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           {booking.type === 'booking' && (booking as Booking).hasReminder && <Bell className="h-4 w-4 text-yellow-500 animate-pulse" />}
-                          {booking.type === 'booking' && (booking as Booking).assignedEmployee && <Badge variant="secondary" className="text-xs">{(booking as Booking).assignedEmployee}</Badge>}
+                          {booking.type === 'booking' && (booking as Booking).assignedEmployee && <Badge variant="secondary" className="text-xs">{getEmployeeName((booking as Booking).assignedEmployee!)}</Badge>}
                           <div className="flex gap-1">
                             {booking.type === 'booking' && (
                               <>
@@ -2354,7 +2360,7 @@ export default function BookingsPage() {
                                   <div className="pt-1 border-t border-zinc-800 mt-1 flex flex-col gap-1">
                                     <div className="flex items-center gap-2 text-[10px]">
                                       <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
-                                      {booking.assignedEmployee && <span className="text-zinc-400">👤 {booking.assignedEmployee}</span>}
+                                      {booking.assignedEmployee && <span className="text-zinc-400">👤 {getEmployeeName(booking.assignedEmployee)}</span>}
                                     </div>
                                     {((booking as Booking).customerEmail || (booking as any).email) && (
                                       <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
@@ -3015,7 +3021,7 @@ export default function BookingsPage() {
                     >
                       <option value="" className="text-gray-400">Unassigned</option>
                       {employees.map((emp) => (
-                        <option key={emp.id} value={emp.name} className="text-white bg-zinc-900">
+                        <option key={emp.id} value={emp.id} className="text-white bg-zinc-900">
                           {emp.name}
                         </option>
                       ))}

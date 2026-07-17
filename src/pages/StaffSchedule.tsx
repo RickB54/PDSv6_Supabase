@@ -103,6 +103,7 @@ export default function StaffSchedule() {
 
         const dbShifts = await getStaffShifts(rangeStart, rangeEnd);
         const dbBookings = await getSupabaseBookings(false); // Fetch all bookings
+        const empList = await getSupabaseEmployees();
 
         // Map DB to UI
         const mapped: Shift[] = dbShifts.map(d => ({
@@ -123,10 +124,13 @@ export default function StaffSchedule() {
             .map((b: any) => {
                 const bDate = parseISO(b.date || b.createdAt || b.scheduled_at || new Date().toISOString());
                 const eDate = b.endTime ? parseISO(b.endTime) : new Date(bDate.getTime() + 2 * 60 * 60000);
+                const empRecord = empList.find((e: any) => e.id === b.assignedEmployee);
+                const resolvedName = empRecord ? empRecord.name : b.assignedEmployee;
+
                 return {
                     id: `booking-${b.id}`,
                     employeeId: b.assignedEmployee,
-                    employeeName: b.assignedEmployee,
+                    employeeName: resolvedName,
                     date: format(bDate, 'yyyy-MM-dd'),
                     startTime: format(bDate, 'HH:mm'),
                     endTime: format(eDate, 'HH:mm'),
@@ -434,7 +438,7 @@ export default function StaffSchedule() {
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <div key={day.toISOString()} className="flex-1 min-w-[100px] md:min-w-[120px] lg:min-w-[140px] border-r border-zinc-800/50 relative group">
+                        <div key={day.toISOString()} className="flex-1 min-w-0 border-r border-zinc-800/50 relative group">
                             {/* Column Header */}
                             <div className={`h-8 border-b border-zinc-800 flex items-center justify-center text-xs font-semibold sticky top-0 z-10 bg-zinc-950 ${isToday ? 'text-blue-400 bg-blue-900/10' : 'text-zinc-400'}`}>
                                 {format(day, 'EEE d')}

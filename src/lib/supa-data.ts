@@ -2474,9 +2474,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 status: b.status || 'confirmed',
 
                 // Employee Info
-                assignedEmployee: b.assigned_employee_id || meta.assignedEmployee || meta.assigned_employee_name || 'Unassigned',
-                employee: b.assigned_employee_id || meta.assignedEmployee || meta.assigned_employee_name || 'Unassigned',
-                employeeName: b.assigned_employee_id || meta.assignedEmployee || meta.assigned_employee_name || 'Unassigned',
+                assignedEmployee: b.assigned_employee_id || 'Unassigned',
+                employee: b.assigned_employee_id || 'Unassigned',
+                employeeName: b.assigned_employee_id || 'Unassigned',
 
                 // Service & Time consistency for Reports
                 service: b.service_package || b.title || meta.title || b.service || 'N/A',
@@ -2552,7 +2552,6 @@ export const upsertSupabaseBooking = async (booking: any) => {
             booking_vehicle: {
               ...(booking.vehicle_info || booking.booking_vehicle || {}),
               customer_name: booking.customer || booking.customer_name,
-              assignedEmployee: booking.assignedEmployee || booking.employeeName || booking.employee || '',
               make: booking.vehicleMake || booking.make,
               model: booking.vehicleModel || booking.model,
               year: booking.vehicleYear || booking.year,
