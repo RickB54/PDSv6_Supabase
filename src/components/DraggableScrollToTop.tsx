@@ -64,10 +64,10 @@ export const DraggableScrollToTop = () => {
 
             scrollContainerRef.current = isDoc ? window : target;
 
-            // Show only when scrolling up AND not near the very top (e.g., > 100px)
-            if (currentScrollY < lastScrollY.current && currentScrollY > 100) {
+            // Show whenever scrolled down past 100px
+            if (currentScrollY > 100) {
                 setIsVisible(true);
-            } else if (currentScrollY > lastScrollY.current || currentScrollY <= 100) {
+            } else {
                 setIsVisible(false);
             }
             lastScrollY.current = currentScrollY;
