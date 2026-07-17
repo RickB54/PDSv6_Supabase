@@ -28,7 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabaseEmployees, getStaffShifts, createStaffShift, updateStaffShift, deleteStaffShift, StaffShift } from "@/lib/supa-data";
+import { getSupabaseEmployees, getStaffShifts, createStaffShift, updateStaffShift, deleteStaffShift, StaffShift, getSupabaseBookings } from "@/lib/supa-data";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -46,6 +46,7 @@ interface Shift {
     notes?: string;
     color?: string;
     status?: 'scheduled' | 'sick' | 'no-show' | 'late'; // New status field
+    isBooking?: boolean;
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 AM to 12 AM (Midnight)
@@ -101,6 +102,7 @@ export default function StaffSchedule() {
         const rangeEnd = format(addMonths(currentDate, 2), 'yyyy-MM-dd');
 
         const dbShifts = await getStaffShifts(rangeStart, rangeEnd);
+        const dbBookings = await getSupabaseBookings(false); // Fetch all bookings
 
         // Map DB to UI
         const mapped: Shift[] = dbShifts.map(d => ({
@@ -115,7 +117,28 @@ export default function StaffSchedule() {
             color: d.color,
             status: d.status as any
         }));
-        setShifts(mapped);
+
+        const bookingShifts: Shift[] = dbBookings
+            .filter((b: any) => b.assignedEmployee && b.assignedEmployee !== 'Unassigned' && b.status !== 'cancelled' && b.status !== 'canceled')
+            .map((b: any) => {
+                const bDate = parseISO(b.date || b.createdAt || b.scheduled_at || new Date().toISOString());
+                const eDate = b.endTime ? parseISO(b.endTime) : new Date(bDate.getTime() + 2 * 60 * 60000);
+                return {
+                    id: `booking-${b.id}`,
+                    employeeId: b.assignedEmployee,
+                    employeeName: b.assignedEmployee,
+                    date: format(bDate, 'yyyy-MM-dd'),
+                    startTime: format(bDate, 'HH:mm'),
+                    endTime: format(eDate, 'HH:mm'),
+                    role: 'Assigned Job',
+                    notes: `Job: ${b.title || b.service_package || 'Service'}\nCustomer: ${b.customer || b.customer_name || 'Customer'}`,
+                    color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                    status: 'scheduled',
+                    isBooking: true
+                };
+            });
+
+        setShifts([...mapped, ...bookingShifts]);
         setIsRefreshing(false);
     };
 
@@ -575,7 +598,7 @@ export default function StaffSchedule() {
                                             <CheckSquare className="w-4 h-4 mr-2" /> Launch Job
                                         </Button>
                                         <div className="flex gap-2 w-full">
-                                            {isAdmin && (
+                                            {isAdmin && !selectedShift.isBooking && (
                                                 <>
                                                     <Button variant="destructive" size="sm" className="h-10 sm:h-12 px-3 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
                                                     <Button variant="outline" size="sm" className="h-10 sm:h-12 flex-1 font-black uppercase tracking-widest text-[10px] border-zinc-800" onClick={() => handleEditShift(selectedShift)}>Edit Shift</Button>
