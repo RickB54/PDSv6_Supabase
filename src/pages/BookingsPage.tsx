@@ -2717,7 +2717,12 @@ export default function BookingsPage() {
                             <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
                             <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
                               {allAddons
-                                .filter((addon: any) => !addon.applicableVehicleTypes || addon.applicableVehicleTypes.includes(formData.vehicle))
+                                .filter((addon: any) => {
+                                  if (addon.active === false) return false;
+                                  if (!addon.applicableVehicleTypes) return true;
+                                  const mappedVType = mapToServiceVehicleType(formData.vehicle || "");
+                                  return addon.applicableVehicleTypes.includes(mappedVType);
+                                })
                                 .map((addon) => (
                                 <CommandItem
                                   key={addon.id}
@@ -2748,7 +2753,7 @@ export default function BookingsPage() {
                                     {(() => {
                                       const vType = mapToServiceVehicleType(formData.vehicle);
                                       const price = getAddOnPrice(addon.id, vType);
-                                      return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price > 0 ? `$${price}` : ''}</span> : null;
+                                      return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
                                     })()}
                                   </div>
                                 </CommandItem>

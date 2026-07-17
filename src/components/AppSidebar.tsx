@@ -565,13 +565,22 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                   detail: { 
                     topicId: location.pathname === '/chemicals' ? 'chemical-cards' : 
                          location.pathname === '/chemical-training' ? 'chemical-decision-system' : 
-                         location.pathname === '/inventory-control' ? 'inventory-control' : 
+                         location.pathname === '/dilution-calculator' ? 'dilution-calc' : 
+                         location.pathname === '/marketing-flyers' ? 'sticker-maker' : 
+                         location.pathname === '/service-checklist' ? 'service-checklist' : 
+                         location.pathname === '/detailing-vendors' ? 'detailing-vendors' : 
+                         location.pathname === '/company-budget' ? 'company-budget' : 
+                         location.pathname === '/taxes' ? 'taxes' : 
+                         location.pathname === '/settings' ? 'application-settings' :
                          location.pathname === '/reports' ? 'reports-global-summary' :
+                         location.pathname === '/user-settings' ? 'user-profile' :
+                         location.pathname === '/time-profitability' ? 'time-profitability' :
+                         location.pathname.startsWith('/help') ? 'show-help' :
+                         location.pathname === '/inventory-control' ? 'inventory-control' : 
                          location.pathname === '/bookings-analytics' ? 'bookings-analytics' :
                          location.pathname === '/notes' ? 'personal-notes' :
                          location.pathname === '/vehicle-gallery' ? 'media-library' :
                          location.pathname === '/file-manager' ? 'file-manager' :
-                         location.pathname === '/bookings-analytics' ? 'admin-dashboard' :
                          location.pathname === '/website-admin' ? 'website-admin' : undefined,
                     role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
                   } 
@@ -687,7 +696,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     window.dispatchEvent(new CustomEvent('open-help', { 
                                       detail: { 
                                         topicId: item.helpTopicId,
-                                        role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                        role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
                                       } 
                                     }));
                                   }}
@@ -721,7 +730,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     window.dispatchEvent(new CustomEvent('open-help', { 
                                       detail: { 
                                         topicId: item.helpTopicId,
-                                        role: (user?.role === 'admin' || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                        role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
                                       } 
                                     }));
                                   }}
