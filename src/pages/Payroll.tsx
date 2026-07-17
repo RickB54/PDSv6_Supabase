@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { getSupabaseEmployees } from "@/lib/supa-data";
 import {
   Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
   Briefcase, Clock, DollarSign, Wallet, CreditCard,
-  CalendarDays, User, Search, FileText, CheckCircle
+  CalendarDays, User, Search, FileText, CheckCircle, ArrowRight
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { badgeVariants } from "@/components/ui/badge";
@@ -38,6 +38,7 @@ const defaultRows: Row[] = [
 
 const Payroll = () => {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const user = getCurrentUser();
   const [periodStart, setPeriodStart] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -251,16 +252,21 @@ const Payroll = () => {
               </div>
             </div>
 
-            <div className="flex gap-8">
-              <div className="text-center">
-                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Total (Current)</p>
-                <p className="text-3xl font-bold text-indigo-400 mt-1">${grossPay.toFixed(2)}</p>
+              <div className="flex gap-4 sm:gap-8 items-center flex-wrap justify-end">
+                <div className="text-center">
+                  <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Total (Current)</p>
+                  <p className="text-3xl font-bold text-indigo-400 mt-1">${grossPay.toFixed(2)}</p>
+                </div>
+                <div className="text-center border-l border-zinc-700 pl-4 sm:pl-8">
+                  <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Unpaid Jobs</p>
+                  <p className="text-3xl font-bold text-amber-500 mt-1">{completedJobs.filter(j => j.status === 'completed' && !j.paid).length}</p>
+                </div>
+                <div className="pl-4 sm:pl-8 mt-2 sm:mt-0 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payments')}>
+                      All Payments <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                </div>
               </div>
-              <div className="text-center border-l border-zinc-700 pl-8">
-                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Unpaid Jobs</p>
-                <p className="text-3xl font-bold text-amber-500 mt-1">{completedJobs.filter(j => j.status === 'completed' && !j.paid).length}</p>
-              </div>
-            </div>
           </div>
         </Card>
 

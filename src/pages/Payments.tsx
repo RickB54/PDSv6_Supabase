@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getSupabaseInvoices, getSupabasePayments } from "@/lib/supa-data";
 import { getReceivables, Receivable } from "@/lib/receivables";
-import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity } from "lucide-react";
+import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
@@ -22,7 +23,10 @@ export interface UnifiedPayment {
   reference?: string;
 }
 
+import { useNavigate } from "react-router-dom";
+
 const Payments = () => {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState<UnifiedPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -166,7 +170,10 @@ const Payments = () => {
             </div>
             <div className="text-center md:text-right">
               <p className="text-emerald-500/70 text-xs uppercase tracking-wider font-black mb-1">Total Filtered Amount</p>
-              <p className="text-4xl font-black text-emerald-400">${totalFilteredAmount.toFixed(2)}</p>
+              <p className="text-4xl font-black text-emerald-400 mb-2">${totalFilteredAmount.toFixed(2)}</p>
+              <Button variant="outline" size="sm" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payroll')}>
+                  <ArrowRight className="w-4 h-4 mr-2" /> Payroll
+              </Button>
             </div>
           </div>
         </Card>
