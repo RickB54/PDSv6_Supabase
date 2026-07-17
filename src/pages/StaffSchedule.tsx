@@ -558,7 +558,13 @@ export default function StaffSchedule() {
                                 Select a shift to view details, notes, and status.
                             </div>
                         ) : (
-                            <div className="flex flex-1 p-4 sm:p-6 gap-4 sm:gap-6 animate-in slide-in-from-bottom-5 overflow-y-auto">
+                            <div className="flex flex-1 p-4 sm:p-6 gap-4 sm:gap-6 animate-in slide-in-from-bottom-5 overflow-y-auto relative pt-10 sm:pt-6">
+                                <button 
+                                    onClick={() => setSelectedShiftId(null)}
+                                    className="absolute top-2 right-2 p-2 lg:hidden text-zinc-400 hover:text-white rounded-full bg-zinc-900/80 hover:bg-zinc-800 transition-colors z-50 border border-zinc-700/50"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
                                 <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
 
                                 {/* Content Wrapper */}
