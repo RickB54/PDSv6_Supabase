@@ -37,6 +37,7 @@ import supabase from "@/lib/supabase";
 import { getTrainingModules, getTrainingBadges, type TrainingModule, type TrainingBadge } from "@/lib/supa-data";
 
 interface Employee {
+  id?: string;
   email: string;
   name: string;
   role: string;
@@ -296,7 +297,12 @@ const CompanyEmployees = () => {
         userExistsInDb = true;
       } catch (e) {
         console.error("Auth Create Error", e);
-        toast({ title: "Auth Note", description: "Created local profile, but Auth creation failed (or requires Admin API)." });
+        toast({ 
+          title: "Failed to Create Employee", 
+          description: "Could not create the employee in the database. The record was NOT saved. Please try again.", 
+          variant: "destructive" 
+        });
+        return; // HALT execution - do not create a ghost record!
       }
     }
 

@@ -2,7 +2,12 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-type Payload = { name?: string; email?: string; password?: string };
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+type Payload = { name?: string; email?: string; password?: string; role?: string };
 
 function genPassword(len = 12): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
@@ -14,22 +19,32 @@ function genPassword(len = 12): string {
 }
 
 serve(async (req) => {
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { headers: corsHeaders, status: 405 });
+  }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return Response.json({ ok: false, error: "missing_supabase_env" }, { status: 500 });
+    return Response.json({ ok: false, error: "missing_supabase_env" }, { headers: corsHeaders, status: 500 });
   }
 
   let payload: Payload;
   try { payload = await req.json(); } catch {
-    return Response.json({ ok: false, error: "invalid_json" }, { status: 400 });
+    return Response.json({ ok: false, error: "invalid_json" }, { headers: corsHeaders, status: 400 });
   }
   const email = String(payload?.email || '').trim().toLowerCase();
   const name = String(payload?.name || '').trim();
+  const role = String(payload?.role || 'employee').trim().toLowerCase();
   const password = String(payload?.password || '') || genPassword(14);
-  if (!email) return Response.json({ ok: false, error: "missing_email" }, { status: 400 });
+  
+  if (!email) {
+    return Response.json({ ok: false, error: "missing_email" }, { headers: corsHeaders, status: 400 });
+  }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
@@ -40,25 +55,25 @@ serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { role: 'employee', name },
+      user_metadata: { role, name },
     });
     if (error) throw error;
     createdUserId = data.user?.id || '';
     if (!createdUserId) throw new Error('createUser_missing_id');
   } catch (e) {
-    return Response.json({ ok: false, error: String((e as any)?.message || e) }, { status: 500 });
+    return Response.json({ ok: false, error: String((e as any)?.message || e) }, { headers: corsHeaders, status: 500 });
   }
 
   // Upsert into app_users
   try {
     const { error } = await supabase
       .from('app_users')
-      .upsert({ id: createdUserId, email, role: 'employee', name, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+      .upsert({ id: createdUserId, email, role, name, updated_at: new Date().toISOString() }, { onConflict: 'id' });
     if (error) throw error;
   } catch (e) {
-    return Response.json({ ok: false, error: `app_users_upsert_failed:${String((e as any)?.message || e)}` }, { status: 500 });
+    return Response.json({ ok: false, error: `app_users_upsert_failed:${String((e as any)?.message || e)}` }, { headers: corsHeaders, status: 500 });
   }
 
-  return Response.json({ ok: true, user: { id: createdUserId, email, name, role: 'employee' } });
+  return Response.json({ ok: true, user: { id: createdUserId, email, name, role } }, { headers: corsHeaders });
 });
 
