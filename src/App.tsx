@@ -25,6 +25,7 @@ import { TestCustomerBanner } from "@/components/TestCustomerBanner";
 import { WalkthroughProvider } from "@/contexts/WalkthroughContext";
 import { WalkthroughOverlay } from "./components/WalkthroughOverlay";
 import { contentService } from "@/lib/content";
+import { DraggableScrollToTop } from "@/components/DraggableScrollToTop";
 
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -617,7 +618,7 @@ const App = () => {
                   <Sonner />
                   <GlobalModals />
                     <StickyNotesReminderEngine />
-                  <ScrollToTop />
+                  <ScrollToTop /><DraggableScrollToTop />
                   <ConditionalGlobalChat />
                   <ChatAudioAlert />
                   <WalkthroughOverlay />

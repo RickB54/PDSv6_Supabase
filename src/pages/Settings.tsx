@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar, HelpCircle, Lock } from "lucide-react";
+import { Download, Upload, Trash2, RotateCcw, AlertTriangle, Database, ShieldAlert, FileText, CheckCircle2, HardDrive, TestTube2, AlertCircle, RefreshCw, Key, Settings as SettingsIcon, Newspaper, MessageCircle, Calendar, HelpCircle, Lock, ArrowUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { postFullSync, postServicesFullSync } from "@/lib/servicesMeta";
 import { exportAllData, downloadBackup, restoreFromJSON, SCHEMA_VERSION } from '@/lib/backup';
@@ -119,6 +119,7 @@ const Settings = () => {
   const [cbAnim, setCbAnim] = useState(() => localStorage.getItem('sticky_notes_anim') !== 'false');
   const [cbMasonry, setCbMasonry] = useState(() => localStorage.getItem('sticky_notes_masonry') === 'true');
   const [cbTags, setCbTags] = useState(() => localStorage.getItem('sticky_notes_tags') !== 'false');
+  const [showScrollToTop, setShowScrollToTop] = useState(() => localStorage.getItem('pds_show_scroll_to_top') !== 'false');
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -814,6 +815,27 @@ const Settings = () => {
                   <div className="flex flex-col">
                     <Label htmlFor="cb-tags" className="text-white cursor-pointer text-sm">Extended Functions & Badges</Label>
                     <p className="text-[10px] text-zinc-500">Display additional organization items and tags on stickies</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-zinc-800/50 pt-4">
+              <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Navigation Preferences</h3>
+              <div className="space-y-4 px-2">
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    id="cb-scroll-top" 
+                    checked={showScrollToTop} 
+                    onCheckedChange={(val) => { 
+                      setShowScrollToTop(!!val); 
+                      localStorage.setItem('pds_show_scroll_to_top', String(!!val)); 
+                      window.dispatchEvent(new Event('pds-settings-updated'));
+                    }} 
+                  />
+                  <div className="flex flex-col">
+                    <Label htmlFor="cb-scroll-top" className="text-white cursor-pointer text-sm">Floating Scroll-To-Top Button</Label>
+                    <p className="text-[10px] text-zinc-500">Show a draggable button to easily scroll to the top of the page</p>
                   </div>
                 </div>
               </div>

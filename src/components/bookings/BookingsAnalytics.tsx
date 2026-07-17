@@ -1938,17 +1938,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
             </div>
 
-            {/* Scroll To Top Button */}
-            <Button
-                variant="default"
-                size="icon"
-                className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-2xl bg-zinc-100 text-zinc-900 hover:bg-white hover:scale-110 transition-all border border-zinc-300"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                title="Back to Top"
-            >
-                <ArrowUp className="h-6 w-6" />
-            </Button>
-
             <div className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl">
             {/* Dynamic Operational Snapshot */}
             <section className="space-y-4">
