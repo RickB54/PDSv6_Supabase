@@ -32,6 +32,9 @@ import { getSupabaseEmployees, getStaffShifts, createStaffShift, updateStaffShif
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 
+import { servicePackages, addOns } from "@/lib/services";
+import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
+
 // Types
 type ViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -47,6 +50,7 @@ interface Shift {
     color?: string;
     status?: 'scheduled' | 'sick' | 'no-show' | 'late'; // New status field
     isBooking?: boolean;
+    bookingData?: any;
 }
 
 const HOURS = Array.from({ length: 19 }, (_, i) => i + 6); // 6 AM to 12 AM (Midnight)
@@ -138,7 +142,8 @@ export default function StaffSchedule() {
                     notes: `Job: ${b.title || b.service_package || 'Service'}\nCustomer: ${b.customer || b.customer_name || 'Customer'}`,
                     color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
                     status: 'scheduled',
-                    isBooking: true
+                    isBooking: true,
+                    bookingData: b
                 };
             });
 
@@ -342,7 +347,7 @@ export default function StaffSchedule() {
         // If it's just "HH", pad it
         if (!timeStr.includes(':')) timeStr += ':00';
         const [h, m] = timeStr.split(':').map(Number);
-        const ampm = h >= 12 ? 'PM' : 'AM';
+        const ampm = (h >= 12 && h < 24) ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
         return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
     };
@@ -597,7 +602,36 @@ export default function StaffSchedule() {
                                             </Button>
                                         )}
                                         <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
-                                            navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
+                                            if (selectedShift.isBooking && selectedShift.bookingData) {
+                                                const b = selectedShift.bookingData;
+                                                const params = new URLSearchParams();
+                                                if (b.customer_id) params.set('customerId', b.customer_id);
+                                                if (b.customer_name || b.customer) params.set('customerName', b.customer_name || b.customer);
+                                                params.set('id', b.id);
+                                                
+                                                // Find service ID
+                                                const allServices = [...servicePackages, ...getCustomPackages()];
+                                                const svcName = b.service_package || b.title;
+                                                const svc = allServices.find(s => s.name === svcName);
+                                                if (svc) params.set('package', svc.id);
+
+                                                if (b.vehicle) params.set('vehicleType', b.vehicle);
+                                                if (b.vehicle_year) params.set('vehicleYear', b.vehicle_year);
+                                                if (b.vehicle_make) params.set('vehicleMake', b.vehicle_make);
+                                                if (b.vehicle_model) params.set('vehicleModel', b.vehicle_model);
+                                                if (b.vehicle_color) params.set('vehicleColor', b.vehicle_color);
+                                                
+                                                const bAddons = typeof b.addons === 'string' ? JSON.parse(b.addons || '[]') : (b.addons || []);
+                                                if (Array.isArray(bAddons) && bAddons.length > 0) {
+                                                    const allAddons = [...addOns, ...getCustomAddOns()];
+                                                    const aids = bAddons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+                                                    if (aids.length > 0) params.set('addons', aids.join(','));
+                                                }
+
+                                                navigate(`/service-checklist?${params.toString()}`);
+                                            } else {
+                                                navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
+                                            }
                                         }}>
                                             <CheckSquare className="w-4 h-4 mr-2" /> Launch Job
                                         </Button>
