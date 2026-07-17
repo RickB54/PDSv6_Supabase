@@ -9,6 +9,7 @@ export const DraggableScrollToTop = () => {
     const [isDragging, setIsDragging] = useState(false);
     const dragRef = useRef<HTMLButtonElement>(null);
     const dragStartPos = useRef({ x: 0, y: 0 });
+    const rawDragStart = useRef({ x: 0, y: 0 });
     const lastScrollY = useRef(0);
     const scrollContainerRef = useRef<HTMLElement | Window>(window);
 
@@ -85,12 +86,24 @@ export const DraggableScrollToTop = () => {
             x: e.clientX - position.x,
             y: e.clientY - position.y
         };
+        rawDragStart.current = { x: e.clientX, y: e.clientY };
         dragRef.current.setPointerCapture(e.pointerId);
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
         if (e.buttons !== 1) return; // Only if primary button is held
-        setIsDragging(true);
+        
+        if (!isDragging) {
+            const dist = Math.max(
+                Math.abs(e.clientX - rawDragStart.current.x),
+                Math.abs(e.clientY - rawDragStart.current.y)
+            );
+            if (dist > 5) {
+                setIsDragging(true);
+            } else {
+                return; // below threshold
+            }
+        }
         const newX = e.clientX - dragStartPos.current.x;
         const newY = e.clientY - dragStartPos.current.y;
         

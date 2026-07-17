@@ -5,7 +5,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, RotateCcw, Loader2, Target, Users } from "lucide-react";
+import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -105,6 +105,15 @@ export default function BookingsAnalyticsPage() {
                             }}
                         />
                     </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate("/reports")}
+                        className="border-amber-800/40 bg-amber-900/10 hover:bg-amber-900/30 text-amber-400 hover:text-white gap-2 font-bold"
+                    >
+                        <FileBarChart className="h-3.5 w-3.5" />
+                        <span>Reports</span>
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
