@@ -780,6 +780,28 @@ const Settings = () => {
               />
             </div>
 
+            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-900/50 transition-colors mt-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <ArrowUp className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <Label htmlFor="show-scroll-top" className="text-white font-semibold cursor-pointer">Floating Scroll-To-Top Button</Label>
+                  <p className="text-[10px] text-zinc-500">Show a draggable button to easily scroll to the top of the page</p>
+                </div>
+              </div>
+              <Switch 
+                id="show-scroll-top"
+                checked={showScrollToTop}
+                onCheckedChange={(val) => {
+                  setShowScrollToTop(val);
+                  localStorage.setItem('pds_show_scroll_to_top', String(val));
+                  window.dispatchEvent(new Event('pds-settings-updated'));
+                }}
+                className="data-[state=checked]:bg-blue-600"
+              />
+            </div>
+
             {/* Sticky Notes Preferences */}
             <div className="mt-6 border-t border-zinc-800/50 pt-4">
               <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Plan & Review Sticky Notes Settings</h3>
@@ -815,27 +837,6 @@ const Settings = () => {
                   <div className="flex flex-col">
                     <Label htmlFor="cb-tags" className="text-white cursor-pointer text-sm">Extended Functions & Badges</Label>
                     <p className="text-[10px] text-zinc-500">Display additional organization items and tags on stickies</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-zinc-800/50 pt-4">
-              <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider mb-4">Navigation Preferences</h3>
-              <div className="space-y-4 px-2">
-                <div className="flex items-center gap-3">
-                  <Checkbox 
-                    id="cb-scroll-top" 
-                    checked={showScrollToTop} 
-                    onCheckedChange={(val) => { 
-                      setShowScrollToTop(!!val); 
-                      localStorage.setItem('pds_show_scroll_to_top', String(!!val)); 
-                      window.dispatchEvent(new Event('pds-settings-updated'));
-                    }} 
-                  />
-                  <div className="flex flex-col">
-                    <Label htmlFor="cb-scroll-top" className="text-white cursor-pointer text-sm">Floating Scroll-To-Top Button</Label>
-                    <p className="text-[10px] text-zinc-500">Show a draggable button to easily scroll to the top of the page</p>
                   </div>
                 </div>
               </div>

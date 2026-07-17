@@ -10,6 +10,7 @@ export const DraggableScrollToTop = () => {
     const dragRef = useRef<HTMLButtonElement>(null);
     const dragStartPos = useRef({ x: 0, y: 0 });
     const lastScrollY = useRef(0);
+    const scrollContainerRef = useRef<HTMLElement | Window>(window);
 
     useEffect(() => {
         const storedPref = localStorage.getItem('pds_show_scroll_to_top');
@@ -48,19 +49,33 @@ export const DraggableScrollToTop = () => {
             return;
         }
 
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            // Show only when scrolling up AND not near the very top (e.g., > 200px)
-            if (currentScrollY < lastScrollY.current && currentScrollY > 200) {
+        const handleScroll = (e: Event) => {
+            const target = e.target as HTMLElement;
+            
+            // Ignore tiny scrolling containers like small dropdowns
+            if (target && target.scrollHeight && target.scrollHeight < window.innerHeight) {
+                return;
+            }
+
+            const isDoc = !target || target === document || target === document.documentElement || target === document.body;
+            const currentScrollY = isDoc ? window.scrollY : target.scrollTop;
+            
+            if (currentScrollY === undefined) return;
+
+            scrollContainerRef.current = isDoc ? window : target;
+
+            // Show only when scrolling up AND not near the very top (e.g., > 100px)
+            if (currentScrollY < lastScrollY.current && currentScrollY > 100) {
                 setIsVisible(true);
-            } else if (currentScrollY > lastScrollY.current || currentScrollY <= 200) {
+            } else if (currentScrollY > lastScrollY.current || currentScrollY <= 100) {
                 setIsVisible(false);
             }
             lastScrollY.current = currentScrollY;
         };
 
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
+        // Use capture phase to catch scroll events from any inner container
+        window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+        return () => window.removeEventListener('scroll', handleScroll, { capture: true });
     }, [isEnabled]);
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -106,7 +121,7 @@ export const DraggableScrollToTop = () => {
             e.preventDefault();
             return;
         }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         setIsVisible(false);
     };
 
