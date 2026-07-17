@@ -635,6 +635,13 @@ export default function StaffSchedule() {
                                         }}>
                                             <CheckSquare className="w-4 h-4 mr-2" /> Launch Job
                                         </Button>
+                                        {selectedShift.isBooking && selectedShift.bookingData && (
+                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
+                                                navigate(`/bookings?id=${selectedShift.bookingData.id}`);
+                                            }}>
+                                                <LayoutDashboard className="w-4 h-4 mr-2" /> View Booking
+                                            </Button>
+                                        )}
                                         <div className="flex gap-2 w-full">
                                             {isAdmin && !selectedShift.isBooking && (
                                                 <>

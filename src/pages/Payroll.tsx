@@ -25,6 +25,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { badgeVariants } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_PAYROLL, MOCK_BOOKINGS } from "@/lib/demoMockData";
+import HelpModal from "@/components/help/HelpModal";
 
 type JobRow = { kind: 'job'; amount: number; description: string; date: string; employee?: string; jobId?: string };
 type HoursRow = { kind: 'hours'; name: string; email?: string; hours: number; rate: number; bonus?: number; jobPay?: number };
@@ -389,7 +390,20 @@ const Payroll = () => {
 
         {tab === 'checks' && (
           <Card className="p-8 bg-zinc-900 border-zinc-800">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Wallet className="h-5 w-5 text-green-400" /> Process Payment / Write Checks</h3>
+            <div className="flex items-center gap-2 mb-6">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2"><Wallet className="h-5 w-5 text-green-400" /> Process Payment / Write Checks</h3>
+              <HelpModal
+                title="How to Pay Employees"
+                description="To generate a payment record and pay an employee, follow these steps:"
+                items={[
+                  { title: '1. Verify Hours / Jobs', content: 'Ensure all completed jobs and hours have been recorded in the Current Payroll tab or via the Job History.' },
+                  { title: '2. Select the Payee', content: 'Enter the employee\'s name in the Payee field. If you used the "Payroll Sync" button from the Work Schedule, this will be pre-filled.' },
+                  { title: '3. Enter the Amount', content: 'Input the exact total you are paying them for this pay period.' },
+                  { title: '4. Choose Payment Method', content: 'Select how you are transferring the funds (e.g., Check, Direct Deposit, Venmo).' },
+                  { title: '5. Record Payment', content: 'Click "Record Payment" to log this transaction in your accounting history and generate a receipt or check stub.' }
+                ]}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
