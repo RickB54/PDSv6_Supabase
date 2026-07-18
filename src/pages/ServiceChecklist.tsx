@@ -346,7 +346,6 @@ const ServiceChecklist = () => {
 
 
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
-  const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});
   const [expandedHelp, setExpandedHelp] = useState<Record<string, boolean>>({}); // Track expanded help items
   const [editingDurationId, setEditingDurationId] = useState<string | null>(null);
   const [editDurationValue, setEditDurationValue] = useState<string>("");
@@ -446,22 +445,6 @@ const ServiceChecklist = () => {
   };
 
   // Standard vehicle types are now hardcoded (compact, midsize, truck, luxury) per user request.
-
-  // Load savedPrices for dynamic pricing
-  useEffect(() => {
-    const loadSavedPrices = async () => {
-      try {
-        const snapshot = await buildFullSyncPayload();
-        setSavedPricesLive(snapshot.savedPrices || {});
-      } catch { }
-    };
-    loadSavedPrices();
-    const onChanged = (e: any) => {
-      if (e && e.detail && (e.detail.kind === 'savedPrices' || e.detail.type === 'savedPrices')) loadSavedPrices();
-    };
-    window.addEventListener('content-changed', onChanged as any);
-    return () => window.removeEventListener('content-changed', onChanged as any);
-  }, []);
 
   // Hard reload page when admin triggers force refresh (vehicle types changed)
   useEffect(() => {
@@ -1199,14 +1182,10 @@ const ServiceChecklist = () => {
       const svc = allServices.find(s => s.id === id);
       if (!svc) return sum;
       if (svc.kind === 'package') {
-        const sp = parseFloat(savedPricesLive[getKey('package', id, selectedKey)]) || NaN;
-        const fallback = getServicePrice(svc.id, builtInKey);
-        return sum + (isNaN(sp) ? fallback : sp);
+        return sum + getServicePrice(svc.id, builtInKey);
       }
       if (svc.kind === 'addon') {
-        const ap = parseFloat(savedPricesLive[getKey('addon', id, selectedKey)]) || NaN;
-        const fallback = getAddOnPrice(svc.id, builtInKey);
-        return sum + (isNaN(ap) ? fallback : ap);
+        return sum + getAddOnPrice(svc.id, builtInKey);
       }
       return sum; // special handled separately
     }, 0);
@@ -1778,12 +1757,10 @@ const ServiceChecklist = () => {
       const price = (() => {
         if (!svc) return 0;
         if (svc.kind === 'package') {
-          const sp = parseFloat(savedPricesLive[getKey('package', svc.id, vehicleType)]) || NaN;
-          return isNaN(sp) ? getServicePrice(svc.id, vkeyBuiltIn) : sp;
+          return getServicePrice(svc.id, vkeyBuiltIn);
         }
         if (svc.kind === 'addon') {
-          const ap = parseFloat(savedPricesLive[getKey('addon', svc.id, vehicleType)]) || NaN;
-          return isNaN(ap) ? getAddOnPrice(svc.id, vkeyBuiltIn) : ap;
+          return getAddOnPrice(svc.id, vkeyBuiltIn);
         }
         return destinationFee;
       })();
@@ -1897,12 +1874,10 @@ const ServiceChecklist = () => {
         const price = (() => {
           if (!svc) return 0;
           if (svc.kind === 'package') {
-            const sp = parseFloat(savedPricesLive[getKey('package', svc.id, vehicleType)]) || NaN;
-            return isNaN(sp) ? getServicePrice(svc.id, vkeyBuiltIn) : sp;
+            return getServicePrice(svc.id, vkeyBuiltIn);
           }
           if (svc.kind === 'addon') {
-            const ap = parseFloat(savedPricesLive[getKey('addon', svc.id, vehicleType)]) || NaN;
-            return isNaN(ap) ? getAddOnPrice(svc.id, vkeyBuiltIn) : ap;
+            return getAddOnPrice(svc.id, vkeyBuiltIn);
           }
           return destinationFee;
         })();

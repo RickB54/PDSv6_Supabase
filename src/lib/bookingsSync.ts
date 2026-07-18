@@ -276,6 +276,63 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
         }
       }
     }
+
+    if (nextStatus === 'done' && prevStatus !== 'done') {
+      console.log(`🚀 Booking marked done. Calculating Payroll Earnings for ${booking.assignedEmployee}...`);
+      
+      try {
+        const { getSupabaseEmployees } = await import("@/lib/supa-data");
+        const employees = await getSupabaseEmployees();
+        const employee = employees.find(e => e.name === booking.assignedEmployee || e.id === booking.assignedEmployee);
+        
+        if (employee) {
+          const jobPrice = booking.price || 0;
+          
+          const materials = 35;
+          const consumables = 10;
+          const otherCosts = 15;
+          const stripeFee = jobPrice > 0 ? (jobPrice * 0.029 + 0.30) : 0;
+          const effectiveStripeDeduction = stripeFee * 0.50; // Employee pays 50%
+          const companyStripeShare = stripeFee - effectiveStripeDeduction;
+          const totalDeductions = materials + consumables + otherCosts + companyStripeShare;
+          
+          const laborRevenue = Math.max(0, jobPrice - totalDeductions);
+          
+          let commissionPercent = 30; // standard fallback
+          if (employee.employee_type === 'Lead Detail Technician') commissionPercent = 40;
+          if (employee.employee_type === 'Independent Contractor') commissionPercent = 50;
+          if (employee.employee_type === 'Shop Manager') commissionPercent = 45;
+          
+          const grossEmployeeCommission = laborRevenue * (commissionPercent / 100);
+          const earnedAmount = Math.max(0, grossEmployeeCommission - effectiveStripeDeduction);
+          
+          const payrollRecord = {
+            employee_id: employee.id,
+            employee_name: employee.name,
+            booking_id: booking.id,
+            booking_title: booking.title,
+            job_price: jobPrice,
+            stripe_fee: stripeFee,
+            material_costs: materials + consumables + otherCosts,
+            labor_revenue: laborRevenue,
+            commission_percent: commissionPercent,
+            earned_amount: earnedAmount,
+            payment_status: 'pending'
+          };
+          
+          const { error: prError } = await supabase.from('payroll_records').insert(payrollRecord);
+          if (prError) {
+             console.error("Failed to insert payroll_record:", prError);
+          } else {
+             console.log("✅ Payroll earning calculated and logged:", payrollRecord);
+          }
+        } else {
+           console.log(`⚠️ No matching employee found for payroll calculation: ${booking.assignedEmployee}`);
+        }
+      } catch (err) {
+        console.error("Failed to calculate payroll earnings:", err);
+      }
+    }
   } catch (e) {
     console.error('Failed to generate/upload status change PDF', e);
   }

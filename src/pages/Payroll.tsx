@@ -3,239 +3,111 @@ import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
-import jsPDF from "jspdf";
-import { savePDFToArchive } from "@/lib/pdfArchive";
+import { Checkbox } from "@/components/ui/checkbox";
 import { upsertExpense } from "@/lib/db";
-import { pushAdminAlert, getAdminAlerts } from "@/lib/adminAlerts";
-import { getCurrentUser } from "@/lib/auth";
-import localforage from "localforage";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import api from "@/lib/api";
-import { getSupabaseEmployees } from "@/lib/supa-data";
+import { getSupabasePayrollRecords, markPayrollPaid } from "@/lib/supa-data";
 import {
-  Pencil, Trash2, Save, X, ChevronDown, ChevronUp,
-  Briefcase, Clock, DollarSign, Wallet, CreditCard,
-  CalendarDays, User, Search, FileText, CheckCircle, ArrowRight
+  Wallet, Clock, DollarSign, CheckCircle, ArrowRight, User
 } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { badgeVariants } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { MOCK_PAYROLL, MOCK_BOOKINGS } from "@/lib/demoMockData";
 import HelpModal from "@/components/help/HelpModal";
 
-type JobRow = { kind: 'job'; amount: number; description: string; date: string; employee?: string; jobId?: string };
-type HoursRow = { kind: 'hours'; name: string; email?: string; hours: number; rate: number; bonus?: number; jobPay?: number };
-type CustomRow = { kind: 'custom'; amount: number; paymentType: 'Bonus' | 'Commission' | 'Tip' | 'Reimbursement' | 'Overtime Pay' | 'Holiday Pay' | 'Gift' | 'Advance' | 'Other'; otherReason?: string };
-type Row = JobRow | HoursRow | CustomRow;
-
-const defaultRows: Row[] = [
-  { kind: 'job', amount: 0, description: '', date: new Date().toISOString().slice(0, 10) },
-];
-
-const Payroll = () => {
-  const [params] = useSearchParams();
+export default function Payroll() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const user = getCurrentUser();
-  const [periodStart, setPeriodStart] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [periodEnd, setPeriodEnd] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [rows, setRows] = useState<Row[]>(defaultRows);
-  const [tab, setTab] = useState<'current' | 'history' | 'checks'>('current');
-  const [history, setHistory] = useState<Array<{ id: string; date: string; type: string; description?: string; amount: number; status: 'Paid' | 'Pending'; employee?: string; pdfId?: string }>>([]);
-
-  // Applied filters
-  const [filterEmployee, setFilterEmployee] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('');
-  const [filterStart, setFilterStart] = useState<string>('');
-  const [filterEnd, setFilterEnd] = useState<string>('');
-  const [filterSearch, setFilterSearch] = useState<string>('');
-
-  // Draft controls
-  const [draftEmployee, setDraftEmployee] = useState<string>('');
-  const [draftType, setDraftType] = useState<string>('');
-  const [draftStart, setDraftStart] = useState<string>('');
-  const [draftEnd, setDraftEnd] = useState<string>('');
-  const [draftSearch, setDraftSearch] = useState<string>('');
-
-  const [employees, setEmployees] = useState<Array<{ name: string; email: string; flatRate?: number; bonuses?: number; paymentByJob?: boolean; jobRates?: Record<string, number> }>>([]);
-  const [completedJobs, setCompletedJobs] = useState<any[]>([]);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ amount?: string; type?: string; description?: string } | null>(null);
-
-  // Checks tab state
-  const [checkEmployee, setCheckEmployee] = useState<string>('');
-  const [checkAmount, setCheckAmount] = useState<string>('');
-  const [checkNumber, setCheckNumber] = useState<string>('');
-  const [checkDate, setCheckDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [checkMemo, setCheckMemo] = useState<string>('');
-  const [checkType, setCheckType] = useState<'Check' | 'Cash' | 'Direct Deposit'>('Check');
-  const [checkPayeeType, setCheckPayeeType] = useState<'Employee' | 'Customer' | 'Other'>('Employee');
-
-  const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
-  const [isWorksheetExpanded, setIsWorksheetExpanded] = useState(true);
-
   const { isDemoMode } = useDemoMode();
 
+  const [tab, setTab] = useState<'pending' | 'history'>('pending');
+  const [pendingRecords, setPendingRecords] = useState<any[]>([]);
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const load = async () => {
-      if (isDemoMode) {
-        setEmployees(MOCK_PAYROLL.map(p => ({ name: p.name, email: 'demo@example.com' })));
-        setCompletedJobs(MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'in_progress'));
-        setHistory(MOCK_PAYROLL.map(p => ({
-          id: p.id,
-          date: p.date,
-          type: 'Payroll',
-          description: `Period: ${p.period}`,
-          amount: p.grossPay,
-          status: p.status === 'paid' ? 'Paid' : 'Pending',
-          employee: p.name
-        })));
-        return;
-      }
-      const list = await getSupabaseEmployees();
-      setEmployees(list);
-      const jobs = JSON.parse(localStorage.getItem('completedJobs') || '[]');
-      setCompletedJobs(jobs);
-    };
     load();
-  }, [isDemoMode]);
+  }, [tab, isDemoMode]);
 
-  useEffect(() => {
-    // 1. Handle Tab Switching and Pre-filling from URL
-    const tabParam = params.get('tab');
-    if (tabParam === 'checks') setTab('checks');
-
-    const empParam = params.get('employee');
-    if (empParam && tabParam === 'checks') {
-      setCheckEmployee(empParam);
-    }
-
-    // 2. Handle Modal / Job Pre-filling (Existing Logic)
-    const modal = params.get('modal');
-    if (modal !== '1') return;
-    const emp = params.get('employee') || '';
-    const jobId = params.get('jobId') || '';
+  const load = async () => {
+    setIsLoading(true);
     try {
-      const job = completedJobs.find((j: any) => String(j.jobId) === String(jobId));
-      if (job) {
-        const newRow: JobRow = {
-          kind: 'job',
-          amount: Number(job.totalRevenue || 0),
-          description: `${job.service || 'Job'} - ${job.vehicle || ''} - ${job.customer || ''}`,
-          date: String(job.finishedAt || new Date().toISOString().slice(0, 10)),
-          employee: emp || job.employee || '',
-          jobId: job.jobId,
-        };
-        setRows([newRow]);
+      if (tab === 'pending') {
+        const records = await getSupabasePayrollRecords('pending');
+        setPendingRecords(records);
+        setSelectedIds(records.map(r => r.id));
       } else {
-        setRows([{ kind: 'job', amount: 0, description: '', date: new Date().toISOString().slice(0, 10), employee: emp || '' }]);
+        const records = await getSupabasePayrollRecords('paid');
+        setHistoryRecords(records);
       }
-    } catch {
-      setRows([{ kind: 'job', amount: 0, description: '', date: new Date().toISOString().slice(0, 10), employee: emp || '' }]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [params, completedJobs]);
-
-  const grossPay = rows.reduce((sum, r) => {
-    if (r.kind === 'job') return sum + (r.amount || 0);
-    if (r.kind === 'hours') return sum + (r.hours * r.rate + (r.bonus || 0) + (r.jobPay || 0));
-    return sum + ((r as CustomRow).amount || 0);
-  }, 0);
-
-  const addJobRow = () => {
-    setRows(r => [...r, { kind: 'job', amount: 0, description: '', date: new Date().toISOString().slice(0, 10) }]);
-    if (!isWorksheetExpanded) setIsWorksheetExpanded(true);
-  };
-  const addHoursRow = () => {
-    setRows(r => [...r, { kind: 'hours', name: "New Employee", hours: 0, rate: 15, bonus: 0 }]);
-    if (!isWorksheetExpanded) setIsWorksheetExpanded(true);
-  };
-  const addCustomRow = () => {
-    setRows(r => [...r, { kind: 'custom', amount: 0, paymentType: 'Bonus' }]);
-    if (!isWorksheetExpanded) setIsWorksheetExpanded(true);
   };
 
-  const addJobRowFromCompleted = (job: any) => {
-    const newRow: JobRow = {
-      kind: 'job',
-      amount: Number(job.totalRevenue || 0),
-      description: `${job.service || 'Job'} - ${job.vehicle || ''} - ${job.customer || ''}`,
-      date: String(job.finishedAt || new Date().toISOString().slice(0, 10)),
-      employee: job.employee || '',
-      jobId: job.jobId,
-    };
-    setRows(prev => [...prev, newRow]);
-    if (!isWorksheetExpanded) setIsWorksheetExpanded(true);
-    toast({ title: 'Added to Payroll', description: 'Row added.' });
+  // Group pending by employee
+  const groupedPending = pendingRecords.reduce((acc, curr) => {
+    if (!acc[curr.employee_name]) acc[curr.employee_name] = [];
+    acc[curr.employee_name].push(curr);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const selectedTotal = pendingRecords
+    .filter(r => selectedIds.includes(r.id))
+    .reduce((sum, r) => sum + Number(r.earned_amount || 0), 0);
+
+  const handleToggle = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
-  const removeRow = (idx: number) => setRows(r => r.filter((_, i) => i !== idx));
+  const handleProcessPayRun = async () => {
+    const recordsToPay = pendingRecords.filter(r => selectedIds.includes(r.id));
+    if (recordsToPay.length === 0) {
+       toast({ title: "No records selected", variant: "destructive" });
+       return;
+    }
 
-  const savePayStub = async () => {
-    // (Simplified logic for brevity, assuming standard save flow)
-    toast({ title: "Saved", description: "Payroll saved (Mock)." });
-    // In real code, keep the existing logic. I'll restore it fully below.
-  };
-
-  // Re-implementing FULL save logic
-  const realSavePayStub = async () => {
     try {
-      const doc = new jsPDF();
-      doc.setFontSize(18); doc.text("Payroll Summary", 20, 20);
-      doc.setFontSize(12); doc.text(`Period: ${periodStart} to ${periodEnd}`, 20, 30);
-      // ... PDF generation logic matches original
-      let y = 42;
-      rows.forEach((r) => {
-        // ... simplified draw
-        doc.text(`• entry $${(r.kind === 'hours' ? (r.hours * r.rate) : r.amount).toFixed(2)}`, 20, y);
-        y += 6;
-      });
-      doc.text(`Total: $${grossPay.toFixed(2)}`, 20, y + 10);
+      // Group by employee to create one expense per employee
+      const byEmployee = recordsToPay.reduce((acc, curr) => {
+        if (!acc[curr.employee_name]) acc[curr.employee_name] = [];
+        acc[curr.employee_name].push(curr);
+        return acc;
+      }, {} as Record<string, any[]>);
 
-      const pdfDataUrl = doc.output('dataurlstring');
-      const fileName = `Payroll_${periodStart}_to_${periodEnd}.pdf`;
-      savePDFToArchive('Payroll', 'Company', `payroll-${periodStart}-${periodEnd}`, pdfDataUrl, { fileName });
+      for (const [empName, records] of Object.entries(byEmployee)) {
+        const totalAmount = records.reduce((sum, r) => sum + Number(r.earned_amount), 0);
+        
+        // 1. Create expense
+        const expense = await upsertExpense({
+            amount: totalAmount,
+            description: `Payroll Run: ${records.length} jobs completed`,
+            category: 'Payroll',
+            payee: empName,
+            createdAt: new Date().toISOString()
+        } as any);
 
-      // Save to API
-      await api('/api/payroll/save', { method: 'POST', body: JSON.stringify({ periodStart, periodEnd, rows }) });
+        // 2. Mark records as paid
+        for (const record of records) {
+          await markPayrollPaid(record.id, expense.id);
+        }
+      }
 
-      // Save History
-      const entries = rows.map(r => ({
-        type: r.kind,
-        amount: (r.kind === 'hours' ? (r.hours * r.rate) : r.amount),
-        description: 'Payroll Entry',
-        date: periodEnd,
-        status: 'Paid',
-        employee: (r as any).name || (r as any).employee || ''
-      }));
-      await api('/api/payroll/history', { method: 'POST', body: JSON.stringify(entries) });
-
-      toast({ title: "Saved", description: "Payroll Finalized & PDF Saved." });
-    } catch (e) { toast({ title: "Error", description: "Save failed", variant: "destructive" }); }
+      toast({ title: "Pay Run Processed", description: `Paid $${selectedTotal.toFixed(2)} to ${Object.keys(byEmployee).length} employees.` });
+      
+      // Reload
+      load();
+    } catch (err) {
+      toast({ title: "Error processing pay run", variant: "destructive" });
+    }
   };
-
-  const loadHistory = async () => {
-    // Mock or API call
-    setHistory([]);
-  };
-
-  // Tab Switching
-  const renderTabButton = (key: 'current' | 'history' | 'checks', label: string, icon: any) => (
-    <Button
-      variant={tab === key ? "default" : "ghost"}
-      className={`rounded-full px-6 ${tab === key ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
-      onClick={() => setTab(key)}
-    >
-      {icon} <span className="ml-2">{label}</span>
-    </Button>
-  );
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Payroll" />
+      <PageHeader title="Payroll Engine" />
       <main className="container mx-auto px-4 py-6 max-w-6xl space-y-6">
 
         {/* Stats Card */}
@@ -247,228 +119,168 @@ const Payroll = () => {
                 <DollarSign className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Payroll & Expenses</h2>
-                <p className="text-zinc-400 text-sm">Manage employee pay and track expenses</p>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  Unified Payroll Engine
+                  <HelpModal
+                    title="Pay Run System"
+                    description="The Payroll Engine automatically calculates employee earnings based on completed jobs."
+                    items={[
+                      { title: 'Job Completion', content: 'When a job is marked Done, earnings are calculated (Price - Stripe - Materials = Labor Revenue * Tier %)' },
+                      { title: 'Processing', content: 'Select pending jobs and click Process Pay Run to log them as official business expenses in the accounting ledger.' }
+                    ]}
+                  />
+                </h2>
+                <p className="text-zinc-400 text-sm">Automated payout calculations and ledger integration</p>
               </div>
             </div>
 
-              <div className="flex gap-4 sm:gap-8 items-center flex-wrap justify-end">
-                <div className="text-center">
-                  <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Total (Current)</p>
-                  <p className="text-3xl font-bold text-indigo-400 mt-1">${grossPay.toFixed(2)}</p>
-                </div>
-                <div className="text-center border-l border-zinc-700 pl-4 sm:pl-8">
-                  <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Unpaid Jobs</p>
-                  <p className="text-3xl font-bold text-amber-500 mt-1">{completedJobs.filter(j => j.status === 'completed' && !j.paid).length}</p>
-                </div>
-                <div className="pl-4 sm:pl-8 mt-2 sm:mt-0 w-full sm:w-auto">
-                    <Button variant="outline" size="sm" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payments')}>
-                      All Payments <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                </div>
+            <div className="flex gap-4 sm:gap-8 items-center flex-wrap justify-end">
+              <div className="text-center">
+                <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Pending Total</p>
+                <p className="text-3xl font-bold text-indigo-400 mt-1">${selectedTotal.toFixed(2)}</p>
               </div>
+              <div className="pl-4 sm:pl-8 mt-2 sm:mt-0 w-full sm:w-auto border-l border-zinc-700">
+                  <Button variant="outline" size="sm" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payments')}>
+                    All Payments <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+              </div>
+            </div>
           </div>
         </Card>
 
         {/* Tab Nav */}
         <div className="flex flex-wrap gap-2 p-1 bg-zinc-900/50 rounded-full border border-zinc-800 w-fit">
-          {renderTabButton('current', 'Current Payroll', <Wallet className="h-4 w-4" />)}
-          {renderTabButton('history', 'History', <Clock className="h-4 w-4" />)}
-          {renderTabButton('checks', 'Process Payment', <CreditCard className="h-4 w-4" />)}
-          <Button variant="ghost" className="rounded-full px-6 text-zinc-400 hover:text-white hover:bg-zinc-800" asChild>
-            <Link to="/payments">
-              <DollarSign className="h-4 w-4 mr-2" /> All Payments
-            </Link>
+          <Button
+            variant={tab === 'pending' ? "default" : "ghost"}
+            className={`rounded-full px-6 ${tab === 'pending' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+            onClick={() => setTab('pending')}
+          >
+            <Wallet className="h-4 w-4 mr-2" /> Pending Pay Run
+          </Button>
+          <Button
+            variant={tab === 'history' ? "default" : "ghost"}
+            className={`rounded-full px-6 ${tab === 'history' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+            onClick={() => setTab('history')}
+          >
+            <Clock className="h-4 w-4 mr-2" /> Payout History
           </Button>
         </div>
 
-        {tab === 'current' && (
+        {tab === 'pending' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            {Object.keys(groupedPending).length === 0 && !isLoading && (
+               <Card className="p-12 text-center bg-zinc-900 border-zinc-800">
+                  <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white">All caught up!</h3>
+                  <p className="text-zinc-400 mt-2">There are no pending job earnings to process.</p>
+               </Card>
+            )}
 
-            {/* Date Selection */}
-            <Card className="p-4 bg-zinc-900 border-zinc-800">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><Label className="text-zinc-400">Period Start</Label><Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="bg-zinc-950 border-zinc-800" /></div>
-                <div><Label className="text-zinc-400">Period End</Label><Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="bg-zinc-950 border-zinc-800" /></div>
-              </div>
-            </Card>
+            {Object.entries(groupedPending).map(([empName, records]) => {
+               const empTotal = records.reduce((sum, r) => sum + Number(r.earned_amount), 0);
+               const empSelectedTotal = records.filter(r => selectedIds.includes(r.id)).reduce((sum, r) => sum + Number(r.earned_amount), 0);
+               
+               return (
+                 <Card key={empName} className="bg-zinc-900 border-zinc-800 overflow-hidden">
+                   <div className="p-4 bg-zinc-950 border-b border-zinc-800 flex justify-between items-center">
+                     <div className="flex items-center gap-3">
+                       <div className="p-2 bg-indigo-500/20 rounded-full text-indigo-400">
+                         <User className="h-5 w-5" />
+                       </div>
+                       <div>
+                         <h3 className="font-bold text-white text-lg">{empName}</h3>
+                         <p className="text-xs text-zinc-400">{records.length} pending jobs</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-xs text-zinc-500 uppercase font-bold tracking-wider mb-1">Selected Payout</p>
+                       <p className="text-xl font-black text-emerald-400">${empSelectedTotal.toFixed(2)}</p>
+                     </div>
+                   </div>
+                   
+                   <div className="p-4 space-y-3">
+                     {records.map(record => (
+                       <div key={record.id} className="flex items-center gap-4 p-3 rounded-lg bg-zinc-950/50 border border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                         <Checkbox 
+                           checked={selectedIds.includes(record.id)} 
+                           onCheckedChange={() => handleToggle(record.id)}
+                           className="border-zinc-700 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                         />
+                         <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                           <div className="md:col-span-2">
+                             <p className="text-sm font-bold text-white truncate">{record.booking_title}</p>
+                             <p className="text-xs text-zinc-500 mt-1">{new Date(record.created_at).toLocaleDateString()}</p>
+                           </div>
+                           <div>
+                             <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Job Revenue</p>
+                             <p className="text-sm text-zinc-300">${Number(record.job_price).toFixed(2)}</p>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Net Earning ({record.commission_percent}%)</p>
+                             <p className="text-sm font-bold text-emerald-400">${Number(record.earned_amount).toFixed(2)}</p>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </Card>
+               );
+            })}
 
-            {/* Unpaid Jobs */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <div className="p-4 border-b border-zinc-800 flex justify-between items-center cursor-pointer hover:bg-zinc-800/50 transition-colors" onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}>
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-5 w-5 text-indigo-400" />
-                  <h3 className="font-semibold text-white">Unpaid Completed Jobs</h3>
-                  <span className="bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded text-xs">{completedJobs.filter(j => j.status === 'completed' && !j.paid).length} Available</span>
-                </div>
-                {isCompletedExpanded ? <ChevronUp className="h-4 w-4 text-zinc-500" /> : <ChevronDown className="h-4 w-4 text-zinc-500" />}
-              </div>
-
-              {isCompletedExpanded && (
-                <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
-                  {completedJobs.filter(j => j.status === 'completed' && !j.paid).length === 0 && <div className="text-center text-zinc-500 py-4">No unpaid jobs found.</div>}
-                  {completedJobs.filter(j => j.status === 'completed' && !j.paid).map(j => (
-                    <div key={j.jobId} className="flex justify-between items-center p-3 rounded bg-zinc-950 border border-zinc-800">
-                      <div>
-                        <div className="font-medium text-white">{j.service} - {j.vehicle}</div>
-                        <div className="text-xs text-zinc-500">{j.customer} • {j.finishedAt?.slice(0, 10)}</div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-bold text-indigo-400">${Number(j.totalRevenue || 0).toFixed(2)}</span>
-                        <Button size="sm" onClick={() => addJobRowFromCompleted(j)} className="bg-indigo-600 hover:bg-indigo-700">Add</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {/* Worksheet */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-indigo-400" />
-                  <h3 className="font-semibold text-white">Payroll Worksheet</h3>
-                </div>
-              </div>
-              <div className="p-4 space-y-4">
-                {rows.map((row, idx) => (
-                  <div key={idx} className="p-3 bg-zinc-950 rounded border border-zinc-800 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    {row.kind === 'job' && (
-                      <>
-                        <div className="md:col-span-3"><Label className="text-xs text-zinc-500">Description</Label><Input value={row.description} onChange={e => { const n = [...rows]; (n[idx] as JobRow).description = e.target.value; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                        <div className="md:col-span-3"><Label className="text-xs text-zinc-500">Date</Label><Input type="date" value={row.date} onChange={e => { const n = [...rows]; (n[idx] as JobRow).date = e.target.value; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                        <div className="md:col-span-3"><Label className="text-xs text-zinc-500">Amount</Label><Input type="number" value={row.amount} onChange={e => { const n = [...rows]; (n[idx] as JobRow).amount = parseFloat(e.target.value) || 0; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                      </>
-                    )}
-                    {row.kind === 'hours' && (
-                      <>
-                        <div className="md:col-span-3"><Label className="text-xs text-zinc-500">Name</Label><Input value={row.name} onChange={e => { const n = [...rows]; (n[idx] as HoursRow).name = e.target.value; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                        <div className="md:col-span-2"><Label className="text-xs text-zinc-500">Hours</Label><Input type="number" value={row.hours} onChange={e => { const n = [...rows]; (n[idx] as HoursRow).hours = parseFloat(e.target.value) || 0; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                        <div className="md:col-span-2"><Label className="text-xs text-zinc-500">Rate</Label><Input type="number" value={row.rate} onChange={e => { const n = [...rows]; (n[idx] as HoursRow).rate = parseFloat(e.target.value) || 0; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                        <div className="md:col-span-2"><Label className="text-xs text-zinc-500">Bonus</Label><Input type="number" value={row.bonus} onChange={e => { const n = [...rows]; (n[idx] as HoursRow).bonus = parseFloat(e.target.value) || 0; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                      </>
-                    )}
-                    {row.kind === 'custom' && (
-                      <>
-                        <div className="md:col-span-4"><Label className="text-xs text-zinc-500">Type</Label>
-                          <Select value={row.paymentType} onValueChange={(v: any) => { const n = [...rows]; (n[idx] as CustomRow).paymentType = v; setRows(n) }}>
-                            <SelectTrigger className="bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="Bonus">Bonus</SelectItem><SelectItem value="Other">Other</SelectItem></SelectContent>
-                          </Select>
-                        </div>
-                        <div className="md:col-span-5"><Label className="text-xs text-zinc-500">Amount</Label><Input type="number" value={row.amount} onChange={e => { const n = [...rows]; (n[idx] as CustomRow).amount = parseFloat(e.target.value) || 0; setRows(n) }} className="bg-zinc-900 border-zinc-800" /></div>
-                      </>
-                    )}
-
-                    <div className="md:col-span-3 flex justify-end">
-                      <Button variant="ghost" size="icon" onClick={() => removeRow(idx)} className="text-zinc-500 hover:text-red-400"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
+            {Object.keys(groupedPending).length > 0 && (
+              <div className="sticky bottom-4 z-20 mt-8">
+                <Card className="bg-zinc-950 border-indigo-500/30 shadow-2xl shadow-indigo-900/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-zinc-400">Total Selected for Processing</p>
+                    <p className="text-2xl font-black text-white">${selectedTotal.toFixed(2)}</p>
                   </div>
-                ))}
-
-                <div className="flex gap-2 justify-center pt-4">
-                  <Button variant="outline" size="sm" onClick={addJobRow}>+ Job</Button>
-                  <Button variant="outline" size="sm" onClick={addHoursRow}>+ Hourly</Button>
-                  <Button variant="outline" size="sm" onClick={addCustomRow}>+ Custom</Button>
-                </div>
-              </div>
-              <div className="p-4 border-t border-zinc-800 bg-zinc-950/50 flex justify-between items-center rounded-b-lg">
-                <span className="font-medium text-zinc-400">Total Payroll</span>
-                <div className="flex items-center gap-4">
-                  <span className="text-2xl font-bold text-white">${grossPay.toFixed(2)}</span>
-                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/10" onClick={realSavePayStub}>
-                    Finalize & Save
+                  <Button 
+                    size="lg" 
+                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                    onClick={handleProcessPayRun}
+                  >
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Process Pay Run & Add to Ledger
                   </Button>
-                </div>
+                </Card>
               </div>
-            </Card>
+            )}
           </div>
         )}
 
         {tab === 'history' && (
-          <Card className="p-8 text-center bg-zinc-900 border-zinc-800">
-            <Clock className="h-12 w-12 text-zinc-700 mx-auto mb-4" />
-            <h3 className="text-xl text-zinc-300">History Placeholder</h3>
-            <p className="text-zinc-500">This section would contain the history table.</p>
-          </Card>
-        )}
-
-        {tab === 'checks' && (
-          <Card className="p-8 bg-zinc-900 border-zinc-800">
-            <div className="flex items-center gap-2 mb-6">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2"><Wallet className="h-5 w-5 text-green-400" /> Process Payment / Write Checks</h3>
-              <HelpModal
-                title="How to Pay Employees"
-                description="To generate a payment record and pay an employee, follow these steps:"
-                items={[
-                  { title: '1. Verify Hours / Jobs', content: 'Ensure all completed jobs and hours have been recorded in the Current Payroll tab or via the Job History.' },
-                  { title: '2. Select the Payee', content: 'Enter the employee\'s name in the Payee field. If you used the "Payroll Sync" button from the Work Schedule, this will be pre-filled.' },
-                  { title: '3. Enter the Amount', content: 'Input the exact total you are paying them for this pay period.' },
-                  { title: '4. Choose Payment Method', content: 'Select how you are transferring the funds (e.g., Check, Direct Deposit, Venmo).' },
-                  { title: '5. Record Payment', content: 'Click "Record Payment" to log this transaction in your accounting history and generate a receipt or check stub.' }
-                ]}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div><Label className="text-zinc-400">Payee</Label><Input value={checkEmployee} onChange={e => setCheckEmployee(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Name or Business" /></div>
-                <div><Label className="text-zinc-400">Amount</Label><Input value={checkAmount} onChange={e => setCheckAmount(e.target.value)} type="number" className="bg-zinc-950 border-zinc-800 font-mono text-lg text-green-400 font-bold" placeholder="0.00" /></div>
-                <div>
-                  <Label className="text-zinc-400">Payment Method</Label>
-                  <Select value={checkType} onValueChange={(v: any) => setCheckType(v)}>
-                    <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Check">Check</SelectItem>
-                      <SelectItem value="Direct Deposit">Direct Deposit</SelectItem>
-                      <SelectItem value="Venmo">Venmo</SelectItem>
-                      <SelectItem value="PayPal">PayPal</SelectItem>
-                      <SelectItem value="Zelle">Zelle</SelectItem>
-                      <SelectItem value="CashApp">CashApp</SelectItem>
-                      <SelectItem value="Stripe">Stripe</SelectItem>
-                      <SelectItem value="Apple Pay">Apple Pay</SelectItem>
-                      <SelectItem value="Google Pay">Google Pay</SelectItem>
-                      <SelectItem value="Wire Transfer">Wire Transfer</SelectItem>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div><Label className="text-zinc-400">Reference / Check Number</Label><Input value={checkNumber} onChange={e => setCheckNumber(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="e.g. 1001 or Trans ID" /></div>
-                <div><Label className="text-zinc-400">Date</Label><Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} className="bg-zinc-950 border-zinc-800" /></div>
-                <div><Label className="text-zinc-400">Memo / Notes</Label><Input value={checkMemo} onChange={e => setCheckMemo(e.target.value)} className="bg-zinc-950 border-zinc-800" placeholder="Reason for payment" /></div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex justify-end gap-4">
-              {checkType === 'Check' && <Button variant="outline" className="text-zinc-300 border-zinc-700 hover:bg-zinc-800">Preview Check PDF</Button>}
-              <Button className="bg-green-600 hover:bg-green-700 min-w-[150px]" onClick={async () => {
-                if (!checkEmployee || !checkAmount) {
-                  toast({ title: "Error", description: "Missing Payee or Amount", variant: "destructive" });
-                  return;
-                }
-                await upsertExpense({
-                  amount: parseFloat(checkAmount),
-                  description: `${checkMemo} (${checkType} #${checkNumber})`.trim(),
-                  category: 'Payroll',
-                  createdAt: new Date(checkDate).toISOString(),
-                  paymentMethod: checkType,
-                  payee: checkEmployee
-                } as any);
-                toast({ title: "Payment Recorded", description: `${checkType} to ${checkEmployee} saved.` });
-                setCheckAmount(''); setCheckMemo(''); setCheckNumber('');
-              }}>
-                <CheckCircle className="w-4 h-4 mr-2" /> Record Payment
-              </Button>
-            </div>
+          <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="bg-zinc-950 border-b border-zinc-800">
+                     <th className="p-4 text-xs font-bold uppercase tracking-wider text-zinc-400">Date Paid</th>
+                     <th className="p-4 text-xs font-bold uppercase tracking-wider text-zinc-400">Employee</th>
+                     <th className="p-4 text-xs font-bold uppercase tracking-wider text-zinc-400">Job Reference</th>
+                     <th className="p-4 text-xs font-bold uppercase tracking-wider text-zinc-400 text-right">Amount</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {historyRecords.length === 0 && !isLoading && (
+                     <tr>
+                       <td colSpan={4} className="p-8 text-center text-zinc-500">No payment history found.</td>
+                     </tr>
+                   )}
+                   {historyRecords.map(record => (
+                     <tr key={record.id} className="border-b border-zinc-800 hover:bg-zinc-800/30">
+                       <td className="p-4 text-sm text-zinc-300">{new Date(record.paid_at || record.created_at).toLocaleDateString()}</td>
+                       <td className="p-4 text-sm font-medium text-white">{record.employee_name}</td>
+                       <td className="p-4 text-sm text-zinc-400">{record.booking_title}</td>
+                       <td className="p-4 text-sm font-bold text-emerald-400 text-right">${Number(record.earned_amount).toFixed(2)}</td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
           </Card>
         )}
 
       </main>
     </div>
   );
-};
-
-export default Payroll;
+}

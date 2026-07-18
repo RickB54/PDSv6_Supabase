@@ -62,14 +62,16 @@ const getWeekDays = (date: Date) => {
   });
 };
 
-const mapToServiceVehicleType = (type: string = ""): VehicleType => {
-  const t = type.toLowerCase();
+const mapToServiceVehicleType = (type: string = "", make: string = "", model: string = ""): VehicleType => {
+  let t = type ? type.toLowerCase() : "";
+  if (!t || t === "no type") t = `${make} ${model}`.toLowerCase();
+  
   if (t.includes('compact') || t.includes('sedan')) return 'compact';
   if (t.includes('mid') || t.includes('suv')) {
     if (t.includes('large') || t.includes('truck') || t.includes('van')) return 'truck';
     return 'midsize';
   }
-  if (t.includes('truck') || t.includes('van') || t.includes('large')) return 'truck';
+  if (t.includes('truck') || t.includes('van') || t.includes('large') || t.includes('pickup') || t.includes('f-150') || t.includes('f150') || t.includes('silverado') || t.includes('sierra') || t.includes('ram') || t.includes('tundra') || t.includes('tacoma') || t.includes('colorado')) return 'truck';
   if (t.includes('luxury')) return 'luxury';
   return 'compact'; // default
 };
@@ -449,7 +451,7 @@ export default function BookingsPage() {
 
   const liveSubtotal = useMemo(() => {
     let subtotal = 0;
-    const vType = mapToServiceVehicleType(formData.vehicle);
+    const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
     const pkg = allServices.find(s => s.name === formData.service);
     if (pkg) {
       subtotal = getServicePrice(pkg.id, vType);
@@ -469,7 +471,7 @@ export default function BookingsPage() {
 
   const liveTotal = useMemo(() => {
     let total = 0;
-    const vType = mapToServiceVehicleType(formData.vehicle);
+    const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
     const pkg = allServices.find(s => s.name === formData.service);
     if (pkg) {
       total = getServicePrice(pkg.id, vType);
@@ -506,7 +508,7 @@ export default function BookingsPage() {
     const title = booking.title || booking.service_package;
     if (!title) return 0;
     
-    const vType = mapToServiceVehicleType(booking.vehicle || booking.vehicleType);
+    const vType = mapToServiceVehicleType(booking.vehicle || booking.vehicleType || '', booking.vehicleMake || booking.make || '', booking.vehicleModel || booking.model || '');
     const svc = allServices.find(s => s.name === title);
     let total = svc ? getServicePrice(svc.id, vType) : 0;
     
@@ -543,7 +545,8 @@ export default function BookingsPage() {
     const svc = allServices.find(s => s.name === formData.service);
     if (svc) params.set('package', svc.id);
 
-    if (formData.vehicle) params.set('vehicleType', formData.vehicle);
+    const mappedVType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
+    params.set('vehicleType', mappedVType);
     if (formData.vehicleYear) params.set('vehicleYear', formData.vehicleYear);
     if (formData.vehicleMake) params.set('vehicleMake', formData.vehicleMake);
     if (formData.vehicleModel) params.set('vehicleModel', formData.vehicleModel);
@@ -1301,7 +1304,7 @@ export default function BookingsPage() {
       const endDate = new Date(dateBase);
       endDate.setHours(isNaN(endHours) ? 17 : endHours, isNaN(endMinutes) ? 0 : endMinutes, 0, 0);
       let calculatedPrice = 0;
-      const finalVType = mapToServiceVehicleType(formData.vehicle);
+      const finalVType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
       const pkg = allServices.find(s => s.name === formData.service);
       if (pkg) {
         calculatedPrice = getServicePrice(pkg.id, finalVType);
@@ -2726,7 +2729,7 @@ export default function BookingsPage() {
                                 .filter((addon: any) => {
                                   if (addon.active === false) return false;
                                   if (!addon.applicableVehicleTypes) return true;
-                                  const mappedVType = mapToServiceVehicleType(formData.vehicle || "");
+                                  const mappedVType = mapToServiceVehicleType(formData.vehicle || "", formData.vehicleMake || "", formData.vehicleModel || "");
                                   return addon.applicableVehicleTypes.includes(mappedVType);
                                 })
                                 .map((addon) => (
@@ -2757,7 +2760,7 @@ export default function BookingsPage() {
                                   <div className="flex flex-col">
                                     <span className="text-xs font-bold">{addon.name}</span>
                                     {(() => {
-                                      const vType = mapToServiceVehicleType(formData.vehicle);
+                                      const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
                                       const price = getAddOnPrice(addon.id, vType);
                                       return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
                                     })()}
@@ -3878,7 +3881,7 @@ export default function BookingsPage() {
                                             <div className="font-medium text-sm flex items-center flex-wrap gap-2">
                                               <span>{event.title}</span>
                                               {event.type === 'booking' && (() => {
-                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '');
+                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '', event.vehicleMake || event.make || '', event.vehicleModel || event.model || '');
                                                 const svcName = event.title || event.service_package || '';
                                                 const svc = allServices.find(s => s.name === svcName || s.id === svcName);
                                                 const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
@@ -3915,7 +3918,7 @@ export default function BookingsPage() {
                                                 
                                                 if (addonsArray.length === 0) return null;
 
-                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '');
+                                                const vType = mapToServiceVehicleType(event.vehicle || event.vehicleType || '', event.vehicleMake || event.make || '', event.vehicleModel || event.model || '');
 
                                                 return (
                                                   <div className="flex flex-wrap gap-1.5 mt-1.5 mb-1">

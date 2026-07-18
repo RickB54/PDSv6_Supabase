@@ -771,7 +771,8 @@ const BookNow = () => {
       });
       
       // Push in-app alert to Admin NotificationBell
-      if (!isTest) {
+      const isTestBooking = testModeActive || formData.name.toLowerCase().includes('test');
+      if (!isTestBooking) {
         notify('booking_created', `Online Booking: ${formData.name}`, 'Website', {
           bookingId: createdBooking?.id || finalId,
           customerId: createdBooking?.customer_id

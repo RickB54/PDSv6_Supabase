@@ -2882,6 +2882,34 @@ export const deleteSupabaseIncome = async (id: string) => {
     }
 };
 
+export const getSupabasePayrollRecords = async (status?: string): Promise<any[]> => {
+    try {
+        let query = supabase.from('payroll_records').select('*');
+        if (status) {
+            query = query.eq('payment_status', status);
+        }
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('getSupabasePayrollRecords error:', err);
+        return [];
+    }
+};
 
-
-
+export const markPayrollPaid = async (id: string, expenseId?: string) => {
+    try {
+        const payload: any = {
+            payment_status: 'paid',
+            paid_at: new Date().toISOString()
+        };
+        if (expenseId) {
+            payload.expense_id = expenseId;
+        }
+        const { error } = await supabase.from('payroll_records').update(payload).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('markPayrollPaid error:', err);
+        throw err;
+    }
+};
