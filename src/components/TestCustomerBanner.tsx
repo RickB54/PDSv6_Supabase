@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import supabase from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Trash2, AlertTriangle, RefreshCw, HelpCircle, CheckCircle2 } from 'lucide-react';
+import { Trash2, AlertTriangle, RefreshCw, HelpCircle, CheckCircle2, FileText } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { deleteSupabaseCustomer } from '@/lib/supa-data';
+import { deleteSupabaseCustomer, auditTestCustomer } from '@/lib/supa-data';
+import { savePDFToArchive } from '@/lib/pdfArchive';
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -20,6 +23,7 @@ import {
 export const TestCustomerBanner = () => {
   const [rickId, setRickId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAuditing, setIsAuditing] = useState(false);
   const [wipeResult, setWipeResult] = useState<{ msg: string; details: string | null } | null>(null);
   const navigate = useNavigate();
 
@@ -117,6 +121,59 @@ export const TestCustomerBanner = () => {
     }
   };
 
+  const handleAudit = async () => {
+    if (!rickId) return;
+    setIsAuditing(true);
+    toast({ title: "Generating Audit...", description: "Scanning test data footprint..." });
+    try {
+      const data = await auditTestCustomer(rickId);
+      
+      const doc = new jsPDF();
+      doc.setFontSize(22);
+      doc.setTextColor(220, 38, 38); // Red
+      doc.text("RBT Sandbox Audit Log", 105, 20, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+      doc.text(`Customer Name: ${data.customerName}`, 105, 34, { align: "center" });
+
+      (doc as any).autoTable({
+        startY: 45,
+        head: [['Data Type', 'Records Created']],
+        body: [
+          ['Bookings', data.bookings],
+          ['Estimates', data.estimates],
+          ['Invoices', data.invoices],
+          ['Vehicles', data.vehicles],
+          ['Engagements', data.engagements],
+          ['Manual Income', data.manual_income],
+          ['Company Expenses', data.expenses],
+          ['Employee Payments', data.payments],
+          ['Payroll Records', data.payroll],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [40, 40, 40] }
+      });
+
+      const pdfDataUrl = doc.output('datauristring');
+      
+      savePDFToArchive(
+        "Admin Updates", // use Admin Updates so it doesn't trigger a UI alert
+        data.customerName,
+        rickId,
+        pdfDataUrl,
+        { fileName: `RBT_Audit_Log_${new Date().toISOString().slice(0,10)}.pdf`, silent: true }
+      );
+
+      toast({ title: "Audit Complete", description: "Audit PDF saved to File Manager (Admin Updates folder)." });
+    } catch (err: any) {
+      toast({ title: "Audit Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
   if (!rickId) return null;
 
   return (
@@ -151,12 +208,22 @@ export const TestCustomerBanner = () => {
           <div className="p-1.5 bg-red-900/50 rounded-full shrink-0">
             <AlertTriangle className="h-4 w-4 text-white" />
           </div>
-          <div className="pr-1">
+          <div className="flex-1 pr-1">
             <h3 className="font-black text-xs uppercase tracking-wider text-white mb-0.5">🧪 Test Data Active</h3>
             <p className="text-[10px] text-red-100 font-medium leading-tight">
               Test account is altering analytics.
             </p>
           </div>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            disabled={isAuditing}
+            onClick={(e) => { e.stopPropagation(); handleAudit(); }}
+            className="h-7 px-2 bg-black/20 hover:bg-black/40 text-[10px] font-bold text-white border border-white/20 ml-auto transition-colors"
+          >
+            {isAuditing ? <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> : <FileText className="h-3 w-3 mr-1" />}
+            Audit
+          </Button>
         </div>
         
         <div className="flex items-center gap-2 mt-1">

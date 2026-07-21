@@ -965,6 +965,61 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
  * Deletes a customer and all their associated data (Vehicles, Bookings, Invoices, Storage Files)
  * This is a highly robust deletion that cleans up database rows AND physical storage files.
  */
+/**
+ * Returns a count of all test data linked to a test customer account
+ */
+export const auditTestCustomer = async (id: string) => {
+    const { data: customer } = await supabase.from('customers').select('*, vehicles(*)').eq('id', id).maybeSingle();
+    const vehicleIds = (customer?.vehicles || []).map((v: any) => v.id).filter(Boolean);
+
+    const [{ count: iCount }, { count: eCount }, { count: bCount }, { count: engCount }, { count: miCount }, { count: teCount }] = await Promise.all([
+        supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+        supabase.from('estimates').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+        supabase.from('engagements').select('*', { count: 'exact', head: true }).eq('customer_id', id),
+        supabase.from('manual_income').select('*', { count: 'exact', head: true }).ilike('customer_name', '%Rick Berube%'),
+        supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('payee', '%Rick Berube%')
+    ]);
+
+    let vCount = 0;
+    if (vehicleIds.length > 0) {
+        const { count } = await supabase.from('vehicles').select('*', { count: 'exact', head: true }).in('id', vehicleIds);
+        vCount = count || 0;
+    }
+
+    let pCount = 0;
+    let prCount = 0;
+    let prExpenseCount = 0;
+    const { data: bDataForCount } = await supabase.from('bookings').select('id').or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
+    if (bDataForCount && bDataForCount.length > 0) {
+        const bIds = bDataForCount.map(b => b.id);
+        const { count: pC } = await supabase.from('payments').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
+        pCount = pC || 0;
+
+        const { count: prC } = await supabase.from('payroll_records').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
+        prCount = prC || 0;
+
+        const { data: pData } = await supabase.from('payroll_records').select('expense_id').in('booking_id', bIds);
+        if (pData && pData.length > 0) {
+            const eIds = pData.map(p => p.expense_id).filter(Boolean);
+            prExpenseCount = eIds.length;
+        }
+    }
+
+    return {
+        customerName: customer?.full_name || 'Rick Berube',
+        bookings: bCount || 0,
+        estimates: eCount || 0,
+        invoices: iCount || 0,
+        vehicles: vCount || 0,
+        engagements: engCount || 0,
+        manual_income: miCount || 0,
+        expenses: (teCount || 0) + prExpenseCount,
+        payments: pCount || 0,
+        payroll: prCount || 0
+    };
+};
+
 export const deleteSupabaseCustomer = async (id: string) => {
     if (blockDemo('customer deletion')) return { success: true, crmCount: 1, authCount: 1 };
     try {
