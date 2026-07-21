@@ -541,17 +541,17 @@ export default function BookingsPage() {
     
     if (bookingArg) {
       if (bookingArg.customerId) params.set('customerId', bookingArg.customerId);
-      if (bookingArg.customerName) params.set('customerName', bookingArg.customerName);
+      if (bookingArg.customer) params.set('customerName', bookingArg.customer);
       if (bookingArg.id) params.set('id', bookingArg.id);
       if (bookingArg.assignedEmployee) {
         params.set('employeeId', bookingArg.assignedEmployee);
         params.set('employee', getEmployeeName(bookingArg.assignedEmployee));
       }
 
-      const svc = allServices.find(s => s.name === bookingArg.service);
+      const svc = allServices.find(s => s.name === bookingArg.title);
       if (svc) params.set('package', svc.id);
 
-      const mappedVType = mapToServiceVehicleType(bookingArg.vehicleType, bookingArg.vehicleMake, bookingArg.vehicleModel);
+      const mappedVType = mapToServiceVehicleType(bookingArg.vehicle || "", bookingArg.vehicleMake, bookingArg.vehicleModel);
       params.set('vehicleType', mappedVType);
       if (bookingArg.vehicleYear) params.set('vehicleYear', bookingArg.vehicleYear);
       if (bookingArg.vehicleMake) params.set('vehicleMake', bookingArg.vehicleMake);
