@@ -541,6 +541,10 @@ export default function BookingsPage() {
     if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
     if (formData.customer) params.set('customerName', formData.customer);
     if (selectedBooking?.id) params.set('id', selectedBooking.id); // PASS THE BOOKING ID
+    if (formData.assignedEmployee) {
+      params.set('employeeId', formData.assignedEmployee);
+      params.set('employee', getEmployeeName(formData.assignedEmployee));
+    }
 
     // Find service ID
     const svc = allServices.find(s => s.name === formData.service);
@@ -2950,10 +2954,10 @@ export default function BookingsPage() {
                             <SelectValue placeholder="Select Vehicle Class" />
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
-                            <SelectItem value="Sedan">Sedan</SelectItem>
-                            <SelectItem value="SUV">SUV</SelectItem>
-                            <SelectItem value="Truck/Van">Truck/Van</SelectItem>
-                            <SelectItem value="Luxury">Luxury</SelectItem>
+                            <SelectItem value="Compact/Sedan">Compact/Sedan</SelectItem>
+                            <SelectItem value="Mid-Size/SUV">Mid-Size/SUV</SelectItem>
+                            <SelectItem value="Truck/Van/Large SUV">Truck/Van/Large SUV</SelectItem>
+                            <SelectItem value="Luxury/High-End">Luxury/High-End</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
