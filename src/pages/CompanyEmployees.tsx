@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
