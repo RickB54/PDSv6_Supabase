@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
-import { getSupabaseEmployees, type Employee } from '@/lib/supa-data';
+import { getSupabaseEmployees, uploadEmployeePhoto, type Employee } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
 
 const TABS = [
@@ -41,6 +41,24 @@ export default function EmployeeProfilePage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !emp?.email) return;
+    setIsUploadingPhoto(true);
+    toast({ title: "Uploading Photo", description: "Please wait..." });
+    const res = await uploadEmployeePhoto(emp.email, file);
+    if (res.error) {
+      toast({ title: "Upload Failed", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Profile photo updated" });
+      load();
+    }
+    setIsUploadingPhoto(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   useEffect(() => { load(); }, [id]);
 
@@ -182,8 +200,20 @@ export default function EmployeeProfilePage() {
               <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
             </Button>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-lg">
-                {initials}
+              <div 
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-zinc-800 flex items-center justify-center text-indigo-300 font-bold border border-zinc-700 relative overflow-hidden group cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {isUploadingPhoto ? (
+                   <RefreshCw className="h-4 w-4 animate-spin text-zinc-500" />
+                ) : Array.isArray(emp.documents_on_file) && emp.documents_on_file.find((d: any) => d.type === 'profile_photo')?.url ? (
+                  <img src={emp.documents_on_file.find((d: any) => d.type === 'profile_photo').url} alt={emp.name} className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit className="h-4 w-4 text-white" />
+                </div>
               </div>
               <div>
                 <h1 className="text-lg font-bold leading-tight">{emp.name}</h1>
@@ -512,6 +542,7 @@ export default function EmployeeProfilePage() {
 
         </div>
       </div>
+      <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
     </div>
   );
 }

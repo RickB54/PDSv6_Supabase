@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -29,6 +29,7 @@ import jsPDF from "jspdf";
 import localforage from "localforage";
 import api from "@/lib/api";
 import { getSupabaseEmployees } from "@/lib/supa-data";
+import { uploadEmployeePhoto } from "@/lib/supa-data";
 import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
@@ -79,6 +80,9 @@ const CompanyEmployees = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoUploadTarget, setPhotoUploadTarget] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
     name: string;
@@ -162,6 +166,27 @@ const CompanyEmployees = () => {
         setEmployeeBadges(badgeMap);
       }
     } catch (e) { console.error(e); }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !photoUploadTarget) return;
+
+    setIsUploadingPhoto(photoUploadTarget);
+    toast({ title: "Uploading Photo", description: "Please wait..." });
+
+    const res = await uploadEmployeePhoto(photoUploadTarget, file);
+    
+    if (res.error) {
+      toast({ title: "Upload Failed", description: res.error, variant: "destructive" });
+    } else {
+      toast({ title: "Success", description: "Profile photo updated" });
+      await loadData();
+    }
+    
+    setIsUploadingPhoto(null);
+    setPhotoUploadTarget(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const saveEmployees = async (list: Employee[]) => {
@@ -404,12 +429,27 @@ const CompanyEmployees = () => {
 
             return (
               <Card key={emp.email} className="bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-5 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold border border-zinc-700">
-                      {emp.name.charAt(0)}
-                    </div>
-                    <div className="overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold border border-zinc-700 relative overflow-hidden group cursor-pointer"
+                        onClick={() => {
+                          setPhotoUploadTarget(emp.email);
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        {isUploadingPhoto === emp.email ? (
+                           <RefreshCw className="h-4 w-4 animate-spin text-zinc-500" />
+                        ) : emp.profilePhotoUrl ? (
+                          <img src={emp.profilePhotoUrl} alt={emp.name} className="w-full h-full object-cover" />
+                        ) : (
+                          emp.name.charAt(0)
+                        )}
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Edit className="h-4 w-4 text-white" />
+                        </div>
+                      </div>
+                      <div className="overflow-hidden">
                       <h3 className="font-bold text-white truncate text-lg pr-2">{emp.name}</h3>
                       <div className="flex items-center gap-2 text-xs text-zinc-500">
                         {emp.role === 'Admin' ? <Shield className="h-3 w-3 text-amber-500" /> : <User className="h-3 w-3" />}
@@ -584,6 +624,14 @@ const CompanyEmployees = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handlePhotoUpload} 
+        accept="image/*" 
+        className="hidden" 
+      />
 
     </div>
   );

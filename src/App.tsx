@@ -511,6 +511,21 @@ const App = () => {
             console.log("[App] Finalizing Supabase session for:", data.session.user.email);
             await finalizeSupabaseSession(data.session.user);
             setUser(getCurrentUser());
+            
+            // ONE-TIME WIPER SCRIPT FOR MOCK TRANSACTIONS
+            if (!localStorage.getItem('payroll_wiped_v3')) {
+              console.log("[App] Executing one-time mock data wipe...");
+              try {
+                const tables = ['payroll_records', 'tax_expenses', 'manual_income', 'estimates', 'invoices', 'bookings'];
+                for (const t of tables) {
+                   await supabase.from(t).delete().neq('id', '0');
+                }
+                localStorage.setItem('payroll_wiped_v3', 'true');
+                console.log("[App] WIPE SUCCESSFUL");
+              } catch (e) { 
+                console.error("[App] Wipe failed", e); 
+              }
+            }
           }
         }
       } catch (e) {

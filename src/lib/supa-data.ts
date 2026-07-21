@@ -29,6 +29,7 @@ export interface Employee {
     paymentByJob?: boolean;
     jobRates?: Record<string, number>;
     lastPaid?: string;
+    profilePhotoUrl?: string;
 
     // Full Profile Fields (New)
     // Employment Info
@@ -237,6 +238,9 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
                 tier_promotion_history: supaUser.tier_promotion_history || [],
                 internal_notes: supaUser.internal_notes,
                 documents_on_file: supaUser.documents_on_file || [],
+                profilePhotoUrl: Array.isArray(supaUser.documents_on_file) 
+                    ? supaUser.documents_on_file.find((d: any) => d.type === 'profile_photo')?.url 
+                    : undefined,
             });
 
             seenEmails.add(email);
@@ -1155,6 +1159,41 @@ export const deleteSupabaseCustomer = async (id: string) => {
         throw err;
     }
 };
+
+export const uploadEmployeePhoto = async (email: string, file: File): Promise<{ url?: string; error?: string }> => {
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `employee_photos/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('images')
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
+        if (!urlData?.publicUrl) throw new Error("Failed to get public URL");
+
+        // Now update app_users documents_on_file
+        const { data: userData } = await supabase.from('app_users').select('documents_on_file').eq('email', email).maybeSingle();
+        let docs = Array.isArray(userData?.documents_on_file) ? userData.documents_on_file : [];
+        
+        // Remove existing photo if any
+        docs = docs.filter((d: any) => d.type !== 'profile_photo');
+        
+        // Add new photo
+        docs.push({ type: 'profile_photo', url: urlData.publicUrl, name: file.name, uploaded_at: new Date().toISOString() });
+
+        await supabase.from('app_users').update({ documents_on_file: docs }).eq('email', email);
+
+        return { url: urlData.publicUrl };
+    } catch (err: any) {
+        console.error('uploadEmployeePhoto error:', err);
+        return { error: err.message };
+    }
+};
+
 // ------------------------------------------------------------------
 // Team Chat
 // ------------------------------------------------------------------
