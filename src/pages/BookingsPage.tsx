@@ -536,31 +536,55 @@ export default function BookingsPage() {
   };
 
   // Handlers
-  const handleStartJob = () => {
+  const handleStartJob = (bookingArg?: Booking) => {
     const params = new URLSearchParams();
-    if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
-    if (formData.customer) params.set('customerName', formData.customer);
-    if (selectedBooking?.id) params.set('id', selectedBooking.id); // PASS THE BOOKING ID
-    if (formData.assignedEmployee) {
-      params.set('employeeId', formData.assignedEmployee);
-      params.set('employee', getEmployeeName(formData.assignedEmployee));
-    }
+    
+    if (bookingArg) {
+      if (bookingArg.customerId) params.set('customerId', bookingArg.customerId);
+      if (bookingArg.customerName) params.set('customerName', bookingArg.customerName);
+      if (bookingArg.id) params.set('id', bookingArg.id);
+      if (bookingArg.assignedEmployee) {
+        params.set('employeeId', bookingArg.assignedEmployee);
+        params.set('employee', getEmployeeName(bookingArg.assignedEmployee));
+      }
 
-    // Find service ID
-    const svc = allServices.find(s => s.name === formData.service);
-    if (svc) params.set('package', svc.id);
+      const svc = allServices.find(s => s.name === bookingArg.service);
+      if (svc) params.set('package', svc.id);
 
-    const mappedVType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
-    params.set('vehicleType', mappedVType);
-    if (formData.vehicleYear) params.set('vehicleYear', formData.vehicleYear);
-    if (formData.vehicleMake) params.set('vehicleMake', formData.vehicleMake);
-    if (formData.vehicleModel) params.set('vehicleModel', formData.vehicleModel);
-    if (formData.vehicleColor) params.set('vehicleColor', formData.vehicleColor);
+      const mappedVType = mapToServiceVehicleType(bookingArg.vehicleType, bookingArg.vehicleMake, bookingArg.vehicleModel);
+      params.set('vehicleType', mappedVType);
+      if (bookingArg.vehicleYear) params.set('vehicleYear', bookingArg.vehicleYear);
+      if (bookingArg.vehicleMake) params.set('vehicleMake', bookingArg.vehicleMake);
+      if (bookingArg.vehicleModel) params.set('vehicleModel', bookingArg.vehicleModel);
+      if (bookingArg.vehicleColor) params.set('vehicleColor', bookingArg.vehicleColor);
 
-    if (formData.addons.length > 0) {
-      // Map names to IDs
-      const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
-      params.set('addons', aids.join(','));
+      if (bookingArg.addons && bookingArg.addons.length > 0) {
+        const aids = bookingArg.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+        params.set('addons', aids.join(','));
+      }
+    } else {
+      if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
+      if (formData.customer) params.set('customerName', formData.customer);
+      if (selectedBooking?.id) params.set('id', selectedBooking.id);
+      if (formData.assignedEmployee) {
+        params.set('employeeId', formData.assignedEmployee);
+        params.set('employee', getEmployeeName(formData.assignedEmployee));
+      }
+
+      const svc = allServices.find(s => s.name === formData.service);
+      if (svc) params.set('package', svc.id);
+
+      const mappedVType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
+      params.set('vehicleType', mappedVType);
+      if (formData.vehicleYear) params.set('vehicleYear', formData.vehicleYear);
+      if (formData.vehicleMake) params.set('vehicleMake', formData.vehicleMake);
+      if (formData.vehicleModel) params.set('vehicleModel', formData.vehicleModel);
+      if (formData.vehicleColor) params.set('vehicleColor', formData.vehicleColor);
+
+      if (formData.addons.length > 0) {
+        const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
+        params.set('addons', aids.join(','));
+      }
     }
 
     navigate(`/service-checklist?${params.toString()}`);
@@ -2195,7 +2219,7 @@ export default function BookingsPage() {
                           <div className="flex gap-1">
                             {booking.type === 'booking' && (
                               <>
-                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={async (e) => { e.stopPropagation(); handleStartJob(); }}><Wrench className="h-4 w-4" /></Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={async (e) => { e.stopPropagation(); handleStartJob(booking as Booking); }}><Wrench className="h-4 w-4" /></Button>
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={async (e) => { e.stopPropagation(); handleDuplicate(booking as Booking); }}><Copy className="h-4 w-4" /></Button>
                               </>
                             )}
@@ -3266,7 +3290,7 @@ export default function BookingsPage() {
                 <Button 
                   variant="secondary" 
                   size="sm" 
-                  onClick={handleStartJob} 
+                  onClick={() => handleStartJob()} 
                   className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
                 >
                   <Wrench className="mr-1.5 h-4 w-4 text-purple-400" /> Start Job

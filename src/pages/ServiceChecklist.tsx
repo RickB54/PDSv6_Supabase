@@ -843,8 +843,13 @@ const ServiceChecklist = () => {
         e.name.toLowerCase().includes('rberube54')
       ) || currentEmps[0];
 
-      if (defaultEmp && !employeeAssigned) {
-        setEmployeeAssigned(String(defaultEmp.id || defaultEmp.name || ''));
+      if (defaultEmp) {
+        setEmployeeAssigned(prev => {
+          if (prev) return prev;
+          const urlEmpId = params.get('employeeId') || params.get('employee');
+          if (urlEmpId) return urlEmpId;
+          return String(defaultEmp.id || defaultEmp.name || '');
+        });
       }
     })();
   }, [params]);
@@ -1288,13 +1293,19 @@ const ServiceChecklist = () => {
         const state = JSON.parse(saved);
         console.log("Restoring checklist draft:", state);
 
+        // URL Parameters take precedence over draft saved values!
+        const urlPkg = searchParams.get("package");
+        const urlVType = searchParams.get("vehicleType");
+        const urlAddons = searchParams.get("addons");
+        const urlEmp = searchParams.get("employeeId");
+
         if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
-        if (state.selectedPackage) setSelectedPackage(state.selectedPackage);
-        if (state.vehicleType) setVehicleType(state.vehicleType);
-        if (state.selectedAddOns) setSelectedAddOns(state.selectedAddOns);
+        if (state.selectedPackage && !urlPkg) setSelectedPackage(state.selectedPackage);
+        if (state.vehicleType && !urlVType) setVehicleType(state.vehicleType);
+        if (state.selectedAddOns && !urlAddons) setSelectedAddOns(state.selectedAddOns);
         if (state.destinationFee) setDestinationFee(state.destinationFee);
         if (state.notes) setNotes(state.notes);
-        if (state.employeeAssigned) setEmployeeAssigned(state.employeeAssigned);
+        if (state.employeeAssigned && !urlEmp) setEmployeeAssigned(state.employeeAssigned);
         if (state.discountValue) setDiscountValue(state.discountValue);
         if (state.discountType) setDiscountType(state.discountType);
 
@@ -1302,7 +1313,7 @@ const ServiceChecklist = () => {
           setChecklistId(urlId);
           // DYNAMIC LOOKUP FIX: Fetch booking to ensure employee is set correctly
           supabase.from('bookings').select('assigned_employee_id').eq('id', urlId).single().then(({ data, error }) => {
-            if (data?.assigned_employee_id) {
+            if (data?.assigned_employee_id && !searchParams.get("employeeId")) {
               setEmployeeAssigned(data.assigned_employee_id);
             }
           });
