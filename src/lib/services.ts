@@ -100,8 +100,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-essential-exterior',
     name: 'Prime Essential Exterior',
     description: 'A professional exterior cleaning restoration.',
-    basePrice: 90,
-    pricing: { compact: 90, midsize: 110, truck: 120, luxury: 130 },
+    basePrice: 99,
+    pricing: { compact: 99, midsize: 121, truck: 132, luxury: 143 },
     steps: [
       { id: 'ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
       { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
@@ -117,8 +117,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-essential-interior',
     name: 'Prime Essential Interior',
     description: 'Quickly freshen up your car’s interior.',
-    basePrice: 180,
-    pricing: { compact: 180, midsize: 200, truck: 210, luxury: 240 },
+    basePrice: 198,
+    pricing: { compact: 198, midsize: 220, truck: 231, luxury: 264 },
     steps: [
       { id: 'int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
@@ -134,8 +134,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
     description: 'Includes everything in the Essential Interior & Essential Exterior combined.',
-    basePrice: 260,
-    pricing: { compact: 260, midsize: 270, truck: 290, luxury: 320 },
+    basePrice: 286,
+    pricing: { compact: 286, midsize: 327, truck: 351, luxury: 388 },
     steps: [
       { id: 'ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
       { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
@@ -160,8 +160,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-elite-exterior',
     name: 'Prime Elite Exterior',
     description: 'Advanced exterior restoration and protection.',
-    basePrice: 160,
-    pricing: { compact: 160, midsize: 180, truck: 190, luxury: 210 },
+    basePrice: 176,
+    pricing: { compact: 176, midsize: 198, truck: 209, luxury: 231 },
     steps: [
       { id: 'elite-ext-wheels', name: 'Wheels & Tires First', category: 'exterior' },
       { id: 'elite-ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
@@ -183,8 +183,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-elite-interior',
     name: 'Prime Elite Interior',
     description: 'A deep interior cleaning restoration.',
-    basePrice: 390,
-    pricing: { compact: 390, midsize: 475, truck: 495, luxury: 590 },
+    basePrice: 429,
+    pricing: { compact: 429, midsize: 523, truck: 545, luxury: 649 },
     steps: [
       { id: 'elite-int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'elite-int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
@@ -208,8 +208,8 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-elite-full',
     name: 'Prime Elite Full Detail',
     description: 'The ultimate restoration and protection package.',
-    basePrice: 495,
-    pricing: { compact: 495, midsize: 595, truck: 695, luxury: 850 },
+    basePrice: 545,
+    pricing: { compact: 545, midsize: 655, truck: 765, luxury: 935 },
     steps: [
       { id: 'elite-full-wheels', name: 'Wheels & Tires First', category: 'exterior' },
       { id: 'elite-full-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
@@ -254,32 +254,29 @@ export const servicePackages: ServicePackage[] = [
 
 export const addOns: AddOn[] = [
   // --- ACTIVE (shown on customer-facing forms) ---
-  { id: 'wheel-cleaning', name: 'Wheel Cleaning & Tire Detail', category: 'exterior', description: 'A thorough hand cleaning of all four wheels and tires including rim faces, spokes, lug nut areas, and wheel wells. Tires are scrubbed clean of built-up road grime and brake dust, and finished with a professional tire shine dressing for a deep, rich black appearance. This add-on goes well beyond the basic wheel rinse included in a standard exterior wash — it is a dedicated, detail-level treatment that leaves every wheel and tire looking showroom-ready. Ideal for vehicles with heavily soiled wheels, brake dust buildup, or tires that have lost their color and shine.', basePrice: 25, pricing: { compact: 25, midsize: 30, truck: 40, luxury: 50 }, active: true },
+  { id: 'wheel-cleaning', name: 'Wheel Cleaning & Tire Detail', category: 'exterior', description: 'A thorough hand cleaning of all four wheels and tires including rim faces, spokes, lug nut areas, and wheel wells. Tires are scrubbed clean of built-up road grime and brake dust, and finished with a professional tire shine dressing for a deep, rich black appearance. This add-on goes well beyond the basic wheel rinse included in a standard exterior wash — it is a dedicated, detail-level treatment that leaves every wheel and tire looking showroom-ready. Ideal for vehicles with heavily soiled wheels, brake dust buildup, or tires that have lost their color and shine.', basePrice: 25, pricing: { compact: 25, midsize: 30, truck: 40, luxury: 44 }, active: true },
   { id: 'large-wheel-cleaning', name: 'Large Sized Wheel Cleaning', category: 'exterior', description: 'A dedicated premium cleaning service for oversized and large-format wheels found on trucks, large SUVs, and luxury vehicles. Includes deep brake dust extraction, inner barrel decontamination, lug nut cleaning, and wheel well treatment. Priced separately due to the additional time and product required for larger wheel surfaces.', basePrice: 35, pricing: { compact: 0, midsize: 35, truck: 50, luxury: 65 }, applicableVehicleTypes: ['midsize', 'truck', 'luxury'], active: true },
-  { id: 'leather-conditioning', name: 'Leather Conditioning', category: 'interior', description: 'Deep-cleaning and premium nourishing treatment for all leather surfaces. We use pH-balanced cleaners followed by a rich, non-greasy conditioner that restores natural suppleness and protects against future UV fading and cracking.', basePrice: 30, pricing: { compact: 30, midsize: 40, truck: 50, luxury: 60 }, active: true },
-  { id: 'engine-bay', name: 'Engine Bay Cleaning', category: 'exterior', description: 'A meticulous, low-pressure detailing of the engine bay. We safely degrease all surfaces, agitate built-up grime, and apply a specialized high-heat dressing to rubber and plastic components for a clean, factory-fresh appearance.', basePrice: 70, pricing: { compact: 70, midsize: 85, truck: 100, luxury: 120 }, active: true },
-  { id: 'pet-hair', name: 'Pet Hair Removal', category: 'interior', description: 'An intensive interior add-on focused on the specialized removal of stubborn, embedded pet hair from carpets, fabric seats, and hard-to-reach crevices using specialized brushes and high-powered extraction.', basePrice: 75, pricing: { compact: 75, midsize: 85, truck: 95, luxury: 105 }, active: true },
-  { id: 'stain-treatment', name: 'Stain Treatment', category: 'interior', description: 'Professional-grade spot treatment and deep-extraction for stubborn interior stains (coffee, mud, food, etc.). We use specialized enzymes and spotters tailored to the specific type of stain to lift it without damaging the upholstery.', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 110 }, active: true },
-  { id: 'odor-eliminator', name: 'Odor Eliminator', category: 'interior', description: 'Targeted application of professional-grade odor neutralizing agents. We don\'t just mask the smell; we use chemical neutralizers to attack and eliminate the source of minor food, smoke, or pet odors.', basePrice: 15, pricing: { compact: 15, midsize: 20, truck: 25, luxury: 35 }, active: true },
-  { id: 'ceramic-protection-1yr', name: '1-Year Ceramic Protection', category: 'exterior', description: 'Premium Graphene Ceramic Spray Coating applied after a thorough prep wash. It chemically bonds to the paint to deliver up to 1 year of superior high-gloss shine, extreme water beading, and simplified maintenance washes.', basePrice: 79, pricing: { compact: 79, midsize: 109, truck: 129, luxury: 149 }, active: true },
-  { id: '3rd-row-seating', name: '3rd Row Seating', category: 'interior', description: 'An additional interior detail extension required for vehicles equipped with a third row of seating. This covers the extra time and labor needed to thoroughly vacuum, clean, and detail the rear-most passenger area and cargo space.', basePrice: 50, pricing: { compact: 50, midsize: 50, truck: 50, luxury: 50 }, applicableVehicleTypes: ['truck', 'luxury'], active: true },
+  { id: 'leather-conditioning', name: 'Leather Conditioning', category: 'interior', description: 'Deep-cleaning and premium nourishing treatment for all leather surfaces. We use pH-balanced cleaners followed by a rich, non-greasy conditioner that restores natural suppleness and protects against future UV fading and cracking.', basePrice: 28, pricing: { compact: 28, midsize: 33, truck: 39, luxury: 50 }, active: true },
+  { id: 'engine-bay', name: 'Engine Bay Cleaning', category: 'exterior', description: 'A meticulous, low-pressure detailing of the engine bay. We safely degrease all surfaces, agitate built-up grime, and apply a specialized high-heat dressing to rubber and plastic components for a clean, factory-fresh appearance.', basePrice: 77, pricing: { compact: 77, midsize: 94, truck: 110, luxury: 132 }, active: true },
+  { id: 'pet-hair', name: 'Pet Hair Removal', category: 'interior', description: 'An intensive interior add-on focused on the specialized removal of stubborn, embedded pet hair from carpets, fabric seats, and hard-to-reach crevices using specialized brushes and high-powered extraction.', basePrice: 83, pricing: { compact: 83, midsize: 94, truck: 105, luxury: 116 }, active: true },
+  { id: 'stain-treatment', name: 'Stain Treatment', category: 'interior', description: 'Professional-grade spot treatment and deep-extraction for stubborn interior stains (coffee, mud, food, etc.). We use specialized enzymes and spotters tailored to the specific type of stain to lift it without damaging the upholstery.', basePrice: 88, pricing: { compact: 88, midsize: 99, truck: 110, luxury: 121 }, active: true },
+  { id: 'odor-eliminator', name: 'Odor Eliminator', category: 'interior', description: 'Targeted application of professional-grade odor neutralizing agents. We don\'t just mask the smell; we use chemical neutralizers to attack and eliminate the source of minor food, smoke, or pet odors.', basePrice: 17, pricing: { compact: 17, midsize: 22, truck: 28, luxury: 39 }, active: true },
+  { id: 'ceramic-protection-1yr', name: '1-Year Ceramic Protection', category: 'exterior', description: 'Premium Graphene Ceramic Spray Coating applied after a thorough prep wash. It chemically bonds to the paint to deliver up to 1 year of superior high-gloss shine, extreme water beading, and simplified maintenance washes.', basePrice: 87, pricing: { compact: 87, midsize: 120, truck: 142, luxury: 164 }, active: true },
+  { id: '3rd-row-seating', name: '3rd Row Seating', category: 'interior', description: 'An additional interior detail extension required for vehicles equipped with a third row of seating. This covers the extra time and labor needed to thoroughly vacuum, clean, and detail the rear-most passenger area and cargo space.', basePrice: 55, pricing: { compact: 55, midsize: 55, truck: 55, luxury: 55 }, applicableVehicleTypes: ['truck', 'luxury'], active: true },
 
   // --- INACTIVE (set active: false to hide from customer forms; re-enable by setting active: true) ---
   { id: 'clay-bar', name: 'Clay Bar & Iron Decontamination', category: 'exterior', description: 'A professional deep decontamination process using specialized clay to pull embedded contaminants, industrial fallout, and iron particles from the clear coat, leaving the paint as smooth as glass.', basePrice: 80, pricing: { compact: 80, midsize: 90, truck: 100, luxury: 120 }, active: false },
-  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Multi-stage wet sanding, compounding, and polishing process to completely remove heavy oxidation and yellowing from headlight lenses, followed by a UV-protective sealant to restore factory clarity and nighttime visibility.', basePrice: 35, pricing: { compact: 35, midsize: 40, truck: 50, luxury: 65 }, active: false },
-  { id: 'ceramic-trim-coat', name: 'Ceramic Trim Coat Restoration', category: 'exterior', description: 'Advanced restoration and protection for faded exterior plastics. We strip old dressings and apply a true ceramic coating that permanently bonds to the trim, restoring deep, rich color and providing long-lasting UV defense.', basePrice: 60, pricing: { compact: 60, midsize: 75, truck: 95, luxury: 125 }, active: false },
-  { id: 'scratch-repair', name: 'Scratch Repair', category: 'exterior', description: 'Targeted correction for minor clear-coat scratches and scuffs. We use machine polishing and careful touch-up techniques to significantly reduce or eliminate the visibility of surface-level defects.', basePrice: 200, pricing: { compact: 200, midsize: 200, truck: 200, luxury: 200 }, active: false },
-  { id: 'deep-interior', name: 'Deep Interior Detail', category: 'interior', description: 'The ultimate interior reset. Includes intensive steam cleaning, deep shampooing and hot-water extraction of all carpets and fabric seats, and meticulous detailing of every crevice, vent, and compartment.', basePrice: 165, pricing: { compact: 165, midsize: 185, truck: 215, luxury: 250 }, active: false },
-  { id: 'paint-sealant', name: 'Paint Sealant Application', category: 'exterior', description: 'Application of an advanced, durable synthetic polymer sealant. This provides superior gloss enhancement and creates a tough barrier against environmental contaminants, outlasting traditional carnauba waxes.', basePrice: 90, pricing: { compact: 90, midsize: 110, truck: 130, luxury: 160 }, active: false },
-  { id: 'paint-touch-up', name: 'Minor Paint Touch-Up', category: 'exterior', description: 'Precision touch-up application for small rock chips and deep scratches. We clean the defect and carefully fill it with color-matched paint to prevent rust and improve the overall visual appearance of the panel.', basePrice: 75, pricing: { compact: 75, midsize: 90, truck: 110, luxury: 140 }, active: false },
-  { id: 'ceramic-coating', name: 'Ceramic Coating', category: 'exterior', description: 'A true ceramic coating application that bonds at a molecular level with your clear coat. Delivers intense gloss, extreme hydrophobic water-beading, and robust protection against chemical etching and UV rays.', basePrice: 500, pricing: { compact: 500, midsize: 500, truck: 550, luxury: 600 }, active: false },
-  { id: 'paint-correction', name: 'Paint Correction', category: 'exterior', description: 'A highly skilled, multi-stage machine compounding and polishing process designed to level the clear coat, permanently removing swirl marks, holograms, and moderate scratches to restore a flawless, mirror-like finish.', basePrice: 300, pricing: { compact: 300, midsize: 350, truck: 400, luxury: 450 }, active: false },
-  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'An intensive, commercial-grade ozone shock treatment designed to completely eradicate severe, persistent odors (like heavy tobacco smoke or mildew) by destroying odor-causing molecules throughout the entire cabin and HVAC system.', basePrice: 100, pricing: { compact: 100, midsize: 100, truck: 100, luxury: 100 }, active: false },
-  { id: 'ceramic-coating-2yr', name: '2-Year Professional Ceramic Coating', category: 'exterior', description: 'Our flagship Professional Nano Ceramic Coating. Following extensive paint prep, this hard-curing quartz coating is applied to deliver 2+ years of maximum gloss, intense hydrophobic protection, and unmatched resistance to environmental damage.', basePrice: 299, pricing: { compact: 299, midsize: 349, truck: 399, luxury: 499 }, active: false },
+  { id: 'headlight-restoration', name: 'Headlight Restoration', category: 'exterior', description: 'Multi-stage wet sanding, compounding, and polishing process to completely remove heavy oxidation and yellowing from headlight lenses, followed by a UV-protective sealant to restore factory clarity and nighttime visibility.', basePrice: 39, pricing: { compact: 39, midsize: 44, truck: 55, luxury: 72 }, active: false },
+  { id: 'ceramic-trim-coat', name: 'Ceramic Trim Coat Restoration', category: 'exterior', description: 'Advanced restoration and protection for faded exterior plastics. We strip old dressings and apply a true ceramic coating that permanently bonds to the trim, restoring deep, rich color and providing long-lasting UV defense.', basePrice: 66, pricing: { compact: 66, midsize: 83, truck: 105, luxury: 138 }, active: false },
+  { id: 'scratch-repair', name: 'Scratch Repair', category: 'exterior', description: 'Targeted correction for minor clear-coat scratches and scuffs. We use machine polishing and careful touch-up techniques to significantly reduce or eliminate the visibility of surface-level defects.', basePrice: 220, pricing: { compact: 220, midsize: 220, truck: 220, luxury: 220 }, active: false },
+  { id: 'deep-interior', name: 'Deep Interior Detail', category: 'interior', description: 'The ultimate interior reset. Includes intensive steam cleaning, deep shampooing and hot-water extraction of all carpets and fabric seats, and meticulous detailing of every crevice, vent, and compartment.', basePrice: 165, pricing: { compact: 165, midsize: 193, truck: 220, luxury: 248 }, active: false },
+  { id: 'paint-sealant', name: 'Paint Sealant Application', category: 'exterior', description: 'Application of an advanced, durable synthetic polymer sealant. This provides superior gloss enhancement and creates a tough barrier against environmental contaminants, outlasting traditional carnauba waxes.', basePrice: 99, pricing: { compact: 99, midsize: 121, truck: 143, luxury: 176 }, active: false },
+  { id: 'paint-touch-up', name: 'Minor Paint Touch-Up', category: 'exterior', description: 'Precision touch-up application for small rock chips and deep scratches. We clean the defect and carefully fill it with color-matched paint to prevent rust and improve the overall visual appearance of the panel.', basePrice: 83, pricing: { compact: 83, midsize: 99, truck: 121, luxury: 154 }, active: false },
+  { id: 'ceramic-coating', name: 'Ceramic Coating', category: 'exterior', description: 'A true ceramic coating application that bonds at a molecular level with your clear coat. Delivers intense gloss, extreme hydrophobic water-beading, and robust protection against chemical etching and UV rays.', basePrice: 550, pricing: { compact: 550, midsize: 550, truck: 605, luxury: 660 }, active: false },
+  { id: 'paint-correction', name: 'Paint Correction', category: 'exterior', description: 'A highly skilled, multi-stage machine compounding and polishing process designed to level the clear coat, permanently removing swirl marks, holograms, and moderate scratches to restore a flawless, mirror-like finish.', basePrice: 330, pricing: { compact: 330, midsize: 385, truck: 440, luxury: 495 }, active: false },
+  { id: 'odor-treatment', name: 'Odor Elimination Treatment', category: 'interior', description: 'An intensive, commercial-grade ozone shock treatment designed to completely eradicate severe, persistent odors (like heavy tobacco smoke or mildew) by destroying odor-causing molecules throughout the entire cabin and HVAC system.', basePrice: 110, pricing: { compact: 110, midsize: 110, truck: 110, luxury: 110 }, active: false },
+  { id: 'ceramic-coating-2yr', name: '2-Year Professional Ceramic Coating', category: 'exterior', description: 'Our flagship Professional Nano Ceramic Coating. Following extensive paint prep, this hard-curing quartz coating is applied to deliver 2+ years of maximum gloss, intense hydrophobic protection, and unmatched resistance to environmental damage.', basePrice: 296, pricing: { compact: 296, midsize: 329, truck: 384, luxury: 494 }, active: false },
 ];
-
-
-
 
 // Read latest overrides on each getter to ensure immediate reflection without reload
 export function getServicePrice(serviceId: string, vehicleType: VehicleType): number {
