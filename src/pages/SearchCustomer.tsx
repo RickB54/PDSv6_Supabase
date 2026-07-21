@@ -205,6 +205,7 @@ const SearchCustomer = () => {
           make: "Ford",
           model: "F-150",
           color: "Black",
+          type: "Truck/Van/Large SUV",
           condition: "Excellent"
         }]
       };

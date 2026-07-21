@@ -2941,13 +2941,20 @@ export default function BookingsPage() {
                   <div className="col-span-3 space-y-2">
                     <div className="flex gap-2">
                       <div className="flex-1 relative">
-                        <Car className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                        <Input
-                          placeholder="e.g. SUV, Sedan, Truck"
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                          value={formData.vehicle}
-                          onChange={(e) => setFormData({ ...formData, vehicle: e.target.value })}
-                        />
+                        <Select 
+                          value={formData.vehicle || ""}
+                          onValueChange={(val) => setFormData({ ...formData, vehicle: val })}
+                        >
+                          <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white">
+                            <SelectValue placeholder="Select Vehicle Class" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
+                            <SelectItem value="Sedan">Sedan</SelectItem>
+                            <SelectItem value="SUV">SUV</SelectItem>
+                            <SelectItem value="Truck/Van">Truck/Van</SelectItem>
+                            <SelectItem value="Luxury">Luxury</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button
                         type="button"
