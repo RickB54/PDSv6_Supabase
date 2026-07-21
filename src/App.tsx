@@ -513,14 +513,15 @@ const App = () => {
             setUser(getCurrentUser());
             
             // ONE-TIME WIPER SCRIPT FOR MOCK TRANSACTIONS
-            if (!localStorage.getItem('payroll_wiped_v3')) {
-              console.log("[App] Executing one-time mock data wipe...");
+            if (!localStorage.getItem('payroll_wiped_v7')) {
+              console.log("[App] Executing one-time mock data wipe v7...");
               try {
-                const tables = ['payroll_records', 'tax_expenses', 'manual_income', 'estimates', 'invoices', 'bookings'];
-                for (const t of tables) {
-                   await supabase.from(t).delete().neq('id', '0');
-                }
-                localStorage.setItem('payroll_wiped_v3', 'true');
+                // Wipe all payroll records completely
+                await supabase.from('payroll_records').delete().neq('id', '0');
+                // Wipe all payroll-related expenses
+                await supabase.from('tax_expenses').delete().eq('category', 'Payroll');
+                
+                localStorage.setItem('payroll_wiped_v7', 'true');
                 console.log("[App] WIPE SUCCESSFUL");
               } catch (e) { 
                 console.error("[App] Wipe failed", e); 

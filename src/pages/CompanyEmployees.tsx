@@ -117,11 +117,23 @@ const CompanyEmployees = () => {
     setPendingPayroll(pending);
     
     // ONE-TIME WIPE FOR PAYROLL RECORDS
-    if (!localStorage.getItem('payroll_wiped_v6')) {
+    if (!localStorage.getItem('payroll_wiped_v7')) {
       console.log("Wiping test payroll data...");
-      await supabase.from('payroll_records').delete().neq('id', '0');
-      localStorage.setItem('payroll_wiped_v6', 'true');
-      setPendingPayroll([]);
+      try {
+        const { error: err1 } = await supabase.from('payroll_records').delete().neq('id', '0');
+        if (err1) throw err1;
+        
+        // Also delete associated payroll expenses
+        const { error: err2 } = await supabase.from('tax_expenses').delete().eq('category', 'Payroll');
+        if (err2) throw err2;
+
+        localStorage.setItem('payroll_wiped_v7', 'true');
+        setPendingPayroll([]);
+        toast({ title: "Wipe Successful", description: "All test payroll records deleted." });
+      } catch (err: any) {
+        console.error("Wipe failed", err);
+        toast({ title: "Wipe Failed", description: err.message || "Failed to wipe data due to permissions", variant: "destructive" });
+      }
     }
     const history = (await localforage.getItem<any[]>('payroll-history')) || [];
     setPayrollHistory(history);
