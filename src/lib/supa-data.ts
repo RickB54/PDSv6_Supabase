@@ -1046,7 +1046,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
         let pCount = 0;
         let prCount = 0;
         let prExpenseCount = 0;
-        const { data: bDataForCount } = await supabase.from('bookings').select('id').eq('customer_id', id);
+        const { data: bDataForCount } = await supabase.from('bookings').select('id').or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
         if (bDataForCount && bDataForCount.length > 0) {
             const bIds = bDataForCount.map(b => b.id);
             const { count: pC } = await supabase.from('payments').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
@@ -1090,7 +1090,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
             await supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             
             // Get booking IDs to delete payments and payroll
-            const { data: bData } = await supabase.from('bookings').select('id').eq('customer_id', id);
+            const { data: bData } = await supabase.from('bookings').select('id').or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             if (bData && bData.length > 0) {
                 const bIds = bData.map(b => b.id);
                 

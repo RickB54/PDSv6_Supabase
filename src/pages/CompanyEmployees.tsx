@@ -116,10 +116,6 @@ const CompanyEmployees = () => {
     const pending = await getSupabasePayrollRecords('pending');
     setPendingPayroll(pending);
     
-    // ONE-TIME WIPE FOR PAYROLL RECORDS
-    if (!localStorage.getItem('payroll_wiped_v7')) {
-      handleManualWipe(true);
-    }
     const history = (await localforage.getItem<any[]>('payroll-history')) || [];
     setPayrollHistory(history);
 
@@ -262,24 +258,6 @@ const CompanyEmployees = () => {
     toast({ title: "Deleted", description: `${empToDelete.name} has been removed.` });
     setDeleteConfirmOpen(false);
     setEmployeeToDelete(null);
-  };
-
-  const handleManualWipe = async (isAuto = false) => {
-    console.log("Wiping test payroll data...");
-    try {
-      const { error: err1 } = await supabase.from('payroll_records').delete().not('id', 'is', null);
-      if (err1) throw err1;
-      
-      const { error: err2 } = await supabase.from('tax_expenses').delete().eq('category', 'Payroll');
-      if (err2) throw err2;
-
-      localStorage.setItem('payroll_wiped_v7', 'true');
-      setPendingPayroll([]);
-      toast({ title: "Wipe Successful", description: "All test payroll records deleted." });
-    } catch (err: any) {
-      console.error("Wipe failed", err);
-      toast({ title: "Wipe Failed", description: err.message || "Failed to wipe data due to permissions", variant: "destructive" });
-    }
   };
 
   const handlePay = async () => {
@@ -440,9 +418,6 @@ const CompanyEmployees = () => {
           </div>
           <div className="flex gap-2 w-full md:w-auto justify-end items-center flex-wrap">
             <DateRangeFilter value={workHistoryDateRange} onChange={setWorkHistoryDateRange} />
-            <Button onClick={() => handleManualWipe(false)} variant="destructive" size="sm" className="bg-red-950 text-red-400 border border-red-900 hover:bg-red-900">
-               Wipe Test Payroll
-            </Button>
             <div className="relative group">
               <Button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="h-4 w-4 mr-2" /> Add Employee</Button>
               <div className="absolute top-full right-0 mt-2 w-64 bg-zinc-800 text-xs text-zinc-300 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
