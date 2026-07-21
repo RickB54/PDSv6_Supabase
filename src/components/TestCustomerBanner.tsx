@@ -94,7 +94,7 @@ export const TestCustomerBanner = () => {
       let msg = "All test data successfully wiped. Analytics restored.";
       let details = null;
       if (res?.affectedData) {
-        const { bookings, estimates, invoices, vehicles, engagements, manual_income, expenses, payments, type } = res.affectedData;
+        const { bookings, estimates, invoices, vehicles, engagements, manual_income, expenses, payments, payroll, type } = res.affectedData;
         const parts = [];
         if (bookings > 0) parts.push(`${bookings} bookings`);
         if (estimates > 0) parts.push(`${estimates} estimates`);
@@ -104,6 +104,7 @@ export const TestCustomerBanner = () => {
         if (manual_income > 0) parts.push(`${manual_income} manual income entries`);
         if (expenses > 0) parts.push(`${expenses} expenses`);
         if (payments > 0) parts.push(`${payments} payments`);
+        if (payroll > 0) parts.push(`${payroll} payroll records`);
         if (parts.length > 0) {
             details = `The following test data were ${type}: ${parts.join(', ')}.`;
         }

@@ -1040,11 +1040,22 @@ export const deleteSupabaseCustomer = async (id: string) => {
         }
 
         let pCount = 0;
+        let prCount = 0;
+        let prExpenseCount = 0;
         const { data: bDataForCount } = await supabase.from('bookings').select('id').eq('customer_id', id);
         if (bDataForCount && bDataForCount.length > 0) {
             const bIds = bDataForCount.map(b => b.id);
-            const { count } = await supabase.from('payments').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
-            pCount = count || 0;
+            const { count: pC } = await supabase.from('payments').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
+            pCount = pC || 0;
+
+            const { count: prC } = await supabase.from('payroll_records').select('*', { count: 'exact', head: true }).in('booking_id', bIds);
+            prCount = prC || 0;
+
+            const { data: pData } = await supabase.from('payroll_records').select('expense_id').in('booking_id', bIds);
+            if (pData && pData.length > 0) {
+                const eIds = pData.map(p => p.expense_id).filter(Boolean);
+                prExpenseCount = eIds.length;
+            }
         }
 
         const affectedData = {
@@ -1054,8 +1065,9 @@ export const deleteSupabaseCustomer = async (id: string) => {
             vehicles: vCount || 0,
             engagements: engCount || 0,
             manual_income: miCount || 0,
-            expenses: teCount || 0,
+            expenses: (teCount || 0) + prExpenseCount,
             payments: pCount || 0,
+            payroll: prCount || 0,
             type: isRickBerube ? 'deleted automatically' : 'detached (requires manual deletion)'
         };
 
@@ -1073,11 +1085,21 @@ export const deleteSupabaseCustomer = async (id: string) => {
             await supabase.from('invoices').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             await supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             
-            // Get booking IDs to delete payments
+            // Get booking IDs to delete payments and payroll
             const { data: bData } = await supabase.from('bookings').select('id').eq('customer_id', id);
             if (bData && bData.length > 0) {
                 const bIds = bData.map(b => b.id);
+                
                 await supabase.from('payments').delete().in('booking_id', bIds);
+                
+                const { data: pData } = await supabase.from('payroll_records').select('expense_id').in('booking_id', bIds);
+                if (pData && pData.length > 0) {
+                    const eIds = pData.map(p => p.expense_id).filter(Boolean);
+                    if (eIds.length > 0) {
+                        await supabase.from('tax_expenses').delete().in('id', eIds);
+                    }
+                }
+                await supabase.from('payroll_records').delete().in('booking_id', bIds);
             }
             
             await supabase.from('bookings').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);

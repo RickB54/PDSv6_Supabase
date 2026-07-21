@@ -2974,13 +2974,23 @@ export default function BookingsPage() {
                       placeholder="Make"
                       className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                       value={formData.vehicleMake}
-                      onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
+                      onChange={(e) => {
+                        const make = e.target.value;
+                        const t = mapToServiceVehicleType("", make, formData.vehicleModel || "");
+                        const displayType = t === 'truck' ? 'Truck/Van' : t === 'midsize' ? 'SUV' : t === 'luxury' ? 'Luxury' : 'Sedan';
+                        setFormData({ ...formData, vehicleMake: make, vehicle: displayType });
+                      }}
                     />
                     <Input
                       placeholder="Model"
                       className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
                       value={formData.vehicleModel}
-                      onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
+                      onChange={(e) => {
+                        const model = e.target.value;
+                        const t = mapToServiceVehicleType("", formData.vehicleMake || "", model);
+                        const displayType = t === 'truck' ? 'Truck/Van' : t === 'midsize' ? 'SUV' : t === 'luxury' ? 'Luxury' : 'Sedan';
+                        setFormData({ ...formData, vehicleModel: model, vehicle: displayType });
+                      }}
                     />
                     <Input
                       placeholder="Color"
