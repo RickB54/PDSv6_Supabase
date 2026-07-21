@@ -2450,11 +2450,10 @@ export default function BookingsPage() {
               </div>
             </DialogHeader>
 
-            <div className="overflow-y-auto flex-1 px-4 sm:px-6">
-              <div className="grid gap-4 py-4">
-                {/* SUMMARY HEADER (READ ONLY) */}
-                <div className="p-3 bg-zinc-950/50 rounded-lg border border-purple-500/20 mb-2">
-                  <div className="flex justify-between items-start">
+            <div className="overflow-y-auto flex-1 px-4 sm:px-6 relative pt-4">
+              {/* SUMMARY HEADER (READ ONLY) */}
+              <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-2 shadow-2xl">
+                <div className="flex justify-between items-start">
                     <div>
                       <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Service Summary</div>
                       <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
@@ -2497,6 +2496,7 @@ export default function BookingsPage() {
                   </div>
                 </div>
 
+              <div className="grid gap-4 pb-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium text-gray-400">Time</label>
                   <div className="col-span-3 grid grid-cols-2 gap-2">
