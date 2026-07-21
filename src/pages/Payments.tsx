@@ -88,6 +88,9 @@ const Payments = () => {
 
         // 3. Online/Stripe Payments (if any)
         onlinePayments.forEach((op: any) => {
+          // Skip if this payment is already represented by an invoice to prevent double-counting
+          if (op.invoice_id && invoices.some(inv => inv.id === op.invoice_id)) return;
+          
           unified.push({
             id: op.id,
             source: 'Online/Stripe',

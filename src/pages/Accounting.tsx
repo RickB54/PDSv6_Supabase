@@ -208,7 +208,12 @@ const Accounting = () => {
 
       let daily = 0, weekly = 0, monthly = 0, yearly = 0, allTimeRev = 0;
 
+      const uniqueInvoiceIds = new Set<string>();
       const paidInvoices = invoices.filter(inv => {
+        if (inv.id) {
+          if (uniqueInvoiceIds.has(inv.id)) return false;
+          uniqueInvoiceIds.add(inv.id);
+        }
         const isPaid = inv.paymentStatus === 'paid' || (inv.paidAmount || 0) > 0;
         if (!isPaid) return false;
         // Exclude Test Data

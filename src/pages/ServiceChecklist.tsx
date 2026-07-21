@@ -1298,7 +1298,15 @@ const ServiceChecklist = () => {
         if (state.discountValue) setDiscountValue(state.discountValue);
         if (state.discountType) setDiscountType(state.discountType);
 
-        if (urlId) setChecklistId(urlId);
+        if (urlId) {
+          setChecklistId(urlId);
+          // DYNAMIC LOOKUP FIX: Fetch booking to ensure employee is set correctly
+          supabase.from('bookings').select('assigned_employee_id').eq('id', urlId).single().then(({ data, error }) => {
+            if (data?.assigned_employee_id) {
+              setEmployeeAssigned(data.assigned_employee_id);
+            }
+          });
+        }
         else if (state.checklistId) setChecklistId(state.checklistId);
 
         if (state.jobStartTime) setJobStartTime(state.jobStartTime);

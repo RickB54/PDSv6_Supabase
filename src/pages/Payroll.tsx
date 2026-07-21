@@ -18,7 +18,7 @@ export default function Payroll() {
   const { toast } = useToast();
   const { isDemoMode } = useDemoMode();
 
-  const [tab, setTab] = useState<'pending' | 'history'>('pending');
+  const [tab, setTab] = useState<'pending' | 'history' | 'dashboard'>('pending');
   const [pendingRecords, setPendingRecords] = useState<any[]>([]);
   const [historyRecords, setHistoryRecords] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -31,14 +31,12 @@ export default function Payroll() {
   const load = async () => {
     setIsLoading(true);
     try {
-      if (tab === 'pending') {
-        const records = await getSupabasePayrollRecords('pending');
-        setPendingRecords(records);
-        setSelectedIds(records.map(r => r.id));
-      } else {
-        const records = await getSupabasePayrollRecords('paid');
-        setHistoryRecords(records);
-      }
+      const pending = await getSupabasePayrollRecords('pending');
+      setPendingRecords(pending);
+      setSelectedIds(pending.map(r => r.id));
+      
+      const history = await getSupabasePayrollRecords('paid');
+      setHistoryRecords(history);
     } catch (err) {
       console.error(err);
     } finally {
@@ -164,6 +162,13 @@ export default function Payroll() {
           >
             <Clock className="h-4 w-4 mr-2" /> Payout History
           </Button>
+          <Button
+            variant={tab === 'dashboard' ? "default" : "ghost"}
+            className={`rounded-full px-6 ${tab === 'dashboard' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+            onClick={() => setTab('dashboard')}
+          >
+            <User className="h-4 w-4 mr-2" /> Performance Dashboard
+          </Button>
         </div>
 
         {tab === 'pending' && (
@@ -278,6 +283,51 @@ export default function Payroll() {
                </table>
              </div>
           </Card>
+        )}
+
+        {tab === 'dashboard' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {Object.entries(
+                historyRecords.reduce((acc, curr) => {
+                  if (!acc[curr.employee_name]) acc[curr.employee_name] = { totalPaid: 0, jobsCompleted: 0 };
+                  acc[curr.employee_name].totalPaid += Number(curr.earned_amount || 0);
+                  acc[curr.employee_name].jobsCompleted += 1;
+                  return acc;
+                }, {} as Record<string, { totalPaid: number, jobsCompleted: number }>)
+              ).map(([empName, stats]) => (
+                <Card key={empName} className="bg-zinc-900 border-zinc-800">
+                  <CardHeader className="pb-2 border-b border-zinc-800/50">
+                    <CardTitle className="text-lg text-white flex items-center gap-2">
+                      <div className="p-2 bg-indigo-500/20 rounded-full text-indigo-400">
+                        <User className="h-4 w-4" />
+                      </div>
+                      {empName}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-4">
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Total Earnings</p>
+                      <p className="text-2xl font-black text-emerald-400">${stats.totalPaid.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Jobs Completed</p>
+                      <p className="text-xl font-bold text-white">{stats.jobsCompleted}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {historyRecords.length === 0 && (
+                <div className="col-span-full">
+                  <Card className="p-12 text-center bg-zinc-900 border-zinc-800">
+                    <User className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-white">No Performance Data</h3>
+                    <p className="text-zinc-400 mt-2">Process pay runs to start generating employee performance metrics.</p>
+                  </Card>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
       </main>

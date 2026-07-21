@@ -4068,6 +4068,9 @@ export default function BookingsPage() {
                                                     const aids = addons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
                                                     if (aids.length) params.set('addons', aids.join(','));
                                                   }
+                                                  if (booking.id) params.set('id', booking.id);
+                                                  const emp = booking.assignedEmployee || booking.assigned_employee_id;
+                                                  if (emp) params.set('employeeId', emp);
                                                   navigate(`/service-checklist?${params.toString()}`);
                                                 }}
                                               >
