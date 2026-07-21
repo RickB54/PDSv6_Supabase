@@ -11,6 +11,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 const CompensationPayroll = () => {
   const [activeTab, setActiveTab] = useState("calculator");
+  const navigate = useNavigate();
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -39,7 +41,11 @@ const CompensationPayroll = () => {
             Intelligent compensation management based on Labor Revenue.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <Button variant="outline" className="border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={() => navigate('/company-employees')}>
+            <Users className="w-4 h-4 mr-2" />
+            Employees
+          </Button>
           <Button variant="outline" className="border-purple-500/20 hover:bg-purple-500/10 text-purple-400" onClick={() => setActiveTab("settings")}>
             <Settings className="w-4 h-4 mr-2" />
             Company Settings

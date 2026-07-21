@@ -395,21 +395,24 @@ const CompanyEmployees = () => {
 
         {/* Filters & Actions */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-          <div className="flex gap-2 w-full md:w-auto items-center">
+          <div className="flex gap-2 w-full md:w-auto items-center flex-wrap">
             <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-md">
               <Users className="h-4 w-4 text-zinc-500" />
               <span className="text-sm font-medium text-zinc-400">Employees:</span>
               <span className="text-white font-bold">{employees.length}</span>
             </div>
             <Select value={selectedEmployee || "all"} onValueChange={(val) => setSelectedEmployee(val === "all" ? "" : val)}>
-              <SelectTrigger className="w-[200px] bg-zinc-950 border-zinc-800"><SelectValue placeholder="All Staff" /></SelectTrigger>
+              <SelectTrigger className="w-[180px] bg-zinc-950 border-zinc-800"><SelectValue placeholder="All Staff" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Staff</SelectItem>
                 {employees.map(e => <SelectItem key={e.email || `no-email-${e.name}`} value={e.email || `no-email-${e.name}`}>{e.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button variant="outline" className="border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={() => navigate('/payroll')}>
+              <DollarSign className="w-4 h-4 mr-2" /> Payroll
+            </Button>
           </div>
-          <div className="flex gap-2 w-full md:w-auto justify-end items-center">
+          <div className="flex gap-2 w-full md:w-auto justify-end items-center flex-wrap">
             <DateRangeFilter value={workHistoryDateRange} onChange={setWorkHistoryDateRange} />
             <div className="relative group">
               <Button onClick={openAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="h-4 w-4 mr-2" /> Add Employee</Button>
@@ -422,34 +425,34 @@ const CompanyEmployees = () => {
         </div>
 
         {/* Employee Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {employees.map(emp => {
             const owed = owedMap[emp.email] || 0;
             const myBadges = employeeBadges[emp.email] || [];
 
             return (
-              <Card key={emp.email} className="bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-5 flex flex-col gap-4">
+              <Card key={emp.email} className="bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-6 flex flex-col gap-5 min-h-[280px]">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       <div 
-                        className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold border border-zinc-700 relative overflow-hidden group cursor-pointer"
+                        className="h-14 w-14 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-bold border border-zinc-700 relative overflow-hidden group cursor-pointer flex-shrink-0"
                         onClick={() => {
                           setPhotoUploadTarget(emp.email);
                           fileInputRef.current?.click();
                         }}
                       >
                         {isUploadingPhoto === emp.email ? (
-                           <RefreshCw className="h-4 w-4 animate-spin text-zinc-500" />
+                           <RefreshCw className="h-5 w-5 animate-spin text-zinc-500" />
                         ) : emp.profilePhotoUrl ? (
                           <img src={emp.profilePhotoUrl} alt={emp.name} className="w-full h-full object-cover" />
                         ) : (
-                          emp.name.charAt(0)
+                          <span className="text-xl">{emp.name.charAt(0)}</span>
                         )}
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <Edit className="h-4 w-4 text-white" />
                         </div>
                       </div>
-                      <div className="overflow-hidden">
+                      <div className="overflow-hidden min-w-0">
                       <h3 className="font-bold text-white truncate text-lg pr-2">{emp.name}</h3>
                       <div className="flex items-center gap-2 text-xs text-zinc-500">
                         {emp.role === 'Admin' ? <Shield className="h-3 w-3 text-amber-500" /> : <User className="h-3 w-3" />}
@@ -499,11 +502,11 @@ const CompanyEmployees = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-4 gap-2 mt-auto pt-2 border-t border-zinc-800">
-                  <Button variant="ghost" size="sm" className="h-8 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => openEdit(emp)}><Edit className="h-3 w-3 mr-1" /> Edit</Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-blue-400 hover:text-blue-300 hover:bg-blue-950/20" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-3 w-3 mr-1" /> Profile</Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/20" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-3 w-3 mr-1" /> Pay</Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-zinc-500 hover:text-red-400 hover:bg-red-950/20" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-3 w-3 mr-1" /> Del</Button>
+                <div className="grid grid-cols-2 gap-2 mt-auto pt-4 border-t border-zinc-800">
+                  <Button variant="ghost" size="sm" className="h-9 text-zinc-400 hover:text-white hover:bg-zinc-800 flex justify-center" onClick={() => openEdit(emp)}><Edit className="h-4 w-4 mr-1.5" /> Edit</Button>
+                  <Button variant="ghost" size="sm" className="h-9 text-blue-400 hover:text-blue-300 hover:bg-blue-950/20 flex justify-center" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-4 w-4 mr-1.5" /> Profile</Button>
+                  <Button variant="ghost" size="sm" className="h-9 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/20 flex justify-center" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-4 w-4 mr-1.5" /> Pay</Button>
+                  <Button variant="ghost" size="sm" className="h-9 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 flex justify-center" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-4 w-4 mr-1.5" /> Del</Button>
                 </div>
               </Card>
             );

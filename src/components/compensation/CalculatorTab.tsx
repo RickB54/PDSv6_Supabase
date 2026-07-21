@@ -8,12 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, Info } from "lucide-react";
 
 export const CalculatorTab = () => {
-  const [jobPrice, setJobPrice] = useState(350);
-  const [materials, setMaterials] = useState(35);
-  const [consumables, setConsumables] = useState(10);
-  const [stripeFee, setStripeFee] = useState(11.35); // Approx 2.9% + 30c
+  const [jobPrice, setJobPrice] = useState(0);
+  const [materials, setMaterials] = useState(0);
+  const [consumables, setConsumables] = useState(0);
+  const [stripeFee, setStripeFee] = useState(0);
   const [employeeStripeShare, setEmployeeStripeShare] = useState(50); // percentage
-  const [otherCosts, setOtherCosts] = useState(15);
+  const [otherCosts, setOtherCosts] = useState(0);
   
   const [employeeType, setEmployeeType] = useState("lead");
   const [commissionPercent, setCommissionPercent] = useState(40);

@@ -1162,32 +1162,56 @@ export const deleteSupabaseCustomer = async (id: string) => {
 
 export const uploadEmployeePhoto = async (email: string, file: File): Promise<{ url?: string; error?: string }> => {
     try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `employee_photos/${fileName}`;
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const img = new Image();
+                    img.onload = async () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 250;
+                        let width = img.width;
+                        let height = img.height;
 
-        const { error: uploadError } = await supabase.storage
-            .from('images')
-            .upload(filePath, file);
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
 
-        if (uploadError) throw uploadError;
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx?.drawImage(img, 0, 0, width, height);
+                        const base64Url = canvas.toDataURL('image/jpeg', 0.8);
 
-        const { data: urlData } = supabase.storage.from('images').getPublicUrl(filePath);
-        if (!urlData?.publicUrl) throw new Error("Failed to get public URL");
+                        // Now update app_users documents_on_file
+                        const { data: userData } = await supabase.from('app_users').select('documents_on_file').eq('email', email).maybeSingle();
+                        let docs = Array.isArray(userData?.documents_on_file) ? userData.documents_on_file : [];
+                        
+                        // Remove existing photo if any
+                        docs = docs.filter((d: any) => d.type !== 'profile_photo');
+                        
+                        // Add new photo
+                        docs.push({ type: 'profile_photo', url: base64Url, name: file.name, uploaded_at: new Date().toISOString() });
 
-        // Now update app_users documents_on_file
-        const { data: userData } = await supabase.from('app_users').select('documents_on_file').eq('email', email).maybeSingle();
-        let docs = Array.isArray(userData?.documents_on_file) ? userData.documents_on_file : [];
-        
-        // Remove existing photo if any
-        docs = docs.filter((d: any) => d.type !== 'profile_photo');
-        
-        // Add new photo
-        docs.push({ type: 'profile_photo', url: urlData.publicUrl, name: file.name, uploaded_at: new Date().toISOString() });
-
-        await supabase.from('app_users').update({ documents_on_file: docs }).eq('email', email);
-
-        return { url: urlData.publicUrl };
+                        await supabase.from('app_users').update({ documents_on_file: docs }).eq('email', email);
+                        resolve({ url: base64Url });
+                    };
+                    img.src = e.target?.result as string;
+                } catch (err: any) {
+                    console.error('uploadEmployeePhoto error:', err);
+                    resolve({ error: err.message });
+                }
+            };
+            reader.readAsDataURL(file);
+        });
     } catch (err: any) {
         console.error('uploadEmployeePhoto error:', err);
         return { error: err.message };
