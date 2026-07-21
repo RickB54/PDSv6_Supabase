@@ -23,13 +23,16 @@ import { TemplatesTab } from "@/components/compensation/TemplatesTab";
 import { SettingsTab } from "@/components/compensation/SettingsTab";
 
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { PageHeader } from "@/components/PageHeader";
 
 const CompensationPayroll = () => {
   const [activeTab, setActiveTab] = useState("calculator");
   const navigate = useNavigate();
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-background pb-20">
+      <PageHeader title="Compensation & Payroll" />
+      <main className="container mx-auto px-4 py-6 max-w-7xl space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -123,6 +126,7 @@ const CompensationPayroll = () => {
         </TabsContent>
 
       </Tabs>
+      </main>
     </div>
   );
 };
