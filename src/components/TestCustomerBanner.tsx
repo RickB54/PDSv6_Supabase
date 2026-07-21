@@ -6,7 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { deleteSupabaseCustomer, auditTestCustomer } from '@/lib/supa-data';
 import { savePDFToArchive } from '@/lib/pdfArchive';
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -138,7 +138,7 @@ export const TestCustomerBanner = () => {
       doc.text(`Generated: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
       doc.text(`Customer Name: ${data.customerName}`, 105, 34, { align: "center" });
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 45,
         head: [['Data Type', 'Records Created']],
         body: [
@@ -208,8 +208,8 @@ export const TestCustomerBanner = () => {
           <div className="p-1.5 bg-red-900/50 rounded-full shrink-0">
             <AlertTriangle className="h-4 w-4 text-white" />
           </div>
-          <div className="flex-1 pr-1">
-            <h3 className="font-black text-xs uppercase tracking-wider text-white mb-0.5">🧪 Test Data Active</h3>
+          <div className="pr-1 flex-1">
+            <h3 className="font-black text-xs uppercase tracking-wider text-white mb-0.5 whitespace-nowrap">🧪 Test Data Active</h3>
             <p className="text-[10px] text-red-100 font-medium leading-tight">
               Test account is altering analytics.
             </p>
@@ -219,9 +219,9 @@ export const TestCustomerBanner = () => {
             size="sm"
             disabled={isAuditing}
             onClick={(e) => { e.stopPropagation(); handleAudit(); }}
-            className="h-7 px-2 bg-black/20 hover:bg-black/40 text-[10px] font-bold text-white border border-white/20 ml-auto transition-colors"
+            className="h-6 px-2 bg-black/20 hover:bg-black/40 text-[9px] font-bold text-white border border-white/20 shrink-0 transition-colors"
           >
-            {isAuditing ? <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> : <FileText className="h-3 w-3 mr-1" />}
+            {isAuditing ? <RefreshCw className="h-2 w-2 mr-1 animate-spin" /> : <FileText className="h-2 w-2 mr-1" />}
             Audit
           </Button>
         </div>
