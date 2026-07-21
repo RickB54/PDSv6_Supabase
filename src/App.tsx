@@ -517,7 +517,7 @@ const App = () => {
               console.log("[App] Executing one-time mock data wipe v7...");
               try {
                 // Wipe all payroll records completely
-                await supabase.from('payroll_records').delete().neq('id', '0');
+                await supabase.from('payroll_records').delete().not('id', 'is', null);
                 // Wipe all payroll-related expenses
                 await supabase.from('tax_expenses').delete().eq('category', 'Payroll');
                 

@@ -11,6 +11,7 @@ import { BlogSocialBlast } from "@/components/BlogSocialBlast";
 import { BlogAIAssistant } from "@/components/BlogAIAssistant";
 import { useToast } from "@/hooks/use-toast";
 import { uploadFile } from "@/lib/storage-utils";
+import { PageHeader } from "@/components/PageHeader";
 
 // DND Kit Imports
 import {
@@ -531,15 +532,9 @@ export default function EliteMaster() {
     });
 
     return (
-        <div style={{ 
-            backgroundColor: '#020202', 
-            color: '#ffffff', 
-            minHeight: '100vh', 
-            display: 'flex', 
-            flexDirection: 'column',
-            fontFamily: 'Inter, system-ui, sans-serif'
-        }}>
-            {/* --- ISOLATED HEADER --- */}
+        <div className="min-h-screen bg-background pb-20">
+            <PageHeader title="Elite Story Master" />
+            {/* --- ISOLATED HEADER (KEPT FOR QUICK CONTROLS) --- */}
             <header style={{ 
                 padding: '15px 30px', 
                 borderBottom: '1px solid #111', 

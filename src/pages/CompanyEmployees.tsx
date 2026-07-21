@@ -267,7 +267,7 @@ const CompanyEmployees = () => {
   const handleManualWipe = async (isAuto = false) => {
     console.log("Wiping test payroll data...");
     try {
-      const { error: err1 } = await supabase.from('payroll_records').delete().neq('id', '0');
+      const { error: err1 } = await supabase.from('payroll_records').delete().not('id', 'is', null);
       if (err1) throw err1;
       
       const { error: err2 } = await supabase.from('tax_expenses').delete().eq('category', 'Payroll');
