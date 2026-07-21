@@ -28,8 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import localforage from "localforage";
 import api from "@/lib/api";
-import { getSupabaseEmployees } from "@/lib/supa-data";
-import { uploadEmployeePhoto } from "@/lib/supa-data";
+import { getSupabaseEmployees, uploadEmployeePhoto, getSupabasePayrollRecords, markPayrollPaid } from "@/lib/supa-data";
 import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
@@ -69,6 +68,7 @@ const CompanyEmployees = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [jobRecords, setJobRecords] = useState<JobRecord[]>([]);
+  const [pendingPayroll, setPendingPayroll] = useState<any[]>([]);
   const [payrollHistory, setPayrollHistory] = useState<Array<{ employee?: string; amount?: number; status?: string }>>([]);
   const [owedMap, setOwedMap] = useState<Record<string, number>>({});
   const [modalOpen, setModalOpen] = useState(false);
@@ -113,8 +113,16 @@ const CompanyEmployees = () => {
   const loadData = async () => {
     const merged = await getSupabaseEmployees();
     setEmployees(merged);
-    const completed = JSON.parse(localStorage.getItem('completedJobs') || '[]');
-    setJobRecords(completed);
+    const pending = await getSupabasePayrollRecords('pending');
+    setPendingPayroll(pending);
+    
+    // ONE-TIME WIPE FOR PAYROLL RECORDS
+    if (!localStorage.getItem('payroll_wiped_v6')) {
+      console.log("Wiping test payroll data...");
+      await supabase.from('payroll_records').delete().neq('id', '0');
+      localStorage.setItem('payroll_wiped_v6', 'true');
+      setPendingPayroll([]);
+    }
     const history = (await localforage.getItem<any[]>('payroll-history')) || [];
     setPayrollHistory(history);
 
@@ -200,15 +208,12 @@ const CompanyEmployees = () => {
     const adj = JSON.parse(adjRaw || '{}');
     const next: Record<string, number> = {};
     employees.forEach(emp => {
-      const unpaidJobs = jobRecords.filter(j => j.status === 'completed' && !j.paid && j.employee === emp.email);
-      const unpaidSum = unpaidJobs.reduce((s, j) => s + Number(j.totalRevenue || 0), 0);
-      const pendHist = payrollHistory.filter(h => String(h.status) === 'Pending' && (String(h.employee) === emp.name || String(h.employee) === emp.email));
-      const pendingSum = pendHist.reduce((s, h) => s + Number(h.amount || 0), 0);
-      const adjSum = Number(adj[emp.name] || 0) + Number(adj[emp.email] || 0);
-      next[emp.email] = Math.max(0, unpaidSum + pendingSum - adjSum);
+      const pendingForEmp = pendingPayroll.filter(p => p.employee_name === emp.name || p.employee_id === emp.email);
+      const pendingSum = pendingForEmp.reduce((s, p) => s + Number(p.earned_amount || 0), 0);
+      next[emp.email] = pendingSum;
     });
     setOwedMap(next);
-  }, [employees, jobRecords, payrollHistory]);
+  }, [employees, pendingPayroll]);
 
   const filteredJobs = jobRecords.filter(j => {
     if (selectedEmployee && j.employee !== selectedEmployee) return false;
@@ -267,19 +272,25 @@ const CompanyEmployees = () => {
     const amt = parseFloat(payAmount) || 0;
     if (amt <= 0 || !payType) { toast({ title: "Error", description: "Invalid amount or type.", variant: "destructive" }); return; }
 
-    // Payment Logic
-    await upsertExpense({
+    // Payment Logic - Create unified expense
+    const expense = await upsertExpense({
       amount: amt,
       description: payDescription || `${payType}: ${payEmployee.name}`,
       category: 'Payroll',
+      payee: payEmployee.name,
       createdAt: new Date().toISOString()
     } as any);
 
+    // Mark specific pending payroll records as paid to clear them from Payroll Engine
+    const pendingForEmp = pendingPayroll.filter(p => p.employee_name === payEmployee.name || p.employee_id === payEmployee.email);
+    for (const record of pendingForEmp) {
+      try { await markPayrollPaid(record.id, expense.id); } catch (e) { console.error(e); }
+    }
+
     // Update local state
-    const currentOwed = owedMap[payEmployee.email] || 0;
-    setOwedMap(prev => ({ ...prev, [payEmployee.email]: Math.max(0, currentOwed - amt) }));
-    setPayDialogOpen(false);
     toast({ title: "Payment Recorded", description: `$${amt.toFixed(2)} paid to ${payEmployee.name}` });
+    setPayDialogOpen(false);
+    await loadData();
   };
 
   const openEdit = (emp: Employee) => {
