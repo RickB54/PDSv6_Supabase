@@ -11,7 +11,7 @@ import {
   Wallet, Clock, DollarSign, CheckCircle, ArrowRight, User
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
-import HelpModal from "@/components/help/HelpModal";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 
 export default function Payroll() {
   const navigate = useNavigate();
@@ -119,14 +119,7 @@ export default function Payroll() {
               <div>
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                   Unified Payroll Engine
-                  <HelpModal
-                    title="Pay Run System"
-                    description="The Payroll Engine automatically calculates employee earnings based on completed jobs."
-                    items={[
-                      { title: 'Job Completion', content: 'When a job is marked Done, earnings are calculated (Price - Stripe - Materials = Labor Revenue * Tier %)' },
-                      { title: 'Processing', content: 'Select pending jobs and click Process Pay Run to log them as official business expenses in the accounting ledger.' }
-                    ]}
-                  />
+                  <PaymentWorkflowHelp variant="payroll-engine" />
                 </h2>
                 <p className="text-zinc-400 text-sm">Automated payout calculations and ledger integration</p>
               </div>

@@ -15,7 +15,8 @@ export type HelpVariant =
   | 'checkout'
   | 'payments-dashboard'
   | 'payment-success'
-  | 'compensation-calculator';
+  | 'compensation-calculator'
+  | 'payroll-engine';
 
 interface Props {
   variant?: HelpVariant;
@@ -187,6 +188,10 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
         {
           title: "4. Bookkeeping",
           desc: "Use the date and source filters to reconcile your daily or weekly revenue against your bank account."
+        },
+        {
+          title: "5. Employee Payouts",
+          desc: "Employee payments are tracked here as 'Payroll' expenses. To actually pay an employee, go to the 'Company Employees' page and click 'Pay' on their card, or go to the 'Payroll Engine'."
         }
       ]
     },
@@ -251,6 +256,24 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
         {
           title: "9. Company Gross Profit",
           desc: "What remains to cover overhead (rent, insurance, marketing, equipment) — it is NOT take-home profit."
+        }
+      ]
+    },
+    'payroll-engine': {
+      title: 'How to Pay Employees',
+      icon: <Activity className="w-5 h-5 text-purple-600" />,
+      steps: [
+        {
+          title: "Method A: Unified Payroll Engine (Recommended)",
+          desc: "Select completed jobs on the Payroll tab and click 'Process Pay Run'. This clears them from the pending queue and automatically logs a unified business expense."
+        },
+        {
+          title: "Method B: Employee Card Quick-Pay",
+          desc: "Go to Company Employees and click 'Pay' on a specific card. The amount defaults to what they are owed. Confirming it logs the expense and clears their pending queue."
+        },
+        {
+          title: "Method C: Manual Ledger Entry",
+          desc: "Go to Accounting and click 'Add Manual Expense'. Set Category to Payroll. This logs the financial expense for bookkeeping but does not affect the pending job queue."
         }
       ]
     }
