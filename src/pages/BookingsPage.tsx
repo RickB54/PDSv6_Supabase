@@ -1004,7 +1004,7 @@ export default function BookingsPage() {
     setSelectedDate(day);
     setSelectedBooking(null);
     setSelectedCustomer(null);
-    const defaultCoupon = coupons.find(c => c.active)?.code || "";
+    const defaultCoupon = "";
     setFormData({
       customerId: undefined,
       customer: "",
