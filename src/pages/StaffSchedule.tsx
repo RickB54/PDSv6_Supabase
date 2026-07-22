@@ -634,6 +634,9 @@ export default function StaffSchedule() {
                                                     if (aids.length > 0) params.set('addons', aids.join(','));
                                                 }
 
+                                                params.set('employeeId', selectedShift.employeeId);
+                                                params.set('employee', selectedShift.employeeName);
+
                                                 navigate(`/service-checklist?${params.toString()}`);
                                             } else {
                                                 navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);

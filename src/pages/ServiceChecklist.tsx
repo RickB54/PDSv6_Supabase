@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -2235,7 +2235,7 @@ const ServiceChecklist = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background">
       <PageHeader 
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
         subtitle="Execute the Prime Standard for every vehicle."
@@ -2323,6 +2323,51 @@ const ServiceChecklist = () => {
         </div>
         
         <div className="space-y-6">
+          {/* Always Visible Sticky Service Summary */}
+          {selectedPackage && (
+            <div 
+              style={{ top: 'var(--header-total-height, 64px)' }}
+              className="sticky z-50 mb-4 bg-zinc-950/95 backdrop-blur-md rounded-xl border border-purple-500/30 shadow-2xl p-3 md:p-4 transition-all"
+            >
+               <div className="flex justify-between items-center w-full">
+                  <div className="min-w-0 flex-1 pr-4">
+                    <div className="text-zinc-500 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+                      Service Summary
+                      {isJobCompleted && (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase py-0 h-4 border-zinc-700">
+                          FINISHED
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-white font-black text-sm md:text-lg tracking-tight leading-tight uppercase truncate">
+                       {servicePackages.find(p => p.id === selectedPackage)?.name || 
+                        getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 
+                        "No Service Selected"}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5 items-center">
+                      <Badge variant="outline" className="bg-zinc-800 text-zinc-300 text-[9px] md:text-[10px] font-black uppercase py-0 px-2 h-5 border-zinc-700 flex items-center gap-1.5">
+                        <User className="h-3 w-3" />
+                        {employees.find(e => e.id === employeeAssigned)?.name || 'Unassigned'}
+                      </Badge>
+                      {selectedAddOns.map((a, i) => {
+                         const name = addOns.find(x => x.id === a)?.name || getCustomAddOns().find((x: any) => x.id === a)?.name || a;
+                         return (
+                          <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px] font-black uppercase py-0 px-2 h-5">
+                            {name}
+                          </Badge>
+                         );
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-emerald-400 font-bold text-lg md:text-2xl drop-shadow-md tracking-tight">
+                      ${calculateTotal().toFixed(2)}
+                    </div>
+                  </div>
+              </div>
+            </div>
+          )}
+
           {/* Timer Reminder Notification */}
           {(selectedPackage && (selectedCustomer || genericCustomerName)) && !isTimerRunning && totalElapsedMs === 0 && (
             <div className="bg-blue-600/20 border border-blue-500/50 p-4 rounded-xl flex items-center justify-between animate-in slide-in-from-top-4 duration-500 shadow-[0_0_15px_rgba(37,99,235,0.2)]">
@@ -2340,11 +2385,11 @@ const ServiceChecklist = () => {
               </Button>
             </div>
           )}
-          {/* Job Setup - Sticky header for mobile efficiency - Offset below fixed PageHeader (64px) */}
+
+          {/* Job Setup */}
           <Card className={`bg-gradient-card border-border overflow-visible mb-4 transition-all duration-300`}>
             <div 
-              style={{ top: 'var(--header-total-height, 64px)' }}
-              className="sticky z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
+              className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/50 transition-all rounded-t-xl"
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
             >
               <div className="flex items-center gap-2 md:gap-3 min-w-0">
