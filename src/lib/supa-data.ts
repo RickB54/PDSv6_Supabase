@@ -224,7 +224,7 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
                 dob: supaUser.dob,
                 emergency_contact_name: supaUser.emergency_contact_name,
                 emergency_contact_phone: supaUser.emergency_contact_phone,
-                job_title: supaUser.job_title,
+                job_title: (supaUser as any).job_title,
                 employee_type: supaUser.employee_type,
                 status: supaUser.status || 'Active',
                 hire_date: supaUser.hire_date,
@@ -1541,7 +1541,7 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
             ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : []),
             ...(p.vehicle ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : []),
-            ...((p.customerName || p.customer?.full_name) ? [{ name: `VIRTUAL_CUSTOMER:${p.customerName || p.customer?.full_name}`, price: 0 }] : [])
+            ...((p.customerName || (p.customer as any)?.full_name) ? [{ name: `VIRTUAL_CUSTOMER:${p.customerName || (p.customer as any)?.full_name}`, price: 0 }] : [])
         ],
         total: p.total,
         date: p.date,

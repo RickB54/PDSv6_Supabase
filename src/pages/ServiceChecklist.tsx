@@ -4192,16 +4192,6 @@ const ServiceChecklist = () => {
         </div>
       )}
 
-      {/* Scroll to Top Button - Icon Only */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="fixed bottom-20 right-4 z-[60] h-10 w-10 rounded-full bg-black/80 backdrop-blur-md border-white/10 text-white shadow-2xl hover:bg-white/10"
-        title="Scroll to Top"
-      >
-        <ArrowUp className="h-5 w-5" />
-      </Button>
 
       {/* Floating Global Job Timer - Master Timer (Job Duration) */}
       {(masterIsRunning || masterElapsedTimeMs > 0) && !showTipScreen && (

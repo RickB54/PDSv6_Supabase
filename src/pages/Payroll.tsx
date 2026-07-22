@@ -123,7 +123,7 @@ export default function Payroll() {
         acc[curr.employee_name].push(curr);
         return acc;
       }, {} as Record<string, any[]>);
-      for (const [empName, records] of Object.entries(byEmployee)) {
+      for (const [empName, records] of Object.entries(byEmployee) as [string, any[]][]) {
         const totalAmount = records.reduce((sum, r) => sum + Number(r.earned_amount), 0);
         const expense = await upsertExpense({
           amount: totalAmount,
