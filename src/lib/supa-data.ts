@@ -1161,6 +1161,25 @@ export const deleteSupabaseCustomer = async (id: string) => {
                 await supabase.from('payroll_records').delete().in('booking_id', bIds);
             }
             
+            // Safety net: Clean up ANY orphaned payroll records globally (fixes manual booking deletion artifacts)
+            try {
+                const { data: allPR } = await supabase.from('payroll_records').select('id, booking_id, expense_id');
+                const { data: allB } = await supabase.from('bookings').select('id');
+                if (allPR && allB) {
+                    const bIdsSet = new Set(allB.map(b => b.id));
+                    const orphaned = allPR.filter(pr => !bIdsSet.has(pr.booking_id));
+                    if (orphaned.length > 0) {
+                        const eIds = orphaned.map(o => o.expense_id).filter(Boolean);
+                        if (eIds.length > 0) {
+                            await supabase.from('tax_expenses').delete().in('id', eIds);
+                        }
+                        await supabase.from('payroll_records').delete().in('id', orphaned.map(o => o.id));
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to clean up orphaned payroll records:", err);
+            }
+
             await supabase.from('bookings').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             if (vehicleIds.length > 0) {
                 await supabase.from('vehicles').delete().in('id', vehicleIds);
@@ -2767,6 +2786,17 @@ export const upsertSupabaseBooking = async (booking: any) => {
 export const deleteSupabaseBooking = async (id: string) => {
     if (isDemoActive()) return;
     try {
+        // Cascade delete related records
+        const { data: pData } = await supabase.from('payroll_records').select('expense_id').eq('booking_id', id);
+        if (pData && pData.length > 0) {
+            const eIds = pData.map(p => p.expense_id).filter(Boolean);
+            if (eIds.length > 0) {
+                await supabase.from('tax_expenses').delete().in('id', eIds);
+            }
+        }
+        await supabase.from('payroll_records').delete().eq('booking_id', id);
+        await supabase.from('payments').delete().eq('booking_id', id);
+
         const { error } = await supabase.from('bookings').delete().eq('id', id);
         if (error) throw error;
     } catch (err) {
