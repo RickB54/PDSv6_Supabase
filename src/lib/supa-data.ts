@@ -978,7 +978,7 @@ export const auditTestCustomer = async (id: string) => {
         supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id),
         supabase.from('engagements').select('*', { count: 'exact', head: true }).eq('customer_id', id),
         supabase.from('manual_income').select('*', { count: 'exact', head: true }).ilike('customer_name', '%Rick Berube%'),
-        supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('payee', '%Rick Berube%')
+        supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('vendor', '%Rick Berube%')
     ]);
 
     let vCount = 0;
@@ -1089,7 +1089,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
             supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('customer_id', id),
             supabase.from('engagements').select('*', { count: 'exact', head: true }).eq('customer_id', id),
             supabase.from('manual_income').select('*', { count: 'exact', head: true }).ilike('customer_name', '%Rick Berube%'),
-            supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('payee', '%Rick Berube%')
+            supabase.from('tax_expenses').select('*', { count: 'exact', head: true }).ilike('vendor', '%Rick Berube%')
         ]);
 
         let vCount = 0;
@@ -1139,7 +1139,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
             await supabase.from('manual_income').delete().ilike('customer_name', '%Rick Berube%');
             
             // Delete expenses with payee match
-            await supabase.from('tax_expenses').delete().ilike('payee', '%Rick Berube%');
+            await supabase.from('tax_expenses').delete().ilike('vendor', '%Rick Berube%');
 
             await supabase.from('invoices').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             await supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);

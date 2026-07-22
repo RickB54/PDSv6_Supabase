@@ -279,13 +279,14 @@ export async function upsertExpense<T extends Partial<GenericWithId>>(exp: T): P
   try {
     const payload = {
       ...exp,
-      vendor: (exp as any).description,
+      vendor: (exp as any).payee || (exp as any).vendor || (exp as any).description,
       date: (exp as any).createdAt ? new Date((exp as any).createdAt).toISOString() : new Date().toISOString(),
       is_deductible: true
     };
     // Cleanup local fields
     delete (payload as any).description;
     delete (payload as any).createdAt;
+    delete (payload as any).payee;
 
     const { data, error } = await supabase.from('tax_expenses').upsert(payload).select().single();
     if (error) throw error;
