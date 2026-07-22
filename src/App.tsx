@@ -478,6 +478,26 @@ const App = () => {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    if (authReady && user) {
+      console.log("Running authenticated cleanup for Brandon's test data...");
+      supabase.from('payroll_records').delete().ilike('employee_name', '%Brandon%').then(({error}) => {
+         console.log("Cleanup PR:", error ? error : "Success");
+      });
+      supabase.from('tax_expenses').delete().ilike('vendor', '%Brandon%').then(({error}) => {
+         console.log("Cleanup TE:", error ? error : "Success");
+      });
+      
+      // Also clean up localforage history just in case
+      localforage.getItem('payroll-history').then((history: any) => {
+        if (history && Array.isArray(history)) {
+          const newHistory = history.filter(h => !h.employee_name?.includes('Brandon') && !h.payee?.includes('Brandon'));
+          localforage.setItem('payroll-history', newHistory);
+        }
+      });
+    }
+  }, [authReady, user]);
+
+  useEffect(() => {
     let mounted = true;
     
     // ENVIRONMENTAL AUDIT (Separation of Demo vs Real)
