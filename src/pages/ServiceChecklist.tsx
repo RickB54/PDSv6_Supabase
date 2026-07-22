@@ -172,7 +172,7 @@ const parseTimeToMinutes = (val: string): number => {
 
 const ServiceChecklist = () => {
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [customers, setCustomers] = useState<CustomerType[]>([]);
@@ -314,9 +314,7 @@ const ServiceChecklist = () => {
     sessionStorage.removeItem('pending_draft_steps');
 
     // Clear URL parameters to prevent re-hydration on refresh
-    const url = new URL(window.location.href);
-    url.search = '';
-    window.history.replaceState(null, '', url.toString());
+    setSearchParams({}, { replace: true });
   };
 
   // Read employee from URL params (from Staff Schedule "Start Job")
