@@ -2339,6 +2339,15 @@ const ServiceChecklist = () => {
                         </Badge>
                       )}
                     </div>
+                    <div className="text-blue-400 font-bold text-xs md:text-sm mb-1 truncate flex items-center gap-2">
+                      {(() => {
+                         const cName = customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName;
+                         const vString = [vYear, vMake, vModel].filter(Boolean).join(" ");
+                         const vClass = vehicleLabels[vehicleType] || vehicleType;
+                         const fullVehicle = vString ? `${vString} (${vClass})` : (vClass !== 'choose' && vClass !== 'Choose Type') ? `(${vClass})` : '';
+                         return [cName, fullVehicle].filter(Boolean).join(" • ");
+                      })()}
+                    </div>
                     <div className="text-white font-black text-sm md:text-lg tracking-tight leading-tight uppercase truncate">
                        {servicePackages.find(p => p.id === selectedPackage)?.name || 
                         getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 
