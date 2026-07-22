@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -261,6 +261,9 @@ const ServiceChecklist = () => {
   }, [odometerStart, odometerEnd]);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isJobCompleted, setIsJobCompleted] = useState(false);
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const resetForm = () => {
     setChecklistId("");
@@ -277,14 +280,8 @@ const ServiceChecklist = () => {
     setVMake("");
     setVModel("");
     
-    // Default to the admin (Rick) instead of clearing it
-    const defaultEmp = employees.find(e => 
-      e.name?.toLowerCase().includes('rick') || 
-      e.email?.toLowerCase().includes('rberube') ||
-      e.name?.toLowerCase().includes('rberube54')
-    ) || employees[0];
-    
-    setEmployeeAssigned(defaultEmp ? String(defaultEmp.id || defaultEmp.name || '') : "rberube54");
+    // Do not default to admin; let it be empty or overridden by URL/Booking data
+    setEmployeeAssigned("");
     
     setCustomerSearch("");
     setGenericCustomerName("");
@@ -300,6 +297,8 @@ const ServiceChecklist = () => {
     setItemDurations({});
     setFinishedJobId(null);
     setShowTipScreen(false);
+    setIsJobCompleted(false);
+    setCompletedAt(null);
 
     // Reset Master Timer
     setMasterStartTime(null);
@@ -835,22 +834,13 @@ const ServiceChecklist = () => {
         setLiveAddOns(Array.isArray(live) ? live : []);
       } catch (e) { console.error(e); }
 
-      // Preselect default employee if present and not already set
-      // We use currentEmps which holds either cached or fresh data
-      const defaultEmp = currentEmps.find(e => 
-        e.name.toLowerCase().includes('rick') || 
-        e.email?.toLowerCase().includes('rberube') ||
-        e.name.toLowerCase().includes('rberube54')
-      ) || currentEmps[0];
-
-      if (defaultEmp) {
-        setEmployeeAssigned(prev => {
-          if (prev) return prev;
-          const urlEmpId = params.get('employeeId') || params.get('employee');
-          if (urlEmpId) return urlEmpId;
-          return String(defaultEmp.id || defaultEmp.name || '');
-        });
-      }
+      // Only set employee if explicitly passed via URL
+      setEmployeeAssigned(prev => {
+        if (prev) return prev;
+        const urlEmpId = params.get('employeeId') || params.get('employee');
+        if (urlEmpId) return urlEmpId;
+        return "";
+      });
     })();
   }, [params]);
 
@@ -2095,6 +2085,9 @@ const ServiceChecklist = () => {
       // Trigger tip and payment
       setFinishedJobId(idToUse);
       setShowTipScreen(true);
+      // Lock the checklist
+      setIsJobCompleted(true);
+      setCompletedAt(new Date().toISOString());
     } catch (e: any) {
       const msg = e?.message || 'Unknown error';
       toast({ title: 'Finish Failed', description: `Step: ${step}. ${msg}`, variant: 'destructive' });
@@ -2640,109 +2633,38 @@ const ServiceChecklist = () => {
           )}
         </Card>
 
-        {/* Service Checklist History - NEW SECTION */}
-        {recentDrafts.length > 0 && (
-          <Card className="p-4 bg-zinc-950/50 border-zinc-800/50 backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                <HistoryIcon className="h-4 w-4" /> Service Checklist History
-              </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-[10px] h-6 text-zinc-500 hover:text-red-400"
-                onClick={() => {
-                  if (confirm("Clear all recent checklist drafts?")) {
-                    localStorage.removeItem(DRAFTS_INDEX_KEY);
-                    setRecentDrafts([]);
-                  }
-                }}
-              >
-                Clear All
-              </Button>
-            </div>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-              {recentDrafts.map((draft) => (
-                <div 
-                  key={draft.id} 
-                  className={`group flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer ${
-                    checklistId === draft.id 
-                      ? 'bg-red-500/10 border-red-500/50' 
-                      : 'bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800'
-                  }`}
-                  onClick={() => {
-                    if (checklistId && checklistId !== draft.id) {
-                      if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
-                        return;
-                      }
-                    }
 
-                    // Restore this draft
-                    const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${draft.id}`);
-                    if (saved) {
-                      const state = JSON.parse(saved);
-                      setChecklistId(state.checklistId || "");
-                      setSelectedCustomer(state.selectedCustomer || "");
-                      setSelectedPackage(state.selectedPackage || "");
-                      setVehicleType(state.vehicleType || "choose");
-                      setSelectedAddOns(state.selectedAddOns || []);
-                      setNotes(state.notes || "");
-                      setJobStartTime(state.jobStartTime || null);
-                      setIsTimerRunning(!!state.isTimerRunning);
-                      setTotalElapsedMs(state.totalElapsedMs || 0);
-                      setElapsedTime(state.elapsedTime || "00:00:00");
-                      setItemDurations(state.itemDurations || {});
-                      setSectionDurations(state.sectionDurations || {});
-                      setChemRows(state.chemRows || []);
-                      setMatRows(state.matRows || []);
-                      setToolRows(state.toolRows || []);
-                      if (state.checklistSteps) {
-                        window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
-                      }
-                      
-                      // Derive and set selectedServices so the UI checkmarks appear
-                      const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
-                      setSelectedServices(services);
-                      
-                      // Switched Job toast will provide feedback instead of scrolling
-                      // window.scrollTo({ top: 0, behavior: 'smooth' });
-                      
-                      toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
-                    }
-                  }}
-                >
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm truncate text-white">{draft.customerName}</span>
-                      <span className="text-[10px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded uppercase font-bold tracking-tighter">
-                        {draft.progress}%
-                      </span>
-                      {draft.isTimerRunning && (
-                        <span className="text-[9px] bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full uppercase font-black animate-pulse">
-                          Live
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-[11px] text-zinc-500 truncate">
-                      <span className="text-red-400/80 font-medium">{draft.packageName}</span>
-                      <span>•</span>
-                      <span>{new Date(draft.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400"
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+        {/* ===== JOB COMPLETION LOCK BANNER ===== */}
+        {isJobCompleted && (
+          <div className="mx-0 mb-4 rounded-xl border-2 border-emerald-500/50 bg-emerald-950/40 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-emerald-900/20">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="font-black text-emerald-400 text-base uppercase tracking-wider">✓ Job Completed</p>
+                <p className="text-zinc-400 text-sm mt-0.5">
+                  This checklist was completed on {completedAt ? new Date(completedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'just now'}.
+                </p>
+                <p className="text-zinc-500 text-xs mt-1">Invoice and payment records are unaffected. Totals &amp; Payment remain editable below.</p>
+              </div>
             </div>
-          </Card>
+            <Button
+              variant="outline"
+              className="shrink-0 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:border-emerald-400 font-bold"
+              onClick={() => {
+                setIsJobCompleted(false);
+                setCompletedAt(null);
+                toast({ title: 'Checklist Reopened', description: 'You can now edit this checklist. No financial records were changed.' });
+              }}
+            >
+              <HistoryIcon className="h-4 w-4 mr-2" /> Reopen &amp; Edit
+            </Button>
+          </div>
         )}
 
-      <Card className="bg-gradient-card border-border overflow-visible relative mb-4">
+      <Card className="bg-gradient-card border-border overflow-visible relative mb-4"
+            style={{ opacity: isJobCompleted ? 0.65 : 1, pointerEvents: isJobCompleted ? 'none' : 'auto', transition: 'opacity 0.3s' }}>
         <div 
           style={{ top: 'var(--header-total-height, 64px)' }}
           className="sticky z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
@@ -3955,10 +3877,15 @@ const ServiceChecklist = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button 
                   onClick={finishJob} 
-                  className="md:col-span-2 bg-red-600 hover:bg-red-700 text-white font-black italic h-12 text-lg shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                  disabled={isJobCompleted}
+                  className={`md:col-span-2 text-white font-black italic h-12 text-lg transition-all ${
+                    isJobCompleted 
+                      ? 'bg-emerald-600/50 cursor-not-allowed opacity-50' 
+                      : 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.3)]'
+                  }`}
                 >
                   <CheckCircle2 className="h-5 w-5 mr-3" />
-                  FINISH & COMPLETE JOB
+                  {isJobCompleted ? 'JOB FINISHED & LOCKED' : 'FINISH & COMPLETE JOB'}
                 </Button>
                 <Button 
                   onClick={async () => {
@@ -4047,6 +3974,130 @@ const ServiceChecklist = () => {
                   }} />
                   <Button variant="outline" onClick={() => { /* skip */ toast({ title: 'Saved as generic', description: 'You can link later from history.' }); }}>Skip</Button>
                 </div>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Service Checklist History - RELOCATED & IMPROVED */}
+        {recentDrafts.length > 0 && (
+          <Card className="bg-gradient-card border-border overflow-visible relative mb-4 mt-8">
+            <div 
+              className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
+              onClick={() => setHistoryOpen(!historyOpen)}
+            >
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-blue-600/20 flex items-center justify-center shrink-0 group-hover:bg-blue-600/30 transition-colors">
+                  <HistoryIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist History</h2>
+                    {historyOpen ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
+                  </div>
+                  <p className="text-[10px] md:text-sm text-zinc-400">View and restore past or in-progress jobs</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs h-8 text-zinc-400 hover:text-red-400 bg-black/50 border-white/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm("Clear all recent checklist drafts?")) {
+                    localStorage.removeItem(DRAFTS_INDEX_KEY);
+                    setRecentDrafts([]);
+                  }
+                }}
+              >
+                Clear All
+              </Button>
+            </div>
+            
+            {historyOpen && (
+              <div className="p-4 bg-zinc-950/80 backdrop-blur-sm rounded-b-xl border-t border-white/5 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                {recentDrafts.map((draft) => (
+                  <div 
+                    key={draft.id} 
+                    className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
+                      checklistId === draft.id 
+                        ? 'bg-blue-900/20 border-blue-500/50 shadow-md shadow-blue-900/20' 
+                        : 'bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800'
+                    }`}
+                    onClick={() => {
+                      if (checklistId && checklistId !== draft.id) {
+                        if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
+                          return;
+                        }
+                      }
+                      const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${draft.id}`);
+                      if (saved) {
+                        const state = JSON.parse(saved);
+                        setChecklistId(state.checklistId || "");
+                        setSelectedCustomer(state.selectedCustomer || "");
+                        setSelectedPackage(state.selectedPackage || "");
+                        setVehicleType(state.vehicleType || "choose");
+                        setSelectedAddOns(state.selectedAddOns || []);
+                        setNotes(state.notes || "");
+                        setJobStartTime(state.jobStartTime || null);
+                        setIsTimerRunning(!!state.isTimerRunning);
+                        setTotalElapsedMs(state.totalElapsedMs || 0);
+                        setElapsedTime(state.elapsedTime || "00:00:00");
+                        setItemDurations(state.itemDurations || {});
+                        setSectionDurations(state.sectionDurations || {});
+                        setChemRows(state.chemRows || []);
+                        setMatRows(state.matRows || []);
+                        setToolRows(state.toolRows || []);
+                        if (state.checklistSteps) {
+                          window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+                        }
+                        const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
+                        setSelectedServices(services);
+                        toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                  >
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-base truncate text-white">{draft.customerName || 'Unknown Customer'}</span>
+                        <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded uppercase font-bold tracking-tighter">
+                          {draft.progress}% Complete
+                        </span>
+                        {draft.isTimerRunning && (
+                          <span className="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full uppercase font-black animate-pulse">
+                            Active
+                          </span>
+                        )}
+                        {checklistId === draft.id && (
+                          <span className="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase font-black">
+                            Currently Viewing
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
+                        <span className="text-white/90 font-medium flex items-center gap-1">
+                          <Package className="h-3 w-3" /> {draft.packageName || 'Custom Service'}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1">
+                          <Car className="h-3 w-3" /> {vehicleLabels[draft.vehicleType] || draft.vehicleType || 'Unknown Vehicle'}
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-zinc-500">
+                          <Clock className="h-3 w-3" /> {new Date(draft.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="opacity-0 group-hover:opacity-100 h-10 w-10 rounded-full hover:bg-blue-500/20 hover:text-blue-400 transition-all shrink-0 ml-4"
+                    >
+                      <RotateCcw className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </Card>

@@ -126,24 +126,36 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
       ]
     },
     'service-checklist': {
-      title: 'In-Shop Quick Pay Workflow',
+      title: 'Job Lifecycle & Quick Pay',
       icon: <ArrowRightLeft className="w-5 h-5 text-blue-600" />,
       steps: [
         {
-          title: "1. Job Completion",
-          desc: "Once the detailing job is done and the checklist is complete, click 'Checkout' to initiate the in-shop payment flow."
+          title: "1. Auto-Saving Drafts",
+          desc: "Your progress is saved automatically. If you leave the page, you can restore your active job from the 'Service Checklist History' accordion at the bottom of the page."
         },
         {
-          title: "2. The Tip Screen",
-          desc: "Hand the device to the customer so they can privately select a tip percentage or custom amount before final payment."
+          title: "2. Finish & Complete Job",
+          desc: "When the detailing job is completely finished, click 'Finish & Complete Job'. This generates a PDF report, posts materials used, auto-generates an invoice (if needed), and locks the checklist to prevent accidental edits."
         },
         {
-          title: "3. Stripe vs. Cash",
-          desc: "For cards or Apple Pay, proceed to Stripe Checkout. For cash/Zelle, DO NOT use Stripe; manually log the payment on the Invoice instead."
+          title: "3. Reopen & Edit",
+          desc: "If you made a mistake and need to adjust the checklist after finishing, click 'Reopen & Edit' on the green completion banner at the top. This unlocks the form without affecting any financial records."
         },
         {
-          title: "4. Webhook Automation",
-          desc: "If they pay via Stripe, the webhook will automatically handle marking the job/invoice as Paid and emailing the receipt."
+          title: "4. Tool Shortcuts",
+          desc: "Use 'Uncheck All' to reset the checklist boxes. Use 'Prefill Avg Times' to instantly load standard estimated durations for all line items."
+        },
+        {
+          title: "5. Materials & Mileage",
+          desc: "Log 'Materials Used' accurately as they impact profit calculations. 'Job Mileage Tracking' is automatically logged to Finance upon finishing the job."
+        },
+        {
+          title: "6. The Tip Screen",
+          desc: "After completing a job, hand the device to the customer. They can privately select a tip percentage or custom amount before final payment."
+        },
+        {
+          title: "7. Final Checkout & Payment",
+          desc: "For cards or Apple Pay, proceed to Stripe Checkout. The webhook will automatically mark the job as Paid. For cash/Zelle, DO NOT use Stripe; manually log the payment on the Invoice."
         }
       ]
     },

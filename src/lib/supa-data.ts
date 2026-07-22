@@ -23,6 +23,7 @@ export interface Employee {
     email: string;
     name: string;
     role: string;
+    job_title?: string;
     // Local metadata fields
     flatRate?: number;
     bonuses?: number;
