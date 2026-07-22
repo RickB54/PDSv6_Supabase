@@ -2499,6 +2499,15 @@ export default function BookingsPage() {
                           </Badge>
                         )}
                       </div>
+                      <div className="text-blue-400 font-bold text-xs md:text-sm mb-1 truncate flex items-center gap-2">
+                        {(() => {
+                           const cName = formData.customer || "";
+                           const vString = [formData.vehicleYear, formData.vehicleMake, formData.vehicleModel].filter(Boolean).join(" ");
+                           const vClass = formData.vehicle || "";
+                           const fullVehicle = vString ? `${vString} (${vClass})` : vClass ? `(${vClass})` : '';
+                           return [cName, fullVehicle].filter(Boolean).join(" • ");
+                        })()}
+                      </div>
                       <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
                       {formData.addons && formData.addons.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -2528,9 +2537,6 @@ export default function BookingsPage() {
                           -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
                         </div>
                       ) : null}
-                      <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">
-                        Live Estimate
-                      </div>
                       <div className="text-zinc-500 text-[10px] mt-1">
                         {selectedDate ? formatETDate(selectedDate) : "No Date"}
                         {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
