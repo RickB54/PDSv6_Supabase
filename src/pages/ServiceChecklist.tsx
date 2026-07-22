@@ -1257,20 +1257,31 @@ const ServiceChecklist = () => {
   const CHECKLIST_DRAFT_KEY = 'service_checklist_draft';
   const DRAFTS_INDEX_KEY = 'service_checklist_drafts_v1';
 
-  const [recentDrafts, setRecentDrafts] = useState<any[]>([]);
+  const [customerHistory, setCustomerHistory] = useState<any[]>([]);
 
-  // Helper to load draft index
-  const loadDraftsIndex = () => {
-    try {
-      const idx = JSON.parse(localStorage.getItem(DRAFTS_INDEX_KEY) || '[]');
-      setRecentDrafts(idx);
-      return idx;
-    } catch { return []; }
-  };
+  // Fetch true database history for the selected customer
+  useEffect(() => {
+    if (!selectedCustomer) {
+      setCustomerHistory([]);
+      return;
+    }
+    const fetchHistory = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('customer_id', selectedCustomer)
+          .order('date', { ascending: false });
+        if (data) setCustomerHistory(data);
+      } catch (e) {
+        console.error("Failed to fetch customer history:", e);
+      }
+    };
+    fetchHistory();
+  }, [selectedCustomer]);
 
   // 1. Restore State on Mount (if no URL params)
   useEffect(() => {
-    loadDraftsIndex();
     const hasUrlParams = searchParams.get("package") || searchParams.get("vehicleType") || searchParams.get("addons");
     const urlId = searchParams.get("id");
     
@@ -1418,23 +1429,7 @@ const ServiceChecklist = () => {
       localStorage.setItem(`${CHECKLIST_DRAFT_KEY}_${checklistId}`, JSON.stringify(state));
     }
 
-    // Update Index
-    try {
-      const idx = JSON.parse(localStorage.getItem(DRAFTS_INDEX_KEY) || '[]');
-      const filtered = idx.filter((d: any) => d.id !== (checklistId || 'temp'));
-      const newEntry = {
-        id: checklistId || 'temp',
-        customerName,
-        packageName,
-        vehicleType,
-        lastUpdated: Date.now(),
-        progress: progressPercent,
-        isTimerRunning
-      };
-      const nextIdx = [newEntry, ...filtered].slice(0, 10); // Keep last 10
-      localStorage.setItem(DRAFTS_INDEX_KEY, JSON.stringify(nextIdx));
-      setRecentDrafts(nextIdx);
-    } catch { }
+    // Note: DRAFTS_INDEX_KEY local history is removed in favor of Supabase customer-scoped history.
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
@@ -3980,7 +3975,7 @@ const ServiceChecklist = () => {
         )}
 
         {/* Service Checklist History - RELOCATED & IMPROVED */}
-        {recentDrafts.length > 0 && (
+        {customerHistory.length > 0 && (
           <Card className="bg-gradient-card border-border overflow-visible relative mb-4 mt-8">
             <div 
               className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
@@ -3995,48 +3990,38 @@ const ServiceChecklist = () => {
                     <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist History</h2>
                     {historyOpen ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
                   </div>
-                  <p className="text-[10px] md:text-sm text-zinc-400">View and restore past or in-progress jobs</p>
+                  <p className="text-[10px] md:text-sm text-zinc-400">View past or active jobs for this customer</p>
                 </div>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs h-8 text-zinc-400 hover:text-red-400 bg-black/50 border-white/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm("Clear all recent checklist drafts?")) {
-                    localStorage.removeItem(DRAFTS_INDEX_KEY);
-                    setRecentDrafts([]);
-                  }
-                }}
-              >
-                Clear All
-              </Button>
             </div>
             
             {historyOpen && (
               <div className="p-4 bg-zinc-950/80 backdrop-blur-sm rounded-b-xl border-t border-white/5 space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-                {recentDrafts.map((draft) => (
+                {customerHistory.map((booking) => {
+                  const bVehicle = typeof booking.vehicle_info === 'string' ? booking.vehicle_info : (booking.vehicle_info?.type || 'Unknown');
+                  const bPackage = booking.service_package || booking.title || 'Custom Service';
+                  const isDone = booking.status === 'done' || booking.status === 'completed';
+                  return (
                   <div 
-                    key={draft.id} 
+                    key={booking.id} 
                     className={`group flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${
-                      checklistId === draft.id 
+                      checklistId === booking.id 
                         ? 'bg-blue-900/20 border-blue-500/50 shadow-md shadow-blue-900/20' 
                         : 'bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800'
                     }`}
                     onClick={() => {
-                      if (checklistId && checklistId !== draft.id) {
-                        if (!confirm(`You have an active job for ${recentDrafts.find(d => d.id === checklistId)?.customerName || 'someone else'}. \n\nSwitching will save your current progress but change your active checklist. Continue?`)) {
+                      if (checklistId && checklistId !== booking.id) {
+                        if (!confirm(`Switching will save your current progress but change your active checklist. Continue?`)) {
                           return;
                         }
                       }
-                      const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${draft.id}`);
+                      const saved = localStorage.getItem(`${CHECKLIST_DRAFT_KEY}_${booking.id}`);
                       if (saved) {
                         const state = JSON.parse(saved);
-                        setChecklistId(state.checklistId || "");
-                        setSelectedCustomer(state.selectedCustomer || "");
-                        setSelectedPackage(state.selectedPackage || "");
-                        setVehicleType(state.vehicleType || "choose");
+                        setChecklistId(state.checklistId || booking.id);
+                        setSelectedCustomer(state.selectedCustomer || booking.customer_id);
+                        setSelectedPackage(state.selectedPackage || bPackage);
+                        setVehicleType(state.vehicleType || (vehicleOptions.includes(bVehicle) ? bVehicle : 'choose'));
                         setSelectedAddOns(state.selectedAddOns || []);
                         setNotes(state.notes || "");
                         setJobStartTime(state.jobStartTime || null);
@@ -4051,25 +4036,38 @@ const ServiceChecklist = () => {
                         if (state.checklistSteps) {
                           window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
                         }
-                        const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
+                        const services = [state.selectedPackage || bPackage, ...(state.selectedAddOns || [])].filter(Boolean);
                         setSelectedServices(services);
-                        toast({ title: "Switched Job", description: `Resumed job for ${draft.customerName}.` });
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } else {
+                        setChecklistId(booking.id);
+                        setSelectedCustomer(booking.customer_id);
+                        setSelectedPackage(bPackage);
+                        setVehicleType(vehicleOptions.includes(bVehicle) ? bVehicle : 'choose');
+                        setSelectedAddOns([]);
+                        setNotes("");
+                        setJobStartTime(null);
+                        setIsTimerRunning(false);
+                        setTotalElapsedMs(0);
+                        setElapsedTime("00:00:00");
+                        setItemDurations({});
+                        setSectionDurations({});
+                        setChemRows([]);
+                        setMatRows([]);
+                        setToolRows([]);
+                        window.sessionStorage.removeItem('pending_draft_steps');
+                        setSelectedServices([bPackage].filter(Boolean));
                       }
+                      toast({ title: "Switched Job", description: `Opened record for ${booking.customer_name}.` });
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                   >
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-base truncate text-white">{draft.customerName || 'Unknown Customer'}</span>
-                        <span className="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded uppercase font-bold tracking-tighter">
-                          {draft.progress}% Complete
+                        <span className="font-bold text-base truncate text-white">{booking.customer_name || 'Unknown Customer'}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-tighter ${isDone ? 'bg-zinc-800 text-zinc-300' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                          {isDone ? '100% Complete' : 'Active'}
                         </span>
-                        {draft.isTimerRunning && (
-                          <span className="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full uppercase font-black animate-pulse">
-                            Active
-                          </span>
-                        )}
-                        {checklistId === draft.id && (
+                        {checklistId === booking.id && (
                           <span className="text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full uppercase font-black">
                             Currently Viewing
                           </span>
@@ -4077,15 +4075,15 @@ const ServiceChecklist = () => {
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
                         <span className="text-white/90 font-medium flex items-center gap-1">
-                          <Package className="h-3 w-3" /> {draft.packageName || 'Custom Service'}
+                          <Package className="h-3 w-3" /> {bPackage}
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
-                          <Car className="h-3 w-3" /> {vehicleLabels[draft.vehicleType] || draft.vehicleType || 'Unknown Vehicle'}
+                          <Car className="h-3 w-3" /> {vehicleLabels[bVehicle] || bVehicle}
                         </span>
                         <span>•</span>
                         <span className="flex items-center gap-1 text-zinc-500">
-                          <Clock className="h-3 w-3" /> {new Date(draft.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          <Clock className="h-3 w-3" /> {new Date(booking.date || booking.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </div>
                     </div>
@@ -4097,7 +4095,7 @@ const ServiceChecklist = () => {
                       <RotateCcw className="h-5 w-5" />
                     </Button>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </Card>

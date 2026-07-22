@@ -39,6 +39,7 @@ export interface Employee {
     hire_date?: string;
     termination_date?: string;
     tax_classification?: 'W-2' | '1099';
+    payment_method_notes?: string;
     
     // Personal/Contact
     full_legal_name?: string;
