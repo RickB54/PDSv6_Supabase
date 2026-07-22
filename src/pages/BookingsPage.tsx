@@ -2488,12 +2488,8 @@ export default function BookingsPage() {
                         Service Summary
                         {formData.status && (
                           <Badge variant="outline" className={cn(
-                            "text-[9px] font-black uppercase py-0 h-4 border-zinc-700",
-                            formData.status === 'confirmed' ? "bg-blue-500/10 text-blue-400" :
-                            formData.status === 'done' ? "bg-emerald-500/10 text-emerald-400" :
-                            formData.status === 'cancelled' ? "bg-red-500/10 text-red-400" :
-                            formData.status === 'blocked' ? "bg-red-900/20 text-red-500" :
-                            "bg-zinc-800 text-zinc-300"
+                            "text-[9px] font-black uppercase py-0 h-4 border",
+                            getStatusColor(formData.status as any)
                           )}>
                             {formData.status.replace(/_/g, ' ')}
                           </Badge>
