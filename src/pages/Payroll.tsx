@@ -8,10 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { upsertExpense } from "@/lib/db";
 import { getSupabasePayrollRecords, markPayrollPaid } from "@/lib/supa-data";
 import {
-  Wallet, Clock, DollarSign, CheckCircle, ArrowRight, User
+  Wallet, Clock, DollarSign, CheckCircle, ArrowRight, User, Trophy, Award, TrendingUp, Briefcase, BadgeDollarSign, Star, Zap
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { cn } from "@/lib/utils";
 
 export default function Payroll() {
   const navigate = useNavigate();
@@ -174,7 +175,7 @@ export default function Payroll() {
                </Card>
             )}
 
-            {Object.entries(groupedPending).map(([empName, records]) => {
+            {(Object.entries(groupedPending) as [string, any[]][]).map(([empName, records]) => {
                const empTotal = records.reduce((sum, r) => sum + Number(r.earned_amount), 0);
                const empSelectedTotal = records.filter(r => selectedIds.includes(r.id)).reduce((sum, r) => sum + Number(r.earned_amount), 0);
                
@@ -279,47 +280,99 @@ export default function Payroll() {
         )}
 
         {tab === 'dashboard' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {Object.entries(
-                historyRecords.reduce((acc, curr) => {
-                  if (!acc[curr.employee_name]) acc[curr.employee_name] = { totalPaid: 0, jobsCompleted: 0 };
-                  acc[curr.employee_name].totalPaid += Number(curr.earned_amount || 0);
-                  acc[curr.employee_name].jobsCompleted += 1;
-                  return acc;
-                }, {} as Record<string, { totalPaid: number, jobsCompleted: number }>)
-              ).map(([empName, stats]) => (
-                <Card key={empName} className="bg-zinc-900 border-zinc-800">
-                  <CardHeader className="pb-2 border-b border-zinc-800/50">
-                    <CardTitle className="text-lg text-white flex items-center gap-2">
-                      <div className="p-2 bg-indigo-500/20 rounded-full text-indigo-400">
-                        <User className="h-4 w-4" />
-                      </div>
-                      {empName}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4 space-y-4">
-                    <div>
-                      <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Total Earnings</p>
-                      <p className="text-2xl font-black text-emerald-400">${stats.totalPaid.toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Jobs Completed</p>
-                      <p className="text-xl font-bold text-white">{stats.jobsCompleted}</p>
-                    </div>
-                  </CardContent>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 pb-12">
+            {historyRecords.length === 0 ? (
+              <div className="col-span-full">
+                <Card className="p-12 text-center bg-zinc-900 border-zinc-800">
+                  <User className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-white">No Performance Data</h3>
+                  <p className="text-zinc-400 mt-2">Process pay runs to start generating employee performance metrics.</p>
                 </Card>
-              ))}
-              {historyRecords.length === 0 && (
-                <div className="col-span-full">
-                  <Card className="p-12 text-center bg-zinc-900 border-zinc-800">
-                    <User className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-white">No Performance Data</h3>
-                    <p className="text-zinc-400 mt-2">Process pay runs to start generating employee performance metrics.</p>
-                  </Card>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(() => {
+                  const statsByEmployee = historyRecords.reduce((acc, curr) => {
+                    if (!acc[curr.employee_name]) acc[curr.employee_name] = { totalPaid: 0, jobsCompleted: 0, highestPayout: 0 };
+                    acc[curr.employee_name].totalPaid += Number(curr.earned_amount || 0);
+                    acc[curr.employee_name].jobsCompleted += 1;
+                    if (Number(curr.earned_amount) > acc[curr.employee_name].highestPayout) {
+                      acc[curr.employee_name].highestPayout = Number(curr.earned_amount);
+                    }
+                    return acc;
+                  }, {} as Record<string, { totalPaid: number, jobsCompleted: number, highestPayout: number }>);
+                  
+                  const sortedEmployees = (Object.entries(statsByEmployee) as [string, { totalPaid: number, jobsCompleted: number, highestPayout: number }][]).sort((a, b) => b[1].totalPaid - a[1].totalPaid);
+                  
+                  return sortedEmployees.map(([empName, stats], index) => {
+                    const isTopEarner = index === 0;
+                    // Approximate hours assuming ~3.5 hours per job to give an estimated average hourly
+                    const estAvgHourly = stats.totalPaid / (stats.jobsCompleted * 3.5);
+                    const avgJobPayout = stats.totalPaid / stats.jobsCompleted;
+
+                    return (
+                      <Card key={empName} className={cn("bg-zinc-900 border-zinc-800 relative overflow-hidden", isTopEarner && "border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.15)]")}>
+                        {isTopEarner && (
+                          <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10 flex items-center gap-1 shadow-lg">
+                            <Trophy className="h-3 w-3" /> Employee of the Month
+                          </div>
+                        )}
+                        <CardHeader className="pb-3 border-b border-zinc-800/50 relative z-10">
+                          <CardTitle className="text-xl text-white flex items-center gap-3">
+                            <div className={cn("p-2.5 rounded-xl", isTopEarner ? "bg-indigo-500/20 text-indigo-400" : "bg-zinc-800 text-zinc-400")}>
+                              {isTopEarner ? <Award className="h-5 w-5" /> : <User className="h-5 w-5" />}
+                            </div>
+                            <div>
+                              <div className="font-black tracking-tight">{empName}</div>
+                              <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-0.5 flex items-center gap-1">
+                                Rank #{index + 1}
+                              </div>
+                            </div>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-5 space-y-5 relative z-10">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1 flex items-center gap-1">
+                                <DollarSign className="h-3 w-3 text-emerald-500" /> Total Earnings
+                              </p>
+                              <p className="text-2xl font-black text-emerald-400">${stats.totalPaid.toFixed(2)}</p>
+                            </div>
+                            <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-1 flex items-center gap-1">
+                                <Briefcase className="h-3 w-3 text-blue-500" /> Jobs Done
+                              </p>
+                              <p className="text-2xl font-black text-white">{stats.jobsCompleted}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3 pt-2">
+                            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800/30 transition-colors">
+                              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <BadgeDollarSign className="h-4 w-4 text-zinc-500" /> Highest Payout
+                              </span>
+                              <span className="text-sm font-black text-emerald-400">${stats.highestPayout.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800/30 transition-colors">
+                              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-zinc-500" /> Avg Job Payout
+                              </span>
+                              <span className="text-sm font-black text-white">${avgJobPayout.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-800/30 transition-colors">
+                              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-zinc-500" /> Est. Hourly Rate
+                              </span>
+                              <span className="text-sm font-black text-blue-400">~${estAvgHourly.toFixed(2)}/hr</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  });
+                })()}
+              </div>
+            )}
           </div>
         )}
 

@@ -2484,7 +2484,21 @@ export default function BookingsPage() {
               <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-2 shadow-2xl">
                 <div className="flex justify-between items-start">
                     <div>
-                      <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1">Service Summary</div>
+                      <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+                        Service Summary
+                        {formData.status && (
+                          <Badge variant="outline" className={cn(
+                            "text-[9px] font-black uppercase py-0 h-4 border-zinc-700",
+                            formData.status === 'confirmed' ? "bg-blue-500/10 text-blue-400" :
+                            formData.status === 'done' ? "bg-emerald-500/10 text-emerald-400" :
+                            formData.status === 'cancelled' ? "bg-red-500/10 text-red-400" :
+                            formData.status === 'blocked' ? "bg-red-900/20 text-red-500" :
+                            "bg-zinc-800 text-zinc-300"
+                          )}>
+                            {formData.status.replace(/_/g, ' ')}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
                       {formData.addons && formData.addons.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">

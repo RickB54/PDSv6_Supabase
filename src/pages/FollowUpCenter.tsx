@@ -214,6 +214,8 @@ export default function FollowUpCenter() {
 
     completedBookings.forEach(booking => {
       if (!booking.customerEmail) return;
+      if (booking.hasReminder === false) return; // Respect the "Enable Follow-up" toggle
+
       const existing = latestByCustomer[booking.customerEmail];
       if (!existing || new Date(booking.date) > new Date(existing.date)) {
         latestByCustomer[booking.customerEmail] = booking;
@@ -533,9 +535,21 @@ export default function FollowUpCenter() {
                Client Retention
                <Badge className="bg-black/40 text-blue-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{stats.dueNow}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="follow-ups" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
+            <TabsTrigger value="follow-ups" className="group relative rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
                <Zap className="h-4 w-4 sm:h-5 sm:w-5" />
-               CRM Follow-ups
+               <span className="flex items-center gap-2">
+                 CRM Follow-ups
+                 <HelpCircle className="h-3 w-3 text-zinc-400 group-hover:text-indigo-300 transition-colors" />
+               </span>
+               <div className="absolute top-[110%] left-1/2 -translate-x-1/2 mt-2 w-64 bg-zinc-900 border border-zinc-700 p-3 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[9999] pointer-events-none flex flex-col gap-1.5 text-left before:content-[''] before:absolute before:-top-2 before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-b-zinc-700 after:content-[''] after:absolute after:-top-[7px] after:left-1/2 after:-translate-x-1/2 after:border-[7px] after:border-transparent after:border-b-zinc-900">
+                 <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                   <HelpCircle className="h-4 w-4" />
+                   <span className="font-bold tracking-tight text-[11px]">How it Works</span>
+                 </div>
+                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">1. Select <strong>Enable Follow-up</strong> when creating or editing a booking.</p>
+                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">2. Choose a reminder frequency (e.g., 6 Months).</p>
+                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">3. If that time passes with no new activity, they appear here!</p>
+               </div>
                <Badge className="bg-black/40 text-indigo-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{followUpStatus.overdue.length + followUpStatus.dueThisWeek.length}</Badge>
             </TabsTrigger>
             <TabsTrigger value="prospects" className="rounded-xl sm:rounded-2xl px-6 sm:px-10 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] h-14 sm:h-16 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-[0_0_30px_rgba(147,51,234,0.4)] transition-all flex items-center justify-center sm:justify-start gap-3 w-full">
