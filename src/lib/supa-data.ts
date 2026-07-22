@@ -3083,3 +3083,23 @@ export const markPayrollPaid = async (id: string, expenseId?: string) => {
         throw err;
     }
 };
+
+export const updatePayrollRecord = async (id: string, updates: { earned_amount?: number; commission_percent?: number; booking_title?: string; employee_name?: string; payment_status?: string; notes?: string }) => {
+    try {
+        const { error } = await supabase.from('payroll_records').update(updates).eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('updatePayrollRecord error:', err);
+        throw err;
+    }
+};
+
+export const deletePayrollRecord = async (id: string) => {
+    try {
+        const { error } = await supabase.from('payroll_records').delete().eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deletePayrollRecord error:', err);
+        throw err;
+    }
+};
