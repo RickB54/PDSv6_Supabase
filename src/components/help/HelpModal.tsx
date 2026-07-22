@@ -149,7 +149,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] w-full h-[95vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[95vw] w-full h-[98vh] sm:h-[98vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 sm:mb-2">
             <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-lg sm:text-2xl font-bold tracking-tight">
@@ -250,14 +250,14 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
         </DialogHeader>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden p-4 sm:p-8 bg-[#0f1629]/50 relative flex flex-col">
+        <div className="flex-1 overflow-hidden p-4 sm:p-6 sm:pt-4 bg-[#0f1629]/50 relative flex flex-col">
           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -z-10" />
 
           {topic ? (
-            <div className="flex flex-col h-full max-w-[1600px] mx-auto w-full pt-0 sm:pt-2">
-              <div className="flex flex-col sm:flex-row items-start justify-between mb-4 sm:mb-8 pb-4 sm:pb-6 border-b border-slate-800/60 shrink-0 gap-4">
-                <div className="space-y-3 sm:space-y-4 w-full">
-                  <h2 className="text-xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">{topic.title}</h2>
+            <div className="flex flex-col h-full max-w-[1600px] mx-auto w-full pt-0">
+              <div className="flex flex-col sm:flex-row items-start justify-between mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-slate-800/60 shrink-0 gap-4">
+                <div className="space-y-2 sm:space-y-3 w-full">
+                  <h2 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">{topic.title}</h2>
                   <div className="flex items-center gap-2">
                     {topic.route && (<div className="text-[9px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-1 rounded-full border border-cyan-800/50 uppercase tracking-[0.1em]">Section: {topic.route.replace('/', '') || 'Home'}</div>)}
                     {topic.route && (
