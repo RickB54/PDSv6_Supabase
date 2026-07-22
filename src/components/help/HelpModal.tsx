@@ -149,7 +149,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1200px] xl:max-w-[1400px] h-[90vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[95vw] w-full h-[95vh] bg-[#0c1220] border-slate-800 text-white shadow-2xl flex flex-col p-0 overflow-hidden">
         <DialogHeader className="px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-800/60 shrink-0 bg-[#0f1629]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1 sm:mb-2">
             <DialogTitle className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-emerald-300 to-sky-400 text-lg sm:text-2xl font-bold tracking-tight">
@@ -254,7 +254,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl -z-10" />
 
           {topic ? (
-            <div className="flex flex-col h-full max-w-4xl mx-auto w-full pt-0 sm:pt-2">
+            <div className="flex flex-col h-full max-w-[1600px] mx-auto w-full pt-0 sm:pt-2">
               <div className="flex flex-col sm:flex-row items-start justify-between mb-4 sm:mb-8 pb-4 sm:pb-6 border-b border-slate-800/60 shrink-0 gap-4">
                 <div className="space-y-3 sm:space-y-4 w-full">
                   <h2 className="text-xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight sm:leading-none">{topic.title}</h2>
@@ -296,7 +296,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                 </div>
               </div>
 
-              <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-2 sm:pr-6 space-y-4 sm:space-y-6 custom-scrollbar text-base sm:text-lg leading-relaxed text-slate-300 pb-12">
+              <div id="help-content-scroll" className="flex-1 overflow-y-auto pr-2 sm:pr-6 space-y-4 sm:space-y-6 custom-scrollbar text-sm sm:text-base leading-relaxed text-slate-300 pb-12">
                 {(topic.content || []).map((p, i) => (
                   <p key={i} className={p.startsWith('**') ? 'text-white font-bold' : ''}>
                     {p.split(/(\*\*.*?\*\*)/g).map((chunk, j) => 
@@ -308,7 +308,7 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                 {topic.summary && (
                   <div className="mt-8 p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
-                    <p className="text-lg text-emerald-200/90 italic font-medium leading-relaxed">✨ Summary: {topic.summary}</p>
+                    <p className="text-base text-emerald-200/90 italic font-medium leading-relaxed">✨ Summary: {topic.summary}</p>
                   </div>
                 )}
 
