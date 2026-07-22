@@ -541,14 +541,14 @@ export default function FollowUpCenter() {
                  CRM Follow-ups
                  <HelpCircle className="h-3 w-3 text-zinc-400 group-hover:text-indigo-300 transition-colors" />
                </span>
-               <div className="absolute top-[110%] left-1/2 -translate-x-1/2 mt-2 w-64 bg-zinc-900 border border-zinc-700 p-3 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[9999] pointer-events-none flex flex-col gap-1.5 text-left before:content-[''] before:absolute before:-top-2 before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-b-zinc-700 after:content-[''] after:absolute after:-top-[7px] after:left-1/2 after:-translate-x-1/2 after:border-[7px] after:border-transparent after:border-b-zinc-900">
+               <div className="absolute top-[110%] left-1/2 -translate-x-1/2 mt-2 w-80 bg-zinc-900 border border-zinc-700 p-4 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[9999] pointer-events-none flex flex-col gap-2 text-left before:content-[''] before:absolute before:-top-2 before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-b-zinc-700 after:content-[''] after:absolute after:-top-[7px] after:left-1/2 after:-translate-x-1/2 after:border-[7px] after:border-transparent after:border-b-zinc-900">
                  <div className="flex items-center gap-2 text-indigo-400 mb-1">
-                   <HelpCircle className="h-4 w-4" />
-                   <span className="font-bold tracking-tight text-[11px]">How it Works</span>
+                   <HelpCircle className="h-5 w-5" />
+                   <span className="font-bold tracking-tight text-sm uppercase">How it Works</span>
                  </div>
-                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">1. Select <strong>Enable Follow-up</strong> when creating or editing a booking.</p>
-                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">2. Choose a reminder frequency (e.g., 6 Months).</p>
-                 <p className="text-zinc-300 text-[10px] normal-case tracking-normal leading-snug">3. If that time passes with no new activity, they appear here!</p>
+                 <p className="text-white text-xs normal-case tracking-normal leading-relaxed font-medium">1. Select <strong className="text-indigo-300">Enable Follow-up</strong> when creating or editing a booking.</p>
+                 <p className="text-white text-xs normal-case tracking-normal leading-relaxed font-medium">2. Choose a reminder frequency (e.g., 6 Months).</p>
+                 <p className="text-white text-xs normal-case tracking-normal leading-relaxed font-medium">3. If that time passes with no new activity, they appear here!</p>
                </div>
                <Badge className="bg-black/40 text-indigo-400 border-none font-black text-[10px] px-2.5 py-1 rounded-lg">{followUpStatus.overdue.length + followUpStatus.dueThisWeek.length}</Badge>
             </TabsTrigger>
