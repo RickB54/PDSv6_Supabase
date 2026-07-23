@@ -81,6 +81,19 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
 
         {/* GROUP 2: Scheduling Workflow */}
         {/* Sub-section A: Active scheduling/calendars */}
+        {isAdmin && (
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => navigate('/availability-manager')}
+                title="Hybrid Availability System"
+                className={collapsed ? "" : "w-full justify-start gap-2"}
+            >
+                <CalendarCheck className="w-5 h-5 text-blue-600" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Hybrid Availability</span>}
+            </Button>
+        )}
+
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <Calendar className="w-5 h-5 text-purple-500" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase text-left">Bookings</span>}
@@ -96,21 +109,9 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
         </Button>
 
-        <div className="w-[50%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+        <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
         {/* Sub-section B: Reference/people */}
-        {isAdmin && (
-            <Button
-                variant="ghost"
-                size={collapsed ? "icon" : "default"}
-                onClick={() => navigate('/availability-manager')}
-                title="Hybrid Availability System"
-                className={collapsed ? "" : "w-full justify-start gap-2"}
-            >
-                <CalendarCheck className="w-5 h-5 text-blue-600" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Hybrid Availability</span>}
-            </Button>
-        )}
 
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Database" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <Users className="w-5 h-5 text-blue-500" />
