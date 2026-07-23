@@ -30,7 +30,7 @@ import { contentService } from "@/lib/content";
 
 const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean) => (
     <>
-        {/* Top Priority Action */}
+        {/* GROUP 1: Quick Helpful Items */}
         <Button
             variant="ghost"
             size={collapsed ? "icon" : "default"}
@@ -42,7 +42,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
         </Button>
 
-        {/* Quick Pay Shortcut - Admin Only */}
         {isAdmin && (
             <Button
                 variant="ghost"
@@ -56,7 +55,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        {/* Pricing Scenario Shortcut - Admin Only */}
         {isAdmin && (
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Calculator className="w-5 h-5 text-red-500" />
@@ -64,15 +62,24 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        {/* Sticky Notes */}
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/sticky-notes')} title="Sticky Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <CheckSquare className="w-5 h-5 text-yellow-400" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Sticky Notes</span>}
         </Button>
 
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <CheckSquare className="w-5 h-5 text-blue-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Tasks</span>}
+        </Button>
 
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Video className="w-5 h-5 text-pink-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Gallery</span>}
+        </Button>
 
-        {/* Hybrid Availability System - Admin Only */}
+        <div className="w-[70%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
+        {/* GROUP 2: Scheduling Workflow */}
         {isAdmin && (
             <Button
                 variant="ghost"
@@ -91,16 +98,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Staff Schedule</span>}
         </Button>
 
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <CheckSquare className="w-5 h-5 text-blue-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Tasks</span>}
-        </Button>
-
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <Video className="w-5 h-5 text-pink-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Gallery</span>}
-        </Button>
-
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <Calendar className="w-5 h-5 text-purple-500" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase text-left">Bookings</span>}
@@ -111,6 +108,21 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
         </Button>
 
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Database" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Users className="w-5 h-5 text-blue-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Customers</span>}
+        </Button>
+
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/prospects')} title="Prospects Overview" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Users className="w-5 h-5 text-purple-500" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Prospects</span>}
+            </Button>
+        )}
+
+        <div className="w-[70%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
+        {/* GROUP 3: Chemicals & Inventory */}
         {isAdmin && (
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Package className="w-5 h-5 text-cyan-500" />
@@ -132,18 +144,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             <Beaker className="w-5 h-5 text-green-400" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Calc</span>}
         </Button>
-
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Database" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <Users className="w-5 h-5 text-blue-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Customers</span>}
-        </Button>
-
-        {isAdmin && (
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/prospects')} title="Prospects Overview" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <Users className="w-5 h-5 text-purple-500" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Prospects</span>}
-            </Button>
-        )}
     </>
 );
 
