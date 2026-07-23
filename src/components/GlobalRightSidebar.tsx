@@ -39,7 +39,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
         >
             <Phone className="w-5 h-5 text-primary animate-pulse" />
-            {!collapsed && <span className="font-bold uppercase tracking-tight">Phone Assistant</span>}
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
         </Button>
 
         {isAdmin && (
@@ -251,37 +251,7 @@ export function GlobalRightSidebar() {
     // Mobile style logic
     const isAdmin = user?.role === 'admin';
 
-    if (isMobile) {
-        return (
-            <>
-                {/* Mobile Drawer Overlay */}
-                {openMobile && (
-                    <div 
-                        className="fixed inset-0 bg-black/60 z-50 animate-in fade-in duration-300" 
-                        onClick={() => setOpenMobile(false)}
-                    />
-                )}
-                <div 
-                    className={`fixed right-0 top-0 h-screen w-48 bg-zinc-950 border-l border-zinc-800 z-[100] transition-transform duration-300 transform flex flex-col items-start px-2 pt-16 pb-24 gap-3 overflow-y-auto no-scrollbar ${
-                        openMobile ? 'translate-x-0' : 'translate-x-full'
-                    }`}
-                >
-                    <div className="flex w-full items-center justify-between mb-4 border-b border-zinc-800 pb-2 flex-shrink-0">
-                        <span className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em]">Quick Access</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => setOpenMobile(false)}
-                            className="h-8 w-8 text-zinc-500"
-                        >
-                            <ChevronRight className="w-5 h-5" />
-                        </Button>
-                    </div>
-                    {renderSidebarContent(false, navigate, isAdmin)}
-                </div>
-            </>
-        );
-    }
+
 
     // Calculate dynamic top offset based on active banners
     const isPerspectiveMode = user?.role === 'admin' && (
