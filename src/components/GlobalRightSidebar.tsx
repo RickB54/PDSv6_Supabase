@@ -21,7 +21,9 @@ import {
     Beaker,
     CalendarDays,
     DollarSign,
-    BookOpen
+    BookOpen,
+    Banknote,
+    Receipt
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -110,6 +112,23 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         </Button>
 
         <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
+        {/* Sub-section: Financial / Billing */}
+        {isAdmin && (
+            <>
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <Banknote className="w-5 h-5 text-green-500" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Payroll</span>}
+                </Button>
+
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/invoicing')} title="Invoices" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <Receipt className="w-5 h-5 text-blue-400" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Invoices</span>}
+                </Button>
+                
+                <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+            </>
+        )}
 
         {/* Sub-section B: Reference/people */}
 
