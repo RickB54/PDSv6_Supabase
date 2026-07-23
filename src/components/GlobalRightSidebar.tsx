@@ -77,9 +77,28 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Gallery</span>}
         </Button>
 
-        <div className="w-[70%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+        <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
         {/* GROUP 2: Scheduling Workflow */}
+        {/* Sub-section A: Active scheduling/calendars */}
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <Calendar className="w-5 h-5 text-purple-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase text-left">Bookings</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <CalendarDays className="w-5 h-5 text-emerald-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Staff Schedule</span>}
+        </Button>
+
+        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/service-checklist')} title="Checklist" className={collapsed ? "" : "w-full justify-start gap-2"}>
+            <ClipboardList className="w-5 h-5 text-orange-500" />
+            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
+        </Button>
+
+        <div className="w-[50%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
+        {/* Sub-section B: Reference/people */}
         {isAdmin && (
             <Button
                 variant="ghost"
@@ -93,21 +112,6 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/staff-schedule')} title="Staff Schedule" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <CalendarDays className="w-5 h-5 text-emerald-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Staff Schedule</span>}
-        </Button>
-
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/bookings')} title="Bookings" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <Calendar className="w-5 h-5 text-purple-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase text-left">Bookings</span>}
-        </Button>
-
-        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/service-checklist')} title="Checklist" className={collapsed ? "" : "w-full justify-start gap-2"}>
-            <ClipboardList className="w-5 h-5 text-orange-500" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
-        </Button>
-
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/search-customer')} title="Customer Database" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <Users className="w-5 h-5 text-blue-500" />
             {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Customers</span>}
@@ -120,7 +124,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        <div className="w-[70%] h-[1px] bg-zinc-700/60 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+        <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
         {/* GROUP 3: Chemicals & Inventory */}
         {isAdmin && (
