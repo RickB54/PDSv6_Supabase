@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle, GraduationCap } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle, GraduationCap, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ADMIN_TRAINING_PHASES } from '@/lib/training-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -797,7 +798,27 @@ export default function EmployeeProfilePage() {
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold text-white mb-1">Training Progress</h2>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="text-base font-bold text-white">Training Progress</h2>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-zinc-500 hover:text-white transition-colors">
+                          <HelpCircle className="w-4 h-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-zinc-900 border-zinc-700 text-white p-4 shadow-2xl z-50 text-xs space-y-3">
+                        <h4 className="font-bold text-sm text-indigo-400 border-b border-zinc-800 pb-2 mb-2">How to use this page</h4>
+                        <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
+                          <li><strong>Checklist:</strong> Check off items as you complete them in-person. Progress saves automatically.</li>
+                          <li><strong>Progress Bar:</strong> Updates in real-time. Auto-checks the 'Training Completed' box when 100%.</li>
+                          <li><strong>Phase Notes:</strong> Jot quick observations after each phase while fresh — saves to the profile.</li>
+                          <li><strong>PDF Buttons:</strong> Open reference guides in a popup without leaving the page.</li>
+                          <li><strong>Exam Unlock:</strong> Toggle ON when ready. They won't see the exam on their dashboard until you do.</li>
+                          <li><strong>Exam Results:</strong> Once taken, their score appears next to the progress bar.</li>
+                        </ul>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   <p className="text-xs text-zinc-500">Track 6-phase checklist completion and exam status.</p>
                 </div>
                 <div className="flex gap-2">
