@@ -8,6 +8,7 @@ import { pushAdminAlert } from "@/lib/adminAlerts";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { getOrientationExamModule, upsertTrainingModule, TrainingModule } from "@/lib/supa-data";
+import { supabase } from "@/lib/supabase";
 
 type ExamQ = { q: string; options: string[]; correct: number };
 // LocalStorage fallback key only
@@ -18,6 +19,7 @@ export default function ExamAdmin() {
   const [questions, setQuestions] = useState<ExamQ[]>([]);
   const [issues, setIssues] = useState<Record<number, string[]>>({});
   const [moduleId, setModuleId] = useState<string | null>(null);
+  const [results, setResults] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +51,19 @@ export default function ExamAdmin() {
       setQuestions(defaults);
     };
     load();
+
+    const fetchResults = async () => {
+       const { data } = await supabase
+          .from('employee_training_progress')
+          .select(`
+             *,
+             app_users:user_id ( name, email )
+          `)
+          .eq('status', 'completed')
+          .order('completed_at', { ascending: false });
+       if (data) setResults(data);
+    };
+    fetchResults();
   }, []);
 
   const saveToSupabase = async (qs: ExamQ[]) => {
@@ -328,7 +343,39 @@ export default function ExamAdmin() {
   }
 
   return (
-    <div className="p-4 max-w-screen-xl mx-auto">
+    <div className="p-4 max-w-screen-xl mx-auto space-y-6">
+      <Card className="p-4 bg-[#18181b] border-zinc-800">
+        <h2 className="text-xl font-semibold text-white mb-4">Exam Results</h2>
+        {results.length === 0 ? (
+          <p className="text-zinc-400">No exam results found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-300">
+              <thead className="text-xs uppercase bg-zinc-900 text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3">Employee</th>
+                  <th className="px-4 py-3">Date Taken</th>
+                  <th className="px-4 py-3">Score</th>
+                  <th className="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r, i) => (
+                  <tr key={i} className="border-b border-zinc-800 hover:bg-zinc-800/50">
+                    <td className="px-4 py-3 font-medium text-white">{r.app_users?.name || r.app_users?.email || 'Unknown'}</td>
+                    <td className="px-4 py-3">{new Date(r.completed_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">{r.score} / 50</td>
+                    <td className="px-4 py-3">
+                      {r.score >= 38 ? <span className="text-green-500">Passed</span> : <span className="text-red-500">Failed</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
       <Card className="p-4 bg-[#18181b] border-zinc-800">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
           <h1 className="text-xl font-semibold text-white">Exam Administration</h1>

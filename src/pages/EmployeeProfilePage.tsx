@@ -39,6 +39,7 @@ export default function EmployeeProfilePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const user = getCurrentUser();
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
   const [emp, setEmp] = useState<any>(null);
   const [originalEmp, setOriginalEmp] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -176,6 +177,7 @@ export default function EmployeeProfilePage() {
       training_completed: emp.training_completed || false,
       training_completed_on: emp.training_completed_on || null,
       training_notes: emp.training_notes || null,
+      exam_unlocked: emp.exam_unlocked || false,
       updated_at: new Date().toISOString(),
     };
 
@@ -835,6 +837,17 @@ export default function EmployeeProfilePage() {
                     </div>
                   ) : (
                     <span className="text-xs text-zinc-500">Not taken yet</span>
+                  )}
+                  {isAdmin && (
+                    <div className="mt-4 pt-3 border-t border-zinc-800 flex items-center justify-between">
+                      <Label className="text-xs text-zinc-400 cursor-pointer" onClick={() => set('exam_unlocked', !emp.exam_unlocked)}>Unlock Certification Exam for this employee</Label>
+                      <input 
+                        type="checkbox" 
+                        checked={emp.exam_unlocked || false} 
+                        onChange={(e) => set('exam_unlocked', e.target.checked)} 
+                        className="w-4 h-4 accent-indigo-500 rounded bg-zinc-900 border-zinc-700 cursor-pointer" 
+                      />
+                    </div>
                   )}
                 </Card>
               </div>

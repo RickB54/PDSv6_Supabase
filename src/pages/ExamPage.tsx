@@ -8,6 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { HelpCircle } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrientationExamModule, getTrainingProgress, upsertTrainingProgress } from "@/lib/supa-data";
+import jsPDF from "jspdf";
+import { savePDFToArchive } from "@/lib/pdfArchive";
+import { supabase } from "@/lib/supabase";
 
 import {
   AlertDialog,
@@ -126,7 +129,36 @@ export default function ExamPage() {
     setScore(correctCount);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     await syncProgress(answers, true, correctCount);
-    toast({ title: "Exam Submitted", description: "Your results have been saved to Supabase." });
+
+    // Generate PDF
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text('Employee Certification Exam Record', 105, 20, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text(`Employee: ${user?.user_metadata?.name || user?.email || 'Unknown'}`, 20, 35);
+      doc.text(`Date Taken: ${new Date().toLocaleDateString()}`, 20, 45);
+      doc.text(`Score: ${correctCount} / 50 (${Math.round((correctCount / 50) * 100)}%)`, 20, 55);
+      doc.text(`Passing Threshold: 75% (38/50)`, 20, 65);
+      doc.text(`Result: ${correctCount >= 38 ? 'PASSED' : 'FAILED'}`, 20, 75);
+      
+      const pdfData = doc.output('dataurlstring');
+      const fileName = `Certification_Exam_${(user?.email || 'user').split('@')[0]}_${new Date().toISOString().split('T')[0]}.pdf`;
+      savePDFToArchive('Employee Training' as any, user?.email || 'system', `exam_record_${Date.now()}`, pdfData, { fileName, path: 'Employee Training/' });
+    } catch (e) {
+      console.error('Failed to generate PDF', e);
+    }
+
+    // Update Employee Profile record
+    if (user?.id) {
+       await supabase.from('app_users').update({
+          exam_completed: true,
+          exam_date: new Date().toISOString().split('T')[0],
+          exam_score: correctCount
+       }).eq('id', user.id);
+    }
+
+    toast({ title: "Exam Submitted", description: "Your results have been saved to Supabase and a PDF record was generated." });
   };
 
   const saveAndExit = async () => {
