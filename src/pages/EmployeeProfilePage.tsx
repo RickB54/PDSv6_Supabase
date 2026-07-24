@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ const TABS = [
   { id: 'performance',  label: 'Performance',  icon: Activity },
   { id: 'admin',        label: 'Admin',        icon: FileText },
   { id: 'history',      label: 'Change History',icon: Clock },
+  { id: 'communications', label: 'Communications', icon: MessageSquare },
 ];
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -41,7 +43,19 @@ export default function EmployeeProfilePage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [communications, setCommunications] = useState<any[]>([]);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showCommModal, setShowCommModal] = useState(false);
+  const [commForm, setCommForm] = useState({
+    id: null as string | null,
+    method: 'Text',
+    direction: 'Sent by me',
+    subject: '',
+    content: '',
+    follow_up_required: false,
+    follow_up_due_date: '',
+    status: 'Open'
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +109,13 @@ export default function EmployeeProfilePage() {
         .eq('employee_id', data.id)
         .order('changed_at', { ascending: false });
       setAuditLog(auditData || []);
+      
+      const { data: commData } = await supabase
+        .from('employee_communications')
+        .select('*')
+        .eq('employee_id', data.id)
+        .order('created_at', { ascending: false });
+      setCommunications(commData || []);
     }
 
     setLoading(false);
@@ -171,6 +192,75 @@ export default function EmployeeProfilePage() {
       load();
     }
     setSaving(false);
+  };
+
+  const handleSaveComm = async () => {
+    if (!emp?.id) return;
+    if (!commForm.subject || !commForm.content) {
+      toast({ title: 'Missing fields', description: 'Subject and content are required.', variant: 'destructive' });
+      return;
+    }
+    
+    setSaving(true);
+    const payload = {
+      employee_id: emp.id,
+      method: commForm.method,
+      direction: commForm.direction,
+      subject: commForm.subject,
+      content: commForm.content,
+      follow_up_required: commForm.follow_up_required,
+      follow_up_due_date: commForm.follow_up_due_date || null,
+      status: commForm.status
+    };
+
+    if (commForm.id) {
+      const { error } = await supabase.from('employee_communications').update(payload).eq('id', commForm.id);
+      if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      else toast({ title: 'Success', description: 'Communication updated.' });
+    } else {
+      const { error } = await supabase.from('employee_communications').insert([payload]);
+      if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      else toast({ title: 'Success', description: 'Communication logged.' });
+    }
+    
+    setSaving(false);
+    setShowCommModal(false);
+    load();
+  };
+
+  const resetCommForm = () => {
+    setCommForm({
+      id: null,
+      method: 'Text',
+      direction: 'Sent by me',
+      subject: '',
+      content: '',
+      follow_up_required: false,
+      follow_up_due_date: '',
+      status: 'Open'
+    });
+    setShowCommModal(true);
+  };
+  
+  const editComm = (comm: any) => {
+    setCommForm({
+      id: comm.id,
+      method: comm.method,
+      direction: comm.direction,
+      subject: comm.subject,
+      content: comm.content,
+      follow_up_required: comm.follow_up_required || false,
+      follow_up_due_date: comm.follow_up_due_date || '',
+      status: comm.status
+    });
+    setShowCommModal(true);
+  };
+
+  const toggleCommStatus = async (e: React.MouseEvent, comm: any) => {
+    e.stopPropagation();
+    const newStatus = comm.status === 'Open' ? 'Resolved' : 'Open';
+    const { error } = await supabase.from('employee_communications').update({ status: newStatus }).eq('id', comm.id);
+    if (!error) load();
   };
 
   if (loading) return (
@@ -540,9 +630,135 @@ export default function EmployeeProfilePage() {
             </div>
           )}
 
+          {/* COMMUNICATIONS */}
+          {activeTab === 'communications' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-white mb-1">Communications Log</h2>
+                  <p className="text-xs text-zinc-500">Record of all communications with {emp.name}.</p>
+                </div>
+                <Button onClick={resetCommForm} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                  <Plus className="h-4 w-4" /> Log Communication
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {communications.length === 0 ? (
+                  <p className="text-sm text-zinc-500 py-8 text-center bg-zinc-900/50 rounded-lg border border-zinc-800">No communications logged yet.</p>
+                ) : (
+                  communications.map((comm: any) => (
+                    <div key={comm.id} onClick={() => editComm(comm)} className="bg-zinc-950 border border-zinc-800 p-4 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors relative group">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${comm.status === 'Open' ? 'bg-amber-500/20 text-amber-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                            {comm.status}
+                          </span>
+                          <span className="text-sm font-bold text-zinc-200">{comm.subject}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="text-[10px] text-zinc-400">{new Date(comm.created_at).toLocaleString()}</div>
+                            <div className="text-[10px] text-zinc-500">{comm.method} • {comm.direction}</div>
+                          </div>
+                          <button onClick={(e) => toggleCommStatus(e, comm)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-zinc-800 rounded">
+                            {comm.status === 'Open' ? <Circle className="h-5 w-5 text-amber-400" /> : <CheckCircle className="h-5 w-5 text-emerald-400" />}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-zinc-300 mt-2 whitespace-pre-wrap p-3 bg-black/40 rounded border border-zinc-800/50">
+                        {comm.content}
+                      </div>
+                      
+                      {comm.follow_up_required && (
+                        <div className="mt-3 flex items-center gap-2 text-xs">
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="text-amber-500 font-medium">Follow-up required</span>
+                          {comm.follow_up_due_date && <span className="text-amber-500/70">by {comm.follow_up_due_date}</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
       <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
+
+      <Dialog open={showCommModal} onOpenChange={setShowCommModal}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{commForm.id ? 'Edit Communication' : 'Log Communication'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Method">
+                <Select value={commForm.method} onValueChange={v => setCommForm(prev => ({...prev, method: v}))}>
+                  <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Text">Text</SelectItem>
+                    <SelectItem value="Email">Email</SelectItem>
+                    <SelectItem value="Phone Call">Phone Call</SelectItem>
+                    <SelectItem value="In-Person">In-Person</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Direction">
+                <Select value={commForm.direction} onValueChange={v => setCommForm(prev => ({...prev, direction: v}))}>
+                  <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Sent by me">Sent by me</SelectItem>
+                    <SelectItem value="Received from employee">Received</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <Field label="Subject / Topic">
+              <Input value={commForm.subject} onChange={e => setCommForm(prev => ({...prev, subject: e.target.value}))} className={inputCls} placeholder="e.g. Schedule change" />
+            </Field>
+            <Field label="Message Content / Notes">
+              <Textarea value={commForm.content} onChange={e => setCommForm(prev => ({...prev, content: e.target.value}))} className={`${inputCls} h-32`} placeholder="Paste message or notes..." />
+            </Field>
+            
+            <div className="bg-zinc-900/50 p-3 rounded-lg border border-zinc-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Follow-up Required?</Label>
+                <Select value={commForm.follow_up_required ? 'yes' : 'no'} onValueChange={v => setCommForm(prev => ({...prev, follow_up_required: v === 'yes'}))}>
+                  <SelectTrigger className={`${inputCls} w-24 h-8 text-xs`}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">No</SelectItem>
+                    <SelectItem value="yes">Yes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {commForm.follow_up_required && (
+                <Field label="Follow-up Due Date (Optional)">
+                  <Input type="date" value={commForm.follow_up_due_date} onChange={e => setCommForm(prev => ({...prev, follow_up_due_date: e.target.value}))} className={inputCls} />
+                </Field>
+              )}
+            </div>
+            
+            <Field label="Status">
+              <Select value={commForm.status} onValueChange={v => setCommForm(prev => ({...prev, status: v}))}>
+                <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Open">Open</SelectItem>
+                  <SelectItem value="Resolved">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowCommModal(false)} className="text-zinc-400 hover:text-white">Cancel</Button>
+            <Button onClick={handleSaveComm} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">Save Entry</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
