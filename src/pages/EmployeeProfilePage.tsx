@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle, GraduationCap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ADMIN_TRAINING_PHASES } from '@/lib/training-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ const TABS = [
   { id: 'admin',        label: 'Admin',        icon: FileText },
   { id: 'history',      label: 'Change History',icon: Clock },
   { id: 'communications', label: 'Communications', icon: MessageSquare },
+  { id: 'training',     label: 'Training Progress', icon: GraduationCap },
 ];
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -44,6 +46,9 @@ export default function EmployeeProfilePage() {
   const [activeTab, setActiveTab] = useState('personal');
   const [auditLog, setAuditLog] = useState<any[]>([]);
   const [communications, setCommunications] = useState<any[]>([]);
+  const [checklist, setChecklist] = useState<any[]>([]);
+  const [examProgress, setExamProgress] = useState<any>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showCommModal, setShowCommModal] = useState(false);
   const [commForm, setCommForm] = useState({
@@ -116,6 +121,20 @@ export default function EmployeeProfilePage() {
         .eq('employee_id', data.id)
         .order('created_at', { ascending: false });
       setCommunications(commData || []);
+      
+      const { data: clData } = await supabase
+        .from('employee_training_progress_checklist')
+        .select('*')
+        .eq('employee_id', data.id);
+      setChecklist(clData || []);
+
+      const { data: exData } = await supabase
+        .from('employee_training_progress')
+        .select('*')
+        .eq('user_id', data.id)
+        .order('completed_at', { ascending: false })
+        .limit(1);
+      if (exData && exData.length > 0) setExamProgress(exData[0]);
     }
 
     setLoading(false);
@@ -154,6 +173,9 @@ export default function EmployeeProfilePage() {
       documents_on_file: emp.documents_on_file || null,
       documents_with_expiry: emp.documents_with_expiry || null,
       equipment_issued: emp.equipment_issued || null,
+      training_completed: emp.training_completed || false,
+      training_completed_on: emp.training_completed_on || null,
+      training_notes: emp.training_notes || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -261,6 +283,68 @@ export default function EmployeeProfilePage() {
     const newStatus = comm.status === 'Open' ? 'Resolved' : 'Open';
     const { error } = await supabase.from('employee_communications').update({ status: newStatus }).eq('id', comm.id);
     if (!error) load();
+  };
+
+  const toggleChecklistItem = async (phase: number, key: string, currentStatus: boolean) => {
+    const newStatus = !currentStatus;
+    
+    setChecklist(prev => {
+      const existing = prev.find(p => p.phase_number === phase && p.item_key === key);
+      if (existing) {
+        return prev.map(p => p.id === existing.id ? { ...p, completed: newStatus, completed_at: newStatus ? new Date().toISOString() : null, completed_by: user?.id } : p);
+      } else {
+        return [...prev, { phase_number: phase, item_key: key, completed: newStatus, completed_at: newStatus ? new Date().toISOString() : null, completed_by: user?.id }];
+      }
+    });
+
+    const { data: existing } = await supabase.from('employee_training_progress_checklist')
+      .select('id').eq('employee_id', emp.id).eq('phase_number', phase).eq('item_key', key).maybeSingle();
+
+    if (existing) {
+      await supabase.from('employee_training_progress_checklist').update({
+        completed: newStatus,
+        completed_at: newStatus ? new Date().toISOString() : null,
+        completed_by: user?.id
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('employee_training_progress_checklist').insert([{
+        employee_id: emp.id,
+        phase_number: phase,
+        item_key: key,
+        completed: newStatus,
+        completed_at: newStatus ? new Date().toISOString() : null,
+        completed_by: user?.id
+      }]);
+    }
+    
+    const currentList = [...checklist];
+    const itemIndex = currentList.findIndex(p => p.phase_number === phase && p.item_key === key);
+    if (itemIndex >= 0) {
+      currentList[itemIndex].completed = newStatus;
+    } else {
+      currentList.push({ phase_number: phase, item_key: key, completed: newStatus });
+    }
+    
+    const totalItems = ADMIN_TRAINING_PHASES.reduce((acc, p) => acc + p.items.length, 0);
+    const completedItems = currentList.filter(p => p.completed).length;
+    
+    if (completedItems === totalItems && !emp.training_completed) {
+      setEmp((prev: any) => ({ ...prev, training_completed: true, training_completed_on: new Date().toISOString().split('T')[0] }));
+      await supabase.from('app_users').update({ training_completed: true, training_completed_on: new Date().toISOString().split('T')[0] }).eq('id', emp.id);
+      toast({ title: 'Training Complete!', description: 'All phases marked complete. Profile updated.' });
+    } else if (completedItems < totalItems && emp.training_completed) {
+      setEmp((prev: any) => ({ ...prev, training_completed: false, training_completed_on: null }));
+      await supabase.from('app_users').update({ training_completed: false, training_completed_on: null }).eq('id', emp.id);
+    }
+  };
+
+  const openPdf = async (filename: string) => {
+    const { data } = await supabase.storage.from('training-documents').createSignedUrl(filename, 60);
+    if (data?.signedUrl) {
+      setPdfUrl(data.signedUrl);
+    } else {
+      toast({ title: 'Error', description: 'Could not load PDF. Make sure it is uploaded to the training-documents bucket.', variant: 'destructive' });
+    }
   };
 
   if (loading) return (
@@ -465,6 +549,25 @@ export default function EmployeeProfilePage() {
                   <Field label="Typical Weekly Availability/Hours">
                     <Input value={emp.weekly_availability || ''} onChange={e => set('weekly_availability', e.target.value)} className={inputCls} placeholder="e.g. Mon-Fri 9am-5pm" />
                   </Field>
+                </div>
+                <div className="md:col-span-2 pt-2 border-t border-zinc-800">
+                  <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-4">Training Status</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex items-center gap-3 h-10">
+                      <input 
+                        type="checkbox" 
+                        checked={emp.training_completed || false} 
+                        onChange={(e) => set('training_completed', e.target.checked)} 
+                        className="w-4 h-4 accent-indigo-500 rounded bg-zinc-900 border-zinc-700" 
+                      />
+                      <Label className="text-sm">Training Program Completed</Label>
+                    </div>
+                    {emp.training_completed && (
+                      <Field label="Completed On">
+                        <Input type="date" value={emp.training_completed_on || ''} onChange={e => set('training_completed_on', e.target.value)} className={inputCls} />
+                      </Field>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -685,6 +788,118 @@ export default function EmployeeProfilePage() {
             </div>
           )}
 
+          {/* TRAINING PROGRESS */}
+          {activeTab === 'training' && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-white mb-1">Training Progress</h2>
+                  <p className="text-xs text-zinc-500">Track 6-phase checklist completion and exam status.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}>
+                    <FileText className="h-3.5 w-3.5 mr-1.5" /> View Admin Training Guide
+                  </Button>
+                  <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}>
+                    <FileText className="h-3.5 w-3.5 mr-1.5" /> View Employee Training Guide
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress Bar & Exam Status */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-4 bg-zinc-950 border-zinc-800 flex flex-col justify-center">
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-sm font-semibold text-white">Overall Checklist</span>
+                    <span className="text-xs text-zinc-400">
+                      {checklist.filter(c => c.completed).length} / {ADMIN_TRAINING_PHASES.reduce((acc, p) => acc + p.items.length, 0)} Items
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-indigo-500 transition-all" 
+                      style={{ width: `${Math.round((checklist.filter(c => c.completed).length / ADMIN_TRAINING_PHASES.reduce((acc, p) => acc + p.items.length, 0)) * 100) || 0}%` }}
+                    />
+                  </div>
+                </Card>
+                <Card className="p-4 bg-zinc-950 border-zinc-800 flex flex-col justify-center">
+                  <span className="text-sm font-semibold text-white mb-1">Orientation Exam Status</span>
+                  {examProgress ? (
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded font-bold ${examProgress.score >= 38 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {examProgress.score >= 38 ? 'Passed' : 'Failed'}
+                      </span>
+                      <span className="text-xs text-zinc-400">Score: {examProgress.score} / 50</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-zinc-500">Not taken yet</span>
+                  )}
+                </Card>
+              </div>
+
+              {/* Phases */}
+              <div className="space-y-4">
+                {ADMIN_TRAINING_PHASES.map(phase => {
+                  const phaseTotal = phase.items.length;
+                  const phaseCompleted = phase.items.filter(item => checklist.find(c => c.phase_number === phase.phase_number && c.item_key === item)?.completed).length;
+                  const pct = Math.round((phaseCompleted / phaseTotal) * 100);
+                  
+                  return (
+                    <Card key={phase.phase_number} className="bg-zinc-950/50 border-zinc-800 overflow-hidden">
+                      <div className="p-4 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${pct === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                            {phase.phase_number}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm text-zinc-200">{phase.title}</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <div className="w-24 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                                <div className={`h-full ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[10px] text-zinc-500">{pct}% Complete</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        {phase.items.map((item, i) => {
+                          const isDone = checklist.find(c => c.phase_number === phase.phase_number && c.item_key === item)?.completed;
+                          return (
+                            <label key={i} className="flex items-start gap-3 cursor-pointer group">
+                              <input 
+                                type="checkbox" 
+                                checked={isDone || false}
+                                onChange={() => toggleChecklistItem(phase.phase_number, item, isDone || false)}
+                                className="mt-1 w-4 h-4 rounded border-zinc-700 bg-zinc-900 accent-indigo-500 cursor-pointer"
+                              />
+                              <span className={`text-xs leading-relaxed transition-colors ${isDone ? 'text-zinc-500 line-through' : 'text-zinc-300 group-hover:text-white'}`}>
+                                {item}
+                              </span>
+                            </label>
+                          );
+                        })}
+                        
+                        <div className="pt-3 mt-3 border-t border-zinc-800/50">
+                          <Label className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 block">Phase {phase.phase_number} Admin Notes</Label>
+                          <Textarea 
+                            value={(emp.training_notes || {})[phase.phase_number] || ''} 
+                            onChange={e => {
+                              const newNotes = { ...(emp.training_notes || {}), [phase.phase_number]: e.target.value };
+                              set('training_notes', newNotes);
+                            }}
+                            placeholder={`Observations during Phase ${phase.phase_number}...`}
+                            className="bg-zinc-900/50 border-zinc-800 h-20 text-xs text-zinc-300 resize-none focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
       <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
@@ -757,6 +972,17 @@ export default function EmployeeProfilePage() {
             <Button variant="ghost" onClick={() => setShowCommModal(false)} className="text-zinc-400 hover:text-white">Cancel</Button>
             <Button onClick={handleSaveComm} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white">Save Entry</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pdfUrl} onOpenChange={() => setPdfUrl(null)}>
+        <DialogContent className="max-w-4xl h-[85vh] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 border-b border-zinc-800 flex-shrink-0">
+            <DialogTitle>PDF Viewer</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full bg-zinc-900">
+            {pdfUrl && <iframe src={pdfUrl} className="w-full h-full border-0" />}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
