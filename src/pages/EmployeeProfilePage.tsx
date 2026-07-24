@@ -291,7 +291,9 @@ export default function EmployeeProfilePage() {
     setChecklist(prev => {
       const existing = prev.find(p => p.phase_number === phase && p.item_key === key);
       if (existing) {
-        return prev.map(p => p.id === existing.id ? { ...p, completed: newStatus, completed_at: newStatus ? new Date().toISOString() : null, completed_by: user?.id } : p);
+        return prev.map(p => (p.phase_number === phase && p.item_key === key) 
+          ? { ...p, completed: newStatus, completed_at: newStatus ? new Date().toISOString() : null, completed_by: user?.id } 
+          : p);
       } else {
         return [...prev, { phase_number: phase, item_key: key, completed: newStatus, completed_at: newStatus ? new Date().toISOString() : null, completed_by: user?.id }];
       }
