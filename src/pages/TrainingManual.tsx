@@ -21,6 +21,8 @@ import {
     getTrainingProgress, upsertTrainingProgress, getTrainingBadges,
     type TrainingModule, type TrainingProgress, type TrainingBadge
 } from "@/lib/supa-data";
+import { supabase } from "@/lib/supabase";
+import { ADMIN_TRAINING_PHASES } from "@/lib/training-data";
 
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
@@ -144,7 +146,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     const [modules, setModules] = useState<TrainingModule[]>([]);
     const [progress, setProgress] = useState<TrainingProgress[]>([]);
     const [badges, setBadges] = useState<TrainingBadge[]>([]);
-    // Removed local tips state
+    const [checklist, setChecklist] = useState<any[]>([]);
 
     // UI State
     const [searchParams, setSearchParams] = useSearchParams();
@@ -190,6 +192,9 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
         if (userId !== 'guest') {
             const prog = await getTrainingProgress(userId);
             setProgress(prog);
+
+            const { data } = await supabase.from('employee_training_progress_checklist').select('*').eq('employee_id', userId);
+            setChecklist(data || []);
         }
 
         // Rick's Tips loaded globally, no local load needed here
@@ -704,6 +709,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                     <Tabs value={activeTab} onValueChange={(v) => setSearchParams({ tab: v })} className="w-full space-y-6">
                         <TabsList className="flex flex-wrap h-auto w-full bg-zinc-900/50 p-2 rounded-xl border border-zinc-800">
                             <TabsTrigger value="videos" className="flex-1 min-w-[120px] data-[state=active]:bg-purple-600 data-[state=active]:text-white"><Video className="w-4 h-4 mr-2" />Certification</TabsTrigger>
+                            <TabsTrigger value="checklist" className="flex-1 min-w-[120px] data-[state=active]:bg-indigo-600 data-[state=active]:text-white"><CheckCircle2 className="w-4 h-4 mr-2" />My Progress</TabsTrigger>
                             {/* Library Tab removed from main view as requested, accessible via separate page */}
                             {/* <TabsTrigger value="library" className="flex-1 min-w-[120px] data-[state=active]:bg-blue-600 data-[state=active]:text-white"><PlayCircle className="w-4 h-4 mr-2" />Learning Lib</TabsTrigger> */}
                             <TabsTrigger value="process" className="flex-1 min-w-[120px]">SOPs</TabsTrigger>
@@ -711,6 +717,56 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                             <TabsTrigger value="chemicals" className="flex-1 min-w-[120px]">Chemicals</TabsTrigger>
                             <TabsTrigger value="materials" className="flex-1 min-w-[120px]">Materials</TabsTrigger>
                         </TabsList>
+
+                        <TabsContent value="checklist" className="space-y-6">
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                <h2 className="text-xl font-bold mb-4">Training Checklist Progress</h2>
+                                <p className="text-zinc-400 mb-6">This is a read-only view of your training checklist. Your manager will check these off during your evaluations.</p>
+                                <div className="space-y-4">
+                                    {ADMIN_TRAINING_PHASES.map(phase => {
+                                      const phaseTotal = phase.items.length;
+                                      const phaseCompleted = phase.items.filter(item => checklist.find(c => c.phase_number === phase.phase_number && c.item_key === item)?.completed).length;
+                                      const pct = Math.round((phaseCompleted / phaseTotal) * 100);
+                                      
+                                      return (
+                                        <Card key={phase.phase_number} className="bg-zinc-950/50 border-zinc-800 overflow-hidden">
+                                          <div className="p-4 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-sm ${pct === 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                                                {phase.phase_number}
+                                              </div>
+                                              <div>
+                                                <h3 className="font-semibold text-sm text-zinc-200">{phase.title}</h3>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                  <div className="w-24 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: `${pct}%` }} />
+                                                  </div>
+                                                  <span className="text-[10px] text-zinc-500">{pct}% Complete</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="p-4 space-y-3">
+                                            {phase.items.map((item, i) => {
+                                              const isDone = checklist.find(c => c.phase_number === phase.phase_number && c.item_key === item)?.completed;
+                                              return (
+                                                <div key={i} className="flex items-start gap-3 opacity-90">
+                                                  <div className={`mt-1 w-4 h-4 rounded flex items-center justify-center ${isDone ? 'bg-indigo-500 text-white' : 'border border-zinc-700 bg-zinc-900'}`}>
+                                                    {isDone && <CheckCircle2 className="w-3 h-3" />}
+                                                  </div>
+                                                  <span className={`text-xs leading-relaxed transition-colors ${isDone ? 'text-zinc-500 line-through' : 'text-zinc-300'}`}>
+                                                    {item}
+                                                  </span>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </Card>
+                                      );
+                                    })}
+                                </div>
+                            </div>
+                        </TabsContent>
 
                         <TabsContent value="videos" className="space-y-6">
                             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">

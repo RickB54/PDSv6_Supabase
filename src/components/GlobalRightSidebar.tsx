@@ -289,24 +289,26 @@ export function GlobalRightSidebar() {
 
     return (
         <div 
-          className={`sticky border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 z-40 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
+          className={`${isMobile ? 'fixed right-0 z-50 ' + (openMobile ? 'translate-x-0 shadow-2xl' : 'translate-x-full') : 'sticky z-40'} border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${(!isMobile && collapsed) ? 'w-12' : 'w-48 items-start px-2'}`}
           style={{ 
             top: `${dynamicTop}px`,
             height: `calc(100vh - ${dynamicTop}px)`,
-            marginTop: `${dynamicTop}px`
+            marginTop: isMobile ? 0 : `${dynamicTop}px`
           }}
         >
             {/* Toggle */}
-            <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCollapsed(!collapsed)}
-                className="mb-2 self-center hover:bg-zinc-800 text-zinc-500"
-                title={collapsed ? "Expand" : "Collapse"}
-            >
-                {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
-            {renderSidebarContent(collapsed, navigate, isAdmin)}
+            {!isMobile && (
+              <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCollapsed(!collapsed)}
+                  className="mb-2 self-center hover:bg-zinc-800 text-zinc-500"
+                  title={collapsed ? "Expand" : "Collapse"}
+              >
+                  {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </Button>
+            )}
+            {renderSidebarContent(isMobile ? false : collapsed, navigate, isAdmin)}
         </div>
     );
 }
