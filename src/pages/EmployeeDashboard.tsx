@@ -28,6 +28,8 @@ import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { getCurrentUser } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { ADMIN_TRAINING_PHASES } from "@/lib/training-data";
 import HelpModal from "@/components/help/HelpModal";
 import localforage from "localforage";
 import { Lightbulb, UserCheck, Plus } from "lucide-react";
@@ -135,12 +137,15 @@ const EmployeeDashboard = () => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
+  const [examUnlocked, setExamUnlocked] = useState(false);
+  const [examStatusStr, setExamStatusStr] = useState("Not Started");
+  const [trainingProgress, setTrainingProgress] = useState(0);
+
   const location = useLocation();
   useEffect(() => {
     const cert = localStorage.getItem("employee_training_certified");
     if (cert) setCertifiedDate(cert);
     try { localStorage.removeItem("employee_tasks"); } catch { }
-
 
     try {
       const params = new URLSearchParams(location.search);
@@ -150,7 +155,37 @@ const EmployeeDashboard = () => {
         setStartExamOnOpen(true);
       }
     } catch { }
-  }, [location.search]);
+
+    const loadUserStats = async () => {
+      if (!user?.id) return;
+      // 1. Get user record for exam_unlocked
+      const { data: uData } = await supabase.from('app_users').select('exam_unlocked').eq('id', user.id).maybeSingle();
+      if (uData) setExamUnlocked(uData.exam_unlocked || false);
+      
+      // 2. Get exam progress
+      const { data: exData } = await supabase.from('employee_training_progress')
+         .select('status, score').eq('user_id', user.id).order('completed_at', { ascending: false }).limit(1);
+      if (exData && exData.length > 0) {
+         const prog = exData[0];
+         if (prog.status === 'completed') {
+            setExamStatusStr(`Completed — Score: ${Math.round((prog.score/50)*100)}%`);
+         } else if (prog.status === 'started') {
+            setExamStatusStr('In Progress');
+         }
+      }
+      
+      // 3. Get checklist progress
+      const { data: clData } = await supabase.from('employee_training_progress_checklist')
+         .select('completed').eq('employee_id', user.id);
+      if (clData) {
+         const completedCount = clData.filter((c:any) => c.completed).length;
+         const total = ADMIN_TRAINING_PHASES.reduce((acc, p) => acc + p.items.length, 0);
+         const pct = Math.round((completedCount / total) * 100) || 0;
+         setTrainingProgress(pct);
+      }
+    };
+    loadUserStats();
+  }, [location.search, user?.id]);
 
   // Sync checks
 
@@ -265,7 +300,7 @@ const EmployeeDashboard = () => {
             />
 
             <DashboardTile 
-              href="/training-manual" title="PRIME TRAINING CENTER" desc="Video Courses • SOPs • Certification" bgColor="bg-purple-700"
+              href="/training-manual" title="PRIME TRAINING CENTER" desc={`Progress: ${trainingProgress}% complete`} bgColor="bg-purple-700"
               infoTitle="Prime Training Center" infoContent="Watch instructional videos, complete quizzes, and earn your detailing certifications through our internal training program."
             />
 
@@ -274,10 +309,12 @@ const EmployeeDashboard = () => {
               infoTitle="Learning Library" infoContent="Access our archive of optional resources, past training materials, and company best-practices for continuous improvement."
             />
 
-            <DashboardTile 
-              onClick={() => setOrientationOpen(true)} title="ORIENTATION (EXAM)" desc="Company overview • Policies • Final Exam" bgColor="bg-orange-600"
-              infoTitle="Orientation Exam" infoContent="Take the required onboarding exam to confirm your understanding of company policies and basic safety procedures."
-            />
+            {examUnlocked && (
+              <DashboardTile 
+                onClick={() => setOrientationOpen(true)} title="ORIENTATION (EXAM)" desc={examStatusStr} bgColor="bg-orange-600"
+                infoTitle="Orientation Exam" infoContent="Take the required onboarding exam to confirm your understanding of company policies and basic safety procedures."
+              />
+            )}
 
             <DashboardTile 
               href="/services" title="VIEW WEBSITE" desc="To view our current package pricelist." bgColor="bg-blue-700"
