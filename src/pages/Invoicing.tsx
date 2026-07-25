@@ -2282,13 +2282,25 @@ Precision. Protection. Perfection.`;
                               )}
                               {cust && cust.phone && (
                                   <>
-                                      <a href={`sms:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-md border border-emerald-500/20">
+                                      <button 
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              const text = `Hi ${selectedInvoice.customerName.split(' ')[0]},\n\nThank you for trusting Prime Auto Detail with your vehicle! Here is a link to view and securely pay your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\nWe appreciate your business.\n\nBest regards,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
+                                              navigator.clipboard.writeText(text).then(() => {
+                                                  toast({ title: "Message Copied!", description: "Paste it directly into Google Voice." });
+                                                  window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone!.replace(/[^0-9+]/g, '')}`, '_blank');
+                                              }).catch(() => {
+                                                  window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone!.replace(/[^0-9+]/g, '')}`, '_blank');
+                                              });
+                                          }}
+                                          className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-md border border-emerald-500/20"
+                                      >
                                           <MessageSquare className="h-3 w-3" />
-                                          Text: {cust.phone}
-                                      </a>
-                                      <a href={`tel:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-md border border-amber-500/20">
+                                          GV Text: {cust.phone}
+                                      </button>
+                                      <a href={`https://voice.google.com/u/0/calls?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-md border border-amber-500/20">
                                           <Phone className="h-3 w-3" />
-                                          Call
+                                          GV Call
                                       </a>
                                   </>
                               )}
