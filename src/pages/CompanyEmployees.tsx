@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -612,16 +612,16 @@ const CompanyEmployees = () => {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Label className="text-zinc-400 m-0">Pay Structure</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
+                <Dialog>
+                  <DialogTrigger asChild>
                     <button
                       className="inline-flex items-center justify-center rounded-full w-5 h-5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors focus:outline-none shrink-0"
                       aria-label="How to Choose Pay Structure"
                     >
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[95vw] max-w-[480px] p-5 shadow-2xl border-blue-500/30 bg-zinc-900 overflow-y-auto max-h-[70vh]" align="start" side="top" sideOffset={8}>
+                  </DialogTrigger>
+                  <DialogContent className="w-[95vw] max-w-[480px] p-5 shadow-2xl border-blue-500/30 bg-zinc-900 overflow-y-auto max-h-[85vh]">
                     <div className="space-y-5">
                       <h4 className="font-bold text-lg text-white border-b border-zinc-800 pb-3">How to Choose the Right Pay Structure</h4>
                       <p className="text-zinc-200 font-semibold text-sm">The key question: Do you control how this person does their work?</p>
@@ -671,8 +671,8 @@ const CompanyEmployees = () => {
                         <strong className="text-zinc-300 not-italic">When in doubt:</strong> Consult your accountant or employment attorney before processing your first payroll. The IRS and both Massachusetts and New Hampshire impose penalties for misclassification. A 30-minute consultation now costs far less than a misclassification penalty later.
                       </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
+                  </DialogContent>
+                </Dialog>
               </div>
               <Select value={form.payStructure} onValueChange={(v) => setForm({ ...form, payStructure: v, paymentByJob: v.startsWith('job-') })}>
                 <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
