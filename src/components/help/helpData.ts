@@ -750,10 +750,10 @@ export const timeProfitabilityHelpTopic: HelpTopic = {
 
 export const compensationPayrollTopic: HelpTopic = {
   id: 'compensation-payroll',
-  title: 'Compensation & Payroll',
+  title: 'Compensation Calculator',
   summary: 'Intelligently calculate employee compensation based on Labor Revenue to protect business profitability.',
   content: [
-    '**Compensation & Payroll**: This module allows you to calculate fair employee compensation based on Labor Revenue rather than Gross Job Price.',
+    '**Compensation Calculator**: This module allows you to calculate fair employee compensation based on Labor Revenue rather than Gross Job Price.',
     '',
     '🧮 **1. The Live Calculator**',
     'The core of the system is the Live Calculator. It ensures employees are paid from the remaining Labor Revenue after all real business costs (materials, shop supplies, stripe fees) have been deducted.',

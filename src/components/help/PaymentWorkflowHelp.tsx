@@ -288,6 +288,36 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
           desc: "Go to Accounting and click 'Add Manual Expense'. Set Category to Payroll. This logs the financial expense for bookkeeping but does not affect the pending job queue."
         }
       ]
+    },
+    'staff-management': {
+      title: 'Staff Management',
+      icon: <Users className="w-5 h-5 text-blue-600" />,
+      steps: [
+        {
+          title: "What this page is for",
+          desc: "Manage your employees — add new staff, view their pay type and payment history, access their full profile, process payments, and track work history all from one place."
+        },
+        {
+          title: "Employee cards",
+          desc: "Each card shows the employee's name, role, last paid date, and pay type at a glance. Use the action buttons at the bottom of each card:\n• Edit — Update the employee's basic info (name, email, role, pay structure)\n• Profile — Open the full Employee Profile page where you can manage their personal info, employment details, compensation, performance tracking, training progress, communications, tax compliance documents, and change history\n• Calc — Open the Compensation Calculator for this employee\n• Pay — Process a payment to this employee — opens the Payroll page pre-loaded for this employee\n• Del — Permanently delete this employee record — use with caution, this cannot be undone"
+        },
+        {
+          title: "Add Employee",
+          desc: "Click the purple 'Add Employee' button to onboard a new staff member. This creates both their CRM record and their app login credentials simultaneously."
+        },
+        {
+          title: "Filtering",
+          desc: "Use the 'All Staff' dropdown to filter the view by role. Use 'Custom Range' to filter work history by date."
+        },
+        {
+          title: "Total Revenue and Total Jobs",
+          desc: "The header stats show cumulative revenue and job counts across all employees for quick reference."
+        },
+        {
+          title: "Work History",
+          desc: "Scroll down below the employee cards to see a full log of completed jobs across all staff, filterable by employee, date range, and service type."
+        }
+      ]
     }
   };
 
@@ -324,7 +354,7 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
               </div>
               <div>
                 <p className="font-bold text-slate-900 text-sm mb-1">{step.title}</p>
-                <p className="text-slate-600 text-sm leading-relaxed">{step.desc}</p>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{step.desc}</p>
               </div>
             </div>
           ))}

@@ -209,7 +209,7 @@ export default function Payroll() {
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                   Unified Payroll Engine <PaymentWorkflowHelp variant="payroll-engine" />
                 </h2>
-                <p className="text-zinc-400 text-sm">Full control — edit, delete, and process employee payouts</p>
+                <p className="text-zinc-400 text-sm">Process and record employee payments</p>
               </div>
             </div>
             <div className="flex gap-4 sm:gap-8 items-center flex-wrap justify-end">
@@ -217,7 +217,10 @@ export default function Payroll() {
                 <p className="text-zinc-500 text-xs uppercase tracking-wider font-semibold">Pending Total</p>
                 <p className="text-3xl font-bold text-indigo-400 mt-1">${selectedTotal.toFixed(2)}</p>
               </div>
-              <div className="pl-4 sm:pl-8 border-l border-zinc-700">
+              <div className="pl-4 sm:pl-8 border-l border-zinc-700 space-y-2 flex flex-col">
+                <Button variant="outline" size="sm" className="bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20 font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/compensation-payroll')}>
+                  Calculate Job Earnings → Compensation Calculator
+                </Button>
                 <Button variant="outline" size="sm" className="bg-indigo-500/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payments')}>
                   All Payments <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>

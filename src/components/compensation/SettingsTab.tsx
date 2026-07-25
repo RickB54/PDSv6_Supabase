@@ -84,7 +84,7 @@ export const SettingsTab = () => {
             <Input type="number" defaultValue="45" className="bg-zinc-950 border-zinc-800 text-white" />
           </div>
           <div className="space-y-2">
-            <Label className="text-zinc-400">Target Payroll %</Label>
+            <Label className="text-zinc-400">Target Compensation %</Label>
             <Input type="number" defaultValue="35" className="bg-zinc-950 border-zinc-800 text-white" />
           </div>
           <div className="space-y-2">

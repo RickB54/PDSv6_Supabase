@@ -31,23 +31,26 @@ const CompensationPayroll = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Compensation & Payroll" />
+      <PageHeader title="Compensation Calculator" />
       <main className="container mx-auto px-4 py-6 max-w-7xl space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
             <DollarSign className="w-8 h-8 text-purple-500" />
-            Compensation & Payroll
+            Compensation Calculator
             <PaymentWorkflowHelp variant="compensation-calculator" />
           </h1>
           <p className="text-zinc-400 mt-1">
-            Intelligent compensation management based on Labor Revenue.
+            Calculate job earnings and commission splits.
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
           <Button variant="outline" className="border-indigo-500/20 hover:bg-indigo-500/10 text-indigo-400" onClick={() => navigate('/company-employees')}>
             <Users className="w-4 h-4 mr-2" />
             Employees
+          </Button>
+          <Button variant="outline" className="border-green-500/20 hover:bg-green-500/10 text-green-400" onClick={() => navigate('/payroll')}>
+            Process Payment → Go to Payroll
           </Button>
           <Button variant="outline" className="border-purple-500/20 hover:bg-purple-500/10 text-purple-400" onClick={() => setActiveTab("settings")}>
             <Settings className="w-4 h-4 mr-2" />
@@ -65,13 +68,13 @@ const CompensationPayroll = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400 flex items-center">
               <DollarSign className="w-4 h-4 mr-2 text-emerald-400" />
-              Total Payroll (MTD)
+              Calculated Compensation (MTD)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">$0.00</div>
             <p className="text-xs text-zinc-500 flex items-center mt-1">
-              Awaiting payroll processing
+              Awaiting calculation
             </p>
           </CardContent>
         </Card>

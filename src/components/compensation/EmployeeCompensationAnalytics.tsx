@@ -16,7 +16,7 @@ export const EmployeeCompensationAnalytics = ({ bookings, employees }: { booking
             <DollarSign className="w-6 h-6 text-purple-500" />
             Employee Compensation Analytics
           </h2>
-          <p className="text-zinc-400">Track payroll efficiency, labor revenue generated, and compensation trends.</p>
+          <p className="text-zinc-400">Track compensation efficiency, labor revenue generated, and compensation trends.</p>
         </div>
       </div>
 
@@ -25,12 +25,12 @@ export const EmployeeCompensationAnalytics = ({ bookings, employees }: { booking
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-400 flex items-center">
               <DollarSign className="w-4 h-4 mr-2 text-emerald-400" />
-              Total Payroll YTD
+              Total Compensation YTD
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">$0.00</div>
-            <p className="text-xs text-zinc-500 mt-1">Awaiting payroll data</p>
+            <p className="text-xs text-zinc-500 mt-1">Awaiting compensation data</p>
           </CardContent>
         </Card>
         
@@ -77,7 +77,7 @@ export const EmployeeCompensationAnalytics = ({ bookings, employees }: { booking
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="bg-zinc-900 border-zinc-800 lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg text-white">Payroll vs Labor Revenue Trend</CardTitle>
+            <CardTitle className="text-lg text-white">Compensation vs Labor Revenue Trend</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -91,7 +91,7 @@ export const EmployeeCompensationAnalytics = ({ bookings, employees }: { booking
                   itemStyle={{ color: '#fff' }}
                 />
                 <Legend />
-                <Bar dataKey="payroll" name="Payroll" fill="#a855f7" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="payroll" name="Compensation" fill="#a855f7" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="revenue" name="Labor Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -100,7 +100,7 @@ export const EmployeeCompensationAnalytics = ({ bookings, employees }: { booking
 
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-lg text-white">Payroll by Compensation Type</CardTitle>
+            <CardTitle className="text-lg text-white">Compensation by Type</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">

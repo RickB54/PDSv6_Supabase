@@ -30,7 +30,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { contentService } from "@/lib/content";
 
-const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean) => (
+const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean, pendingPayrollCount: number = 0) => (
     <>
         {/* GROUP 1: Quick Helpful Items */}
         <Button
@@ -116,8 +116,15 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         {/* Sub-section: Financial / Billing */}
         {isAdmin && (
             <>
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                    <Banknote className="w-5 h-5 text-green-500" />
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-green-500/10`}>
+                    <div className="relative">
+                        <Banknote className="w-5 h-5 text-green-500" />
+                        {pendingPayrollCount > 0 && (
+                            <div className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 rounded-full flex items-center justify-center text-[9px] font-black text-white px-0.5 border border-[#18181b]">
+                                {pendingPayrollCount}
+                            </div>
+                        )}
+                    </div>
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Payroll</span>}
                 </Button>
 
@@ -187,6 +194,7 @@ export function GlobalRightSidebar() {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
+    const [pendingPayroll, setPendingPayroll] = useState(0);
     const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
     const [businessStatus, setBusinessStatus] = useState<any>(() => {
@@ -204,6 +212,24 @@ export function GlobalRightSidebar() {
             } catch {}
         })();
     }, []);
+
+    useEffect(() => {
+        if (!user || user.role !== 'admin') return;
+        
+        const fetchPayroll = async () => {
+            try {
+                const { getSupabasePayrollRecords } = await import("@/lib/supa-data");
+                const records = await getSupabasePayrollRecords('pending');
+                setPendingPayroll(records.length);
+            } catch {}
+        };
+        fetchPayroll();
+
+        // Listen for payroll updates
+        const handleUpdate = () => fetchPayroll();
+        window.addEventListener('payroll-updated', handleUpdate);
+        return () => window.removeEventListener('payroll-updated', handleUpdate);
+    }, [user?.role]);
 
     // Swipe Gesture Logic for Mobile
     useEffect(() => {
@@ -297,28 +323,43 @@ export function GlobalRightSidebar() {
     if (isPerspectiveMode) dynamicTop += 40;
     if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
+    if (isMobile) {
+        return (
+            <div className={`fixed inset-0 z-50 bg-zinc-950/90 backdrop-blur-sm transition-all duration-300 ${openMobile ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
+                <div className={`fixed top-0 right-0 h-full w-64 bg-zinc-950 border-l border-zinc-800 flex flex-col transition-transform duration-300 ${openMobile ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 shrink-0">
+                        <span className="text-sm font-bold text-white tracking-widest uppercase">Navigation</span>
+                        <Button variant="ghost" size="icon" onClick={() => setOpenMobile(false)} className="h-8 w-8 text-zinc-400 hover:text-white"><ChevronRight className="h-4 w-4" /></Button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 styled-scrollbar">
+                        {renderSidebarContent(false, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div 
-          className={`${isMobile ? 'fixed right-0 z-50 ' + (openMobile ? 'translate-x-0 shadow-2xl' : 'translate-x-full') : 'sticky z-40'} border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${(!isMobile && collapsed) ? 'w-12' : 'w-48 items-start px-2'}`}
+          className={`sticky z-40 border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
           style={{ 
             top: `${dynamicTop}px`,
             height: `calc(100vh - ${dynamicTop}px)`,
-            marginTop: isMobile ? 0 : `${dynamicTop}px`
+            marginTop: `${dynamicTop}px`
           }}
         >
             {/* Toggle */}
-            {!isMobile && (
-              <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setCollapsed(!collapsed)}
-                  className="mb-2 self-center hover:bg-zinc-800 text-zinc-500"
-                  title={collapsed ? "Expand" : "Collapse"}
-              >
-                  {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </Button>
-            )}
-            {renderSidebarContent(isMobile ? false : collapsed, navigate, isAdmin)}
+            <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCollapsed(!collapsed)}
+                className="mb-2 self-center hover:bg-zinc-800 text-zinc-500"
+                title={collapsed ? "Expand" : "Collapse"}
+            >
+                {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+            
+            {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll)}
         </div>
     );
 }

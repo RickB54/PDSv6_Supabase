@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -32,6 +32,7 @@ import { getSupabaseEmployees, uploadEmployeePhoto, getSupabasePayrollRecords, m
 import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
+import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import supabase from "@/lib/supabase";
 import { getTrainingModules, getTrainingBadges, type TrainingModule, type TrainingBadge } from "@/lib/supa-data";
@@ -379,7 +380,7 @@ const CompanyEmployees = () => {
                 <Users className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Staff Management</h2>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">Staff Management <PaymentWorkflowHelp variant="staff-management" /></h2>
                 <p className="text-zinc-400 text-sm">Manage employees, track revenue, and history</p>
               </div>
             </div>
@@ -506,11 +507,12 @@ const CompanyEmployees = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-auto pt-4 border-t border-zinc-800">
-                  <Button variant="ghost" size="sm" className="h-9 text-zinc-400 hover:text-white hover:bg-zinc-800 flex justify-center" onClick={() => openEdit(emp)}><Edit className="h-4 w-4 mr-1.5" /> Edit</Button>
-                  <Button variant="ghost" size="sm" className="h-9 text-blue-400 hover:text-blue-300 hover:bg-blue-950/20 flex justify-center" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-4 w-4 mr-1.5" /> Profile</Button>
-                  <Button variant="ghost" size="sm" className="h-9 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/20 flex justify-center" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-4 w-4 mr-1.5" /> Pay</Button>
-                  <Button variant="ghost" size="sm" className="h-9 text-zinc-500 hover:text-red-400 hover:bg-red-950/20 flex justify-center" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-4 w-4 mr-1.5" /> Del</Button>
+                <div className="flex flex-wrap gap-2 mt-auto pt-4 border-t border-zinc-800 justify-between">
+                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-zinc-400 hover:text-white hover:bg-zinc-800 flex justify-center" onClick={() => openEdit(emp)}><Edit className="h-4 w-4 mr-1.5" /> Edit</Button>
+                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-blue-400 hover:text-blue-300 hover:bg-blue-950/20 flex justify-center" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-4 w-4 mr-1.5" /> Profile</Button>
+                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/20 flex justify-center" onClick={() => navigate(`/compensation-payroll?employee=${emp.email}`)}><Calculator className="h-4 w-4 mr-1.5" /> Calc</Button>
+                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/20 flex justify-center" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-4 w-4 mr-1.5" /> Pay</Button>
+                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-zinc-500 hover:text-red-400 hover:bg-red-950/20 flex justify-center" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-4 w-4 mr-1.5" /> Del</Button>
                 </div>
               </Card>
             );
@@ -597,6 +599,13 @@ const CompanyEmployees = () => {
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
           <DialogHeader><DialogTitle>Pay {payEmployee?.name}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="bg-purple-500/10 text-purple-400 border border-purple-500/20 p-3 rounded-lg text-sm mb-2">
+              <span className="font-bold flex items-center gap-1.5"><AlertTriangle className="h-4 w-4" /> Unsure of the amount?</span>
+              <p className="mt-1 text-purple-300/80">Use the Compensation Calculator to calculate the correct amount first.</p>
+              <Button variant="link" className="text-purple-300 hover:text-purple-200 h-auto p-0 mt-1 font-bold" onClick={() => navigate('/compensation-payroll')}>
+                Open Calculator &rarr;
+              </Button>
+            </div>
             <div><Label className="text-zinc-400">Amount ($)</Label><Input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="bg-zinc-950 border-zinc-800 text-xl font-bold font-mono" /></div>
             <div><Label className="text-zinc-400">Payment Type</Label>
               <Select value={payType} onValueChange={setPayType}>
