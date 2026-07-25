@@ -249,8 +249,8 @@ export function GlobalRightSidebar() {
             const dX = Math.abs(currentX - touchStartX);
             const dY = Math.abs(currentY - touchStartY);
 
-            // RELAXED: Only intercept if starting from the VERY edge AND no dialog is open
-            if (touchStartX > window.innerWidth - 40 && !document.querySelector('[role="dialog"]')) {
+            // RELAXED: Only intercept if starting from the edge AND no dialog is open
+            if (touchStartX > window.innerWidth - 80 && !document.querySelector('[role="dialog"]')) {
                 if (dX > dY && dX > 5) {
                     if (e.cancelable) e.preventDefault();
                 }
@@ -266,20 +266,29 @@ export function GlobalRightSidebar() {
 
             // Right-to-Left swipe (deltaX > 0)
             if (
-                touchStartX > window.innerWidth - 40 && 
                 !document.querySelector('[role="dialog"]') &&
                 deltaX > 60 && 
                 deltaY < 80 
             ) {
-                if (!openMobile) {
-                    setOpenMobile(true);
-                    try { window.navigator.vibrate(10); } catch {}
+                // If starting from near the right edge
+                if (touchStartX > window.innerWidth - 80) {
+                    if (!openMobile) {
+                        setOpenMobile(true);
+                        try { window.navigator.vibrate(10); } catch {}
+                    } else if (openMobile && collapsed) {
+                        setCollapsed(false);
+                        try { window.navigator.vibrate(10); } catch {}
+                    }
                 }
             }
             
-            // Left-to-Right swipe to close
+            // Left-to-Right swipe to close (deltaX < 0)
             if (deltaX < -50 && deltaY < 80 && openMobile) {
-                setOpenMobile(false);
+                if (!collapsed) {
+                    setCollapsed(true);
+                } else {
+                    setOpenMobile(false);
+                }
             }
         };
 
@@ -292,7 +301,7 @@ export function GlobalRightSidebar() {
             window.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [isMobile, openMobile]);
+    }, [isMobile, openMobile, collapsed]);
 
     // Hide mobile sidebar on location change
     useEffect(() => {
