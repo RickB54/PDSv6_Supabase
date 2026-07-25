@@ -593,7 +593,7 @@ const CompanyEmployees = () => {
       </main>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white">
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{isEditMode ? "Edit Employee" : "Add Employee"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div><Label className="text-zinc-400">Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-zinc-950 border-zinc-800" /></div>
@@ -620,6 +620,16 @@ const CompanyEmployees = () => {
                   <SelectItem value="hourly-1099">Contractor — Hourly (1099)</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="mt-2 text-xs text-zinc-400 bg-zinc-950 p-3 rounded-md border border-zinc-800 leading-relaxed">
+                {form.payStructure === 'hourly-w2' && "This employee is on your regular payroll and is paid a set rate per hour worked. As a W-2 employer you are responsible for withholding federal income tax, Social Security, and Medicare (FICA) from their paycheck, as well as paying the employer's share of FICA taxes. You must issue them a W-4 before their first paycheck and a W-2 at the end of each tax year. Best for employees who work regular, trackable hours on a consistent schedule."}
+                {form.payStructure === 'flat-w2' && "This employee is on your regular payroll and is paid a fixed predetermined amount per pay period regardless of hours worked. Same tax withholding obligations as Hourly (W-2) — you withhold income tax and FICA, pay employer FICA, issue W-4 and W-2. Best for employees with a consistent, predictable workload where hourly tracking isn't practical."}
+                {form.payStructure === 'job-w2' && "This employee is on your regular payroll and is paid a set amount per job completed. Same tax withholding obligations as other W-2 options — you withhold income tax and FICA, pay employer FICA, issue W-4 and W-2. Best for employees where pay varies based on how many jobs they complete but you still want them classified as regular employees with full payroll tax treatment."}
+                {form.payStructure === 'job-1099' && "This person is an independent contractor, not an employee. They are paid a fixed amount per job completed and are responsible for paying their own taxes — you do NOT withhold income tax, Social Security, or Medicare from their payment. You do NOT pay employer FICA taxes. Instead, you collect a W-9 from them before their first payment, pay them the agreed amount in full, and issue a 1099-NEC at the end of the year if you paid them $600 or more total. Best for skilled tradespeople or specialists you hire on a per-job basis without a long-term employment commitment. Note: The IRS has strict rules about who qualifies as a contractor vs. an employee — misclassifying a W-2 worker as 1099 can result in significant penalties. Confirm with your accountant if you are unsure."}
+                {form.payStructure === 'hourly-1099' && "This person is an independent contractor paid by the hour. Same 1099 treatment as Contractor — Per Job — no withholding, no employer FICA, collect W-9 before first payment, issue 1099-NEC if total payments reach $600 or more in the calendar year. Best for contractors whose work is time-based rather than project-based but who are still not regular employees. Same IRS classification caution applies — confirm with your accountant if unsure whether this person should be W-2 instead."}
+              </div>
+              <p className="mt-3 text-[11px] text-zinc-500 italic leading-relaxed">
+                Not sure which to choose? As a general rule: if you control when, where, and how the work is done, the worker is likely a W-2 employee. If they set their own schedule and methods, they may qualify as a 1099 contractor. When in doubt, consult your accountant or employment attorney — the IRS and Massachusetts both impose penalties for misclassification.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div><Label className="text-zinc-400">Flat Rate ($)</Label><Input type="number" value={form.flatRate} onChange={e => setForm({ ...form, flatRate: e.target.value })} className="bg-zinc-950 border-zinc-800" disabled={form.paymentByJob} /></div>
