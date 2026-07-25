@@ -378,7 +378,7 @@ export default function CustomerEstimatePage() {
     }
 
     let displayServices = estimate.services;
-    let displayTotal = estimate.total;
+    let displayTotal = displayServices.reduce((sum, s) => sum + Number(s.price || 0), 0);
     let isAcceptedMenuMode = false;
 
     if (isAccepted && (estimate.notes || '').includes('[MENU_MODE]') && (estimate.notes || '').includes('[VEHICLE_SELECTIONS_JSON]')) {
