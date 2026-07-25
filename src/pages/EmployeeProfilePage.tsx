@@ -600,7 +600,11 @@ export default function EmployeeProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2 bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-xs text-zinc-400 space-y-1">
                   <p className="font-semibold text-zinc-300">Current Pay Settings (from Staff Management)</p>
-                  <p>Pay structure: <span className="text-white">{emp.paymentByJob ? 'Per Job' : 'Hourly / Flat Rate'}</span></p>
+                  <p>Pay structure: <span className="text-white">
+                    {emp.tax_classification === '1099' 
+                      ? (emp.paymentByJob ? 'Contractor — Per Job (1099)' : 'Contractor — Hourly (1099)') 
+                      : (emp.paymentByJob ? 'Pay by the Job (W-2)' : 'Hourly / Flat Rate (W-2)')}
+                  </span></p>
                   {emp.flatRate && <p>Flat rate: <span className="text-emerald-400">${emp.flatRate}/hr</span></p>}
                   {emp.bonuses && <p>Bonus: <span className="text-emerald-400">${emp.bonuses}</span></p>}
                   <p className="text-zinc-600 italic pt-1">Edit rates from the Employee Card → Edit button in Staff Management.</p>

@@ -45,6 +45,8 @@ interface Employee {
   flatRate?: number;
   bonuses?: number;
   paymentByJob?: boolean;
+  payStructure?: string;
+  tax_classification?: string;
   jobRates?: Record<string, number>;
 }
 
@@ -94,8 +96,9 @@ const CompanyEmployees = () => {
     flatRate: string;
     bonuses: string;
     paymentByJob: boolean;
+    payStructure: string;
     jobRates: Record<string, string>;
-  }>({ name: "", email: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
+  }>({ name: "", email: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, payStructure: "hourly-w2", jobRates: {} });
 
   const [workHistoryDateRange, setWorkHistoryDateRange] = useState<{ from?: Date; to?: Date }>({});
 
@@ -288,10 +291,22 @@ const CompanyEmployees = () => {
   };
 
   const openEdit = (emp: Employee) => {
+    let currentStructure = emp.payStructure;
+    if (!currentStructure) {
+      if (emp.tax_classification === '1099') {
+        currentStructure = emp.paymentByJob ? "job-1099" : "hourly-1099";
+      } else {
+        if (emp.paymentByJob) currentStructure = "job-w2";
+        else if (emp.flatRate && emp.flatRate > 0) currentStructure = "flat-w2";
+        else currentStructure = "hourly-w2";
+      }
+    }
+
     setForm({
       name: emp.name, email: emp.email, originalEmail: emp.email, role: emp.role,
       flatRate: emp.flatRate?.toString() || "", bonuses: emp.bonuses?.toString() || "",
       paymentByJob: !!emp.paymentByJob,
+      payStructure: currentStructure,
       jobRates: Object.fromEntries(Object.entries(emp.jobRates || {}).map(([k, v]) => [k, String(v)]))
     });
     setIsEditMode(true);
@@ -299,7 +314,7 @@ const CompanyEmployees = () => {
   };
 
   const openAdd = () => {
-    setForm({ name: "", email: "", originalEmail: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, jobRates: {} });
+    setForm({ name: "", email: "", originalEmail: "", role: "Employee", password: "", flatRate: "", bonuses: "", paymentByJob: false, payStructure: "hourly-w2", jobRates: {} });
     setIsEditMode(false);
     setModalOpen(true);
   };
@@ -337,11 +352,16 @@ const CompanyEmployees = () => {
     }
 
     // 2. Update existing Profile Data (DB)
+    const is1099 = form.payStructure.includes('1099');
+    const newTaxClass = is1099 ? '1099' : 'W-2';
+    const newPaymentByJob = form.payStructure.startsWith('job-');
+    
     try {
       if (userExistsInDb && form.email) {
         await supabase.from('app_users').update({
           name: form.name,
           role: form.role.toLowerCase(),
+          tax_classification: newTaxClass,
           updated_at: new Date().toISOString()
         }).eq('email', form.email);
       }
@@ -351,7 +371,9 @@ const CompanyEmployees = () => {
       name: form.name, email: form.email, role: form.role,
       flatRate: parseFloat(form.flatRate) || undefined,
       bonuses: parseFloat(form.bonuses) || undefined,
-      paymentByJob: form.paymentByJob,
+      paymentByJob: newPaymentByJob,
+      payStructure: form.payStructure,
+      tax_classification: newTaxClass,
       jobRates: Object.fromEntries(Object.entries(form.jobRates || {}).map(([k, v]) => [k, parseFloat(v)]))
     };
 
@@ -479,7 +501,15 @@ const CompanyEmployees = () => {
                   </div>
                   <div className="bg-zinc-950 p-2 rounded border border-zinc-800/50">
                     <span className="text-zinc-500 text-xs block">Pay Type</span>
-                    <span className="text-zinc-300">{emp.paymentByJob ? 'Per Job' : 'Hourly'}</span>
+                    <span className="text-zinc-300">
+                      {emp.payStructure === 'hourly-w2' ? 'Hourly (W-2)' :
+                       emp.payStructure === 'flat-w2' ? 'Flat Rate (W-2)' :
+                       emp.payStructure === 'job-w2' ? 'Pay by the Job (W-2)' :
+                       emp.payStructure === 'job-1099' ? 'Contractor — Per Job (1099)' :
+                       emp.payStructure === 'hourly-1099' ? 'Contractor — Hourly (1099)' :
+                       emp.tax_classification === '1099' ? (emp.paymentByJob ? 'Contractor — Per Job (1099)' : 'Contractor — Hourly (1099)') :
+                       (emp.paymentByJob ? 'Pay by the Job (W-2)' : 'Hourly / Flat Rate (W-2)')}
+                    </span>
                   </div>
                 </div>
 
@@ -578,11 +608,16 @@ const CompanyEmployees = () => {
               </Select>
             </div>
             <div><Label className="text-zinc-400">Pay Structure</Label>
-              <Select value={form.paymentByJob ? "job" : "hourly"} onValueChange={(v) => setForm({ ...form, paymentByJob: v === "job" })}>
+              <Select value={form.payStructure} onValueChange={(v) => setForm({ ...form, payStructure: v, paymentByJob: v.startsWith('job-') })}>
                 <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hourly">Hourly / Flat Rate</SelectItem>
-                  <SelectItem value="job">Pay by the Job</SelectItem>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider">W-2 Employee</div>
+                  <SelectItem value="hourly-w2">Hourly (W-2)</SelectItem>
+                  <SelectItem value="flat-w2">Flat Rate (W-2)</SelectItem>
+                  <SelectItem value="job-w2">Pay by the Job (W-2)</SelectItem>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-zinc-500 uppercase tracking-wider mt-2 border-t border-zinc-800">1099 Contractor</div>
+                  <SelectItem value="job-1099">Contractor — Per Job (1099)</SelectItem>
+                  <SelectItem value="hourly-1099">Contractor — Hourly (1099)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
