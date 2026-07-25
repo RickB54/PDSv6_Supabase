@@ -1,5 +1,5 @@
 import React from "react";
-import { HelpCircle, CheckCircle2, FileText, MonitorPlay, FileCheck, ArrowRightLeft, ShoppingCart, Activity, ShieldCheck } from "lucide-react";
+import { HelpCircle, CheckCircle2, FileText, MonitorPlay, FileCheck, ArrowRightLeft, ShoppingCart, Activity, ShieldCheck, Users } from "lucide-react";
 import {
   Popover,
   PopoverContent,
