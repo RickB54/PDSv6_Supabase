@@ -420,13 +420,22 @@ export default function EmployeeProfilePage() {
             {TABS.map((tab, i) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
+              const isAdminTab = i >= 4;
+              
               return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${i !== 0 ? 'border-t border-zinc-800/50' : ''} ${active ? 'bg-indigo-600/15 text-indigo-400' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'}`}>
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {tab.label}
-                  {active && <ChevronRight className="h-3.5 w-3.5 ml-auto text-indigo-500" />}
-                </button>
+                <React.Fragment key={tab.id}>
+                  {i === 4 && (
+                    <div className="px-4 py-2 bg-zinc-950 border-t border-b border-zinc-800/50 flex items-center">
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Admin Only</span>
+                    </div>
+                  )}
+                  <button onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${i !== 0 && i !== 4 ? 'border-t border-zinc-800/50' : ''} ${active ? 'bg-indigo-600/15 text-indigo-400' : isAdminTab ? 'text-zinc-500 hover:bg-amber-900/10 hover:text-amber-400' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'}`}>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {tab.label}
+                    {active && <ChevronRight className="h-3.5 w-3.5 ml-auto text-indigo-500" />}
+                  </button>
+                </React.Fragment>
               );
             })}
           </div>
