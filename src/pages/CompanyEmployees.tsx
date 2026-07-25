@@ -621,7 +621,7 @@ const CompanyEmployees = () => {
                       <HelpCircle className="w-3.5 h-3.5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[95vw] max-w-[480px] p-5 shadow-2xl border-blue-500/30 bg-zinc-900 overflow-y-auto max-h-[75vh]" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[95vw] max-w-[480px] p-5 shadow-2xl border-blue-500/30 bg-zinc-900 overflow-y-auto max-h-[70vh]" align="start" side="top" sideOffset={8}>
                     <div className="space-y-5">
                       <h4 className="font-bold text-lg text-white border-b border-zinc-800 pb-3">How to Choose the Right Pay Structure</h4>
                       <p className="text-zinc-200 font-semibold text-sm">The key question: Do you control how this person does their work?</p>
