@@ -116,7 +116,7 @@ export default function Tasks() {
 
     // Subscribe to Realtime Updates
     const channel = supabase
-      .channel('public:team_messages')
+      .channel('tasks_team_messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
         const newMsg = payload.new as TeamMessage;
         setChatMessages(prev => [...prev, newMsg]);

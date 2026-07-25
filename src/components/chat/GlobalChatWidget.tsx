@@ -62,7 +62,7 @@ export function GlobalChatWidget() {
 
         // Subscribe
         const channel = supabase
-            .channel('public:team_messages')
+            .channel('global_widget_team_messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
                 const newMsg = payload.new as TeamMessage;
                 setMessages(prev => {
