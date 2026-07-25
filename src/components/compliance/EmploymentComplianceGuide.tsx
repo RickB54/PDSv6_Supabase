@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Shield, Printer, Download } from "lucide-react";
+import { Shield, Printer, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 export function EmploymentComplianceGuide() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -28,15 +31,46 @@ export function EmploymentComplianceGuide() {
     window.print();
   };
 
-  const saveToPDF = () => {
-    toast({
-      title: "Saving as PDF",
-      description: "Please select 'Save as PDF' in the Destination dropdown of the print dialog.",
-      duration: 6000,
-    });
-    setTimeout(() => {
-      window.print();
-    }, 800);
+  const saveToPDF = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    toast({ title: "Generating PDF Brochure...", description: "Please wait, rendering high quality pages." });
+
+    try {
+      const doc = new jsPDF('p', 'pt', 'a4');
+      const page1 = document.getElementById("pdf-page-1");
+      const page2 = document.getElementById("pdf-page-2");
+
+      if (page1 && page2) {
+        // Temporarily make visible for render, html2canvas needs it in viewport/rendered
+        const container = document.getElementById("pdf-brochure-container");
+        if (container) {
+           container.style.left = "0";
+           container.style.zIndex = "-1000";
+        }
+
+        const canvas1 = await html2canvas(page1, { scale: 2, useCORS: true, backgroundColor: '#09090b' });
+        const img1 = canvas1.toDataURL("image/jpeg", 0.95);
+        doc.addImage(img1, "JPEG", 0, 0, 595.28, 841.89);
+
+        doc.addPage();
+        const canvas2 = await html2canvas(page2, { scale: 2, useCORS: true, backgroundColor: '#09090b' });
+        const img2 = canvas2.toDataURL("image/jpeg", 0.95);
+        doc.addImage(img2, "JPEG", 0, 0, 595.28, 841.89);
+
+        if (container) {
+           container.style.left = "-10000px";
+        }
+
+        doc.save("Prime_Auto_Detail_Compliance_Guide.pdf");
+        toast({ title: "Success", description: "PDF downloaded successfully!" });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to generate PDF.", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -50,11 +84,12 @@ export function EmploymentComplianceGuide() {
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold text-white print:text-black">Employment Compliance Guide</DialogTitle>
           <div className="flex gap-2 print:hidden">
-            <Button variant="outline" size="sm" onClick={printGuide}>
+            <Button variant="outline" size="sm" onClick={printGuide} disabled={isGenerating}>
               <Printer className="w-4 h-4 mr-2" /> Print Guide
             </Button>
-            <Button variant="default" size="sm" onClick={saveToPDF} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              <Download className="w-4 h-4 mr-2" /> Save to PDF
+            <Button variant="default" size="sm" onClick={saveToPDF} disabled={isGenerating} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[140px]">
+              {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              {isGenerating ? "Generating..." : "Save to PDF"}
             </Button>
           </div>
         </DialogHeader>
@@ -390,6 +425,172 @@ export function EmploymentComplianceGuide() {
 
         </div>
       </DialogContent>
+
+      {/* Hidden PDF Brochure Template */}
+      <div id="pdf-brochure-container" className="fixed -left-[10000px] top-0 bg-zinc-950 text-white w-[794px] pointer-events-none opacity-100 flex flex-col gap-4">
+        {/* Page 1 */}
+        <div id="pdf-page-1" className="w-[794px] h-[1123px] bg-gradient-to-br from-zinc-950 to-zinc-900 border border-zinc-800 p-10 relative overflow-hidden flex flex-col font-sans">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          
+          <h1 className="text-4xl font-black text-white tracking-tight mb-2 uppercase">Employment Compliance Guide</h1>
+          <p className="text-indigo-400 font-bold mb-6 text-lg tracking-widest uppercase">Prime Auto Detail</p>
+          
+          <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-xl text-amber-400 mb-8">
+            <p className="text-sm font-semibold leading-relaxed">
+              <strong className="text-amber-500 uppercase">⚠️ Important Disclaimer:</strong> This guide is a general reference only and does not constitute legal advice. Employment law varies by situation and changes over time. Always confirm requirements with a qualified employment attorney or accountant before processing your first payroll. Both Massachusetts and New Hampshire impose penalties for non-compliance.
+            </p>
+          </div>
+
+          <div className="space-y-6 flex-1">
+            <section>
+              <h3 className="text-xl font-bold text-indigo-400 border-b-2 border-indigo-500/20 pb-2 mb-4 uppercase tracking-wide">BEFORE THE FIRST DAY OF WORK (W-2 & 1099)</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-bold text-white text-base">Confirm pay rate and classification in writing</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Put the pay rate, pay structure (W-2 or 1099), and start date in writing before the employee works their first hour.</p>
+                  <p className="text-indigo-300 text-xs mt-1 font-semibold">Deadline: Before first day of work</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-base">Verify identity and work authorization — Form I-9</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Complete Section 1 with the employee on/before Day 1. Complete Section 2 within 3 business days. Keep on file for 3 years from hire or 1 year after termination.</p>
+                  <p className="text-indigo-300 text-xs mt-1 font-semibold">Deadline: Section 1 on/before Day 1 | Section 2 within 3 days</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-base">Provide written notice of pay rate (MA W-2 only)</h4>
+                  <p className="text-zinc-400 text-sm mt-1">MA requires employers to notify employees in writing of their hourly rate/salary, schedule, and deductions before Day 1.</p>
+                  <p className="text-indigo-300 text-xs mt-1 font-semibold">Deadline: Before first day of work</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-blue-400 border-b-2 border-blue-500/20 pb-2 mb-4 uppercase tracking-wide">W-2 EMPLOYEES ONLY — FEDERAL</h3>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-bold text-white text-base">Obtain Form W-4 & Register EIN</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Employee fills out W-4 for federal withholding. Employer needs an EIN from IRS.gov to process payroll.</p>
+                  <p className="text-blue-300 text-xs mt-1 font-semibold">Deadline: Before first payroll</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-base">Set up payroll tax withholding</h4>
+                  <p className="text-zinc-400 text-sm mt-1">Withhold Federal income tax, Social Security (6.2%), Medicare (1.45%). Employer pays matching FICA and FUTA. Gusto or ADP highly recommended.</p>
+                  <p className="text-blue-300 text-xs mt-1 font-semibold">Deadline: Each payroll cycle</p>
+                </div>
+              </div>
+            </section>
+            
+            <section>
+              <h3 className="text-xl font-bold text-emerald-400 border-b-2 border-emerald-500/20 pb-2 mb-4 uppercase tracking-wide">W-2 EMPLOYEES — MASSACHUSETTS</h3>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <h4 className="font-bold text-white text-sm">Obtain Form M-4 & Register DOR</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Keep M-4 on file. Register with MA DOR to remit state income tax.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">MA New Hire Reporting</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Report every W-2 hire to MA DOR within 14 days of Day 1.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Workers Comp & PFML</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Workers Comp is legally required before Day 1. Withhold PFML quarterly.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Earned Sick Time</h4>
+                  <p className="text-zinc-400 text-xs mt-1">1 hour per 30 worked (up to 40/yr). Can be unpaid if under 11 employees.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+          
+          <div className="text-center text-zinc-600 text-xs mt-4">Page 1 of 2 — Prime Auto Detail Administrative Document</div>
+        </div>
+
+        {/* Page 2 */}
+        <div id="pdf-page-2" className="w-[794px] h-[1123px] bg-gradient-to-br from-zinc-950 to-zinc-900 border border-zinc-800 p-10 relative overflow-hidden flex flex-col font-sans">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          
+          <div className="space-y-6 flex-1 pt-4">
+            <section>
+              <h3 className="text-xl font-bold text-cyan-400 border-b-2 border-cyan-500/20 pb-2 mb-4 uppercase tracking-wide">W-2 EMPLOYEES — NEW HAMPSHIRE</h3>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <h4 className="font-bold text-white text-sm">NH New Hire Reporting</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Report to NHES within 20 days of first day of work.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">No State Income Tax</h4>
+                  <p className="text-zinc-400 text-xs mt-1">NH has no state income tax. No NH withholding form required.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Workers Compensation</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Legally required in NH before employee works Day 1.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">NH Unemployment (NHUI)</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Register with NHES and pay NHUI taxes on wages.</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <div className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-xl">
+                <h3 className="text-lg font-bold text-amber-500 mb-2 uppercase tracking-wide">⚠️ CROSS-BORDER EMPLOYMENT (NH & MA)</h3>
+                <p className="text-zinc-300 text-sm">If an NH resident works in MA, MA income tax withholding likely applies to wages earned in MA. You may need to register as an employer in both states, report new hires to both, and ensure Workers Comp covers both. <strong>Consult an accountant.</strong></p>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-orange-400 border-b-2 border-orange-500/20 pb-2 mb-4 uppercase tracking-wide">1099 CONTRACTORS ONLY</h3>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-bold text-white text-sm">Form W-9 & Year-End 1099-NEC</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Collect W-9 before first payment. Track payments. If total reaches $600/yr, issue 1099-NEC by Jan 31.</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">No State Withholding</h4>
+                  <p className="text-zinc-400 text-xs mt-1">No state tax withholding required in NH or MA. Contractor pays own self-employment taxes (15.3%).</p>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Strict Contractor Status Rules</h4>
+                  <p className="text-zinc-400 text-xs mt-1">IRS multi-factor test: Do you control the work? Provide tools? Work exclusively for you? If yes, they are likely W-2. Misclassification brings severe penalties.</p>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h3 className="text-xl font-bold text-purple-400 border-b-2 border-purple-500/20 pb-2 mb-4 uppercase tracking-wide">ONGOING RECORD KEEPING</h3>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                  <h4 className="font-bold text-white text-sm">Document Retention</h4>
+                  <ul className="text-zinc-400 text-xs mt-1 list-disc pl-4 space-y-1">
+                    <li>I-9 forms: 3 yrs from hire or 1 yr after term</li>
+                    <li>Payroll records: 4 years (MA rule)</li>
+                    <li>Tax forms (W-4, W-9, 1099): 4 years</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm">Workplace Posters</h4>
+                  <p className="text-zinc-400 text-xs mt-1">Must display federal and state (MA/NH) labor law posters. Available free from DOL/state agencies.</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-zinc-900 border border-zinc-800 p-5 rounded-xl mt-4 flex-1">
+              <h3 className="text-lg font-bold text-rose-400 mb-3 uppercase tracking-wide">RECOMMENDED NEXT STEPS</h3>
+              <ul className="text-sm text-zinc-300 list-disc pl-5 space-y-2 font-medium">
+                <li>Confirm Brandon's and Paul's classification (W-2 vs 1099) with accountant.</li>
+                <li>Obtain an EIN from IRS.gov if you don't already have one.</li>
+                <li>Set up workers compensation insurance in MA and NH.</li>
+                <li>Consider a payroll service like Gusto for automated compliance.</li>
+                <li>Complete new hire reporting for both employees.</li>
+                <li>Collect I-9, W-4/W-9, and MA M-4 (if W-2).</li>
+              </ul>
+            </section>
+          </div>
+
+          <div className="text-center text-zinc-600 text-xs mt-4">Page 2 of 2 — Prime Auto Detail Administrative Document</div>
+        </div>
+      </div>
     </Dialog>
   );
 }
