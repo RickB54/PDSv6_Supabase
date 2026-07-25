@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, AlertTriangle, RefreshCw, HelpCircle } from "lucide-react";
+import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import {
     type TrainingModule, type TrainingProgress, type TrainingBadge
 } from "@/lib/supa-data";
 import { supabase } from "@/lib/supabase";
-import { ADMIN_TRAINING_PHASES } from "@/lib/training-data";
+import { ADMIN_TRAINING_PHASES, EMPLOYEE_TRAINING_PHASES } from "@/lib/training-data";
+import proceduresData from "@/pages/ProceduresBooklet";
 
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
@@ -540,7 +541,10 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                     <PlayCircle className="w-6 h-6" />
                                                 </div>
                                                 <h3 className="font-bold text-lg mb-1">1. Watch & Learn</h3>
-                                                <p className="text-sm text-zinc-400">Watch the training video completely. You must acknowledge the safety protocol popup before starting.</p>
+                                                <p className="text-sm text-zinc-400">Browse the Learning Library for videos relevant to what you're training on. Your manager will point you to specific videos for each phase. Watch completely and take notes before moving on.</p>
+                                                <Button size="sm" className="mt-4 bg-blue-600 hover:bg-blue-700 w-full" onClick={() => window.location.href = '/learning-library'}>
+                                                    Go to Learning Library
+                                                </Button>
                                             </div>
                                             <div className="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 flex flex-col items-center text-center">
                                                 <div className="w-12 h-12 rounded-full bg-purple-900/30 flex items-center justify-center text-purple-400 mb-3">
@@ -769,43 +773,135 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                         </TabsContent>
 
                         <TabsContent value="videos" className="space-y-6">
-                            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                                {["All", "Exterior", "Interior", "Paint", "Business", "Hardware", "Chemicals", "Materials"].map(cat => (
-                                    <Button key={cat} variant={activeCategory === cat ? "default" : "outline"} onClick={() => setActiveCategory(cat)} className={`rounded-full ${activeCategory === cat ? 'bg-white text-black' : 'border-zinc-700 text-zinc-400'}`} size="sm">{cat}</Button>
-                                ))}
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center">
+                                <h2 className="text-2xl font-bold mb-4 text-purple-400">Employee Certification Process</h2>
+                                <p className="text-zinc-400 mb-6 max-w-2xl mx-auto">
+                                    Your certification is earned through a combination of studying the employee handbook, completing the hands-on training checklist with your manager, and passing the final 50-question Orientation Exam.
+                                </p>
+                                <div className="grid md:grid-cols-3 gap-6 mb-8 text-left">
+                                    <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800">
+                                        <div className="w-8 h-8 rounded-full bg-blue-900/30 text-blue-400 flex items-center justify-center font-bold mb-3">1</div>
+                                        <h3 className="font-bold mb-2">Read Handbook & Watch Videos</h3>
+                                        <p className="text-xs text-zinc-500">Review all policies in the employee handbook and browse the Learning Library for procedures.</p>
+                                    </div>
+                                    <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800">
+                                        <div className="w-8 h-8 rounded-full bg-green-900/30 text-green-400 flex items-center justify-center font-bold mb-3">2</div>
+                                        <h3 className="font-bold mb-2">Complete Training Phases</h3>
+                                        <p className="text-xs text-zinc-500">Your manager will check off your progress through the 6 phases of hands-on training.</p>
+                                    </div>
+                                    <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800">
+                                        <div className="w-8 h-8 rounded-full bg-orange-900/30 text-orange-400 flex items-center justify-center font-bold mb-3">3</div>
+                                        <h3 className="font-bold mb-2">Take Final Exam</h3>
+                                        <p className="text-xs text-zinc-500">Once your training is complete, your manager will unlock the 50-question exam for you to take.</p>
+                                    </div>
+                                </div>
+                                <Button className="bg-purple-600 hover:bg-purple-700 font-bold px-8" onClick={() => window.location.href = '/orientation'}>
+                                    Go to Orientation Roadmap
+                                </Button>
                             </div>
-                            <VideoGrid list={currentList} />
                         </TabsContent>
-
-                        <TabsContent value="library" className="space-y-6">
-                            {/* Fallback if navigated via URL */}
-                            <div className="bg-blue-900/20 border border-blue-800/50 p-4 rounded-xl mb-4">
-                                <h3 className="text-blue-400 font-bold flex items-center gap-2"><Lightbulb className="w-5 h-5" /> Learning Library</h3>
-                                <p className="text-zinc-400 text-sm">Moved to dedicated "Learning Library" page.</p>
-                                <Button size="sm" onClick={() => window.location.href = '/learning-library'}>Go to Library</Button>
-                            </div>
-                        </TabsContent>
-
 
                         <TabsContent value="process" className="space-y-6">
-                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                                <p>Standard Operating Procedures content goes here...</p>
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FileText className="w-6 h-6 text-indigo-400"/> Standard Operating Procedures</h2>
+                                <p className="text-zinc-400 mb-8">This is your digital copy of the Prime Procedures Manual. Refer to this for all company operations and workflows.</p>
+                                
+                                <div className="space-y-6">
+                                    <div className="bg-zinc-950 p-6 rounded-lg border border-zinc-800">
+                                        <h3 className="text-xl font-bold text-white mb-4">Prime Procedures Manual v6.0</h3>
+                                        <p className="text-zinc-400 mb-6">Access the complete, interactive Standard Operating Procedures manual including all checklists, protocols, and safety guidelines.</p>
+                                        <Button className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto" onClick={() => window.location.href = '/app-manual'}>
+                                            <BookOpen className="w-4 h-4 mr-2" /> Open Full Procedures Manual
+                                        </Button>
+                                    </div>
+                                </div>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="materials" className="space-y-6">
-                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                                <p>Materials reference content goes here...</p>
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Layers className="w-6 h-6 text-pink-400"/> Materials & Consumables</h2>
+                                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/learning-library?search=materials'}>
+                                        <Video className="w-4 h-4 mr-2"/> Watch Material Videos
+                                    </Button>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-3">
+                                        <h3 className="font-bold text-lg text-white">Microfiber Towel System</h3>
+                                        <p className="text-sm text-zinc-400 leading-relaxed">Towels are color-coded by task to prevent cross-contamination. Never use a wheel towel on paint, or an interior towel on glass.</p>
+                                        <ul className="text-sm text-zinc-500 space-y-2 list-disc pl-4 mt-2">
+                                            <li><strong className="text-zinc-300">Drying Towels:</strong> Large, ultra-plush for exterior drying only.</li>
+                                            <li><strong className="text-zinc-300">Glass Towels:</strong> Waffle-weave or low-pile to prevent lint.</li>
+                                            <li><strong className="text-zinc-300">Interior Towels:</strong> Used for plastics, leather, and upholstery.</li>
+                                            <li><strong className="text-zinc-300">Wheel/Engine Towels:</strong> Dedicated utility towels. Do NOT mix these in the laundry with paint towels.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-3">
+                                        <h3 className="font-bold text-lg text-white">Decontamination Tools</h3>
+                                        <p className="text-sm text-zinc-400 leading-relaxed">Used to remove embedded contaminants from the clear coat before polishing or sealing.</p>
+                                        <ul className="text-sm text-zinc-500 space-y-2 list-disc pl-4 mt-2">
+                                            <li><strong className="text-zinc-300">Clay Bars:</strong> Traditional clay must be kneaded. If dropped on the floor, throw it away immediately.</li>
+                                            <li><strong className="text-zinc-300">Synthetic Clay Mitts:</strong> Can be rinsed if dropped. Faster for large vehicles.</li>
+                                            <li><strong className="text-zinc-300">Lubrication:</strong> Always use dedicated clay lube (e.g., EZ Shine) or soapy water. Never use on dry paint.</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-zinc-950 p-5 rounded-lg border border-zinc-800 space-y-3 md:col-span-2">
+                                        <h3 className="font-bold text-lg text-white">Polishing Pads</h3>
+                                        <p className="text-sm text-zinc-400 leading-relaxed">Pads dictate the level of cut and finish. Keep them clean during use by blowing them out with compressed air or using a pad conditioning brush.</p>
+                                        <ul className="text-sm text-zinc-500 space-y-2 list-disc pl-4 mt-2 grid md:grid-cols-3 gap-2">
+                                            <li><strong className="text-zinc-300 block">Foam Cutting Pads</strong> Firm dense foam for heavy defect removal.</li>
+                                            <li><strong className="text-zinc-300 block">Foam Polishing Pads</strong> Medium density for finishing and light defects.</li>
+                                            <li><strong className="text-zinc-300 block">Microfiber Pads</strong> Maximum cut for hard clear coats. Requires frequent blowing out.</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </TabsContent>
                         <TabsContent value="hardware" className="space-y-6">
-                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                                <p>Hardware reference content goes here...</p>
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Settings className="w-6 h-6 text-amber-400"/> Equipment & Hardware</h2>
+                                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/learning-library?search=equipment'}>
+                                        <Video className="w-4 h-4 mr-2"/> Watch Hardware Videos
+                                    </Button>
+                                </div>
+                                <p className="text-zinc-400 mb-6">Reference list from Phase 3 of your training checklist.</p>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {EMPLOYEE_TRAINING_PHASES.find(p => p.phase_number === 3)?.items.map((item, idx) => {
+                                        const [category, desc] = item.split(': ');
+                                        return (
+                                            <div key={idx} className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 flex flex-col justify-center">
+                                                <h3 className="text-sm font-bold text-white mb-1">{desc ? category : "Hardware Item"}</h3>
+                                                <p className="text-sm text-zinc-400">{desc || item}</p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </TabsContent>
                         <TabsContent value="chemicals" className="space-y-6">
-                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800 text-center text-zinc-500">
-                                <p>Chemicals reference content goes here...</p>
+                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Beaker className="w-6 h-6 text-cyan-400"/> Chemical Training</h2>
+                                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/learning-library?search=chemical'}>
+                                        <Video className="w-4 h-4 mr-2"/> Watch Chemical Videos
+                                    </Button>
+                                </div>
+                                <p className="text-zinc-400 mb-6">Reference list from Phase 2 of your training checklist. Always wear PPE (gloves/glasses) before handling chemicals.</p>
+                                <div className="space-y-3">
+                                    {EMPLOYEE_TRAINING_PHASES.find(p => p.phase_number === 2)?.items.map((item, idx) => (
+                                        <div key={idx} className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 flex gap-4 items-start">
+                                            <div className="w-6 h-6 rounded-full bg-cyan-900/30 text-cyan-400 flex items-center justify-center font-bold shrink-0 text-xs mt-0.5">{idx + 1}</div>
+                                            <p className="text-sm text-zinc-300 leading-relaxed">{item}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-8 flex justify-center">
+                                    <Button onClick={() => window.location.href = '/chemicals'} className="bg-cyan-600 hover:bg-cyan-700">
+                                        Open Chemical Knowledge Base
+                                    </Button>
+                                </div>
                             </div>
                         </TabsContent>
                     </Tabs>

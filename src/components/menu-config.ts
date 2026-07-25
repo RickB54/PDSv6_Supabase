@@ -168,10 +168,9 @@ export const getMenuGroups = (counts: {
             title: "Prime Learning Center", icon: GraduationCap, iconColor: "text-indigo-400",
             items: [
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield, helpTopicId: 'employee-certification' },
-
-                { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc", icon: Calculator, helpTopicId: 'dilution-calc' },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen, helpTopicId: 'learn-lib' },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus, helpTopicId: 'orientation' },
+                { title: "Exam Administration", url: "/exam-admin", role: "admin", key: "exam-admin", icon: Settings, helpTopicId: 'exam-admin' },
             ]
         },
         {
