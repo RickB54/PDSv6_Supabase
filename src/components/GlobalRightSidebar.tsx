@@ -192,7 +192,6 @@ export function GlobalRightSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const isMobile = useIsMobile();
-    const [openMobile, setOpenMobile] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
     const [pendingPayroll, setPendingPayroll] = useState(0);
     const { isDemoMode } = useDemoMode();
@@ -231,73 +230,6 @@ export function GlobalRightSidebar() {
         return () => window.removeEventListener('payroll-updated', handleUpdate);
     }, [user?.role]);
 
-    // Swipe Gesture Logic for Mobile
-    useEffect(() => {
-        if (!isMobile) return;
-
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        const handleTouchStart = (e: TouchEvent) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        };
-
-        const handleTouchMove = (e: TouchEvent) => {
-            const currentX = e.touches[0].clientX;
-            const currentY = e.touches[0].clientY;
-            const dX = Math.abs(currentX - touchStartX);
-            const dY = Math.abs(currentY - touchStartY);
-
-            // RELAXED: Only intercept if starting from the VERY edge AND no dialog is open
-            if (touchStartX > window.innerWidth - 40 && !document.querySelector('[role="dialog"]')) {
-                if (dX > dY && dX > 5) {
-                    if (e.cancelable) e.preventDefault();
-                }
-            }
-        };
-
-        const handleTouchEnd = (e: TouchEvent) => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            
-            const deltaX = touchStartX - touchEndX;
-            const deltaY = Math.abs(touchStartY - touchEndY);
-
-            // Right-to-Left swipe (deltaX > 0)
-            if (
-                touchStartX > window.innerWidth - 40 && 
-                !document.querySelector('[role="dialog"]') &&
-                deltaX > 60 && 
-                deltaY < 80 
-            ) {
-                if (!openMobile) {
-                    setOpenMobile(true);
-                    try { window.navigator.vibrate(10); } catch {}
-                }
-            }
-            
-            // Left-to-Right swipe to close
-            if (deltaX < -50 && deltaY < 80 && openMobile) {
-                setOpenMobile(false);
-            }
-        };
-
-        window.addEventListener('touchstart', handleTouchStart, { passive: true });
-        window.addEventListener('touchmove', handleTouchMove, { passive: false });
-        window.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-        return () => {
-            window.removeEventListener('touchstart', handleTouchStart);
-            window.removeEventListener('touchmove', handleTouchMove);
-            window.removeEventListener('touchend', handleTouchEnd);
-        };
-    }, [isMobile, openMobile]);
-
-    // Hide mobile sidebar on location change
-    useEffect(() => {
-        setOpenMobile(false);
-    }, [location.pathname]);
 
     // Hide completely on login/auth pages
     const publicPaths = ['/login', '/signup'];
@@ -323,21 +255,6 @@ export function GlobalRightSidebar() {
     if (isPerspectiveMode) dynamicTop += 40;
     if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
-    if (isMobile) {
-        return (
-            <div className={`fixed inset-0 z-50 bg-zinc-950/90 backdrop-blur-sm transition-all duration-300 ${openMobile ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
-                <div className={`fixed top-0 right-0 h-full w-64 bg-zinc-950 border-l border-zinc-800 flex flex-col transition-transform duration-300 ${openMobile ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 shrink-0">
-                        <span className="text-sm font-bold text-white tracking-widest uppercase">Navigation</span>
-                        <Button variant="ghost" size="icon" onClick={() => setOpenMobile(false)} className="h-8 w-8 text-zinc-400 hover:text-white"><ChevronRight className="h-4 w-4" /></Button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 styled-scrollbar">
-                        {renderSidebarContent(false, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll)}
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div 
