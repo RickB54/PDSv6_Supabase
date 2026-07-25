@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Shield, Printer } from "lucide-react";
+import { Shield, Printer, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export function EmploymentComplianceGuide() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   useEffect(() => {
     try {
@@ -26,6 +28,17 @@ export function EmploymentComplianceGuide() {
     window.print();
   };
 
+  const saveToPDF = () => {
+    toast({
+      title: "Saving as PDF",
+      description: "Please select 'Save as PDF' in the Destination dropdown of the print dialog.",
+      duration: 6000,
+    });
+    setTimeout(() => {
+      window.print();
+    }, 800);
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -36,9 +49,14 @@ export function EmploymentComplianceGuide() {
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-zinc-300 print:bg-white print:text-black">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold text-white print:text-black">Employment Compliance Guide</DialogTitle>
-          <Button variant="outline" size="sm" onClick={printGuide} className="print:hidden">
-            <Printer className="w-4 h-4 mr-2" /> Print Guide
-          </Button>
+          <div className="flex gap-2 print:hidden">
+            <Button variant="outline" size="sm" onClick={printGuide}>
+              <Printer className="w-4 h-4 mr-2" /> Print Guide
+            </Button>
+            <Button variant="default" size="sm" onClick={saveToPDF} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              <Download className="w-4 h-4 mr-2" /> Save to PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-8 py-4 print:py-0">
