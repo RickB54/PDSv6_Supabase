@@ -4,115 +4,64 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, Info } from 'lucide-react';
 
+import { employeeMenuTopics, employeeDashboardTopics } from './helpData';
+
 interface EmployeeHelpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialTopicId?: string;
 }
 
-const EMPLOYEE_TOPICS = [
-  {
-    id: 'dashboard-overview',
-    title: 'Employee Dashboard Overview',
-    content: 'Welcome to your Employee Dashboard! This is your central hub for everything you need to do your job at Prime Auto Detail. Click any of the topics below to learn more about a specific feature.'
-  },
-  {
-    id: 'new-booking',
-    title: 'New Booking',
-    content: 'The New Booking tile allows you to book a service on behalf of a customer. It opens an info panel that directs you to the public Services page. When you complete a booking while logged in, that customer is automatically assigned to you in the system so you can access their details later.'
-  },
-  {
-    id: 'service-checklist',
-    title: 'Service Checklist',
-    content: 'The Service Checklist is used when you are actively working on a vehicle. It provides step-by-step Standard Operating Procedures (SOPs) for the job to ensure nothing is missed before returning the vehicle to the customer.'
-  },
-  {
-    id: 'work-schedule',
-    title: 'Work Schedule',
-    content: 'View your upcoming assigned shifts and scheduled times. You can check your hours for the week and see when you are expected to be on the floor.'
-  },
-  {
-    id: 'prime-training-center',
-    title: 'Prime Training Center',
-    content: 'Access all required instructional videos, quizzes, and standard operating procedures (SOPs). Completing these modules earns you certifications and badges necessary for advancement.'
-  },
-  {
-    id: 'learning-library',
-    title: 'Learning Library',
-    content: 'An archive of optional resources, past training materials, and company best-practices. This is your go-to place for continuous improvement outside of required certifications.'
-  },
-  {
-    id: 'orientation-exam',
-    title: 'Orientation (Exam)',
-    content: 'The Orientation Exam is required for all new hires. It covers company overview, basic safety protocols, and general policies. Click this tile to take or review your onboarding exam.'
-  },
-  {
-    id: 'view-website',
-    title: 'View Website',
-    content: 'Opens the live public Prime Auto Detail website exactly as a customer sees it. Use this to quickly check our current public package descriptions and pricing if a customer asks.'
-  },
-  {
-    id: 'ricks-tips',
-    title: 'Rick\'s Tips',
-    content: 'A collection of expert detailing advice directly from Rick. Read these quick reminders to avoid common mistakes, improve your efficiency, and reduce rework on vehicles.'
-  },
-  {
-    id: 'app-team-chat',
-    title: 'App Team Chat',
-    content: 'The internal messaging system for Prime Auto Detail. Send and receive real-time messages with other employees and management to coordinate tasks or ask for help.'
-  },
-  {
-    id: 'sticky-notes',
-    title: 'Sticky Notes',
-    content: 'Your personal, private digital workspace. Create checklists, write down reminders, or keep track of personal to-do items that only you can see.'
-  },
-  {
-    id: 'chemical-cards',
-    title: 'Chemical Cards',
-    content: 'The master reference for our chemical inventory. Look up any product to see its correct dilution ratio, intended use-case, and safety warnings before mixing or applying it.'
-  },
-  {
-    id: 'quick-pay',
-    title: 'Quick Pay',
-    content: 'Process an immediate credit card payment in person. Ideal for walk-in customers or taking quick payments for ad-hoc service additions.'
-  },
-  {
-    id: 'todo-list',
-    title: 'Todo List',
-    content: 'View tasks explicitly assigned to you by the management team. This includes a calendar and list view so you know exactly what needs to be accomplished each day.'
-  },
-  {
-    id: 'show-help',
-    title: 'Show Help',
-    content: 'This very modal you are looking at. It contains the comprehensive guide on how to use every feature in the Employee Dashboard.'
-  },
-  {
-    id: 'notify-admin',
-    title: 'Notify Admin',
-    content: 'Send an immediate alert directly to management regarding an urgent issue, a customer request, or any other matter that needs administrative attention.'
-  }
-];
+const EMPLOYEE_TOPICS = [...employeeDashboardTopics, ...employeeMenuTopics].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
 
 export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOpenChange, initialTopicId }) => {
   const [activeAccordion, setActiveAccordion] = useState<string>("dashboard-overview");
 
-  // When opened, try to match the topic, otherwise default to overview
+  // Listen for open-help event to handle tile clicks
+  useEffect(() => {
+    const handleOpenHelp = (e: any) => {
+      let topicId: string | undefined = undefined;
+      if (typeof e.detail === 'string') {
+        topicId = e.detail;
+      } else if (e.detail && typeof e.detail === 'object') {
+        topicId = e.detail.topicId;
+      }
+      
+      if (topicId) {
+        const found = EMPLOYEE_TOPICS.find(t => t.id === topicId || topicId?.includes(t.id) || t.id.includes(topicId!));
+        if (found) {
+          setActiveAccordion(found.id);
+          onOpenChange(true);
+        }
+      }
+    };
+    window.addEventListener('open-help', handleOpenHelp);
+    return () => window.removeEventListener('open-help', handleOpenHelp);
+  }, [onOpenChange]);
+
   useEffect(() => {
     if (open) {
       if (initialTopicId) {
-        // Try to map the incoming generic topic ID to our specific ones if needed, 
-        // or directly use it if it matches our list.
         const found = EMPLOYEE_TOPICS.find(t => t.id === initialTopicId || initialTopicId.includes(t.id) || t.id.includes(initialTopicId));
         if (found) {
           setActiveAccordion(found.id);
-        } else {
-          setActiveAccordion("dashboard-overview");
         }
-      } else {
-        setActiveAccordion("dashboard-overview");
       }
     }
   }, [open, initialTopicId]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (open && activeAccordion) {
+      setTimeout(() => {
+        const el = document.getElementById(`employee-help-${activeAccordion}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [open, activeAccordion]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,7 +90,8 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
                   <AccordionItem 
                     key={topic.id} 
                     value={topic.id} 
-                    className="border border-zinc-800/60 rounded-lg bg-zinc-900/30 overflow-hidden data-[state=open]:bg-zinc-900 data-[state=open]:border-indigo-500/30 transition-colors"
+                    id={`employee-help-${topic.id}`}
+                    className="border border-zinc-800/60 rounded-lg bg-zinc-900/30 overflow-hidden data-[state=open]:bg-zinc-900 data-[state=open]:border-indigo-500/30 transition-colors scroll-m-4"
                   >
                     <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-zinc-800/50">
                       <div className="flex items-center gap-3 text-left">
@@ -152,8 +102,8 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4 pt-1 text-zinc-400 leading-relaxed border-t border-zinc-800/50 mt-1">
-                      <div className="pl-11 pr-4">
-                        {topic.content}
+                      <div className="pl-11 pr-4 whitespace-pre-wrap">
+                        {Array.isArray(topic.content) ? topic.content.join('\n') : topic.content}
                       </div>
                     </AccordionContent>
                   </AccordionItem>

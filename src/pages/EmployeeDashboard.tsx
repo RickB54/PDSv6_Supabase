@@ -55,10 +55,12 @@ const DashboardTile = ({
   href,
   onClick,
   helpTopicId,
-  isSpecialNewBooking = false
+  isSpecialNewBooking = false,
+  infoTitle,
+  infoContent
 }: {
   title: string, desc: string, bgColor: string, href?: string, onClick?: () => void,
-  helpTopicId?: string, isSpecialNewBooking?: boolean
+  helpTopicId?: string, isSpecialNewBooking?: boolean, infoTitle?: string, infoContent?: React.ReactNode
 }) => {
   const content = (
     <Card className={`p-6 ${bgColor} text-white rounded-xl h-full transition-transform hover:scale-[1.02] relative group`}>
@@ -85,8 +87,8 @@ const DashboardTile = ({
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-80 bg-zinc-900 border-zinc-700 text-white p-4 shadow-2xl z-50">
-          <h4 className="font-bold text-lg mb-2 text-indigo-400">Start Booking</h4>
-          <div className="text-sm text-zinc-300 space-y-2 mb-4">Click below to open the online services page and begin booking a customer.</div>
+          <h4 className="font-bold text-lg mb-2 text-indigo-400">{infoTitle}</h4>
+          <div className="text-sm text-zinc-300 space-y-2 mb-4">{infoContent}</div>
           <Link to="/services">
             <Button className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold">Start Booking Flow</Button>
           </Link>
@@ -262,6 +264,20 @@ const EmployeeDashboard = () => {
               isSpecialNewBooking={true}
               title="NEW BOOKING" desc="Schedule a new service appointment." bgColor="bg-indigo-700"
               helpTopicId="dashboard-new-booking"
+              infoTitle="How to Book a Customer"
+              infoContent={
+                <>
+                  <ol className="list-decimal pl-5 space-y-2 mb-2">
+                    <li><strong>Choose a Service:</strong> Select the package or detail service needed.</li>
+                    <li><strong>Pick a Date & Time:</strong> Find an open slot on the calendar.</li>
+                    <li><strong>Confirm Booking:</strong> Enter the customer's details (name, vehicle, contact) as if you were them.</li>
+                  </ol>
+                  <div className="bg-indigo-900/50 p-2 rounded text-xs text-indigo-200 border border-indigo-800/50">
+                    <Info className="w-3 h-3 inline mr-1" />
+                    When you book a customer while logged in, that customer will be automatically assigned to you and visible in your dashboard.
+                  </div>
+                </>
+              }
             />
 
             <DashboardTile 
@@ -326,16 +342,14 @@ const EmployeeDashboard = () => {
               helpTopicId="dashboard-todo-list"
             />
 
-            <DashboardTile 
-              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'show-help' }))}
-              title="SHOW HELP" desc="Open the full documentation guide." bgColor="bg-slate-700"
-              helpTopicId="dashboard-show-help"
-            />
-
-            <DashboardTile 
-              onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
-              helpTopicId="dashboard-notify-admin"
-            />
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 flex justify-center mt-2">
+              <div className="w-full md:w-1/2 lg:w-1/3">
+                <DashboardTile 
+                  onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
+                  helpTopicId="dashboard-notify-admin"
+                />
+              </div>
+            </div>
 
           </div>
         </div>
