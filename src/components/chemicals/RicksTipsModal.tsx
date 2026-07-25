@@ -298,8 +298,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
       const matches = chems.filter(c => c.name.toLowerCase().includes(item.name.toLowerCase()));
       
       matches.forEach(match => {
-        // 1. Force add to Prep List (Job Setup)
-        if (!seededPrep.includes(match.id)) {
+        // 1. Force add to Prep List (Job Setup) only if it was empty (like on first load or reset)
+        if (!seededPrep.includes(match.id) && currentPrep.length === 0) {
            seededPrep.push(match.id);
            changed = true;
         }
@@ -530,6 +530,10 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
   };
 
   const addToPrepList = (id: string) => {
+    if (!isAdmin) {
+      toast.error("Read Only: Access Denied");
+      return;
+    }
     if (!prepList.includes(id)) {
       updatePrepList([...prepList, id]);
       toast.success("Added to Prep List");
@@ -537,6 +541,14 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
   };
 
   const removeFromPrepList = (id: string) => {
+    if (!isAdmin) {
+      toast.error("Read Only: Contact admin to modify the setup checklist");
+      return;
+    }
+    const chemToRemove = availableChemicals.find(c => c.id === id);
+    if (!confirm(`WARNING: Are you sure you want to remove ${chemToRemove?.name || 'this chemical'} from the Job Setup Checklist?`)) {
+      return;
+    }
     updatePrepList(prepList.filter(item => item !== id));
     toast.info("Removed from Prep List");
   };
@@ -1495,23 +1507,25 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Select onValueChange={addToPrepList}>
-                      <SelectTrigger className="w-full bg-slate-900 border-slate-700 h-12 text-white focus:ring-purple-500/50">
-                        <SelectValue placeholder="Add Chemical to Prep List..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
-                        {availableChemicals.filter(c => !prepList.includes(c.id)).map(chem => (
-                          <SelectItem key={chem.id} value={chem.id} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
-                            <div className="flex items-center gap-3">
-                               <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
-                                  {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
-                               </div>
-                               <span className="font-semibold text-sm">{chem.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isAdmin && (
+                      <Select onValueChange={addToPrepList}>
+                        <SelectTrigger className="w-full bg-slate-900 border-slate-700 h-12 text-white focus:ring-purple-500/50">
+                          <SelectValue placeholder="Add Chemical to Prep List..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-900 border-slate-700 text-white max-h-[40vh]">
+                          {availableChemicals.filter(c => !prepList.includes(c.id)).map(chem => (
+                            <SelectItem key={chem.id} value={chem.id} className="focus:bg-purple-500/20 focus:text-purple-100 py-3 cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-8 h-8 rounded shrink-0 overflow-hidden bg-slate-800 border border-slate-700">
+                                    {chem.primary_image_url ? <img src={chem.primary_image_url} alt="" className="w-full h-full object-cover" /> : <FlaskConical className="w-4 h-4 m-2 text-slate-500" />}
+                                 </div>
+                                 <span className="font-semibold text-sm">{chem.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1548,13 +1562,15 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
                                   const desc = getChemDesc(chem.id);
                                   return (
                                     <Card key={chem.id} className="bg-slate-900/60 border-slate-800 p-4 hover:border-sky-500/30 transition-all group relative border-l-4 border-l-sky-500/50 shadow-lg">
-                                       <button 
-                                         onClick={() => removeFromPrepList(chem.id)}
-                                         className="absolute top-3 right-3 p-2 bg-red-500/10 text-red-500/70 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all no-print border border-red-500/10"
-                                         title="Remove from Prep List"
-                                       >
-                                         <Trash2 className="w-4 h-4" />
-                                       </button>
+                                       {isAdmin && (
+                                         <button 
+                                           onClick={() => removeFromPrepList(chem.id)}
+                                           className="absolute top-3 right-3 p-2 bg-red-500/10 text-red-500/70 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all no-print border border-red-500/10"
+                                           title="Remove from Prep List"
+                                         >
+                                           <Trash2 className="w-4 h-4" />
+                                         </button>
+                                       )}
                                        <div className="flex justify-between items-start mb-3 pr-6">
                                           <div className="flex items-center gap-3">
                                              <div className="w-10 h-10 rounded bg-slate-800 border border-slate-700 overflow-hidden shrink-0">
@@ -1616,13 +1632,15 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
                                   const desc = getChemDesc(chem.id);
                                   return (
                                     <Card key={chem.id} className="bg-slate-900/60 border-slate-800 p-4 hover:border-amber-500/30 transition-all group relative border-l-4 border-l-amber-500/50 shadow-lg">
-                                       <button 
-                                         onClick={() => removeFromPrepList(chem.id)}
-                                         className="absolute top-3 right-3 p-2 bg-red-500/10 text-red-500/70 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all no-print border border-red-500/10"
-                                         title="Remove from Prep List"
-                                       >
-                                         <Trash2 className="w-4 h-4" />
-                                       </button>
+                                       {isAdmin && (
+                                         <button 
+                                           onClick={() => removeFromPrepList(chem.id)}
+                                           className="absolute top-3 right-3 p-2 bg-red-500/10 text-red-500/70 hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-all no-print border border-red-500/10"
+                                           title="Remove from Prep List"
+                                         >
+                                           <Trash2 className="w-4 h-4" />
+                                         </button>
+                                       )}
                                        <div className="flex justify-between items-start mb-3 pr-6">
                                           <div className="flex items-center gap-3">
                                              <div className="w-10 h-10 rounded bg-slate-800 border border-slate-700 overflow-hidden shrink-0">
