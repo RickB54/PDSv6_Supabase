@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Table,
   TableBody,
@@ -48,6 +49,7 @@ interface Employee {
   payStructure?: string;
   tax_classification?: string;
   jobRates?: Record<string, number>;
+  profilePhotoUrl?: string;
 }
 
 interface JobRecord {
@@ -607,7 +609,71 @@ const CompanyEmployees = () => {
                 <SelectContent><SelectItem value="Employee">Employee</SelectItem><SelectItem value="Admin">Admin</SelectItem></SelectContent>
               </Select>
             </div>
-            <div><Label className="text-zinc-400">Pay Structure</Label>
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Label className="text-zinc-400 m-0">Pay Structure</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="inline-flex items-center justify-center rounded-full w-5 h-5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors focus:outline-none shrink-0"
+                      aria-label="How to Choose Pay Structure"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[95vw] max-w-[480px] p-5 shadow-2xl border-blue-500/30 bg-zinc-900 overflow-y-auto max-h-[75vh]" align="start" sideOffset={8}>
+                    <div className="space-y-5">
+                      <h4 className="font-bold text-lg text-white border-b border-zinc-800 pb-3">How to Choose the Right Pay Structure</h4>
+                      <p className="text-zinc-200 font-semibold text-sm">The key question: Do you control how this person does their work?</p>
+                      
+                      <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg space-y-3">
+                        <p className="font-bold text-blue-400 text-sm">If YES → W-2 Employee</p>
+                        <p className="text-xs text-zinc-300 leading-relaxed">You tell them when to show up, what to do, how to do it, and you provide the tools and equipment. This is a W-2 employment relationship regardless of how you pay them (hourly, flat rate, or per job).</p>
+                        <p className="text-xs font-semibold text-zinc-200 pt-1">Signs you have a W-2 employee:</p>
+                        <ul className="text-xs text-zinc-300 list-disc pl-5 space-y-1.5">
+                          <li>You set their schedule</li>
+                          <li>You provide chemicals, equipment, and supplies</li>
+                          <li>You train them on your specific methods</li>
+                          <li>They work exclusively or primarily for you</li>
+                          <li>You direct every aspect of how the work is done</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-lg space-y-3">
+                        <p className="font-bold text-orange-400 text-sm">If NO → 1099 Contractor</p>
+                        <p className="text-xs text-zinc-300 leading-relaxed">They set their own hours, use their own tools, work for multiple clients, and you simply pay them for the end result. You do not direct how they do the work — only what the final result should be.</p>
+                        <p className="text-xs font-semibold text-zinc-200 pt-1">Signs you have a 1099 contractor:</p>
+                        <ul className="text-xs text-zinc-300 list-disc pl-5 space-y-1.5">
+                          <li>They set their own schedule</li>
+                          <li>They bring their own tools and supplies</li>
+                          <li>They work for multiple clients, not just you</li>
+                          <li>They operate their own business</li>
+                          <li>You pay for the result, not the process</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg space-y-2">
+                        <p className="font-bold text-emerald-400 text-sm">Quick rule of thumb for your business:</p>
+                        <p className="text-xs text-zinc-300 leading-relaxed">If you are training someone, providing all chemicals and equipment, and working alongside them — they are almost certainly a W-2 employee, not a 1099 contractor. Misclassifying a W-2 worker as 1099 can result in IRS penalties including back taxes, interest, and fines going back multiple years.</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <p className="font-bold text-white text-sm">Not sure? Ask yourself:</p>
+                        <ul className="text-xs text-zinc-300 space-y-2">
+                          <li><span className="text-zinc-100">Am I providing their tools and supplies?</span> → W-2</li>
+                          <li><span className="text-zinc-100">Am I training them on my specific methods?</span> → W-2</li>
+                          <li><span className="text-zinc-100">Do they set their own hours and work for other clients?</span> → Possibly 1099</li>
+                          <li><span className="text-zinc-100">Do they have their own detailing business?</span> → Possibly 1099</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-800 text-xs text-zinc-400 leading-relaxed italic">
+                        <strong className="text-zinc-300 not-italic">When in doubt:</strong> Consult your accountant or employment attorney before processing your first payroll. The IRS and both Massachusetts and New Hampshire impose penalties for misclassification. A 30-minute consultation now costs far less than a misclassification penalty later.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Select value={form.payStructure} onValueChange={(v) => setForm({ ...form, payStructure: v, paymentByJob: v.startsWith('job-') })}>
                 <SelectTrigger className="bg-zinc-950 border-zinc-800"><SelectValue /></SelectTrigger>
                 <SelectContent>

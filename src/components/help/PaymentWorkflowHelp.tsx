@@ -16,7 +16,8 @@ export type HelpVariant =
   | 'payments-dashboard'
   | 'payment-success'
   | 'compensation-calculator'
-  | 'payroll-engine';
+  | 'payroll-engine'
+  | 'staff-management';
 
 interface Props {
   variant?: HelpVariant;
