@@ -34,6 +34,7 @@ import { upsertExpense } from "@/lib/db";
 import { servicePackages, addOns } from "@/lib/services";
 import DateRangeFilter from "@/components/filters/DateRangeFilter";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { EmploymentComplianceGuide } from "@/components/compliance/EmploymentComplianceGuide";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import supabase from "@/lib/supabase";
 import { getTrainingModules, getTrainingBadges, type TrainingModule, type TrainingBadge } from "@/lib/supa-data";
@@ -404,8 +405,13 @@ const CompanyEmployees = () => {
                 <Users className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">Staff Management <PaymentWorkflowHelp variant="staff-management" /></h2>
-                <p className="text-zinc-400 text-sm">Manage employees, track revenue, and history</p>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    Staff Management <PaymentWorkflowHelp variant="staff-management" />
+                  </h2>
+                  <EmploymentComplianceGuide />
+                </div>
+                <p className="text-zinc-400 text-sm mt-1">Manage employees, track revenue, and history</p>
               </div>
             </div>
 
