@@ -28,7 +28,14 @@ export function EmploymentComplianceGuide() {
   };
 
   const printGuide = () => {
-    window.print();
+    // Radix locks body overflow. We force it visible via print CSS below, 
+    // but occasionally window.print needs it immediately.
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "visible";
+    setTimeout(() => {
+      window.print();
+      document.body.style.overflow = originalOverflow;
+    }, 100);
   };
 
   const saveToPDF = async () => {
@@ -75,12 +82,44 @@ export function EmploymentComplianceGuide() {
 
   return (
     <Dialog>
+      <style>{`
+        @media print {
+          html, body {
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
+          }
+          #root {
+            display: none !important;
+          }
+          div[data-radix-portal] {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+          }
+          div[role="dialog"] {
+            position: absolute !important;
+            transform: none !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
       <DialogTrigger asChild>
         <Button variant="outline" className="border-amber-500/20 hover:bg-amber-500/10 text-amber-500">
           <Shield className="w-4 h-4 mr-2" /> Compliance Guide
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-zinc-300 print:bg-white print:text-black print:static print:transform-none print:w-auto print:h-auto print:max-h-none print:overflow-visible print:border-none print:shadow-none print:m-0 print:p-0">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-zinc-300 print:bg-white print:text-black">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold text-white print:text-black">Employment Compliance Guide</DialogTitle>
           <div className="flex gap-2 print:hidden">
