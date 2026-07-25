@@ -431,7 +431,7 @@ export default function CustomerEstimatePage() {
         } else {
             discountAmount = estimate.discount;
         }
-        finalTotal = Math.max(0, displayTotal - discountAmount);
+        finalTotal = Math.round(Math.max(0, displayTotal - discountAmount));
     }
 
     return (
@@ -822,7 +822,7 @@ export default function CustomerEstimatePage() {
                                                         } else {
                                                             dynamicDiscountAmount = estimate.discount;
                                                         }
-                                                        dynamicFinalTotal = Math.max(0, currentDynamicTotal - dynamicDiscountAmount);
+                                                        dynamicFinalTotal = Math.round(Math.max(0, currentDynamicTotal - dynamicDiscountAmount));
                                                     }
 
                                                     return (

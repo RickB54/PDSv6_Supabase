@@ -500,7 +500,7 @@ export default function BookingsPage() {
         total = Math.max(0, total - matchedCoupon.amount);
       }
     }
-    return total;
+    return Math.round(total);
   }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon]);
 
   const getEventPrice = useCallback((event: any) => {
@@ -527,7 +527,7 @@ export default function BookingsPage() {
     if (booking.discountAmount) {
       total = Math.max(0, total - booking.discountAmount);
     }
-    return total;
+    return Math.round(total);
   }, [items, allServices, allAddons]);
 
   const handleArchiveToggle = (booking: Booking) => {

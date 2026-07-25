@@ -251,7 +251,9 @@ export default function CustomerInvoicePage() {
         } else {
             discountAmount = invoice.discount.value;
         }
-        finalTotal = Math.max(0, finalTotal - discountAmount);
+        finalTotal = Math.round(Math.max(0, finalTotal - discountAmount));
+    } else {
+        finalTotal = Math.round(finalTotal);
     }
 
     return (

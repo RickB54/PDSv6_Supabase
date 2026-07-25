@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, Check, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon, ArrowUp, ArrowDown, Copy } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Search, CheckCircle, Check, CreditCard, Filter, Pencil, X, Mail, Send, Loader2, HelpCircle, Users, User, Eye, Link as LinkIcon, ArrowUp, ArrowDown, Copy, MessageSquare, Phone } from "lucide-react";
 import {
   getSupabaseInvoices,
   upsertSupabaseInvoice,
@@ -279,9 +279,9 @@ const Invoicing = () => {
     if (isPriceLocked) return lockedTotal;
     const subtotal = calculateSubtotal();
     if (invoiceDiscountType === 'percent') {
-      return Math.max(0, subtotal * (1 - (invoiceDiscount / 100)));
+      return Math.round(Math.max(0, subtotal * (1 - (invoiceDiscount / 100))));
     } else {
-      return Math.max(0, subtotal - invoiceDiscount);
+      return Math.round(Math.max(0, subtotal - invoiceDiscount));
     }
   };
 
@@ -776,7 +776,7 @@ const Invoicing = () => {
 
     let newTotal = editPriceLocked 
       ? editLockedTotal 
-      : subtotal - finalDiscountAmount - editAdjustmentAmount;
+      : Math.round(subtotal - finalDiscountAmount - editAdjustmentAmount);
     if (newTotal < 0) newTotal = 0;
 
     const updated: Invoice = { 
@@ -2078,6 +2078,10 @@ Precision. Protection. Perfection.`;
                       </div>
                       <div className="font-medium text-zinc-300">{invoice.customerName}</div>
                       <div className="text-xs text-zinc-500">
+                        {(() => {
+                            const cust = customers.find(c => c.id === invoice.customerId);
+                            return cust?.phone ? <span className="text-zinc-400 mr-2">{cust.phone} •</span> : null;
+                        })()}
                         {(!invoice.vehicle || invoice.vehicle === "Unknown" || invoice.vehicle === "Unknown Vehicle") 
                           ? (customers.find(c => c.id === invoice.customerId)?.vehicle || "Unknown") 
                           : invoice.vehicle}
@@ -2268,17 +2272,28 @@ Precision. Protection. Perfection.`;
                   
                   {(() => {
                       const cust = customers.find(c => c.id === selectedInvoice.customerId);
-                      if (cust && cust.email) {
-                          const subject = encodeURIComponent(`Invoice #${selectedInvoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`);
-                          const body = encodeURIComponent(`Hi ${selectedInvoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
-                          return (
-                              <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
-                                  <Mail className="h-3 w-3" />
-                                  Email Invoice (Gmail)
-                              </a>
-                          );
-                      }
-                      return null;
+                      return (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                              {cust && cust.email && (
+                                  <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Invoice #${selectedInvoice.id?.slice(0,8).toUpperCase()} - Prime Auto Detail`)}&body=${encodeURIComponent(`Hi ${selectedInvoice.customerName},\n\nHere is a link to your invoice: https://primeautodetail.net/invoice/${selectedInvoice.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
+                                      <Mail className="h-3 w-3" />
+                                      Email Invoice (Gmail)
+                                  </a>
+                              )}
+                              {cust && cust.phone && (
+                                  <>
+                                      <a href={`sms:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-md border border-emerald-500/20">
+                                          <MessageSquare className="h-3 w-3" />
+                                          Text: {cust.phone}
+                                      </a>
+                                      <a href={`tel:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-md border border-amber-500/20">
+                                          <Phone className="h-3 w-3" />
+                                          Call
+                                      </a>
+                                  </>
+                              )}
+                          </div>
+                      );
                   })()}
                     
                   {selectedInvoice.notes?.includes('[PAID_VIA_STRIPE]') && (

@@ -82,7 +82,7 @@ const Checkout = () => {
     ? (matchedCoupon.percent ? (totalBeforeDiscount * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
     : 0;
 
-  const totalBeforeTip = Math.max(0, totalBeforeDiscount - appliedDiscount);
+  const totalBeforeTip = Math.round(Math.max(0, totalBeforeDiscount - appliedDiscount));
 
   // Smart Tip Logic
   const hasExistingTip = invoices.filter(i => selectedInvoiceIds.includes(String(i.id))).some(inv => {
@@ -105,7 +105,7 @@ const Checkout = () => {
     ? (parseFloat(customTipValue) || 0) 
     : (tipSelection > 0 ? (totalBeforeTip * tipSelection) / 100 : 0);
 
-  const grandTotal = totalBeforeTip + tipAmount;
+  const grandTotal = Math.round(totalBeforeTip + tipAmount);
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();

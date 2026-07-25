@@ -535,7 +535,7 @@ const BookNow = () => {
   const appliedDiscount = matchedCoupon
     ? (matchedCoupon.percent ? (total * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
     : 0;
-  const discountedTotal = Math.max(0, total - appliedDiscount);
+  const discountedTotal = Math.round(Math.max(0, total - appliedDiscount));
 
   // NUKES ANY OLD GHOST DATA ON EVERY LOAD
   useEffect(() => {

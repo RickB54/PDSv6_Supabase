@@ -1069,7 +1069,7 @@ const ServiceChecklist = () => {
       y += 6;
     }
     
-    const finalTotal = subtotal - (discountType === 'percent' ? (subtotal * (parseFloat(discountValue) / 100)) : (parseFloat(discountValue) || 0));
+    const finalTotal = Math.round(subtotal - (discountType === 'percent' ? (subtotal * (parseFloat(discountValue) / 100)) : (parseFloat(discountValue) || 0)));
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL AMOUNT:', 25, y);
@@ -1575,7 +1575,7 @@ const ServiceChecklist = () => {
     return elapsedTime;
   };
   const calculateTotal = () => {
-    return Math.max(0, calculateSubtotal() - calculateDiscount());
+    return Math.round(Math.max(0, calculateSubtotal() - calculateDiscount()));
   };
 
   // Build a simple list of selected items for PDF summaries

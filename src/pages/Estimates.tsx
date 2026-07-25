@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -363,9 +363,9 @@ const Estimates = () => {
     const calculateTotal = () => {
         const subtotal = services.reduce((sum, s) => sum + s.price, 0);
         if (discountType === 'percent') {
-            return subtotal * (1 - (discount / 100));
+            return Math.round(subtotal * (1 - (discount / 100)));
         } else {
-            return Math.max(0, subtotal - discount);
+            return Math.round(Math.max(0, subtotal - discount));
         }
     };
 
@@ -1917,7 +1917,13 @@ Precision. Protection. Perfection.`;
                                                 )}
                                             </div>
                                             <div className="font-medium text-zinc-300">{est.customerName}</div>
-                                            <div className="text-xs text-zinc-500">{(est.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}</div>
+                                            <div className="text-xs text-zinc-500">
+                                                {(() => {
+                                                    const cust = customers.find(c => c.id === est.customerId);
+                                                    return cust?.phone ? <span className="text-zinc-400 mr-2">{cust.phone} •</span> : null;
+                                                })()}
+                                                {(est.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -2165,17 +2171,28 @@ Precision. Protection. Perfection.`;
                                     <p className="text-zinc-400 mb-2">Prime Auto Detail</p>
                                     {(() => {
                                         const cust = customers.find(c => c.id === selectedEstimate.customerId);
-                                        if (cust && cust.email) {
-                                            const subject = encodeURIComponent(`Estimate #${selectedEstimate.estimateNumber} - Prime Auto Detail`);
-                                            const body = encodeURIComponent(`Hi ${selectedEstimate.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
-                                            return (
-                                                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
-                                                    <Mail className="h-3 w-3" />
-                                                    Email Estimate (Gmail)
-                                                </a>
-                                            );
-                                        }
-                                        return null;
+                                        return (
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {cust && cust.email && (
+                                                    <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Estimate #${selectedEstimate.estimateNumber} - Prime Auto Detail`)}&body=${encodeURIComponent(`Hi ${selectedEstimate.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`)}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-md border border-blue-500/20">
+                                                        <Mail className="h-3 w-3" />
+                                                        Email Estimate (Gmail)
+                                                    </a>
+                                                )}
+                                                {cust && cust.phone && (
+                                                    <>
+                                                        <a href={`sms:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-md border border-emerald-500/20">
+                                                            <MessageSquare className="h-3 w-3" />
+                                                            Text: {cust.phone}
+                                                        </a>
+                                                        <a href={`tel:${cust.phone.replace(/[^0-9+]/g, '')}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1.5 rounded-md border border-amber-500/20">
+                                                            <Phone className="h-3 w-3" />
+                                                            Call
+                                                        </a>
+                                                    </>
+                                                )}
+                                            </div>
+                                        );
                                     })()}
                                 </div>
                                 <div className="flex gap-3 items-center">
