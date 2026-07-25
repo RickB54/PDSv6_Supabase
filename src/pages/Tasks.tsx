@@ -73,7 +73,7 @@ export default function Tasks() {
         text,
         actor?.email || 'guest@demo.com',
         actor?.name || 'Demo Visitor',
-        chatRecipient
+        chatRecipient === 'all' ? null : chatRecipient
       );
       setNewChatText("");
     } catch {
