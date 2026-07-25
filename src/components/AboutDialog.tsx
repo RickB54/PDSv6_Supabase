@@ -38,7 +38,7 @@ export default function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
             <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
               We specialize in high-quality interior and exterior detailing, paint correction,
               ceramic coatings, and mobile-ready services. With transparent pricing and expert
-              craftsmanship, we deliver showroom results at our optimized detailing facility or onsite.
+              craftsmanship, we deliver showroom results at our optimized detailing facility or onsite at your location!
             </p>
             <div className="pt-6 border-t border-zinc-800 mt-2">
               <p className="text-sm text-zinc-400 flex flex-col gap-2">

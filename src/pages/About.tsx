@@ -193,27 +193,27 @@ const About = () => {
             <div className="lg:w-1/2 space-y-8 order-2 lg:order-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold uppercase tracking-widest">
                 <Car className="w-4 h-4" />
-                We Come To You
+                Mobile & Shop Service
               </div>
               <h2 className="text-4xl md:text-5xl font-black text-blue-900 uppercase tracking-tighter leading-none">
-                100% Mobile Service.<br />
+                Flexible Service Options.<br />
                 <span className="text-blue-500">Zero Inconvenience.</span>
               </h2>
               <div className="space-y-6 text-lg text-zinc-600 leading-relaxed">
                 <p>
-                  Time is your most valuable asset. Why waste it driving to a shop, arranging a ride, or waiting in a lobby? <strong>Prime Auto Detail brings the shop to you.</strong>
+                  Time is your most valuable asset. Whether you prefer the ultimate convenience of our mobile unit or the controlled environment of our professional shop, <strong>Prime Auto Detail delivers excellence.</strong>
                 </p>
                 <p>
-                  Whether you are at home, at the office, or at the gym, our fully equipped mobile unit arrives with everything needed—including power and water—to transform your vehicle right where it parks.
+                  Our fully equipped mobile unit brings the shop to your home or office, complete with power and water. For intensive paint correction, ceramic coatings, or premium care, our dedicated detailing facility provides the perfect environment for flawless results.
                 </p>
-                <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                   <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-shadow">
-                    <h4 className="font-bold text-blue-900 mb-1">Office Friendly</h4>
-                    <p className="text-sm text-zinc-500">We work quietly while you close deals.</p>
+                    <h4 className="font-bold text-blue-900 mb-1">Mobile Convenience</h4>
+                    <p className="text-sm text-zinc-500">We work quietly at your home or office while you focus on your day.</p>
                   </div>
                   <div className="p-4 bg-white rounded-xl shadow-sm border border-zinc-100 hover:shadow-md transition-shadow">
-                    <h4 className="font-bold text-blue-900 mb-1">Home Comfort</h4>
-                    <p className="text-sm text-zinc-500">Relax inside while we elevate your driveway.</p>
+                    <h4 className="font-bold text-blue-900 mb-1">Premium Shop Care</h4>
+                    <p className="text-sm text-zinc-500">Our controlled facility is perfect for intensive corrections and coatings.</p>
                   </div>
                 </div>
               </div>
