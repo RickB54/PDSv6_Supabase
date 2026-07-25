@@ -80,7 +80,7 @@ export function EmploymentComplianceGuide() {
           <Shield className="w-4 h-4 mr-2" /> Compliance Guide
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-zinc-300 print:bg-white print:text-black">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800 text-zinc-300 print:bg-white print:text-black print:static print:transform-none print:w-auto print:h-auto print:max-h-none print:overflow-visible print:border-none print:shadow-none print:m-0 print:p-0">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold text-white print:text-black">Employment Compliance Guide</DialogTitle>
           <div className="flex gap-2 print:hidden">
@@ -427,7 +427,7 @@ export function EmploymentComplianceGuide() {
       </DialogContent>
 
       {/* Hidden PDF Brochure Template */}
-      <div id="pdf-brochure-container" className="fixed -left-[10000px] top-0 bg-zinc-950 text-white w-[794px] pointer-events-none opacity-100 flex flex-col gap-4">
+      <div id="pdf-brochure-container" className="fixed -left-[10000px] top-0 bg-zinc-950 text-white w-[794px] pointer-events-none opacity-100 flex flex-col gap-4 print:hidden">
         {/* Page 1 */}
         <div id="pdf-page-1" className="w-[794px] h-[1123px] bg-gradient-to-br from-zinc-950 to-zinc-900 border border-zinc-800 p-10 relative overflow-hidden flex flex-col font-sans">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
