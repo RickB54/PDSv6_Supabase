@@ -54,37 +54,25 @@ const DashboardTile = ({
   bgColor,
   href,
   onClick,
-  infoTitle,
-  infoContent,
+  helpTopicId,
   isSpecialNewBooking = false
 }: {
   title: string, desc: string, bgColor: string, href?: string, onClick?: () => void,
-  infoTitle: string, infoContent: React.ReactNode, isSpecialNewBooking?: boolean
+  helpTopicId?: string, isSpecialNewBooking?: boolean
 }) => {
   const content = (
     <Card className={`p-6 ${bgColor} text-white rounded-xl h-full transition-transform hover:scale-[1.02] relative group`}>
       <div className="text-2xl font-bold pr-8">{title}</div>
       <div className="text-sm opacity-90">{desc}</div>
-      {!isSpecialNewBooking && (
-        <div className="absolute top-4 right-4 z-10" onClick={e => e.preventDefault()}>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="text-white/60 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full p-1">
-                <Info className="w-5 h-5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 bg-zinc-900 border-zinc-700 text-white p-4 shadow-2xl z-50">
-              <h4 className="font-bold text-lg mb-2 text-white">{infoTitle}</h4>
-              <div className="text-sm text-zinc-300 space-y-2">{infoContent}</div>
-            </PopoverContent>
-          </Popover>
-        </div>
-      )}
-      {isSpecialNewBooking && (
-        <div className="absolute top-4 right-4">
-          <div className="bg-black/20 rounded-full p-1 text-white/80"><Info className="w-5 h-5" /></div>
-        </div>
-      )}
+      <div className="absolute top-4 right-4 z-10" onClick={e => e.preventDefault()}>
+        <button onClick={(e) => { 
+          e.preventDefault(); 
+          e.stopPropagation(); 
+          if (helpTopicId) window.dispatchEvent(new CustomEvent('open-help', { detail: helpTopicId })); 
+        }} className="text-white/60 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full p-1 cursor-pointer">
+          <Info className="w-5 h-5" />
+        </button>
+      </div>
     </Card>
   );
 
@@ -97,8 +85,8 @@ const DashboardTile = ({
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-80 bg-zinc-900 border-zinc-700 text-white p-4 shadow-2xl z-50">
-          <h4 className="font-bold text-lg mb-2 text-indigo-400">{infoTitle}</h4>
-          <div className="text-sm text-zinc-300 space-y-2 mb-4">{infoContent}</div>
+          <h4 className="font-bold text-lg mb-2 text-indigo-400">Start Booking</h4>
+          <div className="text-sm text-zinc-300 space-y-2 mb-4">Click below to open the online services page and begin booking a customer.</div>
           <Link to="/services">
             <Button className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold">Start Booking Flow</Button>
           </Link>
@@ -273,93 +261,80 @@ const EmployeeDashboard = () => {
             <DashboardTile 
               isSpecialNewBooking={true}
               title="NEW BOOKING" desc="Schedule a new service appointment." bgColor="bg-indigo-700"
-              infoTitle="How to Book a Customer"
-              infoContent={
-                <>
-                  <ol className="list-decimal pl-5 space-y-2 mb-2">
-                    <li><strong>Choose a Service:</strong> Select the package or detail service needed.</li>
-                    <li><strong>Pick a Date & Time:</strong> Find an open slot on the calendar.</li>
-                    <li><strong>Confirm Booking:</strong> Enter the customer's details (name, vehicle, contact) as if you were them.</li>
-                  </ol>
-                  <div className="bg-indigo-900/50 p-2 rounded text-xs text-indigo-200 border border-indigo-800/50">
-                    <Info className="w-3 h-3 inline mr-1" />
-                    When you book a customer while logged in, that customer will be automatically assigned to you and visible in your dashboard.
-                  </div>
-                </>
-              }
+              helpTopicId="dashboard-new-booking"
             />
 
             <DashboardTile 
               href="/service-checklist" title="SERVICE CHECKLIST" desc="Start Job • View Active Jobs" bgColor="bg-green-700"
-              infoTitle="Service Checklist" infoContent="Access standard operating procedures for active jobs to ensure all steps are followed correctly before returning the vehicle."
+              helpTopicId="dashboard-service-checklist"
             />
 
             <DashboardTile 
               href="/staff-schedule" title="WORK SCHEDULE" desc="View your upcoming shifts and times." bgColor="bg-teal-700"
-              infoTitle="Work Schedule" infoContent="View your assigned shifts, manage time-off requests, and see when you are scheduled to work this week."
+              helpTopicId="dashboard-work-schedule"
             />
 
             <DashboardTile 
               href="/training-manual" title="PRIME TRAINING CENTER" desc={`Progress: ${trainingProgress}% complete`} bgColor="bg-purple-700"
-              infoTitle="Prime Training Center" infoContent="Watch instructional videos, complete quizzes, and earn your detailing certifications through our internal training program."
+              helpTopicId="dashboard-prime-training-center"
             />
 
             <DashboardTile 
               href="/learning-library" title="LEARNING LIBRARY" desc="Company knowledge base & resources." bgColor="bg-indigo-600"
-              infoTitle="Learning Library" infoContent="Access our archive of optional resources, past training materials, and company best-practices for continuous improvement."
+              helpTopicId="dashboard-learning-library"
             />
 
             {examUnlocked && (
               <DashboardTile 
                 onClick={() => setOrientationOpen(true)} title="ORIENTATION (EXAM)" desc={examStatusStr} bgColor="bg-orange-600"
-                infoTitle="Orientation Exam" infoContent="Take the required onboarding exam to confirm your understanding of company policies and basic safety procedures."
+                helpTopicId="dashboard-orientation"
               />
             )}
 
             <DashboardTile 
               href="/services" title="VIEW WEBSITE" desc="To view our current package pricelist." bgColor="bg-blue-700"
-              infoTitle="View Website" infoContent="Browse the live Prime Auto Detail website exactly as a customer sees it to verify packages, prices, and public information."
+              helpTopicId="dashboard-view-website"
             />
 
             <DashboardTile 
               onClick={() => setTipsOpen(true)} title="RICK’S TIPS" desc="Quick professional reminders to reduce rework." bgColor="bg-purple-700"
-              infoTitle="Rick's Tips" infoContent="Read quick, expert advice directly from Rick to avoid common detailing mistakes and improve your efficiency on the floor."
+              helpTopicId="dashboard-pro-tips"
             />
 
             <DashboardTile 
               href="/team-chat" title="APP TEAM CHAT" desc="Communicate with your team in real-time." bgColor="bg-green-700"
-              infoTitle="App Team Chat" infoContent="Send and receive instant messages with other employees and admins to ask questions or coordinate tasks."
+              helpTopicId="dashboard-team-chat"
             />
 
             <DashboardTile 
               href="/sticky-notes" title="STICKY NOTES" desc="Your personal workspace for notes & lists." bgColor="bg-yellow-600"
-              infoTitle="Sticky Notes" infoContent="Create and manage your own private digital sticky notes. Use this to keep track of reminders or personal to-do items."
+              helpTopicId="dashboard-sticky-notes"
             />
 
             <DashboardTile 
               href="/chemicals" title="CHEMICAL CARDS" desc="Browse products, dilution ratios, and usage." bgColor="bg-cyan-700"
-              infoTitle="Chemical Cards" infoContent="Search our chemical inventory to find the exact dilution ratio and intended use-case for any product in the shop."
+              helpTopicId="dashboard-chemical-cards"
             />
 
             <DashboardTile 
               onClick={() => window.dispatchEvent(new Event('open-quick-pay'))} title="QUICK PAY" desc="Receive an in-person payment quickly." bgColor="bg-emerald-600"
-              infoTitle="Quick Pay" infoContent="Process an immediate, in-person credit card payment for a walk-in customer or an ad-hoc service addition."
+              helpTopicId="dashboard-quick-pay"
             />
 
             <DashboardTile 
               href="/tasks" title="TODO LIST" desc="View your assigned tasks and calendar." bgColor="bg-amber-600"
-              infoTitle="Todo List" infoContent="See a calendar and list view of all specific tasks assigned directly to you by the management team."
+              helpTopicId="dashboard-todo-list"
             />
 
             <DashboardTile 
               onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: 'show-help' }))}
               title="SHOW HELP" desc="Open the full documentation guide." bgColor="bg-slate-700"
-              infoTitle="Show Help" infoContent="Open the comprehensive guide on how to use every feature on the Employee Dashboard."
+              helpTopicId="dashboard-show-help"
             />
 
             <DashboardTile 
               onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
-              infoTitle="Notify Admin" infoContent="Use this to send an immediate alert to management regarding an urgent issue or customer request. The message will be securely sent directly to administrators."
+              helpTopicId="dashboard-notify-admin"
             />
 
           </div>

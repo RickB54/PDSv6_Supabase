@@ -3345,299 +3345,577 @@ export const adminTopics: HelpTopic[] = [
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [
-  stickyNotesHelpTopic,
-  demoModeHelpTopic,
-  checklistFinalStepsTopic,
   {
-    id: 'chemical-decision-system',
-    title: 'Chemical Decision System',
-    summary: 'A complete guide to the precision chemistry logic within Prime Auto Detail.',
+    id: 'phone-assistant',
+    title: 'Phone Assistant',
+    summary: 'Scripted guide for handling customer calls.',
     content: [
-      '**The Decision Engine**: This system is designed to remove guesswork from detailing. It guides you through assessing a vehicle and choosing the exact chemical for the task.',
+      '**What this is**: The Phone Assistant provides a step-by-step script to follow when a customer calls to inquire about services.',
       '',
-      '🧠 **1. Universal Decision System**',
-      'The core engine where you input the **Vehicle Severity** and **Contamination Type**. It calculates the required chemistry profile (e.g., Alkaline Surfactant) and points you to the exact product in your inventory.',
+      '**When to use it**: Whenever you answer the shop phone or are speaking to a potential customer on the floor.',
       '',
-      '⚙️ **2. Setup Workflow (Training)**',
-      'A repeatable, 5-step process for every detailer to follow: Inspect, Identify, Consult, Select, and Dilute. This ensures safety and consistency across all jobs.',
+      '**How to use it**: Click the Phone Assistant tile to open the guide. Read through the prompts to answer common questions consistently, gather the right information about their vehicle, and guide them toward the correct package.',
       '',
-      '📚 **3. Condition Library**',
-      'A reference guide explaining what "Light", "Moderate", "Heavy", and "Severe" conditions actually look and feel like. It includes technical risk factors for each level.',
-      '',
-      '📦 **4. Service Packages**',
-      'Templatized workflows for common jobs like Maintenance Washes, Exterior Enhancements, and Interior Deep Cleans. It lists the required chemicals and estimated timeframes.',
-      '',
-      '📋 **5. Job Prep Checklist**',
-      'A final "pre-flight" checklist to ensure all spray bottles are mixed correctly and you have the right chemicals loaded based on the vehicle scenario.',
-      '',
-      '🎯 **Professional Tip**: Use the **AI Consultant** button in the Decision System for complex scenarios like "sap on ceramic coating" or "mold on leather".',
+      '**Important notes**: Always collect the customer\'s name, phone number, and vehicle model before ending the call.'
     ],
-    route: '/chemical-training',
-    section: 'chemicals',
-  },
-  inventoryCleanupTopic,
-  checklistToolsGuide,
-  inventoryChemicalsTopic,
-  unifiedInventoryModalHelpTopic,
-  {
-    id: 'website',
-    title: 'Website',
-    summary: 'View packages, add‑ons, and web tools.',
-    content: [
-      'Use View Website to open the public site and pricing tools.',
-      'Review packages and add‑ons before discussing options with customers.',
-    ],
-    route: '/services',
-    section: 'menu',
+    section: 'menu'
   },
   {
-    id: 'customer-intake',
-    title: 'Customer Intake Tools',
-    summary: 'Sales tools to help convert prospects and guide customers.',
+    id: 'package-selection',
+    title: 'Package Comparison',
+    summary: 'Side-by-side comparison of our detailing packages.',
     content: [
-      '**Overview**: Essential tools for customer-facing interactions and sales.',
+      '**What this is**: A detailed breakdown of every service included in our standard packages (e.g., Prime Essential vs. Prime Elite).',
       '',
-      '**Package Comparison**:',
-      '• Side-by-side comparison of service packages',
-      '• Use as a sales tool during customer conversations',
-      '• Show features and pricing clearly',
+      '**When to use it**: Use this when a customer is unsure which service they need, or when you need to quickly check if a specific task (like clay bar) is included in their booked package.',
       '',
-      '**Vehicle Classification**:',
-      '• Categorize vehicles (sedan, SUV, truck)',
-      '• Standardize pricing based on vehicle size',
-      '• Link customers to classification profiles',
+      '**How to use it**: Open the tool and select two packages to see a side-by-side comparison. You can also view this directly with a customer to help them make a decision.',
       '',
-      '**Client Evaluation**:',
-      '• Assess customer needs and vehicle condition',
-      '• Guide service recommendations',
-      '• Document customer requirements',
-      '',
-      '**Addon Upsell Script**:',
-      '• Proven scripts for suggesting add-on services',
-      '• Increase job value professionally',
-      '• Handle objections effectively',
-      '',
-      '**Prospects**:',
-      '• Add walk-in leads and potential customers',
-      '• Track vehicle interest and contact info',
-      '• Admin converts prospects to customers when they book',
-      '',
-      '**When to Use**:',
-      '✅ During customer consultations',
-      '✅ When a walk-in prospect shows interest',
-      '✅ To explain service options clearly',
-      '✅ To upsell services professionally',
+      '**Important notes**: Do not promise services that are not explicitly listed in the package unless approved by a manager.'
     ],
-    route: '/package-selection',
-    section: 'menu',
+    section: 'menu'
   },
   {
-    id: 'prospects',
-    title: 'Prospects',
-    summary: 'Capture walk-in leads and potential customers.',
+    id: 'vehicle-classification',
+    title: 'Vehicle Classification',
+    summary: 'Guide to determining vehicle sizes for pricing.',
     content: [
-      '**Overview**: Add prospects when potential customers show interest.',
+      '**What this is**: Our official size guide that determines how much a vehicle costs to detail.',
       '',
-      '**Adding Prospects**:',
-      '• Enter name, phone, email (name required)',
-      '• Note vehicle interest and source',
-      '• Save for admin to convert later',
+      '**When to use it**: When booking a customer or verifying that a booked customer was charged correctly for their vehicle size.',
       '',
-      '**Your Role**:',
-      '✅ Capture walk-in leads',
-      '✅ Get contact information',
-      '✅ Note what services they\'re interested in',
-      '❌ Don\'t create customers (admin does this)',
+      '**How to use it**: Search for the make and model. The system will tell you if it classifies as a Sedan, Small SUV, 3-Row SUV, or Oversized (Truck/Van).',
       '',
-      '**Workflow**:',
-      '1. Potential customer shows interest',
-      '2. You add them as a prospect',
-      '3. Admin reviews and converts when they book',
-      '',
-      '**Pro Tips**:',
-      '💡 Get at least name and phone number',
-      '💡 Note what vehicle they have',
-      '💡 Ask what services they\'re interested in',
-      '💡 Admin will follow up and convert to customer',
+      '**Important notes**: If a customer arrives with a larger vehicle than they booked, politely inform them of the size change before starting work.'
     ],
-    route: '/prospects',
-    section: 'menu',
+    section: 'menu'
+  },
+  {
+    id: 'client-evaluation',
+    title: 'Client Evaluation',
+    summary: 'Tool for assessing customer expectations and vehicle condition.',
+    content: [
+      '**What this is**: A quick questionnaire to evaluate the condition of a vehicle when it arrives and understand what the customer cares about most.',
+      '',
+      '**When to use it**: During the initial walk-around with the customer before you take the keys.',
+      '',
+      '**How to use it**: Follow the prompts to document pre-existing damage (scratches, dents), areas of heavy soiling (pet hair, stains), and what the customer specifically asked you to focus on.',
+      '',
+      '**Important notes**: Documenting existing damage protects the shop from liability. Always point out existing damage to the customer before they leave.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'addon-upsell-script',
+    title: 'Addon Upsell Script',
+    summary: 'Professional dialogue for suggesting additional services.',
+    content: [
+      '**What this is**: A guide on how to professionally offer helpful add-ons (like odor removal, pet hair removal, or engine bay detailing).',
+      '',
+      '**When to use it**: During the client evaluation walk-around when you notice a specific problem that their chosen package doesn\'t cover.',
+      '',
+      '**How to use it**: Use the scripts provided to explain the value of the add-on without being pushy. For example, "I noticed some pet hair in the back; our standard vacuum won\'t pull that out, but we offer a specific pet hair extraction service for $X."',
+      '',
+      '**Important notes**: Only suggest add-ons that genuinely benefit the customer\'s specific situation.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'staff-schedule',
+    title: 'Staff Schedule',
+    summary: 'View your upcoming assigned shifts.',
+    content: [
+      '**What this is**: Your personal work schedule calendar showing when you are expected at the shop.',
+      '',
+      '**When to use it**: Check this daily to see your hours for the week and any assigned appointments.',
+      '',
+      '**How to use it**: Open the Staff Schedule. You will see your shifts laid out by day. Click on a specific day to see the exact start and end times.',
+      '',
+      '**Important notes**: You cannot edit your own schedule. If you need time off or see a conflict, use the App Team Chat or Notify Admin feature to contact your manager.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'bookings',
+    title: 'Bookings',
+    summary: 'View upcoming customer appointments.',
+    content: [
+      '**What this is**: The master calendar of all customer appointments scheduled at the shop.',
+      '',
+      '**When to use it**: When you need to see what cars are coming in today, tomorrow, or next week to prepare the shop.',
+      '',
+      '**How to use it**: Navigate to Bookings to see the calendar. Click on any booking to view the customer name, vehicle details, and the services they requested.',
+      '',
+      '**Important notes**: As an employee, you can view bookings but you should not cancel or modify them without manager approval.'
+    ],
+    section: 'menu'
   },
   {
     id: 'service-checklist',
     title: 'Service Checklist',
-    summary: 'Start jobs and track active work.',
+    summary: 'Step-by-step guide for completing a job.',
     content: [
-      '**Persistent Drafts**: Job checklists are automatically saved. You can leave and return without losing progress.',
-      '**Material Tracking**: Use the "Materials Used" search to log chemical consumption during the job.',
-      '**Prime Consistency**: Checklists now use the standardized Prime Essential/Elite service steps.',
-      'Start Job to begin a checklist for the current task/vehicle.',
-      'View Active Jobs to monitor progress and ensure consistency.',
+      '**What this is**: The mandatory checklist you must follow when detailing a vehicle to ensure consistent quality.',
+      '',
+      '**When to use it**: You must open this checklist every time you start a new car.',
+      '',
+      '**How to use it**: Click the Service Checklist tile. Select your active job. Follow the steps in order (e.g., wheels first, then pre-rinse, then contact wash). Check off each step as you complete it. When you are 100% finished, click Finish & Complete Job.',
+      '',
+      '**Important notes**: Do not check off items you did not actually do. The checklist is automatically saved, so you won\'t lose progress if you close the app.'
     ],
-    route: '/service-checklist',
-    section: 'menu',
+    section: 'menu'
   },
   {
     id: 'tasks',
-    title: 'Todo',
-    summary: 'Your tasks with status, comments, and calendar.',
+    title: 'Tasks (Todo List)',
+    summary: 'Your assigned daily tasks and shop duties.',
     content: [
-      'See only tasks assigned to you.',
-      'Update status and add comments; admins are notified automatically.',
-      'Use Calendar view to plan work by day and time.',
+      '**What this is**: A list of non-detailing tasks assigned to you (e.g., "Empty shop trash", "Refill spray bottles").',
+      '',
+      '**When to use it**: Check this every morning when you arrive and at the end of your shift.',
+      '',
+      '**How to use it**: View your tasks, and click the checkbox when you have completed one. You can also leave a comment if there was an issue (e.g., "We are out of all-purpose cleaner").',
+      '',
+      '**Important notes**: Your manager tracks these tasks. Ensure they are completed before you clock out.'
     ],
-    route: '/tasks',
-    section: 'menu',
+    section: 'menu'
   },
   {
-    id: 'customers',
+    id: 'search-customer',
     title: 'Customer Profiles',
-    summary: 'Search and view customer records (view-only).',
+    summary: 'Search and view existing customer records.',
     content: [
-      '**Overview**: Look up existing customers to view their information.',
+      '**What this is**: A database of all customers who have visited the shop.',
       '',
-      '**What You Can Do**:',
-      '✅ Search customers by name, phone, or email',
-      '✅ View customer contact details',
-      '✅ View customer vehicles',
-      '✅ View booking history',
+      '**When to use it**: When a returning customer arrives and you need to look up their vehicle history, contact info, or previous services.',
       '',
-      '**What You Cannot Do**:',
-      '❌ Create new customers (use Prospects instead)',
-      '❌ Edit customer information',
-      '❌ Delete customers',
+      '**How to use it**: Use the search bar to find the customer by name, email, or phone number. Click their profile to view their details.',
       '',
-      '**When to Use**:',
-      '• Customer arrives for appointment',
-      '• Need to look up vehicle details',
-      '• Check customer history',
-      '• Start service checklist',
-      '',
-      '**For New Customers**:',
-      'If someone new shows interest, add them as a Prospect instead.',
-      'Admin will convert them to a customer when they book.',
+      '**Important notes**: This is view-only for employees. To add a new walk-in, use the Prospects or New Booking tool instead.'
     ],
-    route: '/search-customer',
-    section: 'menu',
+    section: 'menu'
   },
   {
-    id: 'quick-detailing-manual',
-    title: 'Quick Detailing Manual',
-    summary: 'Guidelines to maintain consistent quality.',
+    id: 'quick-pay',
+    title: 'Quick Pay',
+    summary: 'Process an in-person payment quickly.',
     content: [
-      'Reference process steps and best practices quickly during work.',
-      'Use this along with Rick\'s Pro Tips for better results.',
+      '**What this is**: A fast way to charge a customer\'s credit card or log a cash payment on the spot.',
+      '',
+      '**When to use it**: When a customer is standing in front of you ready to pay for their service or an add-on.',
+      '',
+      '**How to use it**: Open Quick Pay, enter the total amount, and follow the prompts to process the credit card or log the exact cash amount received.',
+      '',
+      '**Important notes**: Always double-check the final amount with the customer before processing the charge.'
     ],
-    route: '/training-manual',
-    section: 'menu',
+    section: 'menu'
   },
   {
-    id: 'employee-dashboard',
-    title: 'Employee Dashboard',
-    summary: 'Home base for jobs, tips, and quick actions.',
+    id: 'mileage',
+    title: 'Mileage',
+    summary: 'Log your driving miles for mobile detailing.',
     content: [
-      'Access Service Checklist, Orientation, Pro Tips, and quick actions in one place.',
-      'Check Certified Detailer badge and quick stats when available.',
-      'Customer Intake tools help you guide customers and capture leads.',
+      '**What this is**: A tracker for the distance you drive when performing mobile detailing jobs.',
+      '',
+      '**When to use it**: Before and after every mobile job to ensure you are compensated for travel.',
+      '',
+      '**How to use it**: Open the Mileage tool, enter your starting odometer reading when you leave the shop, and your ending reading when you return.',
+      '',
+      '**Important notes**: Log your miles daily. Forgotten miles cannot be backdated after the pay period ends.'
     ],
-    route: '/employee-dashboard',
-    section: 'menu',
+    section: 'menu'
   },
-  multiVehicleBookingHelpTopic,
+  {
+    id: 'chemical-cards',
+    title: 'Chemical Cards',
+    summary: 'Reference guide for all shop chemicals.',
+    content: [
+      '**What this is**: A complete encyclopedia of every chemical product we use in the shop.',
+      '',
+      '**When to use it**: Whenever you are unsure what a chemical does, how to use it safely, or what surfaces it is safe on.',
+      '',
+      '**How to use it**: Open Chemical Cards and search for the product (e.g., "Iron Remover"). Read the safety warnings, application instructions, and safe surfaces.',
+      '',
+      '**Important notes**: Never mix chemicals or use them on surfaces not explicitly approved in the Chemical Card.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'dilution-chart-reference',
+    title: 'Dilution Ratio Chart',
+    summary: 'Quick reference for common chemical dilutions.',
+    content: [
+      '**What this is**: A cheat sheet showing how much water to mix with concentrated chemicals.',
+      '',
+      '**When to use it**: When refilling spray bottles in the shop.',
+      '',
+      '**How to use it**: Look up the chemical you are mixing (e.g., All Purpose Cleaner). Find the ratio (e.g., 10:1). This means 10 parts water to 1 part chemical.',
+      '',
+      '**Important notes**: Always put water in the bottle FIRST, then add the chemical to prevent foaming and dangerous splashing.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'chemical-workflow',
+    title: 'Chemical Workflow',
+    summary: 'Guide for choosing the right chemical for the job.',
+    content: [
+      '**What this is**: A decision-making guide to help you pick the right product for tough cleaning situations.',
+      '',
+      '**When to use it**: When you encounter a stain or contamination you haven\'t seen before (e.g., tree sap, road tar, heavy brake dust).',
+      '',
+      '**How to use it**: Follow the prompts to identify the surface (e.g., paint, leather) and the contamination. The workflow will suggest the safest and most effective chemical to use.',
+      '',
+      '**Important notes**: Always start with the least aggressive chemical first before moving to stronger solvents.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'ricks-tips',
+    title: 'Rick\'s Tips',
+    summary: 'Expert advice and reminders from management.',
+    content: [
+      '**What this is**: A collection of best practices and tips to help you work faster and achieve better results.',
+      '',
+      '**When to use it**: Review these regularly, especially if you are struggling with a specific part of the detailing process.',
+      '',
+      '**How to use it**: Open Rick\'s Tips from the Dashboard or Menu to read through common mistakes to avoid and pro-level techniques.',
+      '',
+      '**Important notes**: New tips are added frequently based on shop feedback, so check back often.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'dilution-calc',
+    title: 'Prime Dilution Calculator',
+    summary: 'Tool to calculate exact ounces for mixing chemicals.',
+    content: [
+      '**What this is**: A calculator that tells you exactly how many ounces of chemical and water you need for any bottle size.',
+      '',
+      '**When to use it**: When you need to mix a new bottle of chemical and the dilution ratio isn\'t a simple pre-marked line on the bottle.',
+      '',
+      '**How to use it**: Enter the size of your bottle (e.g., 32oz) and the desired ratio (e.g., 4:1). The calculator will tell you exactly how many ounces of water and product to pour.',
+      '',
+      '**Important notes**: Accuracy matters. Too much chemical can damage a car; too little won\'t clean effectively.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'dilution-chart-modal',
+    title: 'Dilution Reference Chart',
+    summary: 'Printable chart of all shop dilutions.',
+    content: [
+      '**What this is**: A visual chart of all standard chemical dilutions used in the shop.',
+      '',
+      '**When to use it**: Use this as a quick reference when working in the dilution station.',
+      '',
+      '**How to use it**: Find the product and the intended use (e.g., Interior Plastics vs. Engine Bay) to see the approved dilution ratio.',
+      '',
+      '**Important notes**: Never deviate from these approved ratios without manager permission.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'mobile-setup',
+    title: 'Mobile Setup',
+    summary: 'Checklist for preparing the mobile detailing van.',
+    content: [
+      '**What this is**: A comprehensive checklist of everything required to stock and prepare the mobile van before leaving for a job.',
+      '',
+      '**When to use it**: Every morning before departing for a mobile detailing appointment.',
+      '',
+      '**How to use it**: Go through the list item by item. Verify water tank levels, generator fuel, all chemical bottles, clean towels, and tools are loaded.',
+      '',
+      '**Important notes**: Forgetting a crucial tool on a mobile job costs time and money. Do not skip this checklist.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'shop-setup',
+    title: 'Shop Setup',
+    summary: 'Checklist for opening and closing the shop.',
+    content: [
+      '**What this is**: The standard operating procedure for opening the shop in the morning and shutting it down at night.',
+      '',
+      '**When to use it**: At the beginning and end of your shift if you are the designated opener or closer.',
+      '',
+      '**How to use it**: Follow the steps to turn on/off compressors, unlock/lock bay doors, empty trash, and prep towel buckets.',
+      '',
+      '**Important notes**: Closing procedures are critical for safety and ensuring the morning crew can start immediately.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'employee-certification',
+    title: 'Employee Certification',
+    summary: 'Track your training and certification progress.',
+    content: [
+      '**What this is**: Your portal for viewing your detailing certifications and training phase progress.',
+      '',
+      '**When to use it**: Check this during your onboarding period to see which phases you have completed and what is left to learn.',
+      '',
+      '**How to use it**: Open the Certification tab to view your progress bar. You can see exactly which skills your manager has signed off on.',
+      '',
+      '**Important notes**: You must complete all training phases before you can take the final Orientation Exam.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'learn-lib',
+    title: 'Learning Library',
+    summary: 'Archive of training videos and materials.',
+    content: [
+      '**What this is**: A searchable library of all instructional videos, tool manuals, and best-practice guides.',
+      '',
+      '**When to use it**: When you want to improve your skills, learn a new technique, or review how to use a specific piece of equipment.',
+      '',
+      '**How to use it**: Use the search bar or categories to find videos relevant to what you want to learn.',
+      '',
+      '**Important notes**: Watching these videos is highly encouraged and may be assigned to you by your manager during training.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'orientation',
+    title: 'Orientation',
+    summary: 'The final certification exam for new hires.',
+    content: [
+      '**What this is**: The formal test you take at the end of your training to become a Certified Detailer.',
+      '',
+      '**When to use it**: Only when your manager has unlocked it for you after completing your hands-on training phases.',
+      '',
+      '**How to use it**: Read the Employee Handbook, then click Start Exam. Answer the multiple-choice questions to the best of your ability.',
+      '',
+      '**Important notes**: The exam is for evaluation purposes only. You can retake it as many times as needed to pass.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'sticker-maker',
+    title: 'Business Card Stickers',
+    summary: 'Generate printable QR code stickers for marketing.',
+    content: [
+      '**What this is**: A tool to print Prime Auto Detail promotional stickers with QR codes.',
+      '',
+      '**When to use it**: When instructed by management to prepare marketing materials or leave-behinds for customers.',
+      '',
+      '**How to use it**: Select the sticker design and click print to generate a format compatible with our label printers.',
+      '',
+      '**Important notes**: Do not place stickers on customer vehicles unless explicitly authorized by the customer and management.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'blog',
+    title: 'Prime Blog',
+    summary: 'Read shop news and detailing articles.',
+    content: [
+      '**What this is**: The public-facing blog where we post detailing advice, product reviews, and shop updates.',
+      '',
+      '**When to use it**: Read the blog to stay informed about what we are communicating to our customers, so you can speak knowledgeably about our services.',
+      '',
+      '**How to use it**: Browse the articles to learn more about advanced detailing concepts.',
+      '',
+      '**Important notes**: If a customer asks a question covered in the blog, you can direct them to the website for a full article on the topic.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'show-help',
+    title: 'Employee Help Center',
+    summary: 'The complete guide to using the Prime application.',
+    content: [
+      '**What this is**: The documentation you are reading right now!',
+      '',
+      '**When to use it**: Anytime you are confused about how a feature in the app works or what you are supposed to do next.',
+      '',
+      '**How to use it**: Click the Help icon on any page, or browse the table of contents to find the topic you need.',
+      '',
+      '**Important notes**: If you cannot find the answer in the Help Center, use the App Team Chat to ask a manager.'
+    ],
+    section: 'menu'
+  },
+  {
+    id: 'user-profile',
+    title: 'My Profile',
+    summary: 'Manage your personal account settings.',
+    content: [
+      '**What this is**: Your personal account settings where you manage your login and contact information.',
+      '',
+      '**When to use it**: If you need to change your password or update the phone number management uses to contact you.',
+      '',
+      '**How to use it**: Open My Profile to update your details and save the changes.',
+      '',
+      '**Important notes**: Ensure your contact information is always accurate so you do not miss important scheduling updates.'
+    ],
+    section: 'menu'
+  }
 ];
 
 export const employeeDashboardTopics: HelpTopic[] = [
   {
+    id: 'dashboard-new-booking',
+    title: 'NEW BOOKING',
+    summary: 'Schedule a new service appointment.',
+    content: [
+      'How to book a customer:',
+      '1. Click "Start Booking Flow"',
+      '2. Choose a service from the online services page',
+      '3. Pick a date and time',
+      '4. Enter the customer\'s details as if you were them.',
+      '',
+      'Note: when you book a customer while logged in as an employee, that customer is automatically assigned to you and visible in your dashboard only.'
+    ],
+    section: 'dashboard'
+  },
+  {
     id: 'dashboard-service-checklist',
     title: 'SERVICE CHECKLIST',
-    summary: 'Start Job • View Active Jobs • Active Jobs count.',
+    summary: 'Start and complete your detailing jobs.',
     content: [
-      '**Persistent Progress**: Your checklists are now saved automatically; resume anytime without losing work.',
-      '**Prime Packages**: Work through standardized procedures for Prime Essential and Prime Elite services.',
-      '**Material Usage**: Log chemicals and materials used directly within the active checklist.',
-      'Start Job begins the guided checklist for the current task/vehicle.',
+      'How to start and complete a job: Click this tile to see your active jobs or start a new one.',
+      'Select the job from your list, work through each checklist item in order, and click "Finish & Complete Job" when done.',
+      'All job details including customer, vehicle, service, and pricing are pre-filled from the booking.'
     ],
-    section: 'dashboard',
-    route: '/service-checklist',
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-work-schedule',
+    title: 'WORK SCHEDULE',
+    summary: 'View your upcoming shifts.',
+    content: [
+      'View your upcoming assigned shifts and jobs here.',
+      'Your schedule is set by your manager and updates automatically when a new booking is assigned to you.',
+      'You cannot edit the schedule yourself — contact your manager to make changes.'
+    ],
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-learning-library',
+    title: 'LEARNING LIBRARY',
+    summary: 'Company knowledge base & resources.',
+    content: [
+      'Browse all training videos and reference materials.',
+      'Use the search or category filters to find videos relevant to what you\'re working on.',
+      'Your manager may direct you to specific videos during training phases.'
+    ],
+    section: 'dashboard'
   },
   {
     id: 'dashboard-prime-training-center',
     title: 'PRIME TRAINING CENTER',
-    summary: 'Access your employee certification and standard operating procedures (SOPs).',
+    summary: 'Access your full training program.',
     content: [
-      'The Prime Training Center is your portal for learning the company standards.',
-      'Your manager will track your progress through the 6-phase training checklist during your in-person evaluations.',
-      'The progress percentage on this tile (e.g., "Progress: 42% complete") updates in real-time as your manager checks off your completed training items.',
-      'Use the videos and documents inside to study for your final certification exam.',
+      'Access your full training program including SOPs, chemical guides, equipment references, and certification information.',
+      'Check the "My Progress" tab to see which training phases your manager has marked complete.'
     ],
-    section: 'dashboard',
-    route: '/training-manual',
+    section: 'dashboard'
   },
   {
     id: 'dashboard-orientation',
     title: 'ORIENTATION (EXAM)',
-    summary: 'Take your final certification exam once unlocked by an admin.',
+    summary: 'Take your final certification exam.',
     content: [
-      'This tile is hidden by default. Once your manager approves your training checklist, they will unlock this tile for you.',
-      'Click it to take the final Orientation Exam. Upon passing, a formal PDF certificate is generated and saved to your employee record.',
-      'Your score and completion status will be permanently displayed on this tile after taking the exam.',
+      'Only visible when your manager has unlocked it for you.',
+      'Read the Employee Handbook first, then click "Start Exam" when ready.',
+      'The exam is for your manager\'s reference only — there are no penalties for any score and you can retake it as many times as you like.'
     ],
-    section: 'dashboard',
+    section: 'dashboard'
   },
   {
     id: 'dashboard-view-website',
     title: 'VIEW WEBSITE',
-    summary: 'Open public site to view package pricelist and tools.',
+    summary: 'Open the public website.',
     content: [
-      'Quickly access web pricing and add‑ons to guide the conversation.',
-      'Use this with customers to present options clearly.',
+      'Opens the Prime Auto Detail public website where customers book services.',
+      'Use this to see current pricing, service descriptions, and add-on options so you can answer customer questions accurately.'
     ],
-    section: 'dashboard',
-    route: '/services',
+    section: 'dashboard'
   },
   {
     id: 'dashboard-pro-tips',
-    title: 'RICK’S PRO TIPS',
-    summary: 'Quick professional reminders to reduce rework.',
+    title: 'RICK\'S TIPS',
+    summary: 'Quick professional reminders.',
     content: [
-      'Check off tips as acknowledged to build consistent habits.',
-      'Edit or add personal tips to improve your workflow.',
+      'Quick professional reminders from your manager to help you avoid common mistakes and do the job right the first time.',
+      'Check these regularly — new tips may be added as the business grows.'
     ],
-    section: 'dashboard',
+    section: 'dashboard'
   },
   {
-    id: 'dashboard-quick-todo',
-    title: 'Todo (Calendar)',
-    summary: 'Open your tasks list and calendar view.',
+    id: 'dashboard-team-chat',
+    title: 'APP TEAM CHAT',
+    summary: 'Communicate with your team in real-time.',
     content: [
-      'Use Mine, Today, Overdue, Upcoming filters to stay organized.',
-      'Update status (e.g., Acknowledged) and add comments.',
+      'This is the real-time team messaging channel for all Prime Auto Detail staff.',
+      'All messages are visible to every team member including your manager (this is a public channel, not private).',
+      'Use it for: quick questions to your manager, coordinating with other staff, sharing updates about a job in progress, or anything the whole team should know.',
+      'Keep all messages professional — this is a business communication tool.',
+      'To send a message, type in the message box and press Send. Messages appear in real time for all connected team members.'
     ],
-    section: 'dashboard',
-    route: '/tasks',
+    section: 'dashboard'
   },
   {
-    id: 'dashboard-add-prospect',
-    title: 'ADD PROSPECT',
-    summary: 'Capture walk-in leads and potential customers.',
+    id: 'dashboard-sticky-notes',
+    title: 'STICKY NOTES',
+    summary: 'Your personal workspace.',
     content: [
-      'Enter prospect name, phone, and vehicle interest.',
-      'Admin will convert prospects to customers when they book.',
-      'Your role is to capture leads - admin handles customer creation.',
+      'Your personal private workspace for notes, lists, and reminders.',
+      'Only you can see your sticky notes — they are not visible to your manager or other employees.'
     ],
-    section: 'dashboard',
-    route: '/prospects',
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-chemical-cards',
+    title: 'CHEMICAL CARDS',
+    summary: 'Browse products and usage.',
+    content: [
+      'Browse the full chemical knowledge base including every product we use, its dilution ratios, and application instructions.',
+      'Use this as a quick reference during jobs.'
+    ],
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-quick-pay',
+    title: 'QUICK PAY',
+    summary: 'Receive an in-person payment.',
+    content: [
+      'Use this to process an in-person cash or card payment from a customer on the spot.',
+      'Follow the prompts to enter the amount and payment method.',
+      'Contact your manager if you\'re unsure whether to collect payment directly.'
+    ],
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-todo-list',
+    title: 'TODO LIST',
+    summary: 'View your assigned tasks.',
+    content: [
+      'View tasks and calendar items assigned to you by your manager.',
+      'Check this regularly for any pending tasks or follow-up items on your jobs.'
+    ],
+    section: 'dashboard'
+  },
+  {
+    id: 'dashboard-show-help',
+    title: 'SHOW HELP',
+    summary: 'Open the full documentation guide.',
+    content: [
+      'Opens this full help guide.',
+      'Use it any time you\'re unsure how to use a feature or need a refresher.'
+    ],
+    section: 'dashboard'
   },
   {
     id: 'dashboard-notify-admin',
     title: 'NOTIFY ADMIN',
-    summary: 'Send a priority message; auto‑archives a PDF.',
+    summary: 'Send an urgent message to management.',
     content: [
-      'Fill subject, priority (URGENT/Normal), and message body.',
-      'Sends via email and saves a PDF to File Manager.',
+      'Send an urgent message directly to your manager.',
+      'Use this for anything that needs immediate attention — a problem on a job, a customer complaint, an equipment issue, or anything you\'re not sure how to handle on your own.'
     ],
-    section: 'dashboard',
-  },
+    section: 'dashboard'
+  }
 ];
 
 export const employeeTopics: HelpTopic[] = [
