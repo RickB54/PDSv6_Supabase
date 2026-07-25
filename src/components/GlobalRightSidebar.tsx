@@ -144,6 +144,16 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
+        {isAdmin && (
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/company-employees')} title="Company Employees" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
+                    <User className="w-5 h-5 text-red-500" />
+                    <DollarSign className="w-3 h-3 text-red-500 absolute -bottom-1 -right-1 bg-[#18181b] rounded-full stroke-[3]" />
+                </div>
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Employees</span>}
+            </Button>
+        )}
+
         <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
         {/* GROUP 3: Chemicals & Inventory */}
