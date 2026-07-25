@@ -198,26 +198,12 @@ export function GlobalChatWidget() {
         if (sender === myEmail) return true;
         // 2. Sent to me
         if (recipient === myEmail) return true;
-        // 3. Public messages (recipient is null) - Guests should NOT see all public internal chat?
-        // User requested "allow to see customers here in this chat... chat with customers also".
-        // SECURITY: If we show all NULL messages, guests see internal team chat.
-        // FIX: We need a flag or logic.
-        // Simple filter: Only show if I am the sender OR recipient.
-        // BUT what if Admin replies to NULL (Public)? 
-        // Admin should reply TO the guest (Direct).
-        // So guests only see DMs.
-        return false;
-    });
+        
+        // 3. Admins and employees should see all messages to monitor customer chats
+        const user = getCurrentUser();
+        if (user?.role === 'admin' || user?.role === 'employee') return true;
 
-    // Correction: If the backend logic expects guests to see their own messages,
-    // we must ensure visibleMessages includes them.
-    // We re-apply the filter correctly:
-    const myMessages = messages.filter(m => {
-        const myEmail = guestEmail.toLowerCase();
-        const sender = (m.sender_email || '').toLowerCase();
-        const recipient = (m.recipient_email || '').toLowerCase();
-        const isMe = sender === myEmail || recipient === myEmail;
-        return isMe;
+        return false;
     });
 
     // Drag functionality

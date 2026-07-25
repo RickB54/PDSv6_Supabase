@@ -192,6 +192,7 @@ export function GlobalRightSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const isMobile = useIsMobile();
+    const [openMobile, setOpenMobile] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
     const [pendingPayroll, setPendingPayroll] = useState(0);
     const { isDemoMode } = useDemoMode();
@@ -230,6 +231,73 @@ export function GlobalRightSidebar() {
         return () => window.removeEventListener('payroll-updated', handleUpdate);
     }, [user?.role]);
 
+    // Swipe Gesture Logic for Mobile
+    useEffect(() => {
+        if (!isMobile) return;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const handleTouchStart = (e: TouchEvent) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        };
+
+        const handleTouchMove = (e: TouchEvent) => {
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const dX = Math.abs(currentX - touchStartX);
+            const dY = Math.abs(currentY - touchStartY);
+
+            // RELAXED: Only intercept if starting from the VERY edge AND no dialog is open
+            if (touchStartX > window.innerWidth - 40 && !document.querySelector('[role="dialog"]')) {
+                if (dX > dY && dX > 5) {
+                    if (e.cancelable) e.preventDefault();
+                }
+            }
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const deltaX = touchStartX - touchEndX;
+            const deltaY = Math.abs(touchStartY - touchEndY);
+
+            // Right-to-Left swipe (deltaX > 0)
+            if (
+                touchStartX > window.innerWidth - 40 && 
+                !document.querySelector('[role="dialog"]') &&
+                deltaX > 60 && 
+                deltaY < 80 
+            ) {
+                if (!openMobile) {
+                    setOpenMobile(true);
+                    try { window.navigator.vibrate(10); } catch {}
+                }
+            }
+            
+            // Left-to-Right swipe to close
+            if (deltaX < -50 && deltaY < 80 && openMobile) {
+                setOpenMobile(false);
+            }
+        };
+
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        return () => {
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isMobile, openMobile]);
+
+    // Hide mobile sidebar on location change
+    useEffect(() => {
+        setOpenMobile(false);
+    }, [location.pathname]);
 
     // Hide completely on login/auth pages
     const publicPaths = ['/login', '/signup'];
@@ -255,6 +323,30 @@ export function GlobalRightSidebar() {
     if (isPerspectiveMode) dynamicTop += 40;
     if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
+    if (isMobile) {
+        return (
+            <div 
+                className="fixed right-0 z-40 border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 transition-transform duration-300 w-12"
+                style={{ 
+                    top: `${dynamicTop}px`,
+                    height: `calc(100vh - ${dynamicTop}px)`,
+                    transform: openMobile ? 'translateX(0)' : 'translateX(100%)'
+                }}
+            >
+                {/* Visual hint for swiping */}
+                <div 
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-3 h-16 bg-zinc-800/80 rounded-l-md flex items-center justify-center shadow-lg"
+                    onClick={() => setOpenMobile(!openMobile)}
+                >
+                    <ChevronLeft className="w-3 h-3 text-zinc-400" />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto w-full flex flex-col items-center gap-1.5 styled-scrollbar pt-2 px-0">
+                    {renderSidebarContent(true, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll)}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div 
