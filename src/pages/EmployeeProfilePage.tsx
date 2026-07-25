@@ -179,6 +179,9 @@ export default function EmployeeProfilePage() {
       training_completed_on: emp.training_completed_on || null,
       training_notes: emp.training_notes || null,
       exam_unlocked: emp.exam_unlocked || false,
+      state_of_residence: emp.state_of_residence || null,
+      state_of_work: emp.state_of_work || null,
+      tax_docs_status: emp.tax_docs_status || {},
       updated_at: new Date().toISOString(),
     };
 
@@ -692,13 +695,155 @@ export default function EmployeeProfilePage() {
                 </Field>
 
                 <Field label="General Documents on File (JSON)">
-                  <Textarea value={emp.documents_on_file ? JSON.stringify(emp.documents_on_file, null, 2) : '[]'}
-                    onChange={e => { try { set('documents_on_file', JSON.parse(e.target.value)); } catch {} }}
-                    className={`${inputCls} h-20 font-mono text-xs`} />
                   <p className="text-xs text-zinc-600 mt-1">e.g. <code className="text-zinc-500">["W-4","I-9","Direct Deposit Form"]</code></p>
                 </Field>
 
-                <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-2">
+                {/* TAX & COMPLIANCE SECTION */}
+                <div className="mt-8 border-t border-zinc-800 pt-8 space-y-6">
+                  <div>
+                    <h2 className="text-base font-bold text-white mb-1">Tax & Compliance</h2>
+                    <p className="text-xs text-zinc-500">Manage employee tax forms and documentation status.</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <Field label="Employee State of Residence">
+                      <Select value={emp.state_of_residence || ''} onValueChange={v => set('state_of_residence', v)}>
+                        <SelectTrigger className={inputCls}><SelectValue placeholder="Select state..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NH">NH</SelectItem>
+                          <SelectItem value="MA">MA</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    
+                    <Field label="Primary State Where Work is Performed">
+                      <Select value={emp.state_of_work || ''} onValueChange={v => set('state_of_work', v)}>
+                        <SelectTrigger className={inputCls}><SelectValue placeholder="Select state..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NH">NH</SelectItem>
+                          <SelectItem value="MA">MA</SelectItem>
+                          <SelectItem value="Both NH and MA">Both NH and MA</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg text-amber-500 text-xs">
+                    Tax requirements shown here are a general guide based on state of residence and work location. These employees live and work in both NH and MA. Cross-border employment situations have specific requirements — always confirm with a qualified accountant or employment attorney before processing your first payroll.
+                  </div>
+
+                  {(() => {
+                    const is1099 = emp.tax_classification === '1099';
+                    const docs = emp.tax_docs_status || {};
+                    const setDoc = (key: string, field: string, val: any) => set('tax_docs_status', { ...docs, [key]: { ...(docs[key] || {}), [field]: val } });
+                    
+                    const renderForm = (key: string, title: string, desc: string, link: string) => (
+                      <div key={key} className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-lg flex flex-col gap-3">
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-bold text-sm text-zinc-200">{title}</span>
+                              {docs[key]?.received ? 
+                                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase">On File</span> :
+                                <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded font-bold uppercase">Missing</span>
+                              }
+                            </div>
+                            <p className="text-xs text-zinc-400">{desc}</p>
+                            {key === 'i9' && !is1099 && !docs[key]?.received && (
+                              <div className="mt-2 inline-flex items-center gap-1.5 bg-red-500/10 text-red-400 text-[10px] px-2 py-1 rounded border border-red-500/20 font-bold uppercase tracking-wider">
+                                <AlertCircle className="w-3 h-3" /> Action Required: I-9 missing
+                              </div>
+                            )}
+                            {key === 'nh_new_hire' && !docs[key]?.received && emp.hire_date && (new Date().getTime() - new Date(emp.hire_date).getTime() > 20 * 86400000) && (
+                              <div className="mt-2 inline-flex items-center gap-1.5 bg-red-500/10 text-red-400 text-[10px] px-2 py-1 rounded border border-red-500/20 font-bold uppercase tracking-wider">
+                                <AlertCircle className="w-3 h-3" /> NH New Hire Report overdue
+                              </div>
+                            )}
+                            {key === 'ma_new_hire' && !docs[key]?.received && emp.hire_date && (new Date().getTime() - new Date(emp.hire_date).getTime() > 14 * 86400000) && (
+                              <div className="mt-2 inline-flex items-center gap-1.5 bg-red-500/10 text-red-400 text-[10px] px-2 py-1 rounded border border-red-500/20 font-bold uppercase tracking-wider">
+                                <AlertCircle className="w-3 h-3" /> MA New Hire Report overdue
+                              </div>
+                            )}
+                          </div>
+                          {link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 shrink-0">
+                              Official Source <ChevronRight className="w-3 h-3" />
+                            </a>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-zinc-800">
+                          <label className="flex items-center gap-2 text-xs text-zinc-300">
+                            <input type="checkbox" checked={docs[key]?.received || false} onChange={e => setDoc(key, 'received', e.target.checked)} className="w-4 h-4 rounded bg-zinc-950 border-zinc-800 accent-indigo-500" />
+                            Received / On File
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-zinc-500">Date Received:</span>
+                            <Input type="date" value={docs[key]?.date || ''} onChange={e => setDoc(key, 'date', e.target.value)} className="h-7 text-xs bg-zinc-950 border-zinc-800 w-32" />
+                          </div>
+                          <Button variant="outline" size="sm" className="h-7 text-xs border-zinc-700 ml-auto" onClick={() => toast({ title: 'Placeholder', description: 'File upload coming in next session' })}>
+                            Upload File
+                          </Button>
+                        </div>
+                      </div>
+                    );
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold text-zinc-300">Federal Requirements</h3>
+                          {!is1099 ? (
+                            <>
+                              {renderForm('i9', "I-9 — Employment Eligibility Verification", "Must be completed before or on first day.", "https://www.uscis.gov/i-9")}
+                              {renderForm('w4', "W-4 — Employee's Withholding Certificate", "Federal tax withholding.", "https://www.irs.gov/forms-pubs/about-form-w-4")}
+                              {renderForm('direct_deposit', "Direct Deposit Authorization", "If paying via direct deposit.", "")}
+                            </>
+                          ) : (
+                            <>
+                              {renderForm('w9', "W-9 — Request for Taxpayer ID", "Required for 1099 contractors.", "https://www.irs.gov/forms-pubs/about-form-w-9")}
+                              <div className="bg-zinc-900/50 border border-zinc-800 p-4 rounded-lg flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-sm text-zinc-200">1099-NEC Tracking</span>
+                                </div>
+                                <p className="text-xs text-zinc-400">Year-to-date payments: <span className="text-indigo-400 font-mono">[to be connected to payroll records in future session]</span></p>
+                                <p className="text-xs text-zinc-500 italic mt-1">Note: 1099-NEC is required when payments reach $600 in a calendar year. No state withholding forms required for contractors in NH or MA — confirm any state-specific 1099 reporting requirements with your accountant.</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {!is1099 && (
+                          <div className="space-y-3 pt-2">
+                            <h3 className="text-sm font-semibold text-zinc-300">State-Specific Requirements</h3>
+                            
+                            {(emp.state_of_work === 'Both NH and MA' || emp.state_of_residence === 'Both NH and MA') && (
+                              <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded text-xs text-blue-400">
+                                This employee lives and works in both NH and MA. MA income tax withholding applies to wages earned in Massachusetts even if the employee is an NH resident. Confirm withholding obligations with your accountant before processing payroll.
+                              </div>
+                            )}
+
+                            {(emp.state_of_work === 'NH' || emp.state_of_residence === 'NH' || emp.state_of_work === 'Both NH and MA') && (
+                              <>
+                                <p className="text-xs text-zinc-500 italic px-1">Note: New Hampshire has no state income tax on wages — no state withholding certificate is required for NH work.</p>
+                                {renderForm('nh_new_hire', "NH New Hire Reporting", "Must be submitted within 20 days of hire date.", "https://www.nhes.nh.gov/forms/documents/newhire-employer.pdf")}
+                              </>
+                            )}
+
+                            {(emp.state_of_work === 'MA' || emp.state_of_residence === 'MA' || emp.state_of_work === 'Both NH and MA') && (
+                              <>
+                                {renderForm('ma_m4', "MA M-4 — Withholding Exemption Certificate", "Massachusetts state tax withholding.", "https://www.mass.gov/how-to/complete-the-massachusetts-withholding-exemption-certificate-m-4")}
+                                {renderForm('ma_new_hire', "MA New Hire Reporting", "Must be submitted within 14 days of hire date.", "https://www.mass.gov/new-hire-reporting")}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-2 mt-8">
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Account Metadata</p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-zinc-500">
                     <span>Supabase ID</span><span className="font-mono text-zinc-400 truncate">{emp.id}</span>

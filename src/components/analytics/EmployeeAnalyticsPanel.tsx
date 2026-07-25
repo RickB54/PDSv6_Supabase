@@ -248,6 +248,7 @@ export function EmployeeAnalyticsPanel() {
                 <th className="text-left py-2 pr-4">Pay</th>
                 <th className="text-left py-2 pr-4"><SortBtn k="skill_rating" label="Skill" /></th>
                 <th className="text-left py-2 pr-4"><SortBtn k="next_review_date" label="Next Review" /></th>
+                <th className="text-left py-2 pr-4">Compliance Status</th>
                 <th className="py-2"></th>
               </tr>
             </thead>
@@ -283,6 +284,14 @@ export function EmployeeAnalyticsPanel() {
                           {reviewOverdue && ' ⚠'}
                         </span>
                       ) : <span className="text-zinc-700">—</span>}
+                    </td>
+                    <td className="py-2.5 pr-4">
+                      <div 
+                        className="inline-flex items-center gap-1 bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded text-[10px] font-semibold cursor-pointer hover:bg-zinc-700 transition-colors uppercase tracking-wide border border-zinc-700" 
+                        onClick={() => navigate(`/employee-profile/${e.id}`)}
+                      >
+                        Not Set Up
+                      </div>
                     </td>
                     <td className="py-2.5">
                       <Button size="sm" variant="ghost" className="h-6 text-xs text-indigo-400 hover:text-white" onClick={() => navigate(`/employee-profile/${e.id}`)}>

@@ -26,6 +26,7 @@ export default function Payroll() {
   const [tab, setTab] = useState<'pending' | 'history' | 'dashboard'>('pending');
   const [pendingRecords, setPendingRecords] = useState<any[]>([]);
   const [historyRecords, setHistoryRecords] = useState<any[]>([]);
+  const [contractors, setContractors] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,6 +52,9 @@ export default function Payroll() {
       setSelectedIds(pending.map(r => r.id));
       const history = await getSupabasePayrollRecords('paid');
       setHistoryRecords(history);
+      
+      const { data: users } = await supabase.from('app_users').select('name, tax_classification').eq('tax_classification', '1099');
+      setContractors(users || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -221,6 +225,29 @@ export default function Payroll() {
             </div>
           </div>
         </Card>
+
+        {/* 1099 CONTRACTOR THRESHOLD TRACKING (Placeholder) */}
+        {contractors.length > 0 && (
+          <Card className="bg-zinc-900 border-zinc-800 p-4">
+            <div className="flex items-center gap-2 mb-3 border-b border-zinc-800 pb-2">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <h3 className="font-bold text-white text-sm">1099 Contractor Threshold Tracking</h3>
+            </div>
+            <p className="text-xs text-zinc-400 mb-4">
+              Note: A 1099-NEC form is required when total payments to a contractor reach $600 in a calendar year.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contractors.map((c, i) => (
+                <div key={i} className="bg-zinc-950/50 border border-zinc-800/50 p-3 rounded-lg flex flex-col gap-2">
+                  <div className="font-bold text-sm text-zinc-200">{c.name}</div>
+                  <div className="text-xs text-zinc-500">
+                    Year-to-date payments: <span className="text-indigo-400 font-mono">[to be connected to payroll records]</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* Tab Nav */}
         <div className="flex flex-wrap gap-2 p-1 bg-zinc-900/50 rounded-full border border-zinc-800 w-fit">
