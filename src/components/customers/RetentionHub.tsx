@@ -21,9 +21,10 @@ import jsPDF from "jspdf";
 interface Props {
   customer: Customer;
   onRefresh?: () => void;
+  onOpenEstimate?: () => void;
 }
 
-export function RetentionHub({ customer, onRefresh }: Props) {
+export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
   const { items: allBookings } = useBookingsStore();
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
   const { addLog } = useFollowUpStore();
@@ -656,10 +657,13 @@ export function RetentionHub({ customer, onRefresh }: Props) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/estimates?customerId=${customer.id}`, '_blank')}
+                      onClick={() => {
+                        if (onOpenEstimate) onOpenEstimate();
+                        else window.open(`/estimates?customerId=${customer.id}`, '_blank');
+                      }}
                       className="h-7 text-[9px] font-black uppercase bg-zinc-900 border-zinc-800 text-zinc-400"
                     >
-                      New Estimate <ExternalLink className="h-3 w-3 ml-1" />
+                      New Estimate {onOpenEstimate ? <FileBarChart className="h-3 w-3 ml-1" /> : <ExternalLink className="h-3 w-3 ml-1" />}
                     </Button>
                   </div>
                 ) : (

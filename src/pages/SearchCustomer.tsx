@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft, PenTool } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -52,9 +52,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import jsPDF from "jspdf";
+import { toast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { UnifiedCustomerTimeline } from "@/components/customers/UnifiedCustomerTimeline";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { PageModal } from "@/components/ui/PageModal";
+import LetterMaker from "@/pages/LetterMaker";
+import BookingsPage from "@/pages/BookingsPage";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 
 const SearchCustomer = () => {
@@ -503,6 +508,13 @@ const SearchCustomer = () => {
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
   const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
+
+  const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: any; title: string; icon: any }>({ isOpen: false, url: '', component: null, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
+
+  const openLetterMaker = (customerId: string, bodyStr: string = '') => {
+    const url = bodyStr ? `/?customerId=${customerId}&body=${encodeURIComponent(bodyStr)}` : `/?customerId=${customerId}`;
+    setPageModal({ isOpen: true, url, component: LetterMaker, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
+  };
 
   const openGallery = (customer: Customer, startIndex = 0) => {
     const photos: { url: string; label?: string; type?: "image" | "video"; description?: string; }[] = [];
@@ -1079,6 +1091,22 @@ const SearchCustomer = () => {
                          >
                            <Mail className="h-4 w-4" />
                          </Button>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             const vehicleStr = customer.vehicle 
+                               ? `${customer.year && customer.year !== '-' ? customer.year : ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim()
+                               : '';
+                             const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
+                             openLetterMaker(customer.id!, bodyStr);
+                           }}
+                           className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
+                           title="Write Letter"
+                         >
+                           <PenTool className="h-4 w-4" />
+                         </Button>
                          <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-white"><Pencil className="h-4 w-4" /></Button>
                          {isAdmin && (
                            <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); setDeleteCustomerId(customer.id!); }} className="h-8 w-8 p-0 text-zinc-400 hover:text-red-400">
@@ -1105,8 +1133,15 @@ const SearchCustomer = () => {
                                 <FileBarChart className="h-4 w-4 mr-2" /> Estimates
                               </Link>
                             </Button>
-                            <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
-                              <Link to={`/bookings?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}&notes=${encodeURIComponent(customer.notes || '')}`}><CalendarPlus className="h-4 w-4 mr-2" /> Book Job</Link>
+                            <Button 
+                              className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const url = `/?add=true&customerId=${customer.id}&customerName=${encodeURIComponent(customer.name)}&email=${encodeURIComponent(customer.email || '')}&phone=${encodeURIComponent(customer.phone || '')}&address=${encodeURIComponent(customer.address || '')}&vehicleYear=${encodeURIComponent(customer.year || '')}&vehicleMake=${encodeURIComponent(customer.vehicle || '')}&vehicleModel=${encodeURIComponent(customer.model || '')}&vehicleType=${encodeURIComponent(customer.vehicleType || '')}&vehicleColor=${encodeURIComponent(customer.color || '')}&notes=${encodeURIComponent(customer.notes || '')}`;
+                                setPageModal({ isOpen: true, url, component: BookingsPage, title: 'Schedule Booking', icon: <CalendarPlus className="w-5 h-5 text-emerald-500" /> });
+                              }}
+                            >
+                              <CalendarPlus className="h-4 w-4 mr-2" /> Book Job
                             </Button>
                           </>
                         )}
@@ -1278,13 +1313,13 @@ const SearchCustomer = () => {
                                 <Button
                                   variant="outline"
                                   className="w-full bg-blue-900/20 border-blue-500/30 text-blue-400 hover:text-blue-300 hover:bg-blue-900/40 gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-xl group px-2"
-                                  onClick={() => {
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     const vehicleStr = customer.vehicle 
                                       ? `${customer.year && customer.year !== '-' ? customer.year : ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim()
                                       : '';
                                     const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
-                                    const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
-                                    navigate(url);
+                                    openLetterMaker(customer.id!, bodyStr);
                                   }}
                                 >
                                   <Mail className="w-4 h-4 text-blue-400 shrink-0" />
@@ -1724,6 +1759,16 @@ const SearchCustomer = () => {
         onOpenChange={setShowEmailPreview}
         type={emailPreviewType}
         data={emailFormData}
+      />
+
+      {/* Page Modals rendering generic overlays */}
+      <PageModal 
+        isOpen={pageModal.isOpen} 
+        onClose={() => setPageModal(prev => ({ ...prev, isOpen: false }))} 
+        initialUrl={pageModal.url}
+        component={pageModal.component}
+        title={pageModal.title}
+        icon={pageModal.icon}
       />
     </div >
   );

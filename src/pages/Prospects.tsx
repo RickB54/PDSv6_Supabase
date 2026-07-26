@@ -27,7 +27,7 @@ import {
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown, FileText,
   Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
-  Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft
+  Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft, PenTool
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
 import { savePDFToArchive } from "@/lib/pdfArchive";
@@ -35,6 +35,8 @@ import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { PageModal } from "@/components/ui/PageModal";
+import LetterMaker from "@/pages/LetterMaker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,6 +134,7 @@ export default function Prospects() {
   const [expandedCustomers, setExpandedCustomers] = useState<string[]>([]);
   const [allExpanded, setAllExpanded] = useState(false);
   const [openMaps, setOpenMaps] = useState<string[]>([]);
+  const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: React.FC; title: string; icon: React.ReactNode }>({ isOpen: false, url: '', component: () => null, title: '', icon: null });
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState<{ url: string; label?: string; type?: "image" | "video"; description?: string; }[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
@@ -1399,8 +1402,8 @@ export default function Prospects() {
                                       ? `${customer.year && customer.year !== '-' ? customer.year : ''} ${customer.vehicle || ''} ${customer.model || ''}`.trim()
                                       : '';
                                     const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
-                                    const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
-                                    navigate(url);
+                                    const url = `/?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
+                                    setPageModal({ isOpen: true, url, component: LetterMaker, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-purple-500" /> });
                                   }}
                                 >
                                   <Mail className="w-4 h-4 text-purple-400 shrink-0" />
@@ -1781,6 +1784,14 @@ export default function Prospects() {
         onOpenChange={setShowEmailPreview}
         type={emailPreviewType}
         data={emailFormData}
+      />
+      <PageModal 
+        isOpen={pageModal.isOpen} 
+        onClose={() => setPageModal(prev => ({ ...prev, isOpen: false }))} 
+        initialUrl={pageModal.url}
+        component={pageModal.component}
+        title={pageModal.title}
+        icon={pageModal.icon}
       />
     </div>
   );

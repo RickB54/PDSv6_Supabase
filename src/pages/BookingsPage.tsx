@@ -28,6 +28,9 @@ import api from "@/lib/api";
 import { getSupabaseEmployees, getSupabaseBookings, upsertSupabaseCustomer, upsertSupabaseVehicle, getSupabaseCustomers, Customer, deleteSupabaseVehicle } from "@/lib/supa-data";
 import CustomerModal from "@/components/customers/CustomerModal";
 import { getCurrentUser } from "@/lib/auth"; 
+import { PageModal } from "@/components/ui/PageModal";
+import LetterMaker from "@/pages/LetterMaker";
+import { PenTool } from "lucide-react";
 import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType, getCanonicalAddonName } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
@@ -205,6 +208,13 @@ export default function BookingsPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
+
+  const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: any; title: string; icon: any }>({ isOpen: false, url: '', component: null, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
+
+  const openLetterMaker = (customerId: string, bodyStr: string = '') => {
+    const url = bodyStr ? `/?customerId=${customerId}&body=${encodeURIComponent(bodyStr)}` : `/?customerId=${customerId}`;
+    setPageModal({ isOpen: true, url, component: LetterMaker, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
+  };
   const [engagements, setEngagements] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [selectedHistoryCustomer, setSelectedHistoryCustomer] = useState<string | null>(null);
@@ -2695,12 +2705,32 @@ export default function BookingsPage() {
                         onChange={(val) => setFormData({ ...formData, email: val })}
                       />
                     </div>
-                    <div className="relative">
-                      <ContactInput
-                        type="phone"
-                        value={formData.phone}
-                        onChange={(val) => setFormData({ ...formData, phone: val })}
-                      />
+                    <div className="relative flex gap-2">
+                      <div className="flex-1">
+                        <ContactInput
+                          type="phone"
+                          value={formData.phone}
+                          onChange={(val) => setFormData({ ...formData, phone: val })}
+                        />
+                      </div>
+                      {selectedCustomer && formData.email && (
+                        <Button
+                          variant="outline"
+                          type="button"
+                          className="shrink-0 bg-blue-900/20 border-blue-500/30 text-blue-400 hover:text-blue-300 hover:bg-blue-900/40"
+                          onClick={() => {
+                            const vehicleStr = formData.vehicle 
+                              ? `${formData.vehicleYear || ''} ${formData.vehicleMake || ''} ${formData.vehicleModel || ''}`.trim()
+                              : '';
+                            const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
+                            openLetterMaker(selectedCustomer.id!, bodyStr);
+                          }}
+                          title="Write Letter"
+                        >
+                          <Mail className="w-4 h-4 mr-2" />
+                          Write Letter
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -3740,8 +3770,7 @@ export default function BookingsPage() {
                                               ? `${firstBooking.vehicleYear && firstBooking.vehicleYear !== '-' ? firstBooking.vehicleYear : ''} ${firstBooking.vehicleMake || ''} ${firstBooking.vehicleModel || ''}`.trim()
                                               : '';
                                             const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
-                                            const url = `/letter-maker?customerId=${customer.id || ''}&body=${encodeURIComponent(bodyStr)}`;
-                                            window.open(url, '_blank');
+                                            openLetterMaker(customer.id!, bodyStr);
                                           }}
                                           className="h-8 text-[11px] font-black border-purple-500/30 text-purple-400 hover:bg-purple-900/20 hover:text-purple-300"
                                         >
@@ -4436,6 +4465,16 @@ export default function BookingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Page Modals rendering generic overlays */}
+      <PageModal 
+        isOpen={pageModal.isOpen} 
+        onClose={() => setPageModal(prev => ({ ...prev, isOpen: false }))} 
+        initialUrl={pageModal.url}
+        component={pageModal.component}
+        title={pageModal.title}
+        icon={pageModal.icon}
+      />
+
     </div>
   );
 }

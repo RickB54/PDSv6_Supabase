@@ -5,7 +5,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
-import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff } from "lucide-react";
+import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,14 +14,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFollowUpStatus, useFollowUpSettings } from "@/hooks/useFollowUpStatus";
 import { toast } from "sonner";
 import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
+import { PageModal } from "@/components/ui/PageModal";
+import LetterMaker from "@/pages/LetterMaker";
+import Estimates from "@/pages/Estimates";
+import BookingsPage from "@/pages/BookingsPage";
 
 export default function FollowUpCenter() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [search, setSearch] = useState("");
   
   const { items: allBookings } = useBookingsStore();
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
@@ -45,14 +50,29 @@ export default function FollowUpCenter() {
   const [sortDueSoon, setSortDueSoon] = useState("most_overdue");
   const [sortProspects, setSortProspects] = useState("alphabetical");
 
+  const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: any; title: string; icon: any }>({ isOpen: false, url: '', component: null, title: '', icon: null });
+
+  const openLetterMaker = (customerId: string) => {
+    setPageModal({ isOpen: true, url: `/?customerId=${customerId}`, component: LetterMaker, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
+  };
+  const openEstimate = (customerId: string) => {
+    setPageModal({ isOpen: true, url: `/?customerId=${customerId}&add=true`, component: Estimates, title: 'Estimates', icon: <FileText className="w-5 h-5 text-blue-500" /> });
+  };
+  const openBooking = (customerId: string) => {
+    setPageModal({ isOpen: true, url: `/?add=true&customerId=${customerId}`, component: BookingsPage, title: 'Schedule Booking', icon: <Calendar className="w-5 h-5 text-blue-500" /> });
+  };
+
   const loadData = async () => {
     try {
       const all = await getSupabaseCustomers();
-      setAllCustomers(all);
-      setProspects(all.filter(c => (c.type || '').toLowerCase() === 'prospect'));
-      setLostProspects(all.filter(c => (c.type || '').toLowerCase() === 'lost_prospect'));
-    } catch (e) {
-      console.error("Failed to load customers", e);
+      const activeAll = all.filter(c => !c.is_archived);
+      setAllCustomers(activeAll);
+      
+      const allProspects = activeAll.filter(c => c.type === 'prospect');
+      setProspects(allProspects.filter(p => !p.lost));
+      setLostProspects(allProspects.filter(p => p.lost));
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -85,7 +105,7 @@ export default function FollowUpCenter() {
     }
   };
 
-  const handleMarkContacted = async () => {
+  const handleLogContact = async () => {
     if (!selectedCustomer) return;
     try {
       await supabase.from('engagements').insert({
@@ -163,6 +183,8 @@ export default function FollowUpCenter() {
         const valA = a.lastServiceValue || 0;
         const valB = b.lastServiceValue || 0;
         return valB - valA;
+      } else if (sortType === 'newest') {
+        return new Date(b.customer?.created_at || 0).getTime() - new Date(a.customer?.created_at || 0).getTime();
       } else { // most_overdue
         const daysA = a.daysSince || 0;
         const daysB = b.daysSince || 0;
@@ -258,88 +280,100 @@ export default function FollowUpCenter() {
         </div>
 
         <div className="flex flex-wrap lg:flex-col gap-2 justify-center z-10 shrink-0 w-full xl:w-64">
-          <div className="grid grid-cols-2 gap-2 w-full">
+          <div className="grid grid-cols-1 gap-2 w-full">
             {section === 'overdue' && (
-              <>
-                <Button onClick={() => openFollowUpDialog(customer)} className="w-full bg-blue-600 hover:bg-blue-700 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  <Mail className="h-3 w-3 mr-1" /> Follow-up
+              <div className="flex gap-2 w-full">
+                <Button onClick={() => openFollowUpDialog(customer)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] h-9">
+                  Send Follow-up
                 </Button>
-                <Button variant="outline" onClick={() => { setSelectedCustomer(customer); setIsNoteDialogOpen(true); }} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  <CheckCircle className="h-3 w-3 mr-1" /> Contacted
-                </Button>
-                <Button variant="outline" onClick={() => openFollowUpDialog(customer)} className="w-full col-span-2 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-500 border-emerald-500/20 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  <Ticket className="h-3 w-3 mr-1" /> Apply Coupon & Send
-                </Button>
-              </>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" onClick={() => openFollowUpDialog(customer)} className="flex-1 bg-zinc-950 border-zinc-700 hover:bg-zinc-800 text-zinc-300 font-black uppercase tracking-widest text-[10px] h-9">
+                        <Ticket className="w-3.5 h-3.5 mr-1.5 text-pink-500" /> Apply Coupon & Send
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Send a follow-up email with a discount code attached. Select from your active coupons.</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             )}
             {section === 'dueSoon' && (
-              <>
+              <div className="flex gap-2 w-full">
                 <Button onClick={async () => {
                   const cb = allBookings.find(b => b.customerId === customer.id);
                   if (cb) await onSendReminderEmail(cb, "Manual Outreach");
                   else toast.error("No booking found to generate reminder.");
-                }} className="w-full bg-amber-600 hover:bg-amber-700 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  Reminder
+                }} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] h-9">
+                  Send Maintenance Reminder
                 </Button>
-                <Button variant="outline" onClick={() => { setSelectedCustomer(customer); setIsNoteDialogOpen(true); }} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  <CheckCircle className="h-3 w-3 mr-1" /> Contacted
-                </Button>
-              </>
+              </div>
             )}
             {section === 'prospects' && (
-              <>
-                <Button onClick={async () => await onSendProspectEmail(customer)} className="w-full bg-purple-600 hover:bg-purple-700 text-[9px] font-black uppercase tracking-widest h-9 px-1">
-                  Welcome Email
+              <div className="flex gap-2 w-full">
+                <Button onClick={async () => await onSendProspectEmail(customer)} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black uppercase tracking-widest text-[10px] h-9">
+                  Send Welcome Email
                 </Button>
-                <Button variant="outline" onClick={() => handleConvertProspect(customer.id!)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-emerald-500 hover:text-emerald-400 text-[9px] font-black uppercase tracking-widest h-9 px-1">
+                <Button variant="outline" onClick={() => handleConvertProspect(customer.id!)} className="flex-1 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-emerald-500 hover:text-emerald-400 text-[10px] font-black uppercase tracking-widest h-9">
                   <UserPlus className="h-3 w-3 mr-1" /> Convert
                 </Button>
-              </>
+              </div>
             )}
             {section === 'lost' && (
-              <Button onClick={() => handleRestoreProspect(customer.id!)} className="w-full col-span-2 bg-emerald-600 hover:bg-emerald-700 text-[9px] font-black uppercase tracking-widest h-9">
+              <Button onClick={() => handleRestoreProspect(customer.id!)} className="w-full bg-emerald-600 hover:bg-emerald-700 text-[10px] font-black uppercase tracking-widest h-9">
                 Restore Prospect
               </Button>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-2 w-full">
-            <Button variant="outline" onClick={() => navigate(`/letter-maker?customerId=${customer.id}`)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
+            <Button variant="outline" onClick={() => openLetterMaker(customer.id!)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
               Write Letter
             </Button>
-            <Button variant="outline" onClick={() => navigate(`/estimates?customerId=${customer.id}&add=true`)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
+            <Button variant="outline" onClick={() => openEstimate(customer.id!)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
               Estimate
             </Button>
+            <Button variant="outline" onClick={() => openBooking(customer.id!)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
+              Schedule Booking
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={() => { setSelectedCustomer(customer); setIsNoteDialogOpen(true); }} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1">
+                    Mark Contacted
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Log that you contacted this customer outside the app (phone call, text, etc.). Resets their inactivity clock.</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 w-full">
-            <Button variant="outline" onClick={() => handleViewProfile(customer.id!, customer.name!)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase h-9 px-1" title="View Profile">
-              <ExternalLink className="h-3 w-3" />
+          <div className="grid grid-cols-2 gap-2 w-full">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" onClick={() => handleSnooze(customer.id!, 14)} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-500 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1 gap-1">
+                    <Clock className="w-3 h-3" /> Snooze
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Temporarily removes this customer from the list. They reappear automatically when the snooze period expires.</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button variant="outline" onClick={() => window.open(`/search?search=${encodeURIComponent(customer.name)}`, '_blank')} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-500 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-1 gap-1">
+              Profile <ExternalLink className="w-3 h-3" />
             </Button>
-            <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('open-new-booking-modal', { detail: { customer } }))} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[9px] font-black uppercase h-9 px-1" title="Schedule Booking">
-              <Calendar className="h-3 w-3" />
-            </Button>
-            {section !== 'lost' ? (
-              <Select onValueChange={(v) => handleSnooze(customer.id!, parseInt(v))}>
-                <SelectTrigger className="w-full bg-zinc-950 border-zinc-800 text-zinc-400 text-[9px] font-black h-9 px-2">
-                  <Clock className="h-3 w-3 mr-1" /> Snooze
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                  <SelectItem value="7" className="text-[10px] font-bold">Snooze 7d</SelectItem>
-                  <SelectItem value="14" className="text-[10px] font-bold">Snooze 14d</SelectItem>
-                  <SelectItem value="30" className="text-[10px] font-bold">Snooze 30d</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Button variant="outline" onClick={() => { if(confirm("Are you sure?")) { /* delete functionality */ } }} className="w-full bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-red-500 hover:text-red-400 text-[9px] font-black uppercase h-9 px-1" title="Delete Prospect">
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            )}
           </div>
           {section === 'prospects' && (
-             <Button variant="ghost" onClick={() => handleLostProspect(customer.id!)} className="w-full hover:bg-zinc-800 text-zinc-500 hover:text-red-400 text-[9px] font-black uppercase tracking-widest h-7 mt-1">
-               <EyeOff className="h-3 w-3 mr-1" /> Mark as Lost
-             </Button>
+             <TooltipProvider>
+               <Tooltip>
+                 <TooltipTrigger asChild>
+                   <Button variant="ghost" onClick={() => handleLostProspect(customer.id!)} className="w-full hover:bg-zinc-800 text-zinc-500 hover:text-red-400 text-[9px] font-black uppercase tracking-widest h-7 mt-1">
+                     <EyeOff className="h-3 w-3 mr-1" /> Mark as Lost
+                   </Button>
+                 </TooltipTrigger>
+                 <TooltipContent>Removes from active prospects without deleting. Use 'Show Lost' toggle to view and restore lost prospects.</TooltipContent>
+               </Tooltip>
+             </TooltipProvider>
           )}
         </div>
       </div>
@@ -350,54 +384,104 @@ export default function FollowUpCenter() {
     <div className="min-h-screen bg-black text-white pb-20">
       <Navbar />
       <main className="container mx-auto px-4 md:px-6 pt-6 max-w-6xl">
-        <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-6 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-4">
           <div>
             <div className="flex items-center gap-4 mb-2">
               <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
                 <Zap className="h-8 w-8 text-blue-500 fill-blue-500" />
               </div>
-              <h1 className="text-4xl font-black uppercase tracking-tighter italic">Retention <span className="text-blue-500">Hub</span></h1>
+              <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic flex items-center">
+                Retention <span className="text-blue-500 ml-3">Hub</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { initialTopic: 'retention-hub' } }))} className="ml-3 text-zinc-500 hover:text-white transition-colors">
+                        <HelpCircle className="h-6 w-6" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Open Retention Hub Guide</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h1>
             </div>
-            <p className="text-zinc-500 font-bold text-sm tracking-wide">Manage follow-ups and nurture prospects seamlessly.</p>
+            <p className="text-zinc-500 font-bold text-sm tracking-wide">
+              Never let a customer slip away. Monitor service intervals, reach out to overdue clients, and nurture prospects into paying customers.
+            </p>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Input 
-                  type="number" 
-                  value={settings.threshold === 0 ? '' : settings.threshold}
-                  onChange={(e) => saveSettings({ ...settings, threshold: e.target.value ? parseInt(e.target.value) : 0 })}
-                  className="w-16 h-8 text-center font-bold bg-zinc-950 border-zinc-700 text-xs shrink-0"
-                />
-                <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest shrink-0">Days</span>
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Active</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Switch 
+                        checked={settings.isActive}
+                        onCheckedChange={(v) => saveSettings({ ...settings, isActive: v })}
+                      />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>When ON, the hub actively monitors and flags customers for follow-up. Toggle OFF to pause all follow-up tracking.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-            <div className="h-6 w-px bg-zinc-800 mx-2 hidden sm:block" />
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] uppercase font-black text-zinc-500">Active</span>
-              <Switch checked={settings.active} onCheckedChange={(v) => saveSettings({ ...settings, active: v })} />
+            <div className="w-px h-8 bg-zinc-800 hidden sm:block"></div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Threshold:</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center">
+                      <Input 
+                        type="number" 
+                        value={settings.thresholdValue}
+                        onChange={(e) => saveSettings({ ...settings, thresholdValue: parseInt(e.target.value) || 90 })}
+                        className="w-16 h-8 bg-zinc-950 border-zinc-700 text-center font-bold text-white rounded-l-md rounded-r-none"
+                      />
+                      <Select value={settings.thresholdUnit} onValueChange={(v: 'days' | 'months') => saveSettings({ ...settings, thresholdUnit: v })}>
+                        <SelectTrigger className="w-24 h-8 bg-zinc-800 border-zinc-700 text-white rounded-l-none text-xs font-bold uppercase tracking-wider">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
+                          <SelectItem value="days" className="font-bold text-xs uppercase tracking-wider">Days</SelectItem>
+                          <SelectItem value="months" className="font-bold text-xs uppercase tracking-wider">Months</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Number of days since a customer's last service before they appear as Overdue. Default is 90 days.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Overdue</span>
-                <span className="text-2xl font-black text-red-400 mt-1">{filteredOverdue.length}</span>
-            </div>
-            <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Due Soon</span>
-                <span className="text-2xl font-black text-amber-400 mt-1">{filteredDueSoon.length}</span>
-            </div>
-            <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Prospects</span>
-                <span className="text-2xl font-black text-purple-400 mt-1">{prospects.length}</span>
-            </div>
-            <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
-                <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Emails (This Mo)</span>
-                <span className="text-2xl font-black text-emerald-400 mt-1">{emailsThisMonth}</span>
-            </div>
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Overdue</span>
+                    <span className="text-2xl font-black text-red-400 mt-1">{filteredOverdue.length}</span>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Due Soon</span>
+                    <span className="text-2xl font-black text-amber-400 mt-1">{filteredDueSoon.length}</span>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Prospects</span>
+                    <span className="text-2xl font-black text-purple-400 mt-1">{prospects.length}</span>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Emails (This Mo)</span>
+                    <span className="text-2xl font-black text-emerald-400 mt-1">{emailsThisMonth}</span>
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>Live counts updated as you take actions. Emails Sent This Month counts all outreach emails sent from this hub during the current calendar month.</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <div className="relative mb-8">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-500 z-10" />
@@ -423,16 +507,25 @@ export default function FollowUpCenter() {
                   <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500">Overdue ({filteredOverdue.length})</h2>
                 </div>
                 <div onClick={e => e.stopPropagation()}>
-                    <Select value={sortOverdue} onValueChange={setSortOverdue}>
-                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                        <SelectItem value="most_overdue" className="text-[10px] font-bold">Most Overdue</SelectItem>
-                        <SelectItem value="highest_value" className="text-[10px] font-bold">Highest Value</SelectItem>
-                        <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Select value={sortOverdue} onValueChange={setSortOverdue}>
+                            <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                              <SelectItem value="most_overdue" className="text-[10px] font-bold">Most Overdue</SelectItem>
+                              <SelectItem value="highest_value" className="text-[10px] font-bold">Highest Value</SelectItem>
+                              <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Sort customers within this section. 'Highest Value' sorts by their most recent booking total.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </AccordionTrigger>
@@ -457,16 +550,25 @@ export default function FollowUpCenter() {
                   <h2 className="text-2xl font-black uppercase tracking-tighter text-amber-500">Due Soon ({filteredDueSoon.length})</h2>
                 </div>
                 <div onClick={e => e.stopPropagation()}>
-                    <Select value={sortDueSoon} onValueChange={setSortDueSoon}>
-                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                        <SelectItem value="most_overdue" className="text-[10px] font-bold">Closest to Due</SelectItem>
-                        <SelectItem value="highest_value" className="text-[10px] font-bold">Highest Value</SelectItem>
-                        <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Select value={sortDueSoon} onValueChange={setSortDueSoon}>
+                            <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                              <SelectItem value="most_overdue" className="text-[10px] font-bold">Most Overdue</SelectItem>
+                              <SelectItem value="highest_value" className="text-[10px] font-bold">Highest Value</SelectItem>
+                              <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Sort customers within this section. 'Highest Value' sorts by their most recent booking total.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </AccordionTrigger>
@@ -495,15 +597,24 @@ export default function FollowUpCenter() {
                   </div>
                 </div>
                 <div onClick={e => e.stopPropagation()}>
-                    <Select value={sortProspects} onValueChange={setSortProspects}>
-                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                        <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
-                        <SelectItem value="most_overdue" className="text-[10px] font-bold">Oldest First</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Select value={sortProspects} onValueChange={setSortProspects}>
+                            <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[9px] font-black uppercase w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                              <SelectItem value="alphabetical" className="text-[10px] font-bold">Alphabetical</SelectItem>
+                              <SelectItem value="newest" className="text-[10px] font-bold">Newest First</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Sort customers within this section.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
             </AccordionTrigger>
@@ -541,6 +652,7 @@ export default function FollowUpCenter() {
           <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
             {selectedCustomer && (
               <RetentionHub 
+                onOpenEstimate={() => openEstimate(selectedCustomer.id!)}
                 customer={{
                   id: selectedCustomer.id,
                   name: selectedCustomer.name || 'Unknown',
@@ -559,27 +671,16 @@ export default function FollowUpCenter() {
         </DialogContent>
       </Dialog>
 
-      {/* Contact Note Modal */}
-      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-         <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm rounded-[2rem]">
-            <DialogHeader>
-               <DialogTitle className="font-black uppercase italic tracking-tighter text-xl">Log Manual Contact</DialogTitle>
-               <DialogDescription className="text-zinc-500 font-bold text-xs">Record how you contacted {selectedCustomer?.name}. This will reset their clock.</DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-               <Input 
-                 placeholder="e.g. Called and left a voicemail..." 
-                 value={contactNote}
-                 onChange={(e) => setContactNote(e.target.value)}
-                 className="bg-zinc-900 border-zinc-800 h-12 text-sm"
-               />
-            </div>
-            <DialogFooter>
-               <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)} className="bg-zinc-900 border-zinc-800 text-zinc-400">Cancel</Button>
-               <Button onClick={handleMarkContacted} className="bg-emerald-600 hover:bg-emerald-700 font-black uppercase tracking-widest text-[10px]">Save & Reset Clock</Button>
-            </DialogFooter>
-         </DialogContent>
-      </Dialog>
+      {/* Page Modals rendering generic overlays */}
+      <PageModal 
+        isOpen={pageModal.isOpen} 
+        onClose={() => setPageModal(prev => ({ ...prev, isOpen: false }))} 
+        initialUrl={pageModal.url}
+        component={pageModal.component}
+        title={pageModal.title}
+        icon={pageModal.icon}
+      />
+
     </div>
   );
 }
