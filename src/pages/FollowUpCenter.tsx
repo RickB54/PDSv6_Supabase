@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
-import { getSupabaseCustomers, Customer, supabase } from "@/lib/supa-data";
+import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
 import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
@@ -107,9 +107,12 @@ export default function FollowUpCenter() {
   const handleConvertProspect = async (customerId: string) => {
     if (!confirm("Convert this prospect to a customer?")) return;
     try {
-      await supabase.from('customers').update({ type: 'customer' }).eq('id', customerId);
-      toast.success("Prospect converted to customer!");
-      loadData();
+      const prospect = allCustomers.find(c => c.id === customerId);
+      if (prospect) {
+        await upsertSupabaseCustomer({ ...prospect, type: 'customer' });
+        toast.success("Prospect converted to customer!");
+        loadData();
+      }
     } catch (e) {
       toast.error("Failed to convert prospect.");
     }
@@ -118,9 +121,12 @@ export default function FollowUpCenter() {
   const handleLostProspect = async (customerId: string) => {
     if (!confirm("Mark this prospect as lost?")) return;
     try {
-      await supabase.from('customers').update({ type: 'lost_prospect' }).eq('id', customerId);
-      toast.success("Prospect marked as lost.");
-      loadData();
+      const prospect = allCustomers.find(c => c.id === customerId);
+      if (prospect) {
+        await upsertSupabaseCustomer({ ...prospect, type: 'lost_prospect' });
+        toast.success("Prospect marked as lost.");
+        loadData();
+      }
     } catch (e) {
       toast.error("Failed to mark as lost.");
     }
@@ -128,9 +134,12 @@ export default function FollowUpCenter() {
 
   const handleRestoreProspect = async (customerId: string) => {
     try {
-      await supabase.from('customers').update({ type: 'prospect' }).eq('id', customerId);
-      toast.success("Prospect restored.");
-      loadData();
+      const prospect = allCustomers.find(c => c.id === customerId);
+      if (prospect) {
+        await upsertSupabaseCustomer({ ...prospect, type: 'prospect' });
+        toast.success("Prospect restored.");
+        loadData();
+      }
     } catch (e) {
       toast.error("Failed to restore prospect.");
     }
