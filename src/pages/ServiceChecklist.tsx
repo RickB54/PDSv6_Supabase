@@ -174,6 +174,8 @@ const ServiceChecklist = () => {
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  const isAdminUser = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   const [customers, setCustomers] = useState<CustomerType[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
@@ -322,6 +324,19 @@ const ServiceChecklist = () => {
     const employeeParam = searchParams.get('employee');
     const employeeIdParam = searchParams.get('employeeId');
     if (employeeParam && employeeIdParam) {
+      const user = getCurrentUser();
+      const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+      
+      if (!isAdmin && user?.id !== employeeIdParam && user?.email !== employeeIdParam) {
+        toast({
+          title: "Access Denied",
+          description: "This job is not assigned to you.",
+          variant: "destructive",
+        });
+        navigate('/');
+        return;
+      }
+
       // Auto-select the employee
       setEmployeeAssigned(employeeIdParam);
       toast({
@@ -329,7 +344,7 @@ const ServiceChecklist = () => {
         description: `Job assigned to ${employeeParam}`,
       });
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   /* Accordion states for Materials Used & Discount */
   const [materialsAccordion, setMaterialsAccordion] = useState({ chemicals: false, materials: false, tools: false });
@@ -2633,7 +2648,8 @@ const ServiceChecklist = () => {
                 <select
                   value={employeeAssigned}
                   onChange={(e) => setEmployeeAssigned(e.target.value)}
-                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
+                  disabled={!isAdminUser}
+                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Select employee...</option>
                   {employees.map((e: any) => (

@@ -60,7 +60,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
   const dataInitialized = useRef(false);
   
   const user = getCurrentUser();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner' || localStorage.getItem('demo_mode_active') === 'true';
 
   const chemicalSortOptions = useMemo(() => {
     return Array.from(new Set(availableChemicals.map(c => c.brand || "Other / No Brand"))).sort((a, b) => {

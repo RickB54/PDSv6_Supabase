@@ -147,7 +147,12 @@ export default function StaffSchedule() {
                 };
             });
 
-        setShifts([...mapped, ...bookingShifts]);
+        let allShifts = [...mapped, ...bookingShifts];
+        if (!isAdmin) {
+            allShifts = allShifts.filter(s => s.employeeId === user?.id || s.employeeId === user?.email);
+        }
+
+        setShifts(allShifts);
         setIsRefreshing(false);
     };
 

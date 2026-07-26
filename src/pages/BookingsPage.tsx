@@ -537,6 +537,15 @@ export default function BookingsPage() {
 
   // Handlers
   const handleStartJob = (bookingArg?: Booking) => {
+    const targetEmployeeId = bookingArg?.assignedEmployee || formData.assignedEmployee;
+    const user = getCurrentUser();
+    const isUserAdmin = user?.role === 'admin' || user?.role === 'owner';
+    
+    if (!isUserAdmin && user?.id !== targetEmployeeId && user?.email !== targetEmployeeId) {
+       toast.error("Access Denied: This job is not assigned to you.");
+       return;
+    }
+
     const params = new URLSearchParams();
     
     if (bookingArg) {
