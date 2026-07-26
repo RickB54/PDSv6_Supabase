@@ -2224,7 +2224,7 @@ export default function BookingsPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           {booking.type === 'booking' && (booking as Booking).hasReminder && <Bell className="h-4 w-4 text-yellow-500 animate-pulse" />}
-                          {booking.type === 'booking' && (booking as Booking).assignedEmployee && <Badge variant="secondary" className="text-xs">{getEmployeeName((booking as Booking).assignedEmployee!)}</Badge>}
+                          {booking.type === 'booking' && (booking as Booking).assignedEmployee && (booking as Booking).assignedEmployee !== 'Unassigned' && <Badge variant="secondary" className="text-xs">{getEmployeeName((booking as Booking).assignedEmployee!)}</Badge>}
                           <div className="flex gap-1">
                             {booking.type === 'booking' && (
                               <>
@@ -2401,7 +2401,7 @@ export default function BookingsPage() {
                                   <div className="pt-1 border-t border-zinc-800 mt-1 flex flex-col gap-1">
                                     <div className="flex items-center gap-2 text-[10px]">
                                       <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
-                                      {booking.assignedEmployee && <span className="text-zinc-400">👤 {getEmployeeName(booking.assignedEmployee)}</span>}
+                                      {booking.assignedEmployee && booking.assignedEmployee !== 'Unassigned' && <span className="text-zinc-400">👤 {getEmployeeName(booking.assignedEmployee)}</span>}
                                     </div>
                                     {((booking as Booking).customerEmail || (booking as any).email) && (
                                       <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
@@ -2514,6 +2514,11 @@ export default function BookingsPage() {
                         })()}
                       </div>
                       <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
+                      {formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned' && (
+                        <div className="text-xs text-zinc-400 mt-1 font-bold">
+                          👤 Assigned to: {getEmployeeName(formData.assignedEmployee)}
+                        </div>
+                      )}
                       {formData.addons && formData.addons.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {formData.addons.map((a, i) => (
@@ -3325,7 +3330,7 @@ export default function BookingsPage() {
                   <Button 
                     variant="secondary" 
                     size="sm" 
-                    onClick={() => handleDuplicate(selectedBooking)} 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDuplicate(selectedBooking); }} 
                     className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
                   >
                     <Copy className="mr-1.5 h-4 w-4 opacity-50" /> Duplicate
