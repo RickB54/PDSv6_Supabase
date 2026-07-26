@@ -128,6 +128,11 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Payroll</span>}
                 </Button>
 
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/estimates')} title="Estimates" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <FileText className="w-5 h-5 text-yellow-500" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Estimates</span>}
+                </Button>
+
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/invoicing')} title="Invoices" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <Receipt className="w-5 h-5 text-blue-400" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Invoices</span>}
