@@ -486,21 +486,9 @@ export default function UserManagement() {
 
       <main className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
 
-        {/* Refresh Button */}
-        <div className="flex justify-end">
-          <Button
-            onClick={refreshAll}
-            disabled={isLoading}
-            variant="outline"
-            className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading ? 'Refreshing...' : 'Refresh All Users'}
-          </Button>
-        </div>
-
-        {/* Quick Tips Accordion */}
-        <Accordion type="single" collapsible className="w-full">
+        <div className="flex items-start gap-4">
+          {/* Quick Tips Accordion */}
+          <Accordion type="single" collapsible className="w-full flex-1">
           <AccordionItem value="quick-tips" className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl rounded-lg">
             <AccordionTrigger className="px-6 py-3 hover:no-underline">
               <div className="flex items-center gap-2">
@@ -616,6 +604,18 @@ export default function UserManagement() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+        {/* Refresh Button */}
+        <Button
+          onClick={refreshAll}
+          disabled={isLoading}
+          variant="outline"
+          size="icon"
+          title="Refresh All Users"
+          className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white shrink-0 h-12 w-12 rounded-lg shadow-xl"
+        >
+          <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+        </Button>
+      </div>
 
         {/* Search & Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

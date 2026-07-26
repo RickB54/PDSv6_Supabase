@@ -23,7 +23,8 @@ import {
     DollarSign,
     BookOpen,
     Banknote,
-    Receipt
+    Receipt,
+    Zap
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -57,12 +58,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
             </Button>
         )}
 
-        {isAdmin && (
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/package-pricing?mode=scenario')} title="Pricing Scenario Builder" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <Calculator className="w-5 h-5 text-red-500" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Scenario Builder</span>}
-            </Button>
-        )}
+
 
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/sticky-notes')} title="Sticky Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
             <CheckSquare className="w-5 h-5 text-yellow-400" />
@@ -157,13 +153,17 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         )}
 
         {isAdmin && (
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/company-employees')} title="Company Employees" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
-                    <User className="w-5 h-5 text-red-500" />
-                    <DollarSign className="w-3 h-3 text-red-500 absolute -bottom-1 -right-1 bg-[#18181b] rounded-full stroke-[3]" />
-                </div>
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Employees</span>}
-            </Button>
+            <>
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/company-employees')} title="Company Employees" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <User className="w-5 h-5 text-red-500 shrink-0" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Employees</span>}
+                </Button>
+                
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/follow-up-center')} title="Follow-Up Center" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <Zap className="w-5 h-5 text-blue-500 shrink-0" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Follow-Up</span>}
+                </Button>
+            </>
         )}
 
         <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
