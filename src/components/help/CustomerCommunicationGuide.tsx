@@ -295,7 +295,7 @@ export function CustomerCommunicationGuide() {
                 <strong>For your reference:</strong> To send this link, go to the <strong>Estimates</strong> page, create a new Estimate, save it, and then click the <strong>Send</strong> button. The system will automatically generate and email the secure link to the customer.
               </div>
               <li>"You don't need an account or any paperwork. You can just review it on your phone."</li>
-              <li>"If it looks good, you just click 'Accept'. It will ask you a couple quick questions about the vehicle condition just to confirm."</li>
+
               <li>"Once you accept, it notifies me, and I'll reach right back out to lock in your appointment date and time."</li>
             </ul>
           </div>

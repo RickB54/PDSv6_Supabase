@@ -95,6 +95,7 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
       });
 
       // 3. Bookings
+      let lastServiceValue = 0;
       const customerBookings = bookings.filter(b => 
         b.customerId === customer.id || 
         (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
@@ -106,6 +107,12 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         if (bDate > lastActivityDate) lastActivityDate = bDate;
         if (b.notes && b.notes.trim() && bDate > lastActivityDate) {
           lastActivityDate = bDate;
+        }
+        if (b.price) {
+          const priceNum = parseFloat(String(b.price).replace(/[^0-9.]/g, ''));
+          if (!isNaN(priceNum) && priceNum > lastServiceValue) {
+            lastServiceValue = priceNum;
+          }
         }
       });
 
@@ -140,14 +147,17 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         isOverdue,
         isDueThisWeek,
         isDueThisMonth,
-        daysSince
+        daysSince,
+        lastServiceValue
       };
     });
 
-    const overdue = customersWithStatus.filter(c => c.isOverdue).sort((a, b) => b.daysSince - a.daysSince);
-    const dueThisWeek = customersWithStatus.filter(c => c.isDueThisWeek).sort((a, b) => b.daysSince - a.daysSince);
-    const dueThisMonth = customersWithStatus.filter(c => c.isDueThisMonth).sort((a, b) => b.daysSince - a.daysSince);
+    const isCustomer = (c: any) => (c.customer.type || 'customer').toLowerCase() !== 'prospect';
 
-    return { active: settings.active, overdue, dueThisWeek, dueThisMonth, loading, refresh: fetchEngagements };
+    const overdue = customersWithStatus.filter(c => c.isOverdue && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
+    const dueThisWeek = customersWithStatus.filter(c => c.isDueThisWeek && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
+    const dueThisMonth = customersWithStatus.filter(c => c.isDueThisMonth && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
+
+    return { active: settings.active, overdue, dueThisWeek, dueThisMonth, loading, refresh: fetchEngagements, engagements };
   }, [customers, bookings, engagements, settingsLoading, loadingEngagements, settings]);
 }
