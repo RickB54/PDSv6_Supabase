@@ -12,7 +12,7 @@ export interface FollowUpSettings {
 
 export const DEFAULT_FOLLOW_UP_SETTINGS: FollowUpSettings = {
   active: true,
-  threshold: 30,
+  threshold: 90,
   unit: 'days'
 };
 

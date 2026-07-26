@@ -33,7 +33,7 @@ export default function FollowUpCenter() {
     try {
       const all = await getSupabaseCustomers();
       setAllCustomers(all);
-      setProspects(all.filter(c => c.type === 'prospect'));
+      setProspects(all.filter(c => (c.type || '').toLowerCase() === 'prospect'));
     } catch (e) {
       console.error("Failed to load customers", e);
     }
@@ -54,23 +54,18 @@ export default function FollowUpCenter() {
 
   const searchLower = search.toLowerCase();
 
-  const filteredOverdue = followUpStatus.overdue.filter(c => 
-    c.customer.name?.toLowerCase().includes(searchLower) ||
-    c.customer.email?.toLowerCase().includes(searchLower) ||
-    c.customer.phone?.toLowerCase().includes(searchLower)
-  );
+  const matchSearch = (c: Customer) => {
+    if (!searchLower) return true;
+    return (
+      (c.name || '').toLowerCase().includes(searchLower) ||
+      (c.email || '').toLowerCase().includes(searchLower) ||
+      (c.phone || '').toLowerCase().includes(searchLower)
+    );
+  };
 
-  const filteredDueSoon = [...followUpStatus.dueThisWeek, ...followUpStatus.dueThisMonth].filter(c => 
-    c.customer.name?.toLowerCase().includes(searchLower) ||
-    c.customer.email?.toLowerCase().includes(searchLower) ||
-    c.customer.phone?.toLowerCase().includes(searchLower)
-  );
-
-  const filteredProspects = prospects.filter(p => 
-    p.name?.toLowerCase().includes(searchLower) ||
-    p.email?.toLowerCase().includes(searchLower) ||
-    p.phone?.toLowerCase().includes(searchLower)
-  );
+  const filteredOverdue = followUpStatus.overdue.filter(c => matchSearch(c.customer));
+  const filteredDueSoon = [...followUpStatus.dueThisWeek, ...followUpStatus.dueThisMonth].filter(c => matchSearch(c.customer));
+  const filteredProspects = prospects.filter(matchSearch);
 
   const renderCustomerCard = (item: any, isProspect = false) => {
     let daysSince = 0;
@@ -103,7 +98,16 @@ export default function FollowUpCenter() {
             {isProspect && <Badge className="bg-purple-500/20 text-purple-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">Prospect</Badge>}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-500">
-            <span className="truncate">{customer.email || 'No email'}</span>
+            {customer.email ? (
+              <span className="truncate">{customer.email}</span>
+            ) : (
+              <span 
+                className="truncate text-blue-400 hover:underline cursor-pointer"
+                onClick={() => handleViewProfile(customer.id!, customer.name!)}
+              >
+                No email on file — add in profile
+              </span>
+            )}
             <span>&bull;</span>
             <span>{customer.phone || 'No phone'}</span>
           </div>
@@ -138,15 +142,31 @@ export default function FollowUpCenter() {
         <div className="flex flex-col gap-3 justify-center z-10 shrink-0 w-full sm:w-48">
           <Button 
             onClick={() => openFollowUpDialog(customer)}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-transform hover:scale-105 active:scale-95"
+            className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-transform hover:scale-105 active:scale-95"
           >
             Send Follow-up
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-2 h-3 w-3" />
           </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/letter-maker?customerId=${customer.id}`)}
+              className="w-full h-9 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white font-black text-[9px] uppercase tracking-widest rounded-xl px-1"
+            >
+              Write Letter
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/estimates?customerId=${customer.id}&add=true`)}
+              className="w-full h-9 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white font-black text-[9px] uppercase tracking-widest rounded-xl px-1"
+            >
+              Send Estimate
+            </Button>
+          </div>
           <Button
             variant="outline"
             onClick={() => handleViewProfile(customer.id!, customer.name!)}
-            className="w-full h-10 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-colors"
+            className="w-full h-9 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white font-black text-[9px] uppercase tracking-widest rounded-xl transition-colors"
           >
             <ExternalLink className="mr-2 h-3 w-3" /> View Profile
           </Button>
@@ -173,7 +193,7 @@ export default function FollowUpCenter() {
           <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800">
             <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Settings className="h-5 w-5 text-zinc-500 hidden sm:block" />
-                <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest shrink-0">Threshold:</span>
+                <span className="text-[10px] uppercase font-black text-zinc-500 tracking-widest shrink-0">Threshold: {settings.threshold} {settings.unit}</span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Input 
@@ -218,8 +238,7 @@ export default function FollowUpCenter() {
         <div className="space-y-16">
           <section>
             <div className="flex items-center gap-4 mb-6 pb-2 border-b-2 border-red-500/20">
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500">Overdue</h2>
-              <Badge className="bg-red-500/10 text-red-500 text-sm px-3 py-1 font-black border border-red-500/30">{filteredOverdue.length}</Badge>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500">Overdue ({filteredOverdue.length})</h2>
             </div>
             {filteredOverdue.length > 0 ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -234,8 +253,7 @@ export default function FollowUpCenter() {
 
           <section>
             <div className="flex items-center gap-4 mb-6 pb-2 border-b-2 border-amber-500/20">
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-amber-500">Due Soon</h2>
-              <Badge className="bg-amber-500/10 text-amber-500 text-sm px-3 py-1 font-black border border-amber-500/30">{filteredDueSoon.length}</Badge>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-amber-500">Due Soon ({filteredDueSoon.length})</h2>
             </div>
             {filteredDueSoon.length > 0 ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -250,8 +268,7 @@ export default function FollowUpCenter() {
 
           <section>
             <div className="flex items-center gap-4 mb-6 pb-2 border-b-2 border-purple-500/20">
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-purple-400">Prospects</h2>
-              <Badge className="bg-purple-500/10 text-purple-400 text-sm px-3 py-1 font-black border border-purple-500/30">{filteredProspects.length}</Badge>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-purple-400">Prospects ({filteredProspects.length})</h2>
             </div>
             {filteredProspects.length > 0 ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
