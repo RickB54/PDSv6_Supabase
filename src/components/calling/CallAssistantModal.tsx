@@ -919,6 +919,19 @@ ${firstVehicle.notes || ''}`.trim(),
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                                handleCloseAttempt(false);
+                                navigate('/package-pricing?mode=scenario');
+                            }} 
+                            title="Pricing Scenario Builder" 
+                            className="bg-zinc-900 border-red-500/30 text-white hover:bg-red-500/10 gap-2"
+                        >
+                            <Calculator className="w-4 h-4 text-red-500" />
+                            <span className="hidden sm:inline font-bold uppercase tracking-tight text-[10px]">Scenario Builder</span>
+                        </Button>
                         <CustomerCommunicationGuide />
                         <Button variant="ghost" size="icon" onClick={() => handleCloseAttempt(false)} className="h-8 w-8 rounded-full hover:bg-primary/20">
                             <X className="w-5 h-5" />
