@@ -266,6 +266,11 @@ const ServiceChecklist = () => {
   const [isJobCompleted, setIsJobCompleted] = useState(false);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('checklist_sessions') || '[]'); } catch { return []; }
+  });
 
   const resetForm = () => {
     setChecklistId("");
@@ -1357,6 +1362,12 @@ const ServiceChecklist = () => {
         console.error("Failed to restore draft", e);
       }
     }
+    
+    // Allow state to settle before tracking unsaved changes
+    setTimeout(() => {
+      setInitialLoaded(true);
+      setHasUnsavedChanges(false);
+    }, 1000);
   }, []); // Run once on mount
 
   const progressPercent = useMemo(() => {
@@ -1397,103 +1408,51 @@ const ServiceChecklist = () => {
 
   // 3. Save State on Change
   useEffect(() => {
-    // Don't save if empty/initial
-    if (!selectedPackage && !selectedCustomer) return;
-
-    const currentCustomer = customers.find(c => c.id === selectedCustomer);
-    const customerName = currentCustomer?.name || genericCustomerName || 'Generic Customer';
-    const pkgName = servicePackages.find(p => p.id === selectedPackage)?.name || 
-                   getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 
-                   'Custom Package';
-    const packageName = pkgName;
-
-    const state = {
-      checklistId,
-      customerName,
-      packageName,
-      selectedCustomer,
-      selectedPackage,
-      vehicleType,
-      selectedAddOns,
-      checklistSteps, 
-      notes,
-      destinationFee,
-      employeeAssigned,
-      discountValue,
-      discountType,
-      jobStartTime,
-      isTimerRunning,
-      totalElapsedMs,
-      elapsedTime,
-      itemDurations,
-      sectionDurations,
-      chemRows,
-      matRows,
-      toolRows,
-      milesTraveled,
-      odometerStart,
-      odometerEnd,
-      timestamp: Date.now()
-    };
-
-    // Save to dual keys: general draft (for quick restore) and ID-specific (for history)
-    localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
-    if (checklistId) {
-      localStorage.setItem(`${CHECKLIST_DRAFT_KEY}_${checklistId}`, JSON.stringify(state));
+    // Autosave logic removed. 
+    // We only set hasUnsavedChanges when dependencies change.
+    if (initialLoaded) {
+      setHasUnsavedChanges(true);
+      
+      const sState = {
+        checklistId, customerName: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || 'Generic Customer',
+        packageName: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 'Custom Package',
+        selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
+        checklistSteps, notes, destinationFee, employeeAssigned, discountValue, discountType, jobStartTime,
+        isTimerRunning, totalElapsedMs, elapsedTime, itemDurations, sectionDurations,
+        chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, timestamp: Date.now()
+      };
+      
+      setSessionHistory(prev => {
+        // @ts-ignore
+        const id = window.currentChecklistSessionId || Date.now().toString();
+        // @ts-ignore
+        window.currentChecklistSessionId = id;
+        
+        const existingIdx = prev.findIndex(s => s.sessionId === id);
+        const newEntry = {
+           sessionId: id,
+           date: new Date().toISOString(),
+           jobId: checklistId,
+           customerName: sState.customerName,
+           employeeAssigned,
+           packageName: sState.packageName,
+           state: sState
+        };
+        const newList = [...prev];
+        if (existingIdx >= 0) newList[existingIdx] = newEntry;
+        else newList.unshift(newEntry);
+        
+        if (newList.length > 50) newList.pop(); // Keep only last 50
+        
+        localStorage.setItem('checklist_sessions', JSON.stringify(newList));
+        return newList;
+      });
     }
-
-    // Note: DRAFTS_INDEX_KEY local history is removed in favor of Supabase customer-scoped history.
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
     checklistSteps, notes, destinationFee, employeeAssigned, 
     discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
     chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent, sectionDurations
-  ]);
-
-  // 4. Force Save on Page Exit
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const state = {
-        selectedCustomer,
-        selectedPackage,
-        vehicleType,
-        selectedAddOns,
-        checklistSteps,
-        notes,
-        destinationFee,
-        employeeAssigned,
-        discountValue,
-        discountType,
-        jobStartTime,
-        itemDurations,
-        sectionDurations,
-        chemRows,
-        matRows,
-        toolRows,
-        milesTraveled,
-        odometerStart,
-        odometerEnd,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(state));
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        handleBeforeUnload();
-      }
-    });
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('visibilitychange', handleBeforeUnload);
-    };
-  }, [
-    selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
-    checklistSteps, notes, destinationFee, employeeAssigned, 
-    discountValue, discountType, jobStartTime, itemDurations,
-    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, sectionDurations
   ]);
 
   // --- PERSISTENCE LOGIC END ---
@@ -1544,6 +1503,39 @@ const ServiceChecklist = () => {
     const localId = checklistId || `checklist-${Date.now()}`;
     setChecklistId(localId);
 
+    const stateToSave = {
+      checklistId: localId,
+      customerName: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || 'Generic Customer',
+      packageName: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 'Custom Package',
+      selectedCustomer,
+      selectedPackage,
+      vehicleType,
+      selectedAddOns,
+      checklistSteps, 
+      notes,
+      destinationFee,
+      employeeAssigned,
+      discountValue,
+      discountType,
+      jobStartTime,
+      isTimerRunning,
+      totalElapsedMs,
+      elapsedTime,
+      itemDurations,
+      sectionDurations,
+      chemRows,
+      matRows,
+      toolRows,
+      milesTraveled,
+      odometerStart,
+      odometerEnd,
+      timestamp: Date.now()
+    };
+    
+    localStorage.setItem(CHECKLIST_DRAFT_KEY, JSON.stringify(stateToSave));
+    localStorage.setItem(`${CHECKLIST_DRAFT_KEY}_${localId}`, JSON.stringify(stateToSave));
+    
+    setHasUnsavedChanges(false);
     // toast({ title: 'Progress Saved', description: 'Checklist progress saved.' });
 
     try {
@@ -2381,9 +2373,26 @@ const ServiceChecklist = () => {
                       })}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 flex flex-col items-end gap-2">
                     <div className="text-emerald-400 font-bold text-lg md:text-2xl drop-shadow-md tracking-tight">
                       ${calculateTotal().toFixed(2)}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Button 
+                        size="sm" 
+                        onClick={async () => { 
+                          const savedId = await saveGenericChecklist(); 
+                          archiveChecklistPDF(false, savedId || checklistId || undefined); 
+                        }} 
+                        className="bg-black/50 hover:bg-zinc-800 text-white border border-white/10 h-8 text-[10px] md:text-xs px-3"
+                      >
+                        <Save className="h-3 w-3 mr-1.5" /> Save Progress
+                      </Button>
+                      {hasUnsavedChanges && (
+                        <div className="text-[9px] md:text-[10px] text-yellow-500 flex items-center font-bold animate-pulse mt-0.5">
+                          <AlertCircle className="w-3 h-3 mr-1" /> Unsaved changes
+                        </div>
+                      )}
                     </div>
                   </div>
               </div>
@@ -3907,19 +3916,7 @@ const ServiceChecklist = () => {
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button 
-                    onClick={async () => { 
-                      const savedId = await saveGenericChecklist(); 
-                      archiveChecklistPDF(false, savedId || checklistId || undefined); 
-                      const customer = customers.find(c => c.id === selectedCustomer); 
-                      const customerName = customer?.name || 'Unknown'; 
-                      // pushAdminAlert('job_progress', `Progress saved for ${customerName}`, 'system', { checklistId: savedId || checklistId, customerId: selectedCustomer }); 
-                    }} 
-                    className="bg-black border border-white/10 hover:bg-zinc-900 text-white px-6"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Progress
-                  </Button>
+                  {/* Save button relocated to sticky header */}
                   {checklistId && (
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-green-400 border-green-400/30 bg-green-400/10 px-3 py-1">Saved</Badge>
@@ -4043,7 +4040,7 @@ const ServiceChecklist = () => {
         )}
 
         {/* Service Checklist History - RELOCATED & IMPROVED */}
-        {customerHistory.length > 0 && (
+        {(customerHistory.length > 0 || sessionHistory.length > 0) && (
           <Card className="bg-gradient-card border-border overflow-visible relative mb-4 mt-8">
             <div 
               className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
@@ -4164,6 +4161,94 @@ const ServiceChecklist = () => {
                     </Button>
                   </div>
                 )})}
+                
+                {sessionHistory.length > 0 && (
+                  <div className="mt-6">
+                    {customerHistory.length > 0 && <div className="h-px bg-white/10 my-4" />}
+                    <h3 className="text-zinc-400 font-bold px-2 text-xs uppercase tracking-wider mb-3">Session Recovery History</h3>
+                    <div className="space-y-2">
+                      {sessionHistory.map((session) => (
+                        <div key={session.sessionId} className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border bg-zinc-900/50 border-white/5 hover:border-white/20 hover:bg-zinc-800 transition-all gap-4">
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-base truncate text-white">{session.customerName || 'Generic Customer'}</span>
+                              <span className="text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded uppercase font-bold tracking-tighter">
+                                {new Date(session.date).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-400">
+                              <span className="text-white/90 font-medium flex items-center gap-1">
+                                <Package className="h-3 w-3" /> {session.packageName || 'Service'}
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-zinc-500">
+                                <User className="h-3 w-3" /> {employees.find(e => e.id === session.employeeAssigned)?.name || 'Unassigned'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                             <Button 
+                               size="sm" 
+                               variant="outline"
+                               className="text-xs h-8 bg-black hover:bg-zinc-800 border-white/10"
+                               onClick={() => {
+                                 if (checklistId && checklistId !== session.jobId) {
+                                   if (!confirm('Switching will replace your current unsaved progress. Continue?')) return;
+                                 }
+                                 const state = session.state;
+                                 setChecklistId(state.checklistId);
+                                 setSelectedCustomer(state.selectedCustomer);
+                                 setSelectedPackage(state.selectedPackage);
+                                 setVehicleType(state.vehicleType || 'choose');
+                                 setSelectedAddOns(state.selectedAddOns || []);
+                                 setNotes(state.notes || "");
+                                 setJobStartTime(state.jobStartTime || null);
+                                 setIsTimerRunning(!!state.isTimerRunning);
+                                 setTotalElapsedMs(state.totalElapsedMs || 0);
+                                 setElapsedTime(state.elapsedTime || "00:00:00");
+                                 setItemDurations(state.itemDurations || {});
+                                 setSectionDurations(state.sectionDurations || {});
+                                 setChemRows(state.chemRows || []);
+                                 setMatRows(state.matRows || []);
+                                 setToolRows(state.toolRows || []);
+                                 if (state.checklistSteps) {
+                                   window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+                                 }
+                                 const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
+                                 setSelectedServices(services);
+                                 toast({ title: "Session Restored", description: `Restored progress for ${session.customerName}.` });
+                                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                               }}
+                             >
+                               <RotateCcw className="h-3 w-3 mr-1" /> Restore
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="ghost" 
+                               className="h-8 w-8 p-0 rounded-full hover:bg-red-500/20 hover:text-red-400"
+                               onClick={() => {
+                                 if (!isAdminUser) {
+                                   toast({ title: "Access Denied", description: "Only administrators can delete session history logs.", variant: "destructive" });
+                                   return;
+                                 }
+                                 if (confirm("Are you sure you want to permanently delete this session log? This cannot be undone.")) {
+                                   setSessionHistory(prev => {
+                                     const newList = prev.filter(s => s.sessionId !== session.sessionId);
+                                     localStorage.setItem('checklist_sessions', JSON.stringify(newList));
+                                     return newList;
+                                   });
+                                   toast({ title: "Session Deleted", description: "The session log has been removed." });
+                                 }
+                               }}
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Card>

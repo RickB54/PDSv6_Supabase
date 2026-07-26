@@ -4048,11 +4048,19 @@ export default function BookingsPage() {
                                                   const b = items.find(i => i.id === event.id) || event;
                                                   const email = b.customerEmail || b.email || b.customer_email;
                                                   const phone = b.customerPhone || b.phone;
-                                                  if (!email && !phone) return null;
+                                                  const assignedEmp = b.assignedEmployee || b.assigned_employee_id;
+                                                  const empName = assignedEmp && assignedEmp !== 'Unassigned' ? getEmployeeName(assignedEmp) : null;
+                                                  
+                                                  if (!email && !phone && !empName) return null;
                                                   return (
-                                                    <div className="flex flex-col gap-0.5 text-[11px] text-zinc-400 font-medium">
+                                                    <div className="flex flex-col gap-1 text-[11px] text-zinc-400 font-medium">
                                                       {email && <div>📧 {email}</div>}
                                                       {phone && <div>📞 {phone}</div>}
+                                                      {empName && (
+                                                        <div className="text-zinc-300 font-semibold flex items-center gap-1.5 bg-zinc-900/50 w-fit px-1.5 py-0.5 rounded border border-zinc-800">
+                                                          👤 Assigned to: {empName}
+                                                        </div>
+                                                      )}
                                                     </div>
                                                   );
                                                 })()}
