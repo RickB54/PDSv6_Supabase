@@ -55,6 +55,7 @@ import jsPDF from "jspdf";
 
 import { UnifiedCustomerTimeline } from "@/components/customers/UnifiedCustomerTimeline";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 
 const SearchCustomer = () => {
   const location = useLocation();
@@ -83,6 +84,8 @@ const SearchCustomer = () => {
   const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
   const [activeModalTab, setActiveModalTab] = useState("profile");
   
+  const followUpStatus = useFollowUpStatus(customers, allBookings);
+
   const customerToDelete = useMemo(() => 
     customers.find(c => c.id === deleteCustomerId), 
     [customers, deleteCustomerId]
@@ -965,6 +968,36 @@ const SearchCustomer = () => {
                                <Badge variant="outline" className={`h-5 ${color} gap-1 px-1.5 ml-2`}>
                                  <StatusIcon className="h-3 w-3" />
                                  <span className="text-[9px] font-black uppercase tracking-tight">{label}</span>
+                               </Badge>
+                             );
+                           })()}
+                           {/* Retention Badge */}
+                           {(() => {
+                             let retLabel = 'Active';
+                             let retColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30';
+                             if (customer.type === 'prospect') {
+                               retLabel = 'Prospect';
+                               retColor = 'bg-purple-500/10 text-purple-400 border-purple-500/30 cursor-pointer hover:bg-purple-500/20';
+                             } else if (followUpStatus.overdue.find(c => c.customer.id === customer.id)) {
+                               retLabel = 'Overdue for service';
+                               retColor = 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse cursor-pointer hover:bg-red-500/20';
+                             } else if (followUpStatus.dueThisWeek.find(c => c.customer.id === customer.id) || followUpStatus.dueThisMonth.find(c => c.customer.id === customer.id)) {
+                               retLabel = 'Due soon';
+                               retColor = 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-pointer hover:bg-amber-500/20';
+                             } else {
+                               retColor += ' cursor-pointer hover:bg-emerald-500/20';
+                             }
+                             return (
+                               <Badge 
+                                 variant="outline" 
+                                 className={`h-5 ${retColor} gap-1 px-1.5 ml-2`}
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   navigate('/follow-up-center?search=' + encodeURIComponent(customer.name || ''));
+                                 }}
+                               >
+                                 <Zap className="h-3 w-3" />
+                                 <span className="text-[9px] font-black uppercase tracking-tight">{retLabel}</span>
                                </Badge>
                              );
                            })()}
