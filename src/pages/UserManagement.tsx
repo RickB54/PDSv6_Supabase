@@ -14,7 +14,8 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import supabase from "@/lib/supabase";
-import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info, Lock } from "lucide-react";
+import { Search, UserPlus, Users, Edit, Trash2, Shield, UserCog, Key, Save, X, RefreshCw, Info, Lock, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -692,13 +693,17 @@ export default function UserManagement() {
         </div>
 
         {/* Admins List */}
-        <Card id="admins-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
+        <Card id="admins-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20 group">
+          <Collapsible defaultOpen>
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-amber-500" />
-                <CardTitle className="text-white text-lg">Administrators</CardTitle>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none group/trigger flex-1 text-left">
+                <Shield className="w-5 h-5 text-amber-500 shrink-0" />
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  Administrators
+                  <ChevronDown className="w-4 h-4 text-zinc-500 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
+                </CardTitle>
+              </CollapsibleTrigger>
               <div className="flex items-center gap-3">
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
@@ -720,6 +725,7 @@ export default function UserManagement() {
               </div>
             </div>
           </CardHeader>
+          <CollapsibleContent>
 
           {/* Add New Admin Accordion */}
           <Accordion type="single" collapsible className="border-b border-zinc-800/50">
@@ -828,16 +834,22 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </div>
+          </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {/* Employee List */}
-        <Card id="employees-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
+        <Card id="employees-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20 group">
+          <Collapsible defaultOpen>
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-emerald-500" />
-                <CardTitle className="text-white text-lg">Active Employees</CardTitle>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none group/trigger flex-1 text-left">
+                <Shield className="w-5 h-5 text-emerald-500 shrink-0" />
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  Active Employees
+                  <ChevronDown className="w-4 h-4 text-zinc-500 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
+                </CardTitle>
+              </CollapsibleTrigger>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                 <Input
@@ -857,6 +869,7 @@ export default function UserManagement() {
               </div>
             </div>
           </CardHeader>
+          <CollapsibleContent>
 
           {/* Add New Employee Accordion */}
           <Accordion type="single" collapsible className="border-b border-zinc-800/50">
@@ -1027,19 +1040,25 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </div>
+          </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {/* Customers Section */}
-        <Card id="customers-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
+        <Card id="customers-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20 group">
+          <Collapsible defaultOpen>
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-500" />
-                <CardTitle className="text-white text-lg">Customers</CardTitle>
-                <Badge variant="outline" className="bg-purple-900/10 text-purple-400 border-purple-900/30">
-                  {filteredCustomers.length} Total
-                </Badge>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none group/trigger flex-1 text-left">
+                <Users className="w-5 h-5 text-purple-500 shrink-0" />
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  Customers
+                  <Badge variant="outline" className="bg-purple-900/10 text-purple-400 border-purple-900/30">
+                    {filteredCustomers.length} Total
+                  </Badge>
+                  <ChevronDown className="w-4 h-4 text-zinc-500 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
+                </CardTitle>
+              </CollapsibleTrigger>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                 <Input
@@ -1059,6 +1078,7 @@ export default function UserManagement() {
               </div>
             </div>
           </CardHeader>
+          <CollapsibleContent>
 
           {/* Add New Customer Accordion */}
           <Accordion type="single" collapsible className="border-b border-zinc-800/50">
@@ -1177,19 +1197,25 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </div>
+          </CollapsibleContent>
+          </Collapsible>
         </Card>
 
         {/* Prospects Section */}
-        <Card id="prospects-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20">
+        <Card id="prospects-section" className="bg-zinc-900 border-zinc-800 shadow-xl scroll-mt-20 group">
+          <Collapsible defaultOpen>
           <CardHeader className="border-b border-zinc-800/50 pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-orange-500" />
-                <CardTitle className="text-white text-lg">Prospects</CardTitle>
-                <Badge variant="outline" className="bg-orange-900/10 text-orange-400 border-orange-900/30">
-                  {filteredProspects.length} Total
-                </Badge>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CollapsibleTrigger className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none group/trigger flex-1 text-left">
+                <Users className="w-5 h-5 text-orange-500 shrink-0" />
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  Prospects
+                  <Badge variant="outline" className="bg-orange-900/10 text-orange-400 border-orange-900/30">
+                    {filteredProspects.length} Total
+                  </Badge>
+                  <ChevronDown className="w-4 h-4 text-zinc-500 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
+                </CardTitle>
+              </CollapsibleTrigger>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                 <Input
@@ -1209,6 +1235,7 @@ export default function UserManagement() {
               </div>
             </div>
           </CardHeader>
+          <CollapsibleContent>
 
           {/* Add New Prospect Accordion */}
           <Accordion type="single" collapsible className="border-b border-zinc-800/50">
@@ -1327,6 +1354,8 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </div>
+          </CollapsibleContent>
+          </Collapsible>
         </Card>
       </main>
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => setDeleteConfirm(prev => ({ ...prev, open }))}>
