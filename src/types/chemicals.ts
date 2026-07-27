@@ -20,6 +20,7 @@ export interface ApplicationGuide {
 
 export interface Chemical {
     id: string;
+    chemical_library_id?: string;
     name: string;
     brand?: string;
     category: ChemicalCategory;

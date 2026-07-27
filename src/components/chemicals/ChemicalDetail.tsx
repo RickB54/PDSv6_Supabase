@@ -100,7 +100,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
         if (!chemical) return;
         setIsSavingNotes(true);
         try {
-            const { error } = await updateChemicalPartial(chemical.id, { user_notes: notes });
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, { user_notes: notes });
             if (error) throw error;
             toast({ title: "Notes Saved", description: "User notes have been updated." });
             if (onUpdate) onUpdate();
@@ -174,7 +175,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
             const newGallery = filteredGallery.filter(url => url !== imageUrl);
             if (oldPrimary) newGallery.push(oldPrimary);
 
-            const { error } = await updateChemicalPartial(chemical.id, {
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, {
                 primary_image_url: imageUrl,
                 gallery_image_urls: newGallery
             });
@@ -205,7 +207,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                 updates.gallery_image_urls = filteredGallery.filter(url => url !== imageUrl);
             }
 
-            const { error } = await updateChemicalPartial(chemical.id, updates);
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, updates);
             if (error) throw error;
             toast({ title: "Image Deleted" });
             if (onUpdate) onUpdate();

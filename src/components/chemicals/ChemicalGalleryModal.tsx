@@ -76,7 +76,8 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                 updates.gallery_image_urls = updatedGallery.filter(url => url !== newUrls[0]);
             }
 
-            const { error } = await updateChemicalPartial(chemical.id, updates);
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, updates);
             if (error) throw error;
 
             toast({ title: "Success", description: `${files.length} image(s) uploaded.` });
@@ -109,7 +110,8 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
                 updates.gallery_image_urls = filteredGallery.filter(url => url !== imageUrl);
             }
 
-            const { error } = await updateChemicalPartial(chemical.id, updates);
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, updates);
             if (error) throw error;
 
             toast({ title: "Image Deleted" });
@@ -131,7 +133,8 @@ export function ChemicalGalleryModal({ chemical, open, onOpenChange, onUpdate, i
             const newGallery = filteredGallery.filter(url => url !== imageUrl);
             if (oldPrimary) newGallery.push(oldPrimary);
 
-            const { error } = await updateChemicalPartial(chemical.id, {
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, {
                 primary_image_url: imageUrl,
                 gallery_image_urls: newGallery
             });

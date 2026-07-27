@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1949,7 +1949,27 @@ const InventoryControl = () => {
   };
 
 
-  const renderInteractiveChart = () => (
+  const renderInteractiveChart = () => {
+    const chartChemicals = Object.values((chemicals || []).reduce((acc, chem) => {
+      let effectiveName = chem.name || '';
+      let effectiveBrand = chem.brand || '';
+      let libMatch = chem.chemicalLibraryId ? libMap[chem.chemicalLibraryId] : null;
+      if (!libMatch) {
+        libMatch = Object.values(libMap).find(l => 
+          (l.name || '').toLowerCase().trim() === (effectiveName || '').toLowerCase().trim() &&
+          (l.brand || '').toLowerCase().trim() === (effectiveBrand || '').toLowerCase().trim()
+        ) || null;
+      }
+      if (libMatch) {
+        effectiveName = libMatch.name || '';
+        effectiveBrand = libMatch.brand || '';
+      }
+      const key = `${(effectiveName || '').trim().toLowerCase()}_${(effectiveBrand || '').trim().toLowerCase()}`;
+      if (!acc[key]) acc[key] = { ...chem, effectiveName, effectiveBrand };
+      return acc;
+    }, {} as Record<string, any>));
+
+    return (
 <Dialog open={isDilutionModalOpen} onOpenChange={(val) => {
         setIsDilutionModalOpen(val);
         if (!val) {
@@ -1966,18 +1986,19 @@ const InventoryControl = () => {
       }}>
         <DialogContent className="max-w-[98vw] 2xl:max-w-[1700px] w-full h-[98vh] flex flex-col p-0 overflow-hidden bg-zinc-950 border-none shadow-2xl rounded-2xl">
           {/* PREMIUM DARK HEADER (Matching Dilution Ratio Chart style) */}
-          <div className="flex flex-col sm:flex-row items-center justify-between p-3 sm:p-4 bg-zinc-900 border-b border-zinc-800 gap-3 shrink-0 uppercase">
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-between p-3 sm:p-4 bg-zinc-900 border-b border-zinc-800 gap-3 shrink-0 uppercase">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0 overflow-hidden w-full sm:w-auto">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center border border-white/10 shadow-lg shrink-0">
                     <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div className="flex flex-col min-w-0">
                     <DialogTitle className="text-sm sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none mb-0.5 sm:mb-1 truncate">Prime Dilution Chart</DialogTitle>
+                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">{chartChemicals.length} Unique Chemicals</div>
                 </div>
                 <div className="hidden sm:block px-2 text-[8px] font-black text-zinc-600 border-l border-zinc-800 ml-2 uppercase tracking-[0.2em] italic">Generated: ${new Date().toLocaleDateString()}</div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end no-print">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end no-print">
                 <div className="flex flex-col items-center gap-0.5 shrink-0 opacity-80">
                     <span className="text-[6px] font-black uppercase text-zinc-500 tracking-widest leading-none">Units</span>
                     <div className="bg-zinc-800/80 p-1 rounded-md border border-zinc-700 h-6 flex items-center px-2 text-[8px] font-black text-indigo-400">OZ ONLY</div>
@@ -2043,10 +2064,18 @@ const InventoryControl = () => {
                              <span className="truncate uppercase">{chartSort.startsWith('brand:') ? chartSort.split(':')[1] : 'SORT'}</span>
                         </div>
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-950 border-zinc-900 text-white">
-                        <SelectItem value="brand" className="text-[10px] font-bold uppercase tracking-widest">Brand</SelectItem>
-                        <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z Name</SelectItem>
-                        <SelectItem value="low_stock" className="text-[10px] font-bold uppercase tracking-widest text-red-500">Low Stock</SelectItem>
+                    <SelectContent className="bg-zinc-950 border-zinc-900 text-white max-h-[300px]">
+                        <SelectItem value="brand" className="text-[10px] font-bold uppercase tracking-widest">By Brand (All)</SelectItem>
+                        <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z List</SelectItem>
+                        <SelectItem value="low_stock" className="text-[10px] font-bold uppercase tracking-widest text-red-500">Low Threshold</SelectItem>
+                        {allAvailableBrands.length > 0 && (
+                            <SelectGroup>
+                                <SelectLabel className="text-[10px] font-black text-amber-500/50 uppercase tracking-widest pt-2">Jump to Brand</SelectLabel>
+                                {allAvailableBrands.map(brand => (
+                                    <SelectItem key={brand} value={`brand:${brand}`} className="text-[10px] font-bold text-amber-500/80 uppercase tracking-widest pl-6">{brand}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        )}
                     </SelectContent>
                 </Select>
             </div>
@@ -2062,7 +2091,7 @@ const InventoryControl = () => {
                     if (bottom) bottom.scrollLeft = e.currentTarget.scrollLeft;
                   }}
                 >
-                  <div style={{ width: chartOrientation === 'landscape' ? '1100px' : '700px', height: '1px' }} />
+                  <div style={{ width: chartOrientation === 'landscape' ? '1100px' : '850px', height: '1px' }} />
                 </div>
                 {hiddenChemicalIds.length > 0 && (
                   <Button 
@@ -2083,7 +2112,7 @@ const InventoryControl = () => {
                   if (top) top.scrollLeft = e.currentTarget.scrollLeft;
                 }}
               >
-                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[10px] min-w-[390px]'}`}>
+                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[10px] min-w-[850px]'}`}>
                   <thead className="sticky top-0 z-30 bg-white shadow-sm ring-1 ring-zinc-300">
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
                       <th rowSpan={2} className={`p-1 border border-zinc-300 text-left sticky left-0 z-40 bg-zinc-100 ${chartOrientation === 'landscape' ? 'w-[12%]' : 'w-[80px]'}`}>Product</th>
@@ -2123,21 +2152,21 @@ const InventoryControl = () => {
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
-                      <th className="p-0 border border-zinc-300 bg-amber-500/10">
-                        <span className="text-[9px] font-black text-amber-900 leading-none">{gallonSize/128}G</span>
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[45px] sm:min-w-[55px]">
+                        <span className="text-[9px] font-black text-amber-900 leading-none">{Number((gallonSize/128).toFixed(2))}G</span>
                       </th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
-                      <th className="p-0 border border-zinc-300 bg-amber-500/10">
-                        <span className="text-[9px] font-black text-amber-900 leading-none">{gallonSize/128}G</span>
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[45px] sm:min-w-[55px]">
+                        <span className="text-[9px] font-black text-amber-900 leading-none">{Number((gallonSize/128).toFixed(2))}G</span>
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {[...(chemicals || [])]
-                      .filter(c => {
+                    {chartChemicals
+                      .filter((c: any) => {
                         if (!c) return false;
                         const baseFilter = !hiddenChemicalIds.includes(c.id);
                         if (!baseFilter) return false;
@@ -2263,12 +2292,12 @@ const InventoryControl = () => {
                               }}
                             >
                                <div className="flex items-center justify-between">
-                                 <div className="font-bold text-zinc-900 leading-tight text-[12px] sm:text-[13px] mb-1">{c.name}</div>
+                                 <div className="font-bold text-zinc-900 leading-tight text-[12px] sm:text-[13px] mb-1">{c.effectiveName || c.name}</div>
                                  <div className="opacity-0 group-hover/prod:opacity-100 text-red-500 transition-opacity">
                                    <EyeOff className="w-3 h-3" />
                                  </div>
                                </div>
-                               <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.brand || ''}</div>
+                               <div className="text-[9px] text-zinc-400 font-bold uppercase mb-3 tracking-wider">{c.effectiveBrand || c.brand || ''}</div>
                               <div className="flex flex-col gap-0 text-[8px] font-bold text-zinc-500 border-t border-zinc-100 pt-2 opacity-80 overflow-hidden">
                                  <div className="h-[14px] flex items-center justify-between whitespace-nowrap">
                                     <span className="scale-[0.85] origin-left">CHEM AMOUNT:</span>
@@ -2337,7 +2366,7 @@ const InventoryControl = () => {
                      32oz
                    </div>
                     <div className="flex items-center gap-2 text-amber-600">
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" /> ${(gallonSize/128).toFixed(2)} GAL
+                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" /> {Number((gallonSize/128).toFixed(2))} GAL
                     </div>
                  </div>
                  <div className="flex items-center gap-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/5 px-3 py-1.5 rounded-full border border-indigo-500/10 uppercase tracking-tighter no-print">
@@ -2348,7 +2377,8 @@ const InventoryControl = () => {
           </div>
         </DialogContent>
       </Dialog>
-  );
+    );
+  };
 
   if (!isAdmin) {
     return (

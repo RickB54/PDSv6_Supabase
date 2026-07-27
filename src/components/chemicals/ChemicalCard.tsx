@@ -67,7 +67,8 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                 lastUpdated: new Date().toISOString()
             });
 
-            const { error } = await updateChemicalPartial(chemical.id, { user_notes: updatedNotes });
+            const libraryId = chemical.chemical_library_id || chemical.id;
+            const { error } = await updateChemicalPartial(libraryId, { user_notes: updatedNotes });
             if (error) throw error;
 
             toast({ title: "Added to Inventory" });

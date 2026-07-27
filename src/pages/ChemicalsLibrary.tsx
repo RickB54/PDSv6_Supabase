@@ -254,10 +254,10 @@ export default function ChemicalsLibrary() {
                                 <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Ref Chart</span>
                             </Button>
                         </div>
-                        {isAdmin && (
-                            /* Row 2: Admin Actions */
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                <div className="flex items-center gap-1">
+                          {isAdmin && (
+                              /* Row 2: Admin Actions */
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <div className="flex items-center gap-1 min-w-0">
                                     <Button
                                         variant="outline"
                                         size="sm"
