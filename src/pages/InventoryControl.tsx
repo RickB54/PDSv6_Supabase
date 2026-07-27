@@ -290,20 +290,7 @@ const InventoryControl = () => {
   }, [equipmentSort]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
-  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("landscape");
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (isDilutionModalOpen) {
-        setChartOrientation(window.innerWidth < 768 ? "portrait" : "landscape");
-      }
-    };
-    if (isDilutionModalOpen) {
-      handleResize();
-      window.addEventListener('resize', handleResize);
-    }
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isDilutionModalOpen]);
+  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const [savingChart, setSavingChart] = useState(false);
   const [chartSearch, setChartSearch] = useState<string>('');
