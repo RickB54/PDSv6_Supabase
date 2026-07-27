@@ -387,13 +387,15 @@ export function GlobalRightSidebar() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setCollapsed(!collapsed)}
-                className="mb-2 self-center hover:bg-zinc-800 text-zinc-500"
+                className="mb-2 self-center hover:bg-zinc-800 text-zinc-500 shrink-0"
                 title={collapsed ? "Expand" : "Collapse"}
             >
                 {collapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </Button>
             
-            {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll)}
+            <div className={`flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0 pb-4 ${collapsed ? 'items-center' : 'items-start'}`}>
+                {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll)}
+            </div>
         </div>
     );
 }

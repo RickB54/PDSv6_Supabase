@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Navbar } from "@/components/Navbar";
+import { PageHeader } from "@/components/PageHeader";
 import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
@@ -382,7 +382,7 @@ export default function FollowUpCenter() {
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
-      <Navbar />
+      <PageHeader title="Follow-Up Center" subtitle="Monitor service intervals and nurture prospects" />
       <main className="container mx-auto px-4 md:px-6 pt-6 max-w-6xl">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-8 gap-4">
           <div>
