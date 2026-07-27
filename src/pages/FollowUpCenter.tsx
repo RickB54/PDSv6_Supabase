@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
 import { useFollowUpStatus, useFollowUpSettings } from "@/hooks/useFollowUpStatus";
 import { toast } from "sonner";
 import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
@@ -68,9 +69,8 @@ export default function FollowUpCenter() {
       const activeAll = all.filter(c => !c.is_archived);
       setAllCustomers(activeAll);
       
-      const allProspects = activeAll.filter(c => c.type === 'prospect');
-      setProspects(allProspects.filter(p => !p.lost));
-      setLostProspects(allProspects.filter(p => p.lost));
+      setProspects(activeAll.filter(c => c.type === 'prospect'));
+      setLostProspects(activeAll.filter(c => c.type === 'lost_prospect'));
     } catch (err) {
       console.error(err);
     }
@@ -392,17 +392,19 @@ export default function FollowUpCenter() {
               </div>
               <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic flex items-center">
                 Retention <span className="text-blue-500 ml-3">Hub</span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))} className="ml-3 text-zinc-500 hover:text-white transition-colors">
-                        <HelpCircle className="h-6 w-6" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-[450px] bg-white border-slate-200 text-slate-900 p-6 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="ml-3 text-zinc-500 hover:text-white transition-colors focus:outline-none">
+                      <HelpCircle className="h-6 w-6" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" className="max-w-[450px] bg-white border-slate-200 text-slate-900 p-6 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal relative">
+                       <PopoverClose className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900">
+                         <X className="h-4 w-4" />
+                       </PopoverClose>
                        <div className="space-y-4">
                           <div>
-                            <h4 className="font-bold text-lg text-slate-900 leading-tight">Retention Hub Flow</h4>
+                            <h4 className="font-bold text-lg text-slate-900 leading-tight pr-6">Retention Hub Flow</h4>
                             <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1 pb-3 border-b border-slate-100">Cheat Sheet</p>
                           </div>
                           
@@ -448,9 +450,8 @@ export default function FollowUpCenter() {
                              </div>
                           </div>
                        </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                  </PopoverContent>
+                </Popover>
               </h1>
             </div>
             <p className="text-zinc-500 font-bold text-sm tracking-wide">
@@ -465,8 +466,8 @@ export default function FollowUpCenter() {
                   <TooltipTrigger asChild>
                     <div>
                       <Switch 
-                        checked={settings.isActive}
-                        onCheckedChange={(v) => saveSettings({ ...settings, isActive: v })}
+                        checked={settings.active}
+                        onCheckedChange={(v) => saveSettings({ ...settings, active: v })}
                       />
                     </div>
                   </TooltipTrigger>
@@ -483,11 +484,11 @@ export default function FollowUpCenter() {
                     <div className="flex items-center">
                       <Input 
                         type="number" 
-                        value={settings.thresholdValue}
-                        onChange={(e) => saveSettings({ ...settings, thresholdValue: parseInt(e.target.value) || 90 })}
+                        value={settings.threshold}
+                        onChange={(e) => saveSettings({ ...settings, threshold: parseInt(e.target.value) || 90 })}
                         className="w-16 h-8 bg-zinc-950 border-zinc-700 text-center font-bold text-white rounded-l-md rounded-r-none"
                       />
-                      <Select value={settings.thresholdUnit} onValueChange={(v: 'days' | 'months') => saveSettings({ ...settings, thresholdUnit: v })}>
+                      <Select value={settings.unit} onValueChange={(v: 'days' | 'months') => saveSettings({ ...settings, unit: v })}>
                         <SelectTrigger className="w-24 h-8 bg-zinc-800 border-zinc-700 text-white rounded-l-none text-xs font-bold uppercase tracking-wider">
                           <SelectValue />
                         </SelectTrigger>
@@ -553,7 +554,32 @@ export default function FollowUpCenter() {
             <AccordionTrigger className="hover:no-underline py-0 mb-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500">Overdue ({filteredOverdue.length})</h2>
+                  <h2 className="text-2xl font-black uppercase tracking-tighter text-red-500 flex items-center">
+                    Overdue ({filteredOverdue.length})
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-zinc-500 hover:text-white transition-colors focus:outline-none ml-3">
+                          <HelpCircle className="h-5 w-5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-white border-slate-200 p-5 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal relative">
+                         <PopoverClose className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900">
+                           <X className="h-4 w-4" />
+                         </PopoverClose>
+                         <h4 className="font-bold text-slate-900 mb-1 pr-6">Overdue Clients</h4>
+                         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Cheat Sheet</p>
+                         <p className="text-sm text-slate-600 mb-4">These clients are past their scheduled service interval.</p>
+                         <div className="space-y-3">
+                           <h5 className="font-bold text-slate-800 text-sm">Recommended Actions:</h5>
+                           <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
+                             <li>Send an automated follow-up email</li>
+                             <li>Give them a phone call to re-engage</li>
+                             <li>Mark them as contacted to clear them out</li>
+                           </ul>
+                         </div>
+                      </PopoverContent>
+                    </Popover>
+                  </h2>
                 </div>
                 <div onClick={e => e.stopPropagation()}>
                   <TooltipProvider>
@@ -596,7 +622,32 @@ export default function FollowUpCenter() {
             <AccordionTrigger className="hover:no-underline py-0 mb-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-black uppercase tracking-tighter text-amber-500">Due Soon ({filteredDueSoon.length})</h2>
+                  <h2 className="text-2xl font-black uppercase tracking-tighter text-amber-500 flex items-center">
+                    Due Soon ({filteredDueSoon.length})
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-zinc-500 hover:text-white transition-colors focus:outline-none ml-3">
+                          <HelpCircle className="h-5 w-5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-white border-slate-200 p-5 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal relative">
+                         <PopoverClose className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900">
+                           <X className="h-4 w-4" />
+                         </PopoverClose>
+                         <h4 className="font-bold text-slate-900 mb-1 pr-6">Due Soon Clients</h4>
+                         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Cheat Sheet</p>
+                         <p className="text-sm text-slate-600 mb-4">These clients are approaching their scheduled service interval.</p>
+                         <div className="space-y-3">
+                           <h5 className="font-bold text-slate-800 text-sm">Recommended Actions:</h5>
+                           <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
+                             <li>Proactively reach out to get them on the schedule</li>
+                             <li>Remind them before their vehicle gets too dirty</li>
+                             <li>Send an estimate for their upcoming service</li>
+                           </ul>
+                         </div>
+                      </PopoverContent>
+                    </Popover>
+                  </h2>
                 </div>
                 <div onClick={e => e.stopPropagation()}>
                   <TooltipProvider>
@@ -639,7 +690,32 @@ export default function FollowUpCenter() {
             <AccordionTrigger className="hover:no-underline py-0 mb-4">
               <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-black uppercase tracking-tighter text-purple-400">Prospects ({filteredProspects.length})</h2>
+                  <h2 className="text-2xl font-black uppercase tracking-tighter text-purple-400 flex items-center">
+                    Prospects ({filteredProspects.length})
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-zinc-500 hover:text-white transition-colors focus:outline-none ml-3">
+                          <HelpCircle className="h-5 w-5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-white border-slate-200 p-5 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal relative">
+                         <PopoverClose className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900">
+                           <X className="h-4 w-4" />
+                         </PopoverClose>
+                         <h4 className="font-bold text-slate-900 mb-1 pr-6">Prospects</h4>
+                         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Cheat Sheet</p>
+                         <p className="text-sm text-slate-600 mb-4">New leads who haven't booked a service yet.</p>
+                         <div className="space-y-3">
+                           <h5 className="font-bold text-slate-800 text-sm">Recommended Actions:</h5>
+                           <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
+                             <li>Send them an estimate or custom letter</li>
+                             <li>Schedule a booking to convert them to a customer</li>
+                             <li>Toggle "Show Lost" to view leads who went cold, then re-engage with a discount</li>
+                           </ul>
+                         </div>
+                      </PopoverContent>
+                    </Popover>
+                  </h2>
                   <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                     <Switch checked={showLost} onCheckedChange={setShowLost} id="showLostToggle" />
                     <label htmlFor="showLostToggle" className="text-[9px] font-black uppercase text-zinc-500 cursor-pointer">Show Lost</label>
