@@ -395,11 +395,41 @@ export default function FollowUpCenter() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { initialTopic: 'retention-hub' } }))} className="ml-3 text-zinc-500 hover:text-white transition-colors">
+                      <button onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'retention-hub' } }))} className="ml-3 text-zinc-500 hover:text-white transition-colors">
                         <HelpCircle className="h-6 w-6" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent>Open Retention Hub Guide</TooltipContent>
+                    <TooltipContent side="right" className="max-w-[450px] bg-zinc-950 border-zinc-800 text-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-sm leading-relaxed z-[200]">
+                       <div className="space-y-4 font-sans">
+                          <h3 className="text-lg font-black text-blue-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Retention Hub Flow</h3>
+                          
+                          <div className="space-y-3">
+                             <div className="flex gap-3 items-start">
+                                <span className="bg-red-500/20 text-red-500 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">1</span>
+                                <div><strong className="text-red-400 uppercase tracking-wider text-xs">Overdue:</strong> <span className="text-zinc-300">Clients past their scheduled service interval.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Send them an automated follow-up email, call them, or mark them as contacted to clear them out.</span></div>
+                             </div>
+                             
+                             <div className="flex gap-3 items-start">
+                                <span className="bg-amber-500/20 text-amber-500 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">2</span>
+                                <div><strong className="text-amber-400 uppercase tracking-wider text-xs">Due Soon:</strong> <span className="text-zinc-300">Clients approaching their service interval.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Proactively reach out to get them on the schedule before their car gets too dirty.</span></div>
+                             </div>
+
+                             <div className="flex gap-3 items-start">
+                                <span className="bg-purple-500/20 text-purple-400 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">3</span>
+                                <div><strong className="text-purple-400 uppercase tracking-wider text-xs">Prospects:</strong> <span className="text-zinc-300">New leads who haven't booked yet.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Nurture them! Send an estimate, write a custom letter, or schedule a booking to officially convert them to a Customer.</span></div>
+                             </div>
+
+                             <div className="flex gap-3 items-start">
+                                <span className="bg-blue-500/20 text-blue-400 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">4</span>
+                                <div><strong className="text-blue-400 uppercase tracking-wider text-xs">Lost Prospects:</strong> <span className="text-zinc-300">Prospects who declined or went cold (Toggle "Show Lost").</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Try re-engaging them later with a discount or restore them to active prospects.</span></div>
+                             </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-400 bg-zinc-900/50 p-3 rounded-lg mt-2">
+                             <strong className="text-white">Quick Actions:</strong> You can apply coupons, write custom letters, schedule bookings, or snooze reminders directly from each client card. Use the search bar to find anyone instantly.
+                          </div>
+                       </div>
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </h1>
