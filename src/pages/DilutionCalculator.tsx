@@ -110,7 +110,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
             {!isModal && <PageHeader title="Dilution Calculator" />}
             <div className={`flex flex-col items-center w-full px-6 md:px-12 ${isModal ? 'bg-zinc-950 p-4 h-full overflow-y-auto' : ''}`}>
             {/* Header Area */}
-            <div className="w-full max-w-md relative flex flex-col items-center mb-10 shrink-0">
+            <div className="w-full max-w-md relative flex flex-col items-center mb-4 sm:mb-8 shrink-0">
                 {(isModal || window.innerWidth < 768) && (
                     <Button 
                         variant="ghost" 
@@ -198,7 +198,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 {/* Container Size Input */}
                 <div className="group relative">
                     <div className="absolute -inset-0.5 bg-blue-500/10 blur opacity-0 group-focus-within:opacity-100 transition duration-500 rounded-3xl"></div>
-                    <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-32 shadow-2xl">
+                    <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-24 sm:h-32 shadow-2xl">
                         {/* Label Box */}
                         <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 text-center px-2">
                             <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
@@ -215,7 +215,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                                 type="number"
                                 value={containerSize || ''}
                                 onChange={(e) => setContainerSize(parseFloat(e.target.value) || 0)}
-                                className="w-full bg-transparent border-none text-center text-6xl font-black text-white focus:ring-0 outline-none placeholder:text-zinc-900 p-0"
+                                className="w-full bg-transparent border-none text-center text-5xl sm:text-6xl font-black text-white focus:ring-0 outline-none placeholder:text-zinc-900 p-0"
                                 placeholder="32"
                             />
                             <div className="w-2/3 h-[3px] bg-zinc-800 mt-2 rounded-full" />
@@ -233,7 +233,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 {/* Dilution Ratio Input */}
                 <div className="group relative">
                     <div className="absolute -inset-0.5 bg-purple-500/10 blur opacity-0 group-focus-within:opacity-100 transition duration-500 rounded-3xl"></div>
-                    <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-32 shadow-2xl">
+                    <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-24 sm:h-32 shadow-2xl">
                         {/* Label Box */}
                         <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 text-center px-2">
                             <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
@@ -250,7 +250,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                                 type="number"
                                 value={ratio || ''}
                                 onChange={(e) => setRatio(parseFloat(e.target.value) || 0)}
-                                className="w-full bg-transparent border-none text-center text-6xl font-black text-white focus:ring-0 outline-none placeholder:text-zinc-900 p-0"
+                                className="w-full bg-transparent border-none text-center text-5xl sm:text-6xl font-black text-white focus:ring-0 outline-none placeholder:text-zinc-900 p-0"
                                 placeholder="4"
                             />
                             <div className="w-2/3 h-[3px] bg-zinc-800 mt-2 rounded-full" />
@@ -266,48 +266,48 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                 </div>
 
                 {/* Arrow Visual Separator */}
-                <div className="flex justify-center py-4">
+                <div className="flex justify-center py-2 sm:py-4">
                     <Button 
                         onClick={calculate}
-                        className="w-20 h-10 rounded-full border border-zinc-800/50 flex items-center justify-center bg-black shadow-lg hover:border-zinc-600 transition-all group"
+                        className="w-16 h-8 sm:w-20 sm:h-10 rounded-full border border-zinc-800/50 flex items-center justify-center bg-black shadow-lg hover:border-zinc-600 transition-all group"
                     >
                         <ChevronRight className="w-6 h-6 text-zinc-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                     </Button>
                 </div>
 
                 {/* Output Cards */}
-                <div className="grid grid-cols-2 gap-4 pb-4">
-                    <Card className="bg-[#0b0b0f] border border-zinc-800/50 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl group transition-all h-48 flex flex-col items-center justify-center">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 pb-2 sm:pb-4">
+                    <Card className="bg-[#0b0b0f] border border-zinc-800/50 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 relative overflow-hidden shadow-2xl group transition-all h-28 sm:h-48 flex flex-col items-center justify-center">
                         <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <p className="text-[10px] uppercase font-black text-zinc-500 mb-2 tracking-widest text-center">Total Product</p>
-                        <div className="text-6xl font-black text-white leading-none text-center">
+                        <p className="text-[9px] sm:text-[10px] uppercase font-black text-zinc-500 mb-1 sm:mb-2 tracking-widest text-center">Total Product</p>
+                        <div className="text-4xl sm:text-6xl font-black text-white leading-none text-center">
                             {formatNumber(result.product)}
                         </div>
                         <div className="absolute bottom-6 right-8">
-                            <span className="text-sm font-black text-zinc-500 uppercase italic">{unit === 'oz' ? 'Oz' : 'Ml'}</span>
+                            <span className="text-xs sm:text-sm font-black text-zinc-500 uppercase italic">{unit === 'oz' ? 'Oz' : 'Ml'}</span>
                         </div>
                     </Card>
 
-                    <Card className="bg-[#0b0b0f] border border-zinc-800/50 rounded-[2.5rem] p-8 relative overflow-hidden shadow-2xl group transition-all h-48 flex flex-col items-center justify-center">
+                    <Card className="bg-[#0b0b0f] border border-zinc-800/50 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 relative overflow-hidden shadow-2xl group transition-all h-28 sm:h-48 flex flex-col items-center justify-center">
                         <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <p className="text-[10px] uppercase font-black text-zinc-500 mb-2 tracking-widest text-center">Total Water</p>
-                        <div className="text-6xl font-black text-white leading-none text-center">
+                        <p className="text-[9px] sm:text-[10px] uppercase font-black text-zinc-500 mb-1 sm:mb-2 tracking-widest text-center">Total Water</p>
+                        <div className="text-4xl sm:text-6xl font-black text-white leading-none text-center">
                             {formatNumber(result.water)}
                         </div>
                         <div className="absolute bottom-6 right-8">
-                            <span className="text-sm font-black text-zinc-500 uppercase italic">{unit === 'oz' ? 'Oz' : 'Ml'}</span>
+                            <span className="text-xs sm:text-sm font-black text-zinc-500 uppercase italic">{unit === 'oz' ? 'Oz' : 'Ml'}</span>
                         </div>
                     </Card>
                 </div>
             </div>
 
             {/* Bottom Menu Navigation */}
-            <div className={`w-full max-w-md mt-auto pb-4 transition-all duration-300 ${isModal ? '' : 'mb-3'}`}>
-                <div className="grid grid-cols-5 gap-1.5 p-2 bg-[#0d0d12]/90 border border-zinc-800/50 rounded-3xl shadow-2xl backdrop-blur-xl">
+            <div className={`w-full max-w-md mt-auto pb-2 sm:pb-4 transition-all duration-300 ${isModal ? '' : 'mb-2 sm:mb-3'}`}>
+                <div className="grid grid-cols-5 gap-1.5 p-1.5 sm:p-2 bg-[#0d0d12]/90 border border-zinc-800/50 rounded-2xl sm:rounded-3xl shadow-2xl backdrop-blur-xl">
                     <Button 
                         variant="ghost" 
                         onClick={() => handleUnitChange('oz')}
-                        className={`flex flex-col gap-1 h-14 rounded-2xl transition-all ${unit === 'oz' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
+                        className={`flex flex-col gap-0.5 sm:gap-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl transition-all ${unit === 'oz' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
                     >
                         <div className={`w-6 h-6 border-2 rounded-full flex items-center justify-center font-black text-[10px] transition-colors ${unit === 'oz' ? 'border-blue-400' : 'border-zinc-800'}`}>O</div>
                         <span className="text-[8px] uppercase font-black tracking-tighter">Ounces</span>
@@ -316,7 +316,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <Button 
                         variant="ghost" 
                         onClick={() => handleUnitChange('ml')}
-                        className={`flex flex-col gap-1 h-14 rounded-2xl transition-all ${unit === 'ml' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
+                        className={`flex flex-col gap-0.5 sm:gap-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl transition-all ${unit === 'ml' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
                     >
                         <div className={`w-6 h-6 border-2 rounded-full flex items-center justify-center font-black text-[10px] transition-colors ${unit === 'ml' ? 'border-blue-400' : 'border-zinc-800'}`}>M</div>
                         <span className="text-[8px] uppercase font-black tracking-tighter">Milliliters</span>
@@ -325,7 +325,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <Button 
                         variant="ghost" 
                         onClick={() => setMode(mode === 'ratio' ? 'percent' : 'ratio')}
-                        className={`flex flex-col gap-1 h-14 rounded-2xl transition-all ${mode === 'percent' ? 'bg-zinc-800 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
+                        className={`flex flex-col gap-0.5 sm:gap-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl transition-all ${mode === 'percent' ? 'bg-zinc-800 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
                     >
                         <PercentIcon className="w-5 h-5" />
                         <span className="text-[8px] uppercase font-black tracking-tighter">Percent</span>
@@ -334,7 +334,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <Button 
                         variant="ghost" 
                         onClick={() => setCalcType(calcType === 'total' ? 'product' : 'total')}
-                        className={`flex flex-col gap-1 h-14 rounded-2xl transition-all ${calcType === 'product' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
+                        className={`flex flex-col gap-0.5 sm:gap-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl transition-all ${calcType === 'product' ? 'bg-zinc-800 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60'}`}
                     >
                         <ArrowLeftRight className="w-5 h-5" />
                         <span className="text-[8px] uppercase font-black tracking-tighter">Swap</span>
@@ -343,7 +343,7 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <Button 
                         variant="ghost" 
                         onClick={() => setRatio(prev => prev > 1 ? Math.round(1/prev * 100) / 100 : Math.round(1/prev * 10) / 10)}
-                        className="flex flex-col gap-1 h-14 rounded-2xl text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60 transition-all"
+                        className="flex flex-col gap-0.5 sm:gap-1 h-12 sm:h-14 rounded-xl sm:rounded-2xl text-zinc-600 hover:text-white hover:bg-zinc-900 opacity-60 transition-all"
                     >
                         <div className="w-6 h-6 border-2 border-zinc-800 rounded-full flex items-center justify-center font-black text-[10px] group-hover:border-zinc-600">R</div>
                         <span className="text-[8px] uppercase font-black tracking-tighter">Reverse</span>
