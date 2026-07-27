@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { 
     Info, 
@@ -13,8 +13,10 @@ import {
     BookOpen,
     Eye,
     X,
-    CheckCircle2
+    CheckCircle2,
+    ChevronDown
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
 import { PageHeader } from "@/components/PageHeader";
 import { RatiosOnlyChart } from "@/components/dilution/RatiosOnlyChart";
@@ -34,6 +36,8 @@ import { MOCK_CHEMICAL_LIBRARY } from "@/lib/demoMockData";
 
 const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boolean, onBack?: () => void, onHelp?: () => void }) => {
     const navigate = useNavigate();
+    const containerInputRef = useRef<HTMLInputElement>(null);
+    const ratioInputRef = useRef<HTMLInputElement>(null);
     const [showHelp, setShowHelp] = useState(false);
     const [containerSize, setContainerSize] = useState<number>(32);
     const [ratio, setRatio] = useState<number>(4);
@@ -244,18 +248,32 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <div className="absolute -inset-0.5 bg-blue-500/10 blur opacity-0 group-focus-within:opacity-100 transition duration-500 rounded-3xl"></div>
                     <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-24 shadow-2xl">
                         {/* Label Box */}
-                        <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 text-center px-2">
-                            <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
-                                {calcType === 'total' ? 'Container' : 'Product'}
-                            </span>
-                            <span className="text-[10px] font-black text-zinc-500 uppercase leading-none mt-1 tracking-tighter">
-                                {calcType === 'total' ? 'Size' : 'Amount'}
-                            </span>
-                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 hover:bg-zinc-900 cursor-pointer text-center px-2 transition-colors relative group/dropdown">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
+                                        {calcType === 'total' ? 'Container' : 'Product'}
+                                    </span>
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase leading-none mt-1 tracking-tighter flex items-center gap-1">
+                                        {calcType === 'total' ? 'Size' : 'Amount'} <ChevronDown className="w-3 h-3 text-zinc-600 group-hover/dropdown:text-zinc-400" />
+                                    </span>
+                                </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-white min-w-[120px]">
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(128); }}>1 Gal (128oz)</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(64); }}>64 oz</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(32); }}>32 oz</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(24); }}>24 oz</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(16); }}>16 oz</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setUnit('oz'); setContainerSize(8); }}>8 oz</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => containerInputRef.current?.focus()}>Custom...</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         
                         {/* Number Box */}
                         <div className="h-full flex flex-col items-center justify-center relative bg-[#09090e]">
                             <input 
+                                ref={containerInputRef}
                                 type="number"
                                 value={containerSize || ''}
                                 onChange={(e) => setContainerSize(parseFloat(e.target.value) || 0)}
@@ -279,18 +297,30 @@ const DilutionCalculator = ({ isModal = false, onBack, onHelp }: { isModal?: boo
                     <div className="absolute -inset-0.5 bg-purple-500/10 blur opacity-0 group-focus-within:opacity-100 transition duration-500 rounded-3xl"></div>
                     <div className="relative grid grid-cols-[1fr_2fr_1fr] bg-[#0d0d14] border border-zinc-800 rounded-3xl overflow-hidden h-24 shadow-2xl">
                         {/* Label Box */}
-                        <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 text-center px-2">
-                            <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
-                                {mode === 'ratio' ? 'Dilution' : 'Dilution'}
-                            </span>
-                            <span className="text-[10px] font-black text-zinc-500 uppercase leading-none mt-1 tracking-tighter">
-                                {mode === 'ratio' ? 'Ratio' : 'Percent'}
-                            </span>
-                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <div className="border-r border-zinc-800 h-full flex flex-col items-center justify-center bg-black/40 hover:bg-zinc-900 cursor-pointer text-center px-2 transition-colors relative group/dropdown">
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase leading-none tracking-tighter">
+                                        {mode === 'ratio' ? 'Dilution' : 'Dilution'}
+                                    </span>
+                                    <span className="text-[10px] font-black text-zinc-500 uppercase leading-none mt-1 tracking-tighter flex items-center gap-1">
+                                        {mode === 'ratio' ? 'Ratio' : 'Percent'} <ChevronDown className="w-3 h-3 text-zinc-600 group-hover/dropdown:text-zinc-400" />
+                                    </span>
+                                </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-white min-w-[120px]">
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setMode('ratio'); setRatio(1); }}>1:1</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setMode('ratio'); setRatio(4); }}>4:1</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setMode('ratio'); setRatio(5); }}>5:1</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800" onClick={() => { setMode('ratio'); setRatio(10); }}>10:1</DropdownMenuItem>
+                                <DropdownMenuItem className="font-bold text-xs cursor-pointer hover:bg-zinc-800 text-purple-400" onClick={() => ratioInputRef.current?.focus()}>Custom...</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         
                         {/* Number Box */}
                         <div className="h-full flex flex-col items-center justify-center relative bg-[#09090e]">
                             <input 
+                                ref={ratioInputRef}
                                 type="number"
                                 value={ratio || ''}
                                 onChange={(e) => setRatio(parseFloat(e.target.value) || 0)}
