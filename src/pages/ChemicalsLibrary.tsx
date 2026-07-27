@@ -257,13 +257,13 @@ export default function ChemicalsLibrary() {
                           {isAdmin && (
                               /* Row 2: Admin Actions */
                               <div className="flex flex-wrap gap-2 mt-2">
-                                  <div className="flex items-center gap-1 flex-1 min-w-[140px]">
+                                  <div className="flex items-center gap-1 flex-1 min-w-[160px]">
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={handleCleanup}
                                         disabled={isCleaning}
-                                        className="flex-1 h-9 px-2 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 font-bold text-[11px] sm:text-xs"
+                                        className="flex-1 min-w-0 h-9 px-2 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 font-bold text-[11px] sm:text-xs"
                                         title="Cleanup Duplicate Inventory Items"
                                     >
                                         {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Trash2 className="w-3.5 h-3.5 mr-1 shrink-0" />}
