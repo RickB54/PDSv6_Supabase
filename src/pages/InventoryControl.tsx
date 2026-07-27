@@ -290,12 +290,27 @@ const InventoryControl = () => {
   }, [equipmentSort]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDilutionModalOpen, setIsDilutionModalOpen] = useState(false);
-  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">(window.innerWidth < 768 ? "portrait" : "landscape");
+  const [chartOrientation, setChartOrientation] = useState<"portrait" | "landscape">("landscape");
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (isDilutionModalOpen) {
+        setChartOrientation(window.innerWidth < 768 ? "portrait" : "landscape");
+      }
+    };
+    if (isDilutionModalOpen) {
+      handleResize();
+      window.addEventListener('resize', handleResize);
+    }
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isDilutionModalOpen]);
+
   const [savingChart, setSavingChart] = useState(false);
+  const [chartSearch, setChartSearch] = useState<string>('');
+  const [isRatiosOnlyModalOpen, setIsRatiosOnlyModalOpen] = useState(false);
   const [hiddenChemicalIds, setHiddenChemicalIds] = useState<string[]>([]);
   const [confirmHideId, setConfirmHideId] = useState<string | null>(null);
   const [chartSort, setChartSort] = useState<string>('brand');
-  const [isRatiosOnlyModalOpen, setIsRatiosOnlyModalOpen] = useState(false);
   const [gallonSize, setGallonSize] = useState<number>(128);
 
   // Expanded state for sections
@@ -484,9 +499,9 @@ const InventoryControl = () => {
       setAutoOpenedFromQuery(true);
     }
     const chart = params.get("chart");
-    if (chart === "interactive" || chart === "modal" || chart === "print" || chart === "pdf") {
+    if (chart === "interactive" || chart === "modal" || chart === "print" || chart === "pdf" || chart === "reference") {
       setIsDilutionModalOpen(true);
-    } else if (chart === "reference") {
+    } else if (chart === "ratios_only") {
       setIsRatiosOnlyModalOpen(true);
     }
   }, [location.search]);
@@ -1967,7 +1982,10 @@ const InventoryControl = () => {
       const key = `${(effectiveName || '').trim().toLowerCase()}_${(effectiveBrand || '').trim().toLowerCase()}`;
       if (!acc[key]) acc[key] = { ...chem, effectiveName, effectiveBrand };
       return acc;
-    }, {} as Record<string, any>));
+    }, {} as Record<string, any>)).filter(c => {
+      const q = chartSearch.toLowerCase();
+      return (c.effectiveName || '').toLowerCase().includes(q) || (c.effectiveBrand || '').toLowerCase().includes(q);
+    });
 
     return (
 <Dialog open={isDilutionModalOpen} onOpenChange={(val) => {
@@ -2028,6 +2046,20 @@ const InventoryControl = () => {
                       <Button variant="ghost" size="icon" onClick={() => { setIsDilutionModalOpen(false); navigate('/dilution-calculator'); }} className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" title="Open Calculator">
                         <Calculator className="h-4 w-4" />
                       </Button>
+                </div>
+                <div className="relative shrink-0">
+                    <Search className="absolute left-2.5 top-1.5 h-4 w-4 text-zinc-500" />
+                    <Input
+                        placeholder="SEARCH CHEMICALS.."
+                        value={chartSearch}
+                        onChange={(e) => setChartSearch(e.target.value)}
+                        className="w-[120px] sm:w-[170px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 text-[9px] sm:text-[10px] uppercase tracking-wider pl-8 pr-8 focus-visible:ring-1 focus-visible:ring-indigo-500 rounded-lg placeholder:text-zinc-600 font-bold"
+                    />
+                    {chartSearch && (
+                        <button onClick={() => setChartSearch("")} className="absolute right-2.5 top-2 text-zinc-500 hover:text-white">
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
                 
                 <Select value={chartSort} onValueChange={setChartSort}>
