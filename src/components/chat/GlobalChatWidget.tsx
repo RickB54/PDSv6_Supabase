@@ -37,20 +37,30 @@ export function GlobalChatWidget() {
 
     // Load identity from storage or auth
     useEffect(() => {
-        const user = getCurrentUser();
-        if (user) {
-            setGuestName(user.name);
-            setGuestEmail(user.email);
-            setIsIdentified(true);
-        } else {
-            const stored = localStorage.getItem('guest_identity');
-            if (stored) {
-                const { name, email } = JSON.parse(stored);
-                setGuestName(name);
-                setGuestEmail(email);
+        const updateIdentity = () => {
+            const user = getCurrentUser();
+            if (user) {
+                setGuestName(user.name);
+                setGuestEmail(user.email);
                 setIsIdentified(true);
+            } else {
+                const stored = localStorage.getItem('guest_identity');
+                if (stored) {
+                    const { name, email } = JSON.parse(stored);
+                    setGuestName(name);
+                    setGuestEmail(email);
+                    setIsIdentified(true);
+                } else {
+                    setGuestName('');
+                    setGuestEmail('');
+                    setIsIdentified(false);
+                }
             }
-        }
+        };
+
+        updateIdentity();
+        window.addEventListener('auth-changed', updateIdentity);
+        return () => window.removeEventListener('auth-changed', updateIdentity);
     }, []);
 
     // Sync messages
