@@ -2010,7 +2010,7 @@ const InventoryControl = () => {
                 </div>
 
                 <div className="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-xl border border-zinc-800">
-                      <Button variant="ghost" size="icon" onClick={() => setChartOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Switch Orientation">
+                      <Button variant="ghost" size="icon" onClick={() => setChartOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" title={`Current: ${chartOrientation === 'portrait' ? 'Portrait' : 'Landscape'} Mode (Click to switch)`}>
                         {chartOrientation === 'landscape' ? <Smartphone className="h-4 w-4" /> : <MonitorSmartphone className="h-4 w-4 rotate-90" />}
                       </Button>
 
