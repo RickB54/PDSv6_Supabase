@@ -231,33 +231,33 @@ export default function ChemicalsLibrary() {
                     </div>
                     <div className="flex flex-col gap-2 w-full lg:w-auto">
                         {/* Row 1: Navigation Tools */}
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/dilution-calculator')} 
-                                className="h-9 px-2 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 font-bold text-[11px] sm:text-xs"
+                                className="flex-1 min-w-[90px] h-9 px-2 sm:px-3 sm:h-10 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 font-bold text-[11px] sm:text-xs"
                             >
                                 <Calculator className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Calc</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/chemical-training')} 
-                                className="h-9 px-2 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 font-bold text-[11px] sm:text-xs"
+                                className="flex-1 min-w-[90px] h-9 px-2 sm:px-3 sm:h-10 border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 text-blue-400 font-bold text-[11px] sm:text-xs"
                             >
                                 <Beaker className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Decision</span>
                             </Button>
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/inventory-control?chart=modal')} 
-                                className="h-9 px-2 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 font-bold text-[11px] sm:text-xs"
+                                className="flex-1 min-w-[90px] h-9 px-2 sm:px-3 sm:h-10 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-600 hover:text-white text-emerald-400 font-bold text-[11px] sm:text-xs"
                             >
                                 <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Ref Chart</span>
                             </Button>
                         </div>
                           {isAdmin && (
                               /* Row 2: Admin Actions */
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                  <div className="flex items-center gap-1 min-w-0">
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                  <div className="flex items-center gap-1 flex-1 min-w-[140px]">
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -266,14 +266,14 @@ export default function ChemicalsLibrary() {
                                         className="flex-1 h-9 px-2 sm:px-3 sm:h-10 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-500 font-bold text-[11px] sm:text-xs"
                                         title="Cleanup Duplicate Inventory Items"
                                     >
-                                        {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Trash2 className="w-3.5 h-3.5 mr-1" />}
-                                        Fix Duplicates
+                                        {isCleaning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Trash2 className="w-3.5 h-3.5 mr-1 shrink-0" />}
+                                        <span className="truncate">Fix Duplicates</span>
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => window.alert("Smart Sync: Fix Duplicates\n\nThis tool merges duplicate records and auto-links unlinked items to their Knowledge Base cards.")}
-                                        className="h-9 w-6 text-amber-500/50 hover:text-amber-400 shrink-0"
+                                        className="h-9 w-7 bg-amber-500/5 border border-amber-500/20 text-amber-500 hover:text-amber-400 shrink-0"
                                     >
                                         <HelpCircle className="w-4 h-4" />
                                     </Button>
@@ -281,14 +281,14 @@ export default function ChemicalsLibrary() {
                                 <Button 
                                     variant="outline"
                                     onClick={() => setShowRicksTips(true)} 
-                                    className="h-9 px-2 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-600 hover:text-white text-purple-400 font-bold text-[11px] sm:text-xs"
+                                    className="flex-1 min-w-[100px] h-9 px-2 sm:px-3 sm:h-10 border-purple-500/30 bg-purple-500/5 hover:bg-purple-600 hover:text-white text-purple-400 font-bold text-[11px] sm:text-xs"
                                 >
                                     <Zap className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Rick's Tips</span>
                                 </Button>
                                 <Button 
                                     variant="outline"
                                     onClick={handlePdfAll}
-                                    className="h-9 px-2 sm:px-3 sm:h-10 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 font-bold text-[11px] sm:text-xs"
+                                    className="flex-1 min-w-[100px] h-9 px-2 sm:px-3 sm:h-10 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 font-bold text-[11px] sm:text-xs"
                                 >
                                     <Printer className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">PDF All</span>
                                 </Button>
@@ -310,7 +310,7 @@ export default function ChemicalsLibrary() {
                                         });
                                         setEditDialogOpen(true);
                                     }} 
-                                    className="h-9 px-2 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[11px] sm:text-[10px]"
+                                    className="flex-1 min-w-[120px] h-9 px-2 sm:px-3 sm:h-10 bg-zinc-100 hover:bg-white text-black font-black uppercase tracking-widest text-[11px] sm:text-[10px]"
                                 >
                                     <Plus className="w-4 h-4 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Add Product</span>
                                 </Button>
