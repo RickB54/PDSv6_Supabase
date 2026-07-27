@@ -5,7 +5,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
-import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool } from "lucide-react";
+import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2 } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -399,34 +399,53 @@ export default function FollowUpCenter() {
                         <HelpCircle className="h-6 w-6" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-[450px] bg-zinc-950 border-zinc-800 text-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.8)] text-sm leading-relaxed z-[200]">
-                       <div className="space-y-4 font-sans">
-                          <h3 className="text-lg font-black text-blue-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Retention Hub Flow</h3>
+                    <TooltipContent side="right" className="max-w-[450px] bg-white border-slate-200 text-slate-900 p-6 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal">
+                       <div className="space-y-4">
+                          <div>
+                            <h4 className="font-bold text-lg text-slate-900 leading-tight">Retention Hub Flow</h4>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1 pb-3 border-b border-slate-100">Cheat Sheet</p>
+                          </div>
                           
-                          <div className="space-y-3">
+                          <div className="space-y-5">
                              <div className="flex gap-3 items-start">
-                                <span className="bg-red-500/20 text-red-500 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">1</span>
-                                <div><strong className="text-red-400 uppercase tracking-wider text-xs">Overdue:</strong> <span className="text-zinc-300">Clients past their scheduled service interval.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Send them an automated follow-up email, call them, or mark them as contacted to clear them out.</span></div>
+                                <div className="shrink-0 mt-0.5"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                                <div>
+                                   <h5 className="font-bold text-slate-900 text-sm mb-1">1. Overdue</h5>
+                                   <p className="text-sm text-slate-600 leading-relaxed">Clients past their scheduled service interval. <strong>Action:</strong> Send them an automated follow-up email, call them, or mark them as contacted to clear them out.</p>
+                                </div>
                              </div>
                              
                              <div className="flex gap-3 items-start">
-                                <span className="bg-amber-500/20 text-amber-500 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">2</span>
-                                <div><strong className="text-amber-400 uppercase tracking-wider text-xs">Due Soon:</strong> <span className="text-zinc-300">Clients approaching their service interval.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Proactively reach out to get them on the schedule before their car gets too dirty.</span></div>
+                                <div className="shrink-0 mt-0.5"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                                <div>
+                                   <h5 className="font-bold text-slate-900 text-sm mb-1">2. Due Soon</h5>
+                                   <p className="text-sm text-slate-600 leading-relaxed">Clients approaching their service interval. <strong>Action:</strong> Proactively reach out to get them on the schedule before their car gets too dirty.</p>
+                                </div>
                              </div>
 
                              <div className="flex gap-3 items-start">
-                                <span className="bg-purple-500/20 text-purple-400 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">3</span>
-                                <div><strong className="text-purple-400 uppercase tracking-wider text-xs">Prospects:</strong> <span className="text-zinc-300">New leads who haven't booked yet.</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Nurture them! Send an estimate, write a custom letter, or schedule a booking to officially convert them to a Customer.</span></div>
+                                <div className="shrink-0 mt-0.5"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                                <div>
+                                   <h5 className="font-bold text-slate-900 text-sm mb-1">3. Prospects</h5>
+                                   <p className="text-sm text-slate-600 leading-relaxed">New leads who haven't booked yet. <strong>Action:</strong> Nurture them! Send an estimate, write a custom letter, or schedule a booking to officially convert them to a Customer.</p>
+                                </div>
                              </div>
 
                              <div className="flex gap-3 items-start">
-                                <span className="bg-blue-500/20 text-blue-400 w-6 h-6 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 text-xs">4</span>
-                                <div><strong className="text-blue-400 uppercase tracking-wider text-xs">Lost Prospects:</strong> <span className="text-zinc-300">Prospects who declined or went cold (Toggle "Show Lost").</span><br/><span className="text-emerald-400/90 text-xs font-semibold">Action:</span> <span className="text-zinc-400 text-xs">Try re-engaging them later with a discount or restore them to active prospects.</span></div>
+                                <div className="shrink-0 mt-0.5"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                                <div>
+                                   <h5 className="font-bold text-slate-900 text-sm mb-1">4. Lost Prospects</h5>
+                                   <p className="text-sm text-slate-600 leading-relaxed">Prospects who declined or went cold (Toggle "Show Lost"). <strong>Action:</strong> Try re-engaging them later with a discount or restore them to active prospects.</p>
+                                </div>
                              </div>
-                          </div>
 
-                          <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-400 bg-zinc-900/50 p-3 rounded-lg mt-2">
-                             <strong className="text-white">Quick Actions:</strong> You can apply coupons, write custom letters, schedule bookings, or snooze reminders directly from each client card. Use the search bar to find anyone instantly.
+                             <div className="flex gap-3 items-start">
+                                <div className="shrink-0 mt-0.5"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                                <div>
+                                   <h5 className="font-bold text-slate-900 text-sm mb-1">Quick Actions</h5>
+                                   <p className="text-sm text-slate-600 leading-relaxed">You can apply coupons, write custom letters, schedule bookings, or snooze reminders directly from each client card. Use the search bar to find anyone instantly.</p>
+                                </div>
+                             </div>
                           </div>
                        </div>
                     </TooltipContent>
