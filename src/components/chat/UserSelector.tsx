@@ -9,9 +9,10 @@ interface UserSelectorProps {
     onSelectRecipient: (email: string | null) => void;
     selectedRecipient: string | null;
     onlineUsers: OnlineUser[];
+    offlineUsers?: OnlineUser[];
 }
 
-export function UserSelector({ currentUserEmail, onSelectRecipient, selectedRecipient, onlineUsers }: UserSelectorProps) {
+export function UserSelector({ currentUserEmail, onSelectRecipient, selectedRecipient, onlineUsers, offlineUsers = [] }: UserSelectorProps) {
     // Deprecated: Internal presence tracking removed in favor of passed prop
     // const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]); 
 
@@ -37,11 +38,22 @@ export function UserSelector({ currentUserEmail, onSelectRecipient, selectedReci
                     {(onlineUsers || [])
                         .filter(user => user.email !== currentUserEmail)
                         .map((user) => (
-                            <SelectItem key={user.email} value={user.email}>
+                            <SelectItem key={`online-${user.email}`} value={user.email}>
                                 <div className="flex items-center gap-2">
                                     <Circle className="h-2 w-2 fill-green-500 text-green-500" />
                                     <span>{user.name || user.email}</span>
                                     {user.role && <span className="text-xs text-muted-foreground">({user.role})</span>}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    {(offlineUsers || [])
+                        .filter(user => user.email !== currentUserEmail && !onlineUsers.some(ou => ou.email === user.email))
+                        .map((user) => (
+                            <SelectItem key={`offline-${user.email}`} value={user.email}>
+                                <div className="flex items-center gap-2 opacity-60">
+                                    <Circle className="h-2 w-2 text-muted-foreground" />
+                                    <span>{user.name || user.email}</span>
+                                    <span className="text-xs text-muted-foreground">(Offline)</span>
                                 </div>
                             </SelectItem>
                         ))}

@@ -206,6 +206,24 @@ export function GlobalChatWidget() {
         return false;
     });
 
+    const userRole = getCurrentUser()?.role;
+    const isAdminOrEmployee = userRole === 'admin' || userRole === 'employee';
+
+    const offlineUsersMap = new Map<string, any>();
+    messages.forEach(m => {
+        if (m.sender_email && m.sender_email !== guestEmail) {
+            if (!onlineUsers.some(ou => ou.email === m.sender_email)) {
+                offlineUsersMap.set(m.sender_email, {
+                    email: m.sender_email,
+                    name: m.sender_name || m.sender_email.split('@')[0],
+                    role: 'guest',
+                    online_at: m.created_at,
+                });
+            }
+        }
+    });
+    const offlineUsers = Array.from(offlineUsersMap.values());
+
     // Drag functionality
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const isDraggingRef = useRef(false);
@@ -390,7 +408,19 @@ export function GlobalChatWidget() {
                                             <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm ${isMe ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted text-foreground rounded-bl-none'
                                                     }`}>
-                                                    {!isMe && <p className="text-[10px] font-bold opacity-70 mb-1">{m.sender_name}</p>}
+                                                    {!isMe && (
+                                                        <div className="flex items-center justify-between mb-1 gap-4">
+                                                            <p className="text-[10px] font-bold opacity-70">{m.sender_name}</p>
+                                                            {isAdminOrEmployee && (
+                                                                <button 
+                                                                    onClick={() => setSelectedRecipient(m.sender_email)}
+                                                                    className="text-[9px] text-blue-500 hover:underline opacity-80 hover:opacity-100 uppercase tracking-wider font-bold"
+                                                                >
+                                                                    Reply
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <p>{m.content}</p>
                                                     <p className="text-[9px] opacity-60 text-right mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                                                 </div>
@@ -400,14 +430,17 @@ export function GlobalChatWidget() {
                                 </div>
 
                                 {/* Recipient Selector */}
-                                <div className="mb-2 px-1">
-                                    <UserSelector
-                                        currentUserEmail={guestEmail}
-                                        onSelectRecipient={setSelectedRecipient}
-                                        selectedRecipient={selectedRecipient}
-                                        onlineUsers={onlineUsers}
-                                    />
-                                </div>
+                                {isAdminOrEmployee && (
+                                    <div className="mb-2 px-1">
+                                        <UserSelector
+                                            currentUserEmail={guestEmail}
+                                            onSelectRecipient={setSelectedRecipient}
+                                            selectedRecipient={selectedRecipient}
+                                            onlineUsers={onlineUsers}
+                                            offlineUsers={offlineUsers}
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="mt-4 flex gap-2 pt-2 border-t">
                                     <Input
