@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
-import { toast } from '@/components/ui/use-toast';
 
 export function ChatAudioAlert() {
     const [user, setUser] = useState(getCurrentUser());
@@ -85,7 +84,6 @@ export function ChatAudioAlert() {
         const handleTest = () => {
             console.log("🔔 TEST TRIGGERED");
             playSound();
-            toast({ title: "Test Alert", description: "This is a test notification." });
             sendDesktopNotification("Test Notification", "This is how alerts will appear outside the browser.");
         };
         window.addEventListener('test-chat-alert', handleTest);
@@ -146,14 +144,6 @@ export function ChatAudioAlert() {
 
                         // 3. Window Event
                         window.dispatchEvent(new CustomEvent('new-chat-alert'));
-
-                        // 4. Toast (The Real One)
-                        toast({
-                            title: "New Message",
-                            description: `From: ${newMsg.sender_name || 'Guest'}`,
-                            className: "bg-emerald-600 text-white border-none",
-                            duration: 4000
-                        });
 
                         // 5. Tab Blink
                         let count = 0;
