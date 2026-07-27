@@ -98,9 +98,23 @@ export function GlobalChatWidget() {
 
                 // If closed and msg is for me (or public), show badge
                 const myEmail = guestEmail.toLowerCase();
+                
+                // If I am a guest, only show badge if the message is to me or sent by me.
+                const userRole = getCurrentUser()?.role;
+                const isAdmin = userRole === 'admin' || userRole === 'employee';
+                
                 const isForMe = newMsg.recipient_email?.toLowerCase() === myEmail || newMsg.sender_email?.toLowerCase() === myEmail;
-                // Or if I'm a guest, I should see replies from admins (who might send to null or me)
-                if (!isOpen) setHasUnread(true);
+                
+                if (!isOpen) {
+                    if (isAdmin || isForMe) {
+                        setHasUnread(true);
+                    }
+                }
+
+                // Auto-select guest if I am admin and someone sends a message
+                if (isAdmin && newMsg.sender_email && newMsg.sender_email.toLowerCase() !== myEmail) {
+                    setSelectedRecipient(newMsg.sender_email);
+                }
             })
             .subscribe();
 

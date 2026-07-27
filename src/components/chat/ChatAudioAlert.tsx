@@ -97,12 +97,13 @@ export function ChatAudioAlert() {
         // user state might be null if we are a Guest, so check localStorage too
         const checkIdentity = () => {
             const u = getCurrentUser();
-            if (u) return { email: u.email, name: u.name || '' };
+            if (u) return { email: u.email, name: u.name || '', role: u.role };
 
             const raw = localStorage.getItem('guest_identity');
             if (raw) {
                 try {
-                    return JSON.parse(raw); // { name, email }
+                    const parsed = JSON.parse(raw);
+                    return { email: parsed.email, name: parsed.name, role: 'guest' };
                 } catch { }
             }
             return null;
@@ -124,10 +125,15 @@ export function ChatAudioAlert() {
                 const isSenderMe = sender === myEmail;
                 const isDirectlyForMe = recipient === myEmail;
                 const isPublic = !recipient;
+                
+                const userRole = currentIdentity.role;
+                const isAdminOrEmployee = userRole === 'admin' || userRole === 'employee';
 
                 if (!isSenderMe) {
-                    if (isDirectlyForMe || isPublic) {
-                        console.log("🔔 NOTIFICATION MATCHED!", { myEmail, sender });
+                    const shouldAlert = isDirectlyForMe || (isPublic && isAdminOrEmployee);
+                    
+                    if (shouldAlert) {
+                        console.log("ðŸ”” NOTIFICATION MATCHED!", { myEmail, sender });
 
                         // 1. Audio
                         playSound();
