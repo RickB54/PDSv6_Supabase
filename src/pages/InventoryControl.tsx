@@ -2005,56 +2005,29 @@ const InventoryControl = () => {
                 </div>
 
                 <div className="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-xl border border-zinc-800">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => setChartOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800">
-                            {chartOrientation === 'landscape' ? <Smartphone className="h-4 w-4" /> : <MonitorSmartphone className="h-4 w-4 rotate-90" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Switch Orientation</TooltipContent>
-                      </Tooltip>
+                      <Button variant="ghost" size="icon" onClick={() => setChartOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait')} className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Switch Orientation">
+                        {chartOrientation === 'landscape' ? <Smartphone className="h-4 w-4" /> : <MonitorSmartphone className="h-4 w-4 rotate-90" />}
+                      </Button>
 
                       <div className="w-px h-4 bg-zinc-800 mx-1" />
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => setIsRatiosOnlyModalOpen(true)} className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Show Ratios Only</TooltipContent>
-                      </Tooltip>
+                      <Button variant="ghost" size="icon" onClick={() => setIsRatiosOnlyModalOpen(true)} className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10" title="Show Ratios Only">
+                        <Eye className="h-4 w-4" />
+                      </Button>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { if (typeof printDilutionChart === 'function') printDilutionChart(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800">
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Print Chart</TooltipContent>
-                      </Tooltip>
+                      <Button variant="ghost" size="icon" onClick={() => { if (typeof printDilutionChart === 'function') printDilutionChart(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800" title="Print Chart">
+                        <Printer className="h-4 w-4" />
+                      </Button>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { if (typeof downloadDilutionPDF === 'function') downloadDilutionPDF(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800">
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Export PDF</TooltipContent>
-                      </Tooltip>
+                      <Button variant="ghost" size="icon" onClick={() => { if (typeof downloadDilutionPDF === 'function') downloadDilutionPDF(); }} className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-800" title="Export PDF">
+                        <Download className="h-4 w-4" />
+                      </Button>
 
                       <div className="w-px h-4 bg-zinc-800 mx-1" />
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => { setIsDilutionModalOpen(false); navigate('/dilution-calculator'); }} className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10">
-                            <Calculator className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Open Calculator</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                      <Button variant="ghost" size="icon" onClick={() => { setIsDilutionModalOpen(false); navigate('/dilution-calculator'); }} className="h-8 w-8 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" title="Open Calculator">
+                        <Calculator className="h-4 w-4" />
+                      </Button>
                 </div>
                 
                 <Select value={chartSort} onValueChange={setChartSort}>
@@ -2082,18 +2055,8 @@ const InventoryControl = () => {
           </div>
           <div className="flex-1 p-1 sm:p-2 bg-zinc-50/50 flex flex-col min-h-0 overflow-hidden">
             <div className={`${chartOrientation === 'landscape' ? 'max-w-full' : 'max-w-4xl'} mx-auto w-full bg-white shadow-sm border border-zinc-200 rounded-xl overflow-hidden p-1 flex flex-col min-h-0`}>
-              {/* TOP SYNC SCROLLBAR */}
-              <div className="flex items-center justify-between mb-1 px-1">
-                <div 
-                  className={`overflow-x-auto h-4 bg-zinc-100 border border-zinc-200 rounded-sm shrink-0 chart-top-scroll-container flex-1`} 
-                  onScroll={(e) => {
-                    const bottom = e.currentTarget.parentElement?.nextElementSibling?.querySelector('.chart-bottom-scroll-container');
-                    if (bottom) bottom.scrollLeft = e.currentTarget.scrollLeft;
-                  }}
-                >
-                  <div style={{ width: chartOrientation === 'landscape' ? '1100px' : '850px', height: '1px' }} />
-                </div>
-                {hiddenChemicalIds.length > 0 && (
+              {hiddenChemicalIds.length > 0 && (
+                <div className="flex items-center justify-end mb-1 px-1">
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -2102,8 +2065,8 @@ const InventoryControl = () => {
                   >
                     Show {hiddenChemicalIds.length} Hidden
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
               
               <div 
                 className="flex-1 overflow-auto border border-zinc-300 rounded-lg chart-bottom-scroll-container pb-4"
@@ -2112,7 +2075,7 @@ const InventoryControl = () => {
                   if (top) top.scrollLeft = e.currentTarget.scrollLeft;
                 }}
               >
-                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[10px] min-w-[850px]'}`}>
+                <table className={`w-full border-collapse border border-zinc-300 ${chartOrientation === 'landscape' ? 'text-[9px] min-w-[1100px]' : 'text-[10px] min-w-[650px]'}`}>
                   <thead className="sticky top-0 z-30 bg-white shadow-sm ring-1 ring-zinc-300">
                     <tr className="bg-zinc-100 font-bold uppercase border-b-2 border-zinc-300">
                       <th rowSpan={2} className={`p-1 border border-zinc-300 text-left sticky left-0 z-40 bg-zinc-100 ${chartOrientation === 'landscape' ? 'w-[12%]' : 'w-[80px]'}`}>Product</th>
@@ -2152,14 +2115,14 @@ const InventoryControl = () => {
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
-                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[45px] sm:min-w-[55px]">
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[35px] sm:min-w-[45px]">
                         <span className="text-[9px] font-black text-amber-900 leading-none">{Number((gallonSize/128).toFixed(2))}G</span>
                       </th>
                       <th className="p-1 border-l-4 border-zinc-300/80 border-r border-zinc-300">Ratio</th>
                       <th className="p-1 border border-zinc-300 text-emerald-600">16oz</th>
                       <th className="p-1 border border-zinc-300 text-blue-600">24oz</th>
                       <th className="p-1 border border-zinc-300 text-purple-600">32oz</th>
-                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[45px] sm:min-w-[55px]">
+                      <th className="p-0 border border-zinc-300 bg-amber-500/10 min-w-[35px] sm:min-w-[45px]">
                         <span className="text-[9px] font-black text-amber-900 leading-none">{Number((gallonSize/128).toFixed(2))}G</span>
                       </th>
                     </tr>
@@ -2253,7 +2216,6 @@ const InventoryControl = () => {
                                            }}
                                           className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : (ozSize === 16 ? 'text-emerald-600' : ozSize === 24 ? 'text-blue-600' : ozSize === 32 ? 'text-purple-600' : 'text-zinc-900')}`}
                                         />
-                                       <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
                                    </div>
                                    <div className="h-[16px] flex items-center justify-center bg-white group relative">
                                        <input 
@@ -2271,7 +2233,6 @@ const InventoryControl = () => {
                                            }}
                                           className={`w-full h-full bg-transparent border-none text-center font-bold outline-none text-[11px] focus:bg-indigo-50 ${isCustom ? 'text-indigo-600' : (ozSize === 16 ? 'text-emerald-600' : ozSize === 24 ? 'text-blue-600' : ozSize === 32 ? 'text-purple-600' : 'text-zinc-900')}`}
                                         />
-                                       <span className="absolute right-0.5 text-[7px] text-zinc-300 font-normal pointer-events-none">oz</span>
                                    </div>
                                  </>
                                ) : '-'}
