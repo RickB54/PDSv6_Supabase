@@ -32,6 +32,8 @@ export const QuickPricingEditorModal = ({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkPrice, setBulkPrice] = useState("");
   const [bulkMode, setBulkMode] = useState<"$" | "%">("$");
+  const [showAllPackages, setShowAllPackages] = useState(false);
+  const [showAllAddons, setShowAllAddons] = useState(false);
   
   React.useEffect(() => {
     if (open) {
@@ -205,7 +207,23 @@ export const QuickPricingEditorModal = ({
           <div className="space-y-10">
             {/* Packages */}
             <div>
-              <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 border-b border-zinc-800 pb-2">Packages</h3>
+              <div className="flex items-center justify-between mb-4 border-b border-zinc-800 pb-2">
+                <h3 className="text-xl font-black text-white uppercase tracking-wider">Packages</h3>
+                <div className="flex bg-zinc-900 rounded-md p-1 border border-zinc-800">
+                  <button 
+                    onClick={() => setShowAllPackages(false)} 
+                    className={`px-3 py-1 text-xs font-bold rounded ${!showAllPackages ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  >
+                    Show Live Service Packages
+                  </button>
+                  <button 
+                    onClick={() => setShowAllPackages(true)} 
+                    className={`px-3 py-1 text-xs font-bold rounded ${showAllPackages ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  >
+                    Show ALL Service Packages
+                  </button>
+                </div>
+              </div>
               <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
@@ -219,8 +237,8 @@ export const QuickPricingEditorModal = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {packages.map(pkg => (
-                      <tr key={pkg.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors">
+                    {packages.filter(pkg => showAllPackages || !pkg.isArchived).map(pkg => (
+                      <tr key={pkg.id} className={`border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors ${pkg.isArchived ? 'opacity-50 grayscale' : ''}`}>
                         <td className="p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`package:${pkg.id}:${v}`))}
@@ -228,7 +246,10 @@ export const QuickPricingEditorModal = ({
                             className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-blue-400 text-base">{pkg.name}</td>
+                        <td className="p-4 font-black text-blue-400 text-base">
+                          {pkg.name}
+                          {pkg.isArchived && <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
+                        </td>
                         {vehicleTypes.map(v => {
                           const key = `package:${pkg.id}:${v}`;
                           return (
@@ -266,7 +287,23 @@ export const QuickPricingEditorModal = ({
 
             {/* Addons */}
             <div>
-              <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 border-b border-zinc-800 pb-2">Add-Ons</h3>
+              <div className="flex items-center justify-between mb-4 border-b border-zinc-800 pb-2">
+                <h3 className="text-xl font-black text-white uppercase tracking-wider">Add-Ons</h3>
+                <div className="flex bg-zinc-900 rounded-md p-1 border border-zinc-800">
+                  <button 
+                    onClick={() => setShowAllAddons(false)} 
+                    className={`px-3 py-1 text-xs font-bold rounded ${!showAllAddons ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  >
+                    Show Live Add-Ons
+                  </button>
+                  <button 
+                    onClick={() => setShowAllAddons(true)} 
+                    className={`px-3 py-1 text-xs font-bold rounded ${showAllAddons ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                  >
+                    Show ALL Add-Ons
+                  </button>
+                </div>
+              </div>
               <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
                   <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
@@ -280,8 +317,8 @@ export const QuickPricingEditorModal = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {addons.map(addon => (
-                      <tr key={addon.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors">
+                    {addons.filter(addon => showAllAddons || !addon.isArchived).map(addon => (
+                      <tr key={addon.id} className={`border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors ${addon.isArchived ? 'opacity-50 grayscale' : ''}`}>
                         <td className="p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`addon:${addon.id}:${v}`))}
@@ -289,7 +326,10 @@ export const QuickPricingEditorModal = ({
                             className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-purple-400 text-base">{addon.name}</td>
+                        <td className="p-4 font-black text-purple-400 text-base">
+                          {addon.name}
+                          {addon.isArchived && <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
+                        </td>
                         {vehicleTypes.map(v => {
                           const key = `addon:${addon.id}:${v}`;
                           return (

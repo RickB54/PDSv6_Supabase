@@ -4633,8 +4633,8 @@ export default function PackagePricing() {
       <QuickPricingEditorModal
         open={quickEditorOpen}
         onOpenChange={setQuickEditorOpen}
-        packages={[...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted)}
-        addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted)}
+        packages={[...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted).map(p => ({ ...p, isArchived: getPackageMeta(p.id)?.visible === false }))}
+        addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted).map(a => ({ ...a, isArchived: getAddOnMeta(a.id)?.visible === false }))}
         currentPrices={currentPrices}
         onDownloadAuditPDF={generatePriceAuditPDF}
         onDownloadPricesPDF={downloadPricesPDF}
