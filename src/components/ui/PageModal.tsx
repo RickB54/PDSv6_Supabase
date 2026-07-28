@@ -16,7 +16,7 @@ interface PageModalProps {
 export function PageModal({ isOpen, onClose, initialUrl, component: Component, title, icon }: PageModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 bg-zinc-950 border-zinc-800 flex flex-col overflow-hidden">
+      <DialogContent className="dark-theme max-w-[95vw] w-full h-[95vh] p-0 bg-zinc-950 border-zinc-800 flex flex-col overflow-hidden">
         <DialogHeader className="p-4 border-b border-zinc-800 flex flex-row items-center justify-between shrink-0">
           <DialogTitle className="flex items-center gap-2 text-zinc-100">
             {icon}
