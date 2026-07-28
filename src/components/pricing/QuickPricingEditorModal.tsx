@@ -16,7 +16,8 @@ export const QuickPricingEditorModal = ({
   addons, 
   currentPrices, 
   onSavePrices,
-  onDownloadAuditPDF
+  onDownloadAuditPDF,
+  onDownloadPricesPDF
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
