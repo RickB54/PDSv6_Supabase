@@ -151,6 +151,7 @@ export default function PackagePricing() {
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<string>("current");
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
+  const [isVehicleSticky, setIsVehicleSticky] = useState<boolean>(true);
   const [vehicleOptions, setVehicleOptions] = useState<string[]>(builtInSizes);
   const [vehicleLabels, setVehicleLabels] = useState<Record<string, string>>({
     compact: "Compact/Sedan (Small cars and sedans)",
@@ -3141,18 +3142,32 @@ export default function PackagePricing() {
         </div>
 
         {/* Vehicle Type Selector - Front and Center above the services */}
-        <div className="flex items-center gap-4 bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 shadow-lg">
-          <Label className="text-white text-xl font-black uppercase tracking-tight">Active Vehicle Pricing Category:</Label>
-          <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
-            <SelectTrigger className="w-80 bg-black border-red-600/30 text-white text-lg font-bold h-12 hover:border-red-600 transition-colors">
-              <SelectValue placeholder="Select vehicle" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-              {vehicleOptions.map((opt) => (
-                <SelectItem key={opt} value={opt} className="font-bold">{vehicleLabels[opt] || opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className={cn(
+          "flex items-center justify-between gap-4 bg-zinc-900/50 p-6 rounded-xl border border-zinc-800 shadow-lg z-40 transition-all duration-300",
+          isVehicleSticky ? "sticky top-4 backdrop-blur-md bg-zinc-900/90 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)]" : ""
+        )}>
+          <div className="flex items-center gap-4">
+            <Label className="text-white text-xl font-black uppercase tracking-tight">Active Vehicle Pricing Category:</Label>
+            <Select value={vehicleType} onValueChange={(v) => setVehicleType(v)}>
+              <SelectTrigger className="w-80 bg-black border-red-600/30 text-white text-lg font-bold h-12 hover:border-red-600 transition-colors">
+                <SelectValue placeholder="Select vehicle" />
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                {vehicleOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="font-bold">{vehicleLabels[opt] || opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-3">
+            <Label className="text-zinc-400 text-sm font-bold uppercase tracking-widest cursor-pointer" htmlFor="sticky-toggle">Sticky Mode</Label>
+            <Switch
+              id="sticky-toggle"
+              checked={isVehicleSticky}
+              onCheckedChange={setIsVehicleSticky}
+              className="data-[state=checked]:bg-green-600"
+            />
+          </div>
         </div>
 
         {/* Packages grid */}
