@@ -978,7 +978,7 @@ Precision. Protection. Perfection.`;
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20 overflow-x-hidden w-full">
+        <div className="min-h-screen bg-background pb-20">
             <PageHeader title="Estimates" />
 
             <Dialog open={isEmailModalOpen} onOpenChange={setIsEmailModalOpen}>
