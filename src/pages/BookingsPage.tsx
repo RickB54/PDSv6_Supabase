@@ -80,8 +80,9 @@ const mapToServiceVehicleType = (type: string = "", make: string = "", model: st
   return 'compact'; // default
 };
 
-export default function BookingsPage() {
+export default function BookingsPage({ onModalClose }: { onModalClose?: () => void }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { items, add, update, remove, refresh, subscribeRealtime } = useBookingsStore();
   const { items: coupons, refresh: refreshCoupons } = useCouponsStore();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -89,6 +90,16 @@ export default function BookingsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [analyticsDefaultTab, setAnalyticsDefaultTab] = useState<string | undefined>(undefined);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleCloseBookingModal = () => {
+    setSelectedBooking(null);
+    setSelectedCustomer(null);
+    setIsAddModalOpen(false);
+    const params = new URLSearchParams(location.search);
+    if (params.get('add') === 'true' && onModalClose) {
+      onModalClose();
+    }
+  };
   const hasInitialized = useRef(false);
   const [showClassificationModal, setShowClassificationModal] = useState(false);
   const lastHandledBookingId = useRef<string | null>(null);
@@ -749,7 +760,6 @@ export default function BookingsPage() {
   }, [loadUnifiedEvents]);
 
   // Handle URL query parameters for pre-filling booking form
-  const location = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const shouldAdd = params.get('add') === 'true';
@@ -1292,7 +1302,7 @@ export default function BookingsPage() {
     // 1. Validation Logic
     if (isDemoMode) {
       toast.info("Demo Mode (Read-Only): Booking simulation successful. No data was saved.");
-      setIsAddModalOpen(false);
+      handleCloseBookingModal();
       return;
     }
 
@@ -1570,7 +1580,7 @@ export default function BookingsPage() {
       // Final cleanup and close
       // Final cleanup and close
       console.log("Save complete, closing modal...");
-      setIsAddModalOpen(false);
+      handleCloseBookingModal();
       
       if (triggerEmailSend) {
         setSelectedBooking(resultingBooking);
@@ -1638,7 +1648,7 @@ export default function BookingsPage() {
       
       toast.success("Booking cancelled and customer notified.");
       setIsCancelConfirmOpen(false);
-      setIsAddModalOpen(false);
+      handleCloseBookingModal();
       setCancelReason("");
     } catch (err) {
       console.error("Failed to cancel booking:", err);
@@ -2446,7 +2456,13 @@ export default function BookingsPage() {
         }
 
         {/* Booking Dialog */}
-        <Dialog open={isAddModalOpen} onOpenChange={(open) => { if (!open) { setSelectedBooking(null); setSelectedCustomer(null); } setIsAddModalOpen(open); }}>
+        <Dialog open={isAddModalOpen} onOpenChange={(open) => { 
+          if (!open) { 
+            handleCloseBookingModal();
+          } else {
+            setIsAddModalOpen(true); 
+          }
+        }}>
           <DialogContent className="w-[95vw] max-w-[500px] max-h-[85vh] flex flex-col bg-zinc-950 border-zinc-800 p-0">
             <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 shrink-0 border-b border-zinc-800/50 bg-zinc-900/20">
               <div className="flex items-center justify-between gap-4">
@@ -2488,7 +2504,7 @@ export default function BookingsPage() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => setIsAddModalOpen(false)}
+                    onClick={() => handleCloseBookingModal()}
                     className="h-10 w-10 text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
                     title="Close"
                   >
@@ -4381,7 +4397,7 @@ export default function BookingsPage() {
                   try {
                     await remove(selectedBooking.id);
                     toast.success("Booking deleted");
-                    setIsAddModalOpen(false);
+                    handleCloseBookingModal();
                     setSelectedBooking(null);
                     setSelectedCustomer(null);
                     // Refresh unified events to ensure history updates
