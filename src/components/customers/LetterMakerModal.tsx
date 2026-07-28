@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import LetterMaker from '@/pages/LetterMaker';
 import { PenTool } from 'lucide-react';
@@ -22,11 +22,9 @@ export function LetterMakerModal({ isOpen, onClose, customerId }: LetterMakerMod
         </DialogHeader>
         <div className="flex-1 overflow-y-auto relative">
           {isOpen && (
-            <MemoryRouter initialEntries={[`/?customerId=${customerId}`]}>
-              <Routes>
+              <Routes location={`/?customerId=${customerId}`}>
                 <Route path="/" element={<LetterMaker />} />
               </Routes>
-            </MemoryRouter>
           )}
         </div>
       </DialogContent>

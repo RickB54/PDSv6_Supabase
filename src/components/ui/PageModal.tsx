@@ -1,5 +1,5 @@
 import React from 'react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,11 +36,9 @@ export function PageModal({ isOpen, onClose, initialUrl, component: Component, t
         </DialogHeader>
         <div className="flex-1 overflow-y-auto relative bg-zinc-950">
           {isOpen && (
-            <MemoryRouter initialEntries={[initialUrl]}>
-              <Routes>
+              <Routes location={initialUrl}>
                 <Route path="*" element={<Component />} />
               </Routes>
-            </MemoryRouter>
           )}
         </div>
       </DialogContent>
