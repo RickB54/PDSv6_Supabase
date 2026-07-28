@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { BookingsAnalytics } from "@/components/bookings/BookingsAnalytics";
 import { EmployeeAnalyticsPanel } from "@/components/analytics/EmployeeAnalyticsPanel";
+import { BusinessIntelligencePanel } from "@/components/analytics/BusinessIntelligencePanel";
 import { useBookingsStore } from "@/store/bookings";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { PageHeader } from "@/components/PageHeader";
@@ -18,9 +19,12 @@ export default function BookingsAnalyticsPage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [estimates, setEstimates] = useState<any[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'crm' | 'employees'>(() =>
-        new URLSearchParams(window.location.search).get('tab') === 'employees' ? 'employees' : 'crm'
-    );
+    const [activeTab, setActiveTab] = useState<'crm' | 'bi' | 'employees'>(() => {
+        const tab = new URLSearchParams(window.location.search).get('tab');
+        if (tab === 'employees') return 'employees';
+        if (tab === 'bi') return 'bi';
+        return 'crm';
+    });
 
     const fetchData = useCallback(async (showToast = false) => {
         setIsRefreshing(true);
@@ -66,27 +70,37 @@ export default function BookingsAnalyticsPage() {
             
             <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
                 {/* Tab Switcher */}
-                <div className="px-4 sm:px-6 flex gap-2">
+                <div className="px-4 sm:px-6 flex gap-2 overflow-x-auto no-scrollbar">
                     <button
-                    onClick={() => setActiveTab('crm')}
-                    className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === 'crm'
-                            ? 'border-indigo-500 text-white'
-                            : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                    }`}
-                >
-                    CRM &amp; Analytics
-                </button>
-                <button
-                    onClick={() => setActiveTab('employees')}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === 'employees'
-                            ? 'border-indigo-500 text-white'
-                            : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                    }`}
-                >
-                    <Users className="h-3.5 w-3.5" /> Employees
-                </button>
+                        onClick={() => setActiveTab('crm')}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                            activeTab === 'crm'
+                                ? 'border-indigo-500 text-white'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        CRM &amp; Analytics
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('bi')}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                            activeTab === 'bi'
+                                ? 'border-emerald-500 text-emerald-400'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        <Target className="w-3.5 h-3.5" /> Business Intelligence
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('employees')}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                            activeTab === 'employees'
+                                ? 'border-indigo-500 text-white'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        <Users className="h-3.5 w-3.5" /> Employees
+                    </button>
                 </div>
                 
                 {/* PORTAL TARGET FOR BUSINESS INTELLIGENCE STICKY HEADER */}
@@ -97,6 +111,9 @@ export default function BookingsAnalyticsPage() {
             <div className="p-4 sm:p-6 space-y-6">
                 {activeTab === 'crm' && (
                     <BookingsAnalytics bookings={items} customers={customers} invoices={invoices} estimates={estimates} onRefresh={() => fetchData(true)} isRefreshing={isRefreshing} />
+                )}
+                {activeTab === 'bi' && (
+                    <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
                 )}
                 {activeTab === 'employees' && (
                     <EmployeeAnalyticsPanel />

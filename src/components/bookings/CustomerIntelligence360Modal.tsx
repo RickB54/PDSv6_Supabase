@@ -10,12 +10,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import { 
+  Command, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandInput, 
+  CommandItem, 
+  CommandList 
+} from "@/components/ui/command";
 import { 
   Card, 
   CardContent, 
@@ -61,7 +67,9 @@ import {
   UserCheck,
   Building,
   Target,
-  X
+  X,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { getCustomerDetailedHistory } from "@/lib/supa-data";
@@ -86,26 +94,38 @@ const mapToServiceVehicleType = (type: string = ""): VehicleType => {
 interface CustomerIntelligence360ModalProps {
   customers: any[];
   trigger?: React.ReactNode;
+  inline?: boolean;
 }
 
-export function CustomerIntelligence360Modal({ customers, trigger }: CustomerIntelligence360ModalProps) {
+export function CustomerIntelligence360Modal({ customers, trigger, inline = false }: CustomerIntelligence360ModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [historyData, setHistoryData] = useState<any>(null);
+  
+  // Combobox states
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  
+  // Filter state
+  const [customerFilter, setCustomerFilter] = useState<'all' | 'customer' | 'prospect'>('all');
 
-  // Sorting customers alphabetically
-  const sortedCustomers = useMemo(() => {
-    return [...customers].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [customers]);
+  // Sorting customers alphabetically and applying filter
+  const filteredCustomers = useMemo(() => {
+    let result = [...customers];
+    if (customerFilter !== 'all') {
+      result = result.filter(c => (c.type || 'customer').toLowerCase() === customerFilter);
+    }
+    return result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [customers, customerFilter]);
 
   useEffect(() => {
-    if (selectedCustomerId && isOpen) {
+    if (selectedCustomerId && (isOpen || inline)) {
       loadCustomerData(selectedCustomerId);
     } else {
       setHistoryData(null);
     }
-  }, [selectedCustomerId, isOpen]);
+  }, [selectedCustomerId, isOpen, inline]);
 
   const loadCustomerData = async (id: string) => {
     setLoading(true);
@@ -223,54 +243,116 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [historyData]);
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-blue-400">
-            <Target className="w-4 h-4" />
-            Customer Intelligence 360
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 p-0 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-emerald-500 to-pink-500 z-50" />
-        
+  const content = (
+    <>
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-emerald-500 to-pink-500 z-50" />
+      
+      {!inline && (
         <DialogClose className="absolute right-2 top-2 z-[150] rounded-full p-3 bg-red-600 text-white hover:bg-red-700 transition-all shadow-2xl scale-110 md:scale-100">
           <X className="w-6 h-6" />
           <span className="sr-only">Close Modal</span>
         </DialogClose>
+      )}
 
-        <DialogHeader className="p-6 pb-2">
+      <div className={cn("p-6 pb-2", inline ? "pt-8" : "")}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pr-10 md:pr-0">
             <div>
-              <DialogTitle className="text-2xl font-black tracking-tighter text-zinc-100 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-blue-500" />
-                CUSTOMER INTELLIGENCE 360
-              </DialogTitle>
-              <DialogDescription className="text-zinc-400 text-xs font-medium uppercase tracking-widest mt-1">
-                Deep-dive operational analytics & customer relationship audit
-              </DialogDescription>
+              {inline ? (
+                  <h2 className="text-2xl font-black tracking-tighter text-zinc-100 flex items-center gap-2">
+                    <TrendingUp className="w-6 h-6 text-blue-500" />
+                    CUSTOMER INTELLIGENCE 360
+                  </h2>
+              ) : (
+                  <DialogTitle className="text-2xl font-black tracking-tighter text-zinc-100 flex items-center gap-2">
+                    <TrendingUp className="w-6 h-6 text-blue-500" />
+                    CUSTOMER INTELLIGENCE 360
+                  </DialogTitle>
+              )}
+              
+              {inline ? (
+                  <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest mt-1">
+                    Deep-dive operational analytics & customer relationship audit
+                  </p>
+              ) : (
+                  <DialogDescription className="text-zinc-400 text-xs font-medium uppercase tracking-widest mt-1">
+                    Deep-dive operational analytics & customer relationship audit
+                  </DialogDescription>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
               <div className="w-64 hidden md:block">
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                  <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-blue-500">
-                    <SelectValue placeholder="Select Customer/Prospect..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800 max-h-80">
-                    {sortedCustomers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <div className="flex items-center gap-2">
-                          {c.type === 'prospect' ? <Target className="w-3 h-3 text-pink-400" /> : <UserCheck className="w-3 h-3 text-emerald-400" />}
-                          <span>{c.name}</span>
-                          <span className="text-[10px] text-zinc-500 opacity-50 ml-auto">{c.type?.toUpperCase()}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={desktopOpen} onOpenChange={setDesktopOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={desktopOpen}
+                      className="w-full justify-between bg-zinc-900 border-zinc-800 text-zinc-100 hover:bg-zinc-800 focus:ring-blue-500 font-normal"
+                    >
+                      {selectedCustomerId
+                        ? customers.find((c) => c.id === selectedCustomerId)?.name || "Select Profile..."
+                        : "Select Customer/Prospect..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-0 bg-zinc-900 border-zinc-800" align="end">
+                    <Command className="bg-transparent text-zinc-100">
+                      <div className="flex p-1 border-b border-zinc-800 bg-zinc-950/50">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={cn("h-7 text-[10px] flex-1", customerFilter === 'all' ? "bg-zinc-800 text-white" : "text-zinc-400")} 
+                          onClick={() => setCustomerFilter('all')}
+                        >
+                          ALL
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={cn("h-7 text-[10px] flex-1", customerFilter === 'customer' ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-400")} 
+                          onClick={() => setCustomerFilter('customer')}
+                        >
+                          CUSTOMERS
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={cn("h-7 text-[10px] flex-1", customerFilter === 'prospect' ? "bg-pink-500/20 text-pink-400" : "text-zinc-400")} 
+                          onClick={() => setCustomerFilter('prospect')}
+                        >
+                          PROSPECTS
+                        </Button>
+                      </div>
+                      <CommandInput placeholder="Search name, phone, email..." className="h-9" />
+                      <CommandList className="max-h-80">
+                        <CommandEmpty className="py-6 text-center text-sm text-zinc-500">No profile found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredCustomers.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.name}
+                              onSelect={(currentValue) => {
+                                setSelectedCustomerId(c.id);
+                                setDesktopOpen(false);
+                              }}
+                              className="aria-selected:bg-zinc-800 aria-selected:text-white text-zinc-300"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                {c.type === 'prospect' ? <Target className="w-3 h-3 text-pink-400" /> : <UserCheck className="w-3 h-3 text-emerald-400" />}
+                                <span>{c.name}</span>
+                                <span className="text-[10px] text-zinc-500 opacity-50 ml-auto flex items-center gap-2">
+                                  {c.phone && <span className="truncate max-w-[80px]">{c.phone}</span>}
+                                  {c.type?.toUpperCase() || 'CUSTOMER'}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               
               {historyData && (
@@ -286,34 +368,91 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
                 </Button>
               )}
               
-              <DialogClose asChild>
-                <Button variant="ghost" className="hidden md:flex text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white">
-                  Close Profile
-                </Button>
-              </DialogClose>
+              {!inline && (
+                <DialogClose asChild>
+                  <Button variant="ghost" className="hidden md:flex text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white">
+                    Close Profile
+                  </Button>
+                </DialogClose>
+              )}
             </div>
           </div>
           
           {/* Mobile Search Selector (below title on mobile) */}
           <div className="mt-4 md:hidden">
-            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-              <SelectTrigger className="bg-zinc-900 border-zinc-800 text-zinc-100 focus:ring-blue-500 w-full">
-                <SelectValue placeholder="Select Customer/Prospect..." />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-900 border-zinc-800 max-h-80">
-                {sortedCustomers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <div className="flex items-center gap-2">
-                      {c.type === 'prospect' ? <Target className="w-3 h-3 text-pink-400" /> : <UserCheck className="w-3 h-3 text-emerald-400" />}
-                      <span>{c.name}</span>
-                      <span className="text-[10px] text-zinc-500 opacity-50 ml-auto">{c.type?.toUpperCase()}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={mobileOpen} onOpenChange={setMobileOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={mobileOpen}
+                  className="w-full justify-between bg-zinc-900 border-zinc-800 text-zinc-100 hover:bg-zinc-800 focus:ring-blue-500 font-normal"
+                >
+                  {selectedCustomerId
+                    ? customers.find((c) => c.id === selectedCustomerId)?.name || "Select Profile..."
+                    : "Select Customer/Prospect..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[calc(100vw-48px)] p-0 bg-zinc-900 border-zinc-800" align="start">
+                <Command className="bg-transparent text-zinc-100">
+                  <div className="flex p-1 border-b border-zinc-800 bg-zinc-950/50">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn("h-7 text-[10px] flex-1", customerFilter === 'all' ? "bg-zinc-800 text-white" : "text-zinc-400")} 
+                      onClick={() => setCustomerFilter('all')}
+                    >
+                      ALL
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn("h-7 text-[10px] flex-1", customerFilter === 'customer' ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-400")} 
+                      onClick={() => setCustomerFilter('customer')}
+                    >
+                      CUSTOMERS
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn("h-7 text-[10px] flex-1", customerFilter === 'prospect' ? "bg-pink-500/20 text-pink-400" : "text-zinc-400")} 
+                      onClick={() => setCustomerFilter('prospect')}
+                    >
+                      PROSPECTS
+                    </Button>
+                  </div>
+                  <CommandInput placeholder="Search name, phone, email..." className="h-9" />
+                  <CommandList className="max-h-80">
+                    <CommandEmpty className="py-6 text-center text-sm text-zinc-500">No profile found.</CommandEmpty>
+                    <CommandGroup>
+                      {filteredCustomers.map((c) => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.name}
+                          onSelect={(currentValue) => {
+                            setSelectedCustomerId(c.id);
+                            setMobileOpen(false);
+                          }}
+                          className="aria-selected:bg-zinc-800 aria-selected:text-white text-zinc-300"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            {c.type === 'prospect' ? <Target className="w-3 h-3 text-pink-400" /> : <UserCheck className="w-3 h-3 text-emerald-400" />}
+                            <span>{c.name}</span>
+                            <span className="text-[10px] text-zinc-500 opacity-50 ml-auto flex items-center gap-2">
+                              {c.phone && <span className="truncate max-w-[80px] hidden sm:inline">{c.phone}</span>}
+                              {c.type?.toUpperCase() || 'CUSTOMER'}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
-        </DialogHeader>
+        </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {!selectedCustomerId ? (
@@ -575,12 +714,30 @@ export function CustomerIntelligence360Modal({ customers, trigger }: CustomerInt
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Invoices</div>
             <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-pink-500" /> Notes</div>
           </div>
-          <DialogClose asChild>
-            <Button variant="default" className="w-full sm:w-auto bg-zinc-100 text-zinc-900 hover:bg-white uppercase font-black text-xs tracking-widest px-10 h-12">
-              Close Report
-            </Button>
-          </DialogClose>
-        </div>
+      </div>
+    </>
+  );
+
+  if (inline) {
+      return (
+          <div className="flex flex-col bg-[#09090b] h-full rounded-2xl relative">
+              {content}
+          </div>
+      );
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button variant="outline" className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-blue-400">
+            <Target className="w-4 h-4" />
+            Customer Intelligence 360
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 p-0 overflow-hidden">
+        {content}
       </DialogContent>
     </Dialog>
   );
