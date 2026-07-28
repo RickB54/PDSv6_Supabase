@@ -55,6 +55,7 @@ import {
 } from "@/lib/servicesMeta";
 import supabase from "@/lib/supabase";
 import * as supaPkgs from "@/services/supabase/packages";
+import { QuickPricingEditorModal } from "@/components/pricing/QuickPricingEditorModal";
 import packageBasic from "@/assets/package-basic.jpg";
 import packageExpress from "@/assets/package-express.jpg";
 import packageExterior from "@/assets/package-exterior.jpg";
@@ -163,6 +164,7 @@ export default function PackagePricing() {
   const [comparisonMatrixOpen, setComparisonMatrixOpen] = useState(false);
   const [helpModalOpen, setHelpModalOpen] = useState(false);
   const [recentChangesOpen, setRecentChangesOpen] = useState(false);
+  const [quickEditorOpen, setQuickEditorOpen] = useState(false);
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
 
   useEffect(() => {
@@ -2952,6 +2954,14 @@ export default function PackagePricing() {
                   >
                     View All Add-Ons
                   </Button>
+
+                  <Button
+                    size="lg"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-500/20"
+                    onClick={() => setQuickEditorOpen(true)}
+                  >
+                    Quick Bulk Grid Editor
+                  </Button>
                 </div>
 
                 <div className="border-t border-zinc-800/80 pt-6">
@@ -4620,6 +4630,17 @@ export default function PackagePricing() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QuickPricingEditorModal
+        open={quickEditorOpen}
+        onOpenChange={setQuickEditorOpen}
+        packages={[...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted)}
+        addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted)}
+        currentPrices={currentPrices}
+        onSavePrices={(newPrices) => {
+          // Merge new prices into current prices
+          setCurrentPrices(prev => ({ ...prev, ...newPrices }));
+        }}
+      />
     </div>
   );
 }

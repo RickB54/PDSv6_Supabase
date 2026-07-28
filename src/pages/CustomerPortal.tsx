@@ -486,7 +486,7 @@ const CustomerPortal = () => {
                 style={{
                   background: 'linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(0, 0%, 98%) 100%)',
                 }}
-                onClick={() => setSelectedService(pkg.id)}
+                onClick={() => setSelectedService(prev => prev === pkg.id ? null : pkg.id)}
               >
                 {isBestValue && (
                   <div className="absolute top-0 left-0 right-0 bg-blue-700 py-1 text-center z-10">
@@ -566,8 +566,9 @@ const CustomerPortal = () => {
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 border-none'
                             : 'bg-zinc-100 text-zinc-900 hover:bg-blue-600 hover:text-white border-none'
                           }`}
-                        onClick={() => {
-                          setSelectedService(pkg.id);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedService(prev => prev === pkg.id ? null : pkg.id);
                           setVehicleInteracted(true);
                         }}
                       >
