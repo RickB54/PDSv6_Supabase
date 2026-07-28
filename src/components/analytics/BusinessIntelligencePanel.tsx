@@ -1,7 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { CustomerIntelligence360Modal } from "../bookings/CustomerIntelligence360Modal";
 import MarketPricingAnalysis from "./MarketPricingAnalysis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Target, TrendingUp, BarChart3, FileBarChart, Presentation, Activity, Users, DollarSign } from "lucide-react";
 import { Booking } from "@/store/bookings";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
@@ -14,6 +16,7 @@ interface BusinessIntelligencePanelProps {
 }
 
 export function BusinessIntelligencePanel({ bookings, customers, invoices = [], estimates = [] }: BusinessIntelligencePanelProps) {
+    const navigate = useNavigate();
     // Generate some high-level dynamic stats for the Executive Dashboard
     const now = new Date();
     const weekStart = startOfWeek(now);
@@ -88,14 +91,26 @@ export function BusinessIntelligencePanel({ bookings, customers, invoices = [], 
 
             {/* Market Pricing Analysis Section */}
             <section className="space-y-4 pt-6">
-                <div className="flex items-center gap-3 px-2">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                        <FileBarChart className="w-5 h-5 text-purple-400" />
+                <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                            <FileBarChart className="w-5 h-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-white tracking-tight">Market Pricing Evolution</h2>
+                            <p className="text-xs text-zinc-500 font-medium">Historical audit of base pricing shifts and market adjustments.</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">Market Pricing Evolution</h2>
-                        <p className="text-xs text-zinc-500 font-medium">Historical audit of base pricing shifts and market adjustments.</p>
-                    </div>
+                    <Button 
+                        onClick={() => {
+                            navigate('/package-pricing');
+                            setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
+                        }}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black shadow-lg shadow-blue-500/20 uppercase tracking-widest text-xs h-9 px-4 rounded-xl border border-blue-500/30 flex items-center gap-2"
+                    >
+                        <DollarSign className="w-4 h-4" />
+                        Pricing Control Center
+                    </Button>
                 </div>
                 
                 <div className="bg-[#09090b] rounded-2xl border border-zinc-800 shadow-2xl p-6">
