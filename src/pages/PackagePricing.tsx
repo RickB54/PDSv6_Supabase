@@ -2963,7 +2963,7 @@ export default function PackagePricing() {
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 shadow-lg shadow-emerald-500/20"
                     onClick={() => setQuickEditorOpen(true)}
                   >
-                    Quick Bulk Grid Editor
+                    Pricing Control Center
                   </Button>
                 </div>
 
@@ -4656,7 +4656,7 @@ export default function PackagePricing() {
             if (typeof forceWebsiteTabRefresh === 'function') forceWebsiteTabRefresh();
             if (typeof forceBookNowTabRefresh === 'function') forceBookNowTabRefresh();
             
-            logPriceChange({ type: 'master', description: 'Quick Bulk Grid Editor Update', snapshot: merged });
+            logPriceChange({ type: 'master', description: 'Pricing Control Center Update', snapshot: merged });
             toast.dismiss();
             toast.success("Grid edits saved and published live!");
           } catch (e) {

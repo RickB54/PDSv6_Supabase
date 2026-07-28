@@ -136,14 +136,14 @@ export const QuickPricingEditorModal = ({
       <DialogContent className="!max-w-[95vw] w-full h-[90vh] bg-zinc-950 border-zinc-800 text-zinc-100 flex flex-col p-0 z-[9999] shadow-2xl">
         <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
           <DialogTitle className="text-2xl font-black text-emerald-500 uppercase tracking-tight flex items-center gap-3">
-            Quick Bulk Grid Editor
+            Pricing Control Center
             <TooltipProvider>
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <HelpCircle className="w-8 h-8 text-zinc-400 hover:text-emerald-500 cursor-help transition-colors" />
                 </TooltipTrigger>
                 <TooltipContent className="bg-white border-slate-200 text-slate-800 p-5 max-w-[350px] shadow-xl z-[10000] rounded-xl">
-                  <h3 className="font-bold text-lg text-slate-900 mb-1">Quick Bulk Grid</h3>
+                  <h3 className="font-bold text-lg text-slate-900 mb-1">Pricing Control Center</h3>
                   <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">CHEAT SHEET</p>
                   
                   <p className="mb-4 text-sm text-slate-600">
