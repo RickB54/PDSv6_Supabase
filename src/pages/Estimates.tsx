@@ -1210,16 +1210,16 @@ Precision. Protection. Perfection.`;
                                         })()}
                                     </div>
                                     <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">
-                                        {services.filter(s => !String(s.name || '').startsWith('---')).map(s => s.name).join(", ") || "No Services"}
+                                        {services.filter(s => !String(s.name || '').startsWith('---') && !addOns.some(a => a.name === s.name)).map(s => s.name).join(", ") || "No Packages"}
                                     </div>
                                     {selectedAddons && selectedAddons.length > 0 && (
                                         <div className="mt-2 flex flex-wrap gap-1.5">
                                             {selectedAddons.map((id, i) => {
                                                 const addon = addOns.find(a => a.id === id);
                                                 return addon ? (
-                                                    <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-xs font-medium py-0 px-2 h-5 capitalize">
+                                                    <span key={i} className="bg-blue-100/50 border border-blue-200 text-blue-900 px-3 py-1.5 rounded-md text-sm font-medium">
                                                         + {addon.name}
-                                                    </Badge>
+                                                    </span>
                                                 ) : null;
                                             })}
                                         </div>
