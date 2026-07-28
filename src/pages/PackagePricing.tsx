@@ -3629,7 +3629,7 @@ export default function PackagePricing() {
         </Dialog>
         {/* Current Price Comparison Modal */}
         <Dialog open={comparisonOpen} onOpenChange={setComparisonOpen}>
-          <DialogContent className="sm:max-w-[95vw] lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+          <DialogContent className="w-[95vw] max-w-[95vw] sm:w-full sm:max-w-[95vw] lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0 border-zinc-800">
             <div className="p-6 border-b border-zinc-800 bg-zinc-950">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -3640,14 +3640,14 @@ export default function PackagePricing() {
                   <Button
                     onClick={() => setComparisonMatrixOpen(true)}
                     variant="ghost"
-                    className="h-9 border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 font-bold uppercase tracking-widest text-[10px]"
+                    className="h-9 border border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10 font-bold uppercase tracking-widest text-[10px] w-full sm:w-auto"
                   >
                     <Info className="w-4 h-4 mr-2" /> Show Services
                   </Button>
-                  <div className="flex items-center gap-3 bg-zinc-900 p-1.5 px-3 rounded-lg border border-zinc-800">
+                  <div className="flex flex-wrap items-center gap-2 bg-zinc-900 p-1.5 px-3 rounded-lg border border-zinc-800 w-full sm:w-auto justify-between">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Vehicle Size:</span>
                     <Select value={comparisonVehicle} onValueChange={setComparisonVehicle}>
-                      <SelectTrigger className="w-[180px] bg-black border-zinc-700 h-8 text-xs font-bold"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-full sm:w-[180px] bg-black border-zinc-700 h-8 text-xs font-bold"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {vehicleOptions.map(opt => <SelectItem key={opt} value={opt} className="text-xs font-bold uppercase">{vehicleLabels[opt] || opt}</SelectItem>)}
                       </SelectContent>
@@ -3675,15 +3675,15 @@ export default function PackagePricing() {
                       onChange={(e) => setProjInput(e.target.value)}
                     />
                   </div>
-                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white" onClick={() => {
+                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white flex-1 min-w-[120px]" onClick={() => {
                     const val = parseFloat(projInput) || 0;
                     setScenarioProj(prev => ({ ...prev, pkg: val }));
                   }}>Apply to Packages</Button>
-                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white" onClick={() => {
+                  <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-300 hover:text-white flex-1 min-w-[120px]" onClick={() => {
                     const val = parseFloat(projInput) || 0;
                     setScenarioProj(prev => ({ ...prev, addon: val }));
                   }}>Apply to Add-Ons</Button>
-                  <Button size="sm" variant="outline" className="h-8 border-blue-900/50 text-blue-400 hover:bg-blue-900/30" onClick={() => {
+                  <Button size="sm" variant="outline" className="h-8 border-blue-900/50 text-blue-400 hover:bg-blue-900/30 flex-1 min-w-[120px]" onClick={() => {
                     const val = parseFloat(projInput) || 0;
                     setScenarioProj({ pkg: val, addon: val });
                   }}>Apply to ALL</Button>
@@ -3741,13 +3741,13 @@ export default function PackagePricing() {
                                     ${isArchived ? 'opacity-60 border-dashed border-zinc-700 grayscale-[0.3]' : ''}`}
                         >
                           {isArchived && <div className="absolute -top-2 -right-1 z-10 text-[7px] bg-zinc-800 text-zinc-400 px-1 border border-zinc-700 rounded font-black uppercase tracking-tighter">Archived</div>}
-                          <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-600 border-red-600 text-white' : 'border-zinc-600'}`}>
+                          <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                            <div className={`w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-600 border-red-600 text-white' : 'border-zinc-600'}`}>
                               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                             </div>
-                            <span className={`font-medium ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{p.name}</span>
+                            <span className={`font-medium truncate ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{p.name}</span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 shrink-0">
                             <div className="font-mono font-bold text-emerald-400" onClick={() => setComparisonSelection(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
                               ${price}
                             </div>
@@ -3808,13 +3808,13 @@ export default function PackagePricing() {
                                     ${isArchived ? 'opacity-60 border-dashed border-zinc-700 grayscale-[0.3]' : ''}`}
                         >
                           {isArchived && <div className="absolute -top-2 -right-1 z-10 text-[7px] bg-zinc-800 text-zinc-400 px-1 border border-zinc-700 rounded font-black uppercase tracking-tighter">Archived</div>}
-                          <div className="flex items-center gap-3 flex-1" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-zinc-600'}`}>
+                          <div className="flex items-center gap-3 flex-1 min-w-0" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
+                            <div className={`w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-zinc-600'}`}>
                               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                             </div>
-                            <span className={`font-medium ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{a.name}</span>
+                            <span className={`font-medium truncate ${isSelected ? 'text-white' : 'text-zinc-300'}`}>{a.name}</span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 shrink-0">
                             <div className="font-mono font-bold text-emerald-400" onClick={() => setComparisonSelection(prev => ({ ...prev, [a.id]: !prev[a.id] }))}>
                               ${price}
                             </div>
@@ -3839,29 +3839,29 @@ export default function PackagePricing() {
               </div>
             </div>
 
-            <div className="p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-2xl z-10">
-              <div className="flex items-center gap-2">
-                <Button variant="destructive" className="bg-red-600 hover:bg-red-700 text-white border-red-800" onClick={() => setComparisonSelection({})}>
+            <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xl z-10 overflow-x-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700 text-white border-red-800" onClick={() => setComparisonSelection({})}>
                   Clear All
                 </Button>
-                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={printScenario}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300" onClick={printScenario}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                   Print
                 </Button>
-                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={() => setPreviewOpen(true)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300" onClick={() => setPreviewOpen(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                   Preview
                 </Button>
-                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={() => setMatrixOpen(true)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300" onClick={() => setMatrixOpen(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                   Compare Vehicles
                 </Button>
-                <Button variant="outline" className="border-zinc-700 text-zinc-300" onClick={downloadScenarioPDF}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 24 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <Button variant="outline" size="sm" className="border-zinc-700 text-zinc-300" onClick={downloadScenarioPDF}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 24 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                   Save PDF
                 </Button>
               </div>
-              <div className="flex items-center gap-4 bg-zinc-900 px-6 py-3 rounded-xl border border-zinc-800">
+              <div className="flex items-center gap-4 bg-zinc-900 px-6 py-3 rounded-xl border border-zinc-800 w-full sm:w-auto justify-end mt-4 sm:mt-0">
                 <div className="text-right">
                   <div className="text-xs text-zinc-500 font-bold uppercase tracking-wider">
                     {Object.keys(comparisonSelection).filter(k => comparisonSelection[k]).length > 1 ? 'Price Difference' : 'Estimated Total'}
