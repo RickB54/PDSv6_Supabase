@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { CustomerIntelligence360Modal } from "../bookings/CustomerIntelligence360Modal";
 import MarketPricingAnalysis from "./MarketPricingAnalysis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,6 +17,7 @@ interface BusinessIntelligencePanelProps {
 
 export function BusinessIntelligencePanel({ bookings, customers, invoices = [], estimates = [] }: BusinessIntelligencePanelProps) {
     const navigate = useNavigate();
+    const location = useLocation();
     // Generate some high-level dynamic stats for the Executive Dashboard
     const now = new Date();
     const weekStart = startOfWeek(now);
@@ -31,7 +32,7 @@ export function BusinessIntelligencePanel({ bookings, customers, invoices = [], 
     const monthRev = monthBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
     const activeCustomers = customers.length;
-    const completedJobs = bookings.filter(b => b.status === 'DONE').length;
+    const completedJobs = bookings.filter(b => b.status === 'done' || b.status === 'completed').length;
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2">
@@ -103,7 +104,7 @@ export function BusinessIntelligencePanel({ bookings, customers, invoices = [], 
                     </div>
                     <Button 
                         onClick={() => {
-                            navigate('/package-pricing');
+                            navigate('/package-pricing', { state: { returnTo: location.pathname } });
                             setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
                         }}
                         className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black shadow-lg shadow-blue-500/20 uppercase tracking-widest text-xs h-9 px-4 rounded-xl border border-blue-500/30 flex items-center gap-2"

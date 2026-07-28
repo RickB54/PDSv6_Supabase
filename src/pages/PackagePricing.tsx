@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -111,6 +111,8 @@ const PERSISTENT_BACKUP_KEY = "savedPrices_restore_point"; // survives Settings 
 const ONE_TIME_ORIGINAL_SEED_FLAG = "original_prices_seeded_once";
 
 export default function PackagePricing() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState<"packages" | "addons" | "both">("packages");
   const [masterPct, setMasterPct] = useState("");
   const [globalPct, setGlobalPct] = useState("");
@@ -166,6 +168,13 @@ export default function PackagePricing() {
   const [recentChangesOpen, setRecentChangesOpen] = useState(false);
   const [quickEditorOpen, setQuickEditorOpen] = useState(false);
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
+
+  const handleQuickEditorOpenChange = (open: boolean) => {
+    setQuickEditorOpen(open);
+    if (!open && location.state?.returnTo) {
+      navigate(location.state.returnTo, { replace: true });
+    }
+  };
 
   useEffect(() => {
     setPriceHistory(getPriceChangeHistory());
@@ -4635,7 +4644,7 @@ export default function PackagePricing() {
       </Dialog>
       <QuickPricingEditorModal
         open={quickEditorOpen}
-        onOpenChange={setQuickEditorOpen}
+        onOpenChange={handleQuickEditorOpenChange}
         packages={[...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted).map(p => ({ ...p, isArchived: getPackageMeta(p.id)?.visible === false }))}
         addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted).map(a => ({ ...a, isArchived: getAddOnMeta(a.id)?.visible === false }))}
         currentPrices={currentPrices}

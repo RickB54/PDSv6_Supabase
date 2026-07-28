@@ -114,7 +114,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         {isAdmin && (
             <>
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => {
-                    navigate('/package-pricing');
+                    navigate('/package-pricing', { state: { returnTo: location.pathname } });
                     setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
                 }} title="Pricing Control Center" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
                     <div className="relative flex items-center justify-center w-5 h-5">
