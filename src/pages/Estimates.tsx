@@ -1210,7 +1210,7 @@ Precision. Protection. Perfection.`;
                                         })()}
                                     </div>
                                     <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">
-                                        {services.filter(s => !s.name.startsWith('---')).map(s => s.name).join(", ") || "No Services"}
+                                        {services.filter(s => !String(s.name || '').startsWith('---')).map(s => s.name).join(", ") || "No Services"}
                                     </div>
                                     {selectedAddons && selectedAddons.length > 0 && (
                                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1705,12 +1705,12 @@ Precision. Protection. Perfection.`;
                                         </ul>
                                     </div>
                                     {services.map((s, i) => {
-                                        const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                        const isHeader = String(s.name || '').startsWith('---') && s.price === 0;
                                         
                                         // Calculate subtotal for this header
                                         let sectionTotal = 0;
                                         if (isHeader) {
-                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && String(sx.name || '').startsWith('---') && sx.price === 0);
                                             const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
                                             sectionTotal = services.slice(i + 1, sliceEnd).reduce((sum, sx) => sum + sx.price, 0);
                                         }
@@ -1777,13 +1777,13 @@ Precision. Protection. Perfection.`;
                                                         <Button variant="ghost" size="icon" onClick={() => {
                                                             let prevHeaderIndex = -1;
                                                             for (let j = i - 1; j >= 0; j--) {
-                                                                if ((services[j].name || '').startsWith('---') && services[j].price === 0) {
+                                                                if (String(services[j].name || '').startsWith('---') && services[j].price === 0) {
                                                                     prevHeaderIndex = j;
                                                                     break;
                                                                 }
                                                             }
                                                             if (prevHeaderIndex !== -1) {
-                                                                const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                                const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && String(sx.name || '').startsWith('---') && sx.price === 0);
                                                                 const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
                                                                 const newServices = [...services];
                                                                 const currentSection = newServices.splice(i, sliceEnd - i);
@@ -1794,10 +1794,10 @@ Precision. Protection. Perfection.`;
                                                             <ArrowUp className="h-4 w-4" />
                                                         </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => {
-                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && String(sx.name || '').startsWith('---') && sx.price === 0);
                                                             if (nextHeaderIndex !== -1) {
                                                                 const sliceEnd = nextHeaderIndex;
-                                                                const nextNextHeaderIndex = services.findIndex((sx, idx) => idx > nextHeaderIndex && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                                const nextNextHeaderIndex = services.findIndex((sx, idx) => idx > nextHeaderIndex && String(sx.name || '').startsWith('---') && sx.price === 0);
                                                                 const nextSliceEnd = nextNextHeaderIndex === -1 ? services.length : nextNextHeaderIndex;
                                                                 const newServices = [...services];
                                                                 const currentSection = newServices.splice(i, sliceEnd - i);
@@ -1808,7 +1808,7 @@ Precision. Protection. Perfection.`;
                                                             <ArrowDown className="h-4 w-4" />
                                                         </Button>
                                                         <Button variant="ghost" size="icon" onClick={() => {
-                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && (sx.name || '').startsWith('---') && sx.price === 0);
+                                                            const nextHeaderIndex = services.findIndex((sx, idx) => idx > i && String(sx.name || '').startsWith('---') && sx.price === 0);
                                                             const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
                                                             const sectionToCopy = services.slice(i, sliceEnd).map((item, idx) => {
                                                                 if (idx === 0) return { ...item, name: item.name.replace(' ---', ' (Copy) ---') };
@@ -1852,7 +1852,7 @@ Precision. Protection. Perfection.`;
                                             onClick={() => {
                                                 const newServices = [...services, { name: "--- [Type Section Name Here] ---", price: 0 }];
                                                 setServices(newServices);
-                                                const headerCount = newServices.filter(s => s.name.startsWith('---') && s.price === 0).length;
+                                                const headerCount = newServices.filter(s => String(s.name || '').startsWith('---') && s.price === 0).length;
                                                 if (headerCount > 1 && !notes.trim()) {
                                                     const menuModeNote = NOTE_TEMPLATES.find(t => t.label.includes("Multi-Vehicle (Menu Mode)"))?.text;
                                                     if (menuModeNote) setNotes(menuModeNote);
@@ -2405,7 +2405,7 @@ Precision. Protection. Perfection.`;
                             {/* Service Details similar to Invoicing but tailored for Estimates */}
                             <div className="py-6 space-y-3 border-t border-b border-zinc-800">
                                 {selectedEstimate.services.map((s, i) => {
-                                    const isHeader = (s.name || '').startsWith('---') && s.price === 0;
+                                    const isHeader = String(s.name || '').startsWith('---') && s.price === 0;
                                     return (
                                         <div key={i} className={cn("flex justify-between items-center text-sm", isHeader ? "font-bold text-amber-500 mt-4" : "text-zinc-300")}>
                                             <span>{s.name}</span>
