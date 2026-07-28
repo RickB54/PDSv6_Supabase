@@ -682,14 +682,14 @@ const SearchCustomer = () => {
           </div>
         </Card>
 
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-zinc-900/50 p-2 sm:p-4 rounded-xl border border-zinc-800">
-          <div className="relative w-full md:w-96">
+        <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between bg-zinc-900/50 p-3 sm:p-4 rounded-xl border border-zinc-800">
+          <div className="relative w-full xl:w-[350px] shrink-0">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
             <Input 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
               placeholder="Search customers..." 
-              className="pl-10 pr-10 bg-zinc-950 border-zinc-800" 
+              className="pl-10 pr-10 bg-zinc-950 border-zinc-800 w-full" 
             />
             {searchTerm && (
               <button 
@@ -700,7 +700,7 @@ const SearchCustomer = () => {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+          <div className="flex flex-wrap gap-2 items-center w-full xl:w-auto xl:justify-end">
             {/* Quick date-filter pills */}
             <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-800 rounded-lg p-1">
               {([
@@ -864,11 +864,11 @@ const SearchCustomer = () => {
                     ? "bg-green-900/40 border-green-700 hover:bg-green-900/50"
                     : "bg-zinc-900/50 border-blue-500/20 hover:border-blue-500/40"
                 )}>
-                  <div className={cn("p-4 flex flex-col md:flex-row items-center justify-between cursor-pointer transition-colors gap-4",
+                  <div className={cn("p-4 flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer transition-colors gap-4",
                     customer.is_archived ? "hover:bg-green-900/10" : "bg-blue-500/5 hover:bg-blue-500/10"
                   )} onClick={() => toggleCustomer(customer.id!)}>
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                      <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
+                    <div className="flex items-center gap-4 w-full md:w-auto min-w-0">
+                      <div className={`shrink-0 h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
 
                       {/* Photo Thumbnails - clickable to open gallery */}
                       {(() => {
@@ -887,7 +887,7 @@ const SearchCustomer = () => {
 
                         if (allMedia.length > 0) {
                           return (
-                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {allMedia.slice(0, 1).map((item, idx) => {
                                 const ytThumb = getYouTubeThumbnail(item);
                                 return (
@@ -927,11 +927,11 @@ const SearchCustomer = () => {
                         );
                       })()}
 
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-bold text-zinc-200 text-lg">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-zinc-200 text-lg truncate max-w-full">
                                 {customer.accountType === 'Business' && customer.companyName ? customer.companyName : customer.name}
                               </h3>
                               {customer.is_archived && (
@@ -1034,8 +1034,8 @@ const SearchCustomer = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                      <div className="flex flex-wrap gap-1 mr-4">
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end shrink-0">
+                      <div className="flex flex-wrap gap-1 md:mr-4">
                         <Button
                           variant="ghost"
                           size="sm"
