@@ -131,7 +131,7 @@ export default function MarketPricingAnalysis({ initialCategory = 'packages' }: 
             <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-700">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[10005]">
               <SelectItem value="packages">Packages</SelectItem>
               <SelectItem value="addons">Add-Ons</SelectItem>
             </SelectContent>
@@ -140,7 +140,7 @@ export default function MarketPricingAnalysis({ initialCategory = 'packages' }: 
             <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-700">
               <SelectValue placeholder="Vehicle Class" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[10005]">
               {vehicleOptions.map(v => (
                 <SelectItem key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</SelectItem>
               ))}
