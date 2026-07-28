@@ -802,7 +802,7 @@ const CustomerPortal = () => {
         </Card>
 
         {/* Order Summary */}
-        {selectedService && (
+        {(selectedService || selectedAddOns.length > 0) && (
           <Card className="p-8 max-w-lg mx-auto bg-white border-blue-100 shadow-2xl">
             <h3 className="text-2xl font-bold mb-6 text-blue-900 text-center uppercase tracking-widest">
               [ Order Summary ]
@@ -811,7 +811,7 @@ const CustomerPortal = () => {
               <div className="flex justify-between items-start py-2 border-b border-border">
                 <span className="text-zinc-500 font-medium">Service:</span>
                 <span className="text-right">
-                  <div className="font-bold text-blue-900">{service?.name.replace(' (BEST VALUE)', '')}</div>
+                  <div className="font-bold text-blue-900">{service ? service.name.replace(' (BEST VALUE)', '') : 'None Selected'}</div>
                   <div className="text-blue-700 font-bold">${servicePrice}</div>
                 </span>
               </div>
