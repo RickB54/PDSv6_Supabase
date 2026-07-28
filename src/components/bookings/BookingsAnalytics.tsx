@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -44,9 +44,11 @@ interface BookingsAnalyticsProps {
     invoices?: any[];
     estimates?: any[];
     defaultOpenAccordion?: string;
+    onRefresh?: () => void;
+    isRefreshing?: boolean;
 }
 
-export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion }: BookingsAnalyticsProps) {
+export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion, onRefresh, isRefreshing }: BookingsAnalyticsProps) {
     const navigate = useNavigate();
     const { add } = useTasksStore();
     const { update, remove } = useBookingsStore();
@@ -1950,6 +1952,38 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+
+                <div className="flex-1 min-w-[20px]"></div>
+                <div className="flex items-center gap-1.5 border-l border-zinc-800/50 pl-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
+                        title="Workflow Help"
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }))}
+                    >
+                        <GitBranch className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
+                        title="Business Analytics Help"
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics', role: 'admin' } }))}
+                    >
+                        <LineChart className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        disabled={isRefreshing}
+                        onClick={onRefresh}
+                        className="h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1"
+                        title="Refresh Data"
+                    >
+                        {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
         </div>
     );
