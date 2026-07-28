@@ -1217,9 +1217,9 @@ Precision. Protection. Perfection.`;
                                             {selectedAddons.map((id, i) => {
                                                 const addon = addOns.find(a => a.id === id);
                                                 return addon ? (
-                                                    <span key={i} className="bg-blue-100/50 border border-blue-200 text-blue-900 px-3 py-1.5 rounded-md text-sm font-medium">
-                                                        + {addon.name}
-                                                    </span>
+                                                    <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[9px] font-black uppercase py-0 px-2 h-5 flex items-center justify-center">
+                                                        {addon.name}
+                                                    </Badge>
                                                 ) : null;
                                             })}
                                         </div>

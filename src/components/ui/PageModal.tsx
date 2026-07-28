@@ -43,7 +43,7 @@ export function PageModal({ isOpen, onClose, initialUrl, component: Component, t
                   state: null,
                   key: 'modal'
               }}>
-                <Route path="*" element={<Component />} />
+                <Route path="*" element={<Component onModalClose={onClose} />} />
               </Routes>
           )}
         </div>
