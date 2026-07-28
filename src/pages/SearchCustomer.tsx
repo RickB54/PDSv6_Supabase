@@ -316,6 +316,11 @@ const SearchCustomer = () => {
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+        
+        // Consume the parameter to prevent back-button traps or re-render loops
+        params.delete('customerId');
+        const newSearch = params.toString() ? `?${params.toString()}` : '';
+        navigate(`${location.pathname}${newSearch}`, { replace: true });
       }, 300);
     }
 
@@ -784,7 +789,15 @@ const SearchCustomer = () => {
           <div className="mb-6 flex items-center justify-between bg-zinc-900/60 border border-zinc-800/80 p-4 rounded-2xl shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-3">
               <Button
-                onClick={() => setExpandedCustomers([])}
+                onClick={() => {
+                  setExpandedCustomers([]);
+                  const params = new URLSearchParams(location.search);
+                  if (params.has('customerId')) {
+                    params.delete('customerId');
+                    const newSearch = params.toString() ? `?${params.toString()}` : '';
+                    navigate(`${location.pathname}${newSearch}`, { replace: true });
+                  }
+                }}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-4 py-2 flex items-center gap-2 transition-all text-xs tracking-wider shadow-lg shadow-blue-500/20"
               >
                 <ArrowLeft className="h-4 w-4" />
