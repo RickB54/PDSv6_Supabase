@@ -55,8 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import { upsertSupabaseCustomer, upsertSupabaseEstimate } from "@/lib/supa-data";
-import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
-import { QuickPricingEditorModal } from "@/components/pricing/QuickPricingEditorModal";
+import { PublicPriceListModal } from "@/components/pricing/PublicPriceListModal";
 import localforage from "localforage";
 import { generateInvoiceNumber } from "@/lib/utils";
 import * as supaPkgs from "@/services/supabase/packages";
@@ -426,7 +425,6 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
 
     const [showAutoClassify, setShowAutoClassify] = useState(false);
 
-    const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
     const [priceListOpen, setPriceListOpen] = useState(false);
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [unselectedFields, setUnselectedFields] = useState<string[]>([]);
@@ -932,19 +930,6 @@ ${firstVehicle.notes || ''}`.trim(),
                         >
                             <FileText className="w-4 h-4 text-blue-500" />
                             <span className="hidden sm:inline font-bold uppercase tracking-tight text-[10px]">Price List</span>
-                        </Button>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                                handleCloseAttempt(false);
-                                navigate('/package-pricing?mode=scenario');
-                            }} 
-                            title="Pricing Scenario Builder" 
-                            className="bg-zinc-900 border-red-500/30 text-white hover:bg-red-500/10 gap-2"
-                        >
-                            <Calculator className="w-4 h-4 text-red-500" />
-                            <span className="hidden sm:inline font-bold uppercase tracking-tight text-[10px]">Scenario Builder</span>
                         </Button>
                         <CustomerCommunicationGuide />
                         <Button variant="ghost" size="icon" onClick={() => handleCloseAttempt(false)} className="h-8 w-8 rounded-full hover:bg-primary/20">
@@ -1655,17 +1640,6 @@ ${firstVehicle.notes || ''}`.trim(),
 
                             <Button
                                 type="button"
-                                onClick={() => setServiceComparisonOpen(true)}
-                                variant="outline"
-                                size="icon"
-                                className="h-10 w-10 rounded-xl border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
-                                title="Services"
-                            >
-                                <LayoutDashboard className="w-5 h-5" />
-                            </Button>
-
-                            <Button
-                                type="button"
                                 onClick={handleSaveProspectOnly}
                                 disabled={!callerName}
                                 variant="outline"
@@ -1717,17 +1691,12 @@ ${firstVehicle.notes || ''}`.trim(),
                     });
                 }}
             />
-            <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
-            <QuickPricingEditorModal 
+            <PublicPriceListModal 
                 open={priceListOpen} 
                 onOpenChange={setPriceListOpen} 
                 packages={livePackages} 
                 addons={liveAddOns} 
                 currentPrices={savedPrices} 
-                onSavePrices={(prices) => {
-                    setSavedPrices(prices);
-                    setPriceListOpen(false);
-                }}
             />
             <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
                 <AlertDialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 max-w-md p-6">

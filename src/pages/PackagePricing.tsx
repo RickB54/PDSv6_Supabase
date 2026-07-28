@@ -3839,7 +3839,7 @@ export default function PackagePricing() {
               </div>
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xl z-10 overflow-x-auto">
+            <div className="p-4 sm:p-6 border-t border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-2xl z-10 flex-wrap">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700 text-white border-red-800" onClick={() => setComparisonSelection({})}>
                   Clear All
