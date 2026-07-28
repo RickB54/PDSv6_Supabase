@@ -56,6 +56,7 @@ import { useNavigate } from "react-router-dom";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import { upsertSupabaseCustomer, upsertSupabaseEstimate } from "@/lib/supa-data";
 import { ServiceComparisonModal } from "@/components/ServiceComparisonModal";
+import { QuickPricingEditorModal } from "@/components/pricing/QuickPricingEditorModal";
 import localforage from "localforage";
 import { generateInvoiceNumber } from "@/lib/utils";
 import * as supaPkgs from "@/services/supabase/packages";
@@ -426,6 +427,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const [showAutoClassify, setShowAutoClassify] = useState(false);
 
     const [serviceComparisonOpen, setServiceComparisonOpen] = useState(false);
+    const [priceListOpen, setPriceListOpen] = useState(false);
     const [showCloseWarning, setShowCloseWarning] = useState(false);
     const [unselectedFields, setUnselectedFields] = useState<string[]>([]);
 
@@ -919,6 +921,18 @@ ${firstVehicle.notes || ''}`.trim(),
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                                setPriceListOpen(true);
+                            }} 
+                            title="Quick Price List" 
+                            className="bg-zinc-900 border-blue-500/30 text-white hover:bg-blue-500/10 gap-2"
+                        >
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span className="hidden sm:inline font-bold uppercase tracking-tight text-[10px]">Price List</span>
+                        </Button>
                         <Button 
                             variant="outline" 
                             size="sm" 
@@ -1704,6 +1718,17 @@ ${firstVehicle.notes || ''}`.trim(),
                 }}
             />
             <ServiceComparisonModal open={serviceComparisonOpen} onOpenChange={setServiceComparisonOpen} />
+            <QuickPricingEditorModal 
+                open={priceListOpen} 
+                onOpenChange={setPriceListOpen} 
+                packages={livePackages} 
+                addons={liveAddOns} 
+                currentPrices={savedPrices} 
+                onSavePrices={(prices) => {
+                    setSavedPrices(prices);
+                    setPriceListOpen(false);
+                }}
+            />
             <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
                 <AlertDialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 max-w-md p-6">
                     <AlertDialogHeader className="mb-2">
