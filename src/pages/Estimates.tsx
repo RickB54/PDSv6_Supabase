@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
@@ -1143,11 +1144,93 @@ Precision. Protection. Perfection.`;
 
                 {/* Create Form */}
                 {showCreateForm && (
-                    <Card className="p-6 bg-zinc-900 border-zinc-800 animate-in slide-in-from-top-4">
+                    <Card className="p-6 bg-zinc-900 border-zinc-800 animate-in slide-in-from-top-4 relative">
                         <div className="flex justify-between items-start mb-6">
                             <h2 className="text-xl font-bold text-white">{editingEstimateId ? "Edit Estimate" : "Create New Estimate"}</h2>
                             <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>Cancel</Button>
                         </div>
+
+                        {/* STICKY SUMMARY HEADER */}
+                        <div className="sticky top-[calc(var(--header-total-height,64px)+12px)] z-50 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-blue-500/30 mb-6 shadow-2xl -mx-2 sm:mx-0">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+                                        Estimate Summary
+                                        {selectedStatus && (
+                                            <Badge variant="outline" className={cn(
+                                                "text-[9px] font-black uppercase py-0 h-4 border",
+                                                selectedStatus === 'accepted' ? 'border-emerald-500 text-emerald-500 bg-emerald-500/10' :
+                                                selectedStatus === 'declined' ? 'border-red-500 text-red-500 bg-red-500/10' :
+                                                selectedStatus === 'sent' ? 'border-blue-500 text-blue-500 bg-blue-500/10' :
+                                                'border-amber-500 text-amber-500 bg-amber-500/10'
+                                            )}>
+                                                {selectedStatus.toUpperCase()}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <div className="text-blue-400 font-bold text-xs md:text-sm mb-1 truncate flex items-center gap-2">
+                                        {(() => {
+                                            const cust = customers.find(c => c.id === selectedCustomer);
+                                            const cName = cust?.name || "No Customer Selected";
+                                            let vString = "";
+                                            if (selectedVehicleId === "multiple") vString = "Multiple Vehicles";
+                                            else if (selectedVehicleId === "custom") vString = customVehicleName || "Custom Vehicle";
+                                            else if (selectedVehicleId === "primary") {
+                                                vString = `${formatPart(cust?.year)} ${formatPart(cust?.vehicle)} ${formatPart(cust?.model)}`.trim();
+                                            } else {
+                                                const vObj = cust?.vehicles?.find(v => v.id === selectedVehicleId);
+                                                if (vObj) vString = `${formatPart(vObj.year)} ${formatPart(vObj.make)} ${formatPart(vObj.model)}`.trim();
+                                            }
+                                            const fullVehicle = vString ? `${vString} ${selectedVehicleType ? `(${selectedVehicleType})` : ''}` : (selectedVehicleType ? `(${selectedVehicleType})` : '');
+                                            return [cName, fullVehicle].filter(Boolean).join(" • ");
+                                        })()}
+                                    </div>
+                                    <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">
+                                        {services.filter(s => !s.name.startsWith('---')).map(s => s.name).join(", ") || "No Services"}
+                                    </div>
+                                    {selectedAddons && selectedAddons.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {selectedAddons.map((id, i) => {
+                                                const addon = addOns.find(a => a.id === id);
+                                                return addon ? (
+                                                    <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-0 px-2 h-5">
+                                                        {addon.name}
+                                                    </Badge>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                    {(() => {
+                                        const subtotal = services.reduce((sum, s) => sum + s.price, 0);
+                                        const total = calculateTotal();
+                                        return (
+                                            <>
+                                                {subtotal !== total && (
+                                                    <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
+                                                        ${subtotal.toFixed(2)}
+                                                    </div>
+                                                )}
+                                                <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
+                                                    ${total.toFixed(2)}
+                                                </div>
+                                                {discount > 0 && (
+                                                    <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                                                        -{discountType === 'percent' ? `${discount}%` : `$${discount}`} 
+                                                        {discountMethod === 'coupon' && discountCode ? ` (${discountCode})` : ' (Manual)'}
+                                                    </div>
+                                                )}
+                                                <div className="text-zinc-500 text-[10px] mt-1">
+                                                    {formatDisplayDate(estimateDate)}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Form Content similar to existing but styled */}
                         <div className="space-y-4">
                             <div>
