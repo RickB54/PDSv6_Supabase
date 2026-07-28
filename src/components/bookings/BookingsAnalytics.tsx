@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1885,58 +1886,65 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         );
     }
 
-    return (
-        <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
-            {/* Global Actions Bar & Bookmarks */}
-            <div className="flex flex-col gap-4 mb-2 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800/50 backdrop-blur-md">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h3 className="text-lg font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
-                        <p className="text-xs text-zinc-500">Comprehensive overview of operational performance and revenue goals.</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                        <CustomerIntelligence360Modal customers={customers} />
-                        <Button 
-                            onClick={generateAnalyticsPDF}
-                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-10 px-6 gap-2 shadow-lg shadow-blue-900/20 w-full sm:w-auto"
-                        >
-                            <Printer className="w-4 h-4" />
-                            Print Performance Report
-                        </Button>
-                        <Button 
-                            variant="outline"
-                            onClick={generatePriceHistoryPDF}
-                            className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-10 gap-2 w-full sm:w-auto"
-                        >
-                            <FileBarChart className="w-4 h-4" />
-                            Price Audit
-                        </Button>
-                        <Button 
-                            variant="outline"
-                            onClick={clearAllFilters}
-                            className="border-red-900/50 bg-red-900/10 text-red-400 hover:text-white hover:bg-red-900/40 h-10 gap-2 w-full sm:w-auto"
-                            title="Reset all Analytics filters to default"
-                        >
-                            <FilterX className="w-4 h-4" />
-                            Clear All Filters
-                        </Button>
-                    </div>
+    const portalTarget = document.getElementById('crm-sticky-header-portal');
+    const businessIntelligenceHeader = (
+        <div className="flex flex-col gap-2 p-3 bg-zinc-950/40">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
+                    <p className="text-[10px] text-zinc-500">Overview of operational performance and revenue goals.</p>
                 </div>
-                
-                {/* Bookmarks Bar */}
-                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-800/50">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mr-2 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Jump To:</span>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Invoices</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Estimates & Quotes</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Probono Jobs</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
-                    <Button variant="outline" size="sm" className="h-7 text-xs bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+                <div className="flex flex-wrap gap-1.5 w-full sm:w-auto [&>button]:h-7 [&>button]:text-[10px] [&>button]:px-2.5">
+                    <div className="scale-90 origin-right transform-gpu"><CustomerIntelligence360Modal customers={customers} /></div>
+                    <Button 
+                        size="sm"
+                        onClick={generateAnalyticsPDF}
+                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-7 px-3 text-[10px] gap-1.5 shadow-lg shadow-blue-900/20"
+                    >
+                        <Printer className="w-3 h-3" />
+                        Print Report
+                    </Button>
+                    <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={generatePriceHistoryPDF}
+                        className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-7 px-3 text-[10px] gap-1.5"
+                    >
+                        <FileBarChart className="w-3 h-3" />
+                        Price Audit
+                    </Button>
+                    <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAllFilters}
+                        className="border-red-900/50 bg-red-900/10 text-red-400 hover:text-white hover:bg-red-900/40 h-7 px-3 text-[10px] gap-1.5"
+                        title="Reset all Analytics filters to default"
+                    >
+                        <FilterX className="w-3 h-3" />
+                        Clear Filters
+                    </Button>
                 </div>
             </div>
+            
+            {/* Bookmarks Bar */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-zinc-800/50">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Jump To:</span>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Invoices</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Estimates & Quotes</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Probono Jobs</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
+                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2">
+            {portalTarget ? createPortal(businessIntelligenceHeader, portalTarget) : businessIntelligenceHeader}
 
             <div className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl">
             {/* Dynamic Operational Snapshot */}

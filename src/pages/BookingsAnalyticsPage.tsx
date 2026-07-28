@@ -62,9 +62,10 @@ export default function BookingsAnalyticsPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
-            <div className="flex items-center justify-between pr-4 sm:pr-8">
-                <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
-                <div className="flex items-center gap-3 mt-6">
+            <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
+            
+            <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
+                <div className="flex flex-wrap items-center justify-end pr-4 sm:pr-8 gap-3 pt-3 pb-2">
                     <div className="hidden md:flex items-center gap-2 mr-2">
                         <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900/50 font-normal py-1 px-3 hover:bg-zinc-800 cursor-help transition-colors"
                             onClick={(e) => {
@@ -138,11 +139,10 @@ export default function BookingsAnalyticsPage() {
                         <span className="hidden sm:inline">Refresh Data</span>
                     </Button>
                 </div>
-            </div>
-
-            {/* Tab Switcher */}
-            <div className="px-4 sm:px-6 pt-2 flex gap-2 border-b border-zinc-800">
-                <button
+                
+                {/* Tab Switcher */}
+                <div className="px-4 sm:px-6 flex gap-2 border-t border-zinc-800/50 pt-2">
+                    <button
                     onClick={() => setActiveTab('crm')}
                     className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'crm'
@@ -162,6 +162,11 @@ export default function BookingsAnalyticsPage() {
                 >
                     <Users className="h-3.5 w-3.5" /> Employees
                 </button>
+                </div>
+                
+                {/* PORTAL TARGET FOR BUSINESS INTELLIGENCE STICKY HEADER */}
+                <div id="crm-sticky-header-portal"></div>
+                <div className="border-b border-zinc-800 w-full" />
             </div>
 
             <div className="p-4 sm:p-6 space-y-6">
