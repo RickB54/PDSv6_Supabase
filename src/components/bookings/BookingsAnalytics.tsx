@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
     const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'employee-analytics');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
+    const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
     const followUpStatus = useFollowUpStatus(customers, bookings);
 
@@ -1888,47 +1889,58 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
-        <div className="flex flex-col gap-2 p-3 bg-zinc-950/40">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                    <h3 className="text-sm font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
-                    <p className="text-[10px] text-zinc-500">Overview of operational performance and revenue goals.</p>
+        <div className="flex flex-col gap-2 p-3 bg-zinc-950/40 transition-all duration-300">
+            {!isHeaderCollapsed && (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                        <h3 className="text-sm font-bold text-white uppercase tracking-tighter">Business Intelligence</h3>
+                        <p className="text-[10px] text-zinc-500">Overview of operational performance and revenue goals.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 w-full sm:w-auto [&>button]:h-7 [&>button]:text-[10px] [&>button]:px-2.5">
+                        <div className="scale-90 origin-right transform-gpu"><CustomerIntelligence360Modal customers={customers} /></div>
+                        <Button 
+                            size="sm"
+                            onClick={generateAnalyticsPDF}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-7 px-3 text-[10px] gap-1.5 shadow-lg shadow-blue-900/20"
+                        >
+                            <Printer className="w-3 h-3" />
+                            Print Report
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={generatePriceHistoryPDF}
+                            className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-7 px-3 text-[10px] gap-1.5"
+                        >
+                            <FileBarChart className="w-3 h-3" />
+                            Price Audit
+                        </Button>
+                        <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={clearAllFilters}
+                            className="border-red-900/50 bg-red-900/10 text-red-400 hover:text-white hover:bg-red-900/40 h-7 px-3 text-[10px] gap-1.5"
+                            title="Reset all Analytics filters to default"
+                        >
+                            <FilterX className="w-3 h-3" />
+                            Clear Filters
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 w-full sm:w-auto [&>button]:h-7 [&>button]:text-[10px] [&>button]:px-2.5">
-                    <div className="scale-90 origin-right transform-gpu"><CustomerIntelligence360Modal customers={customers} /></div>
-                    <Button 
-                        size="sm"
-                        onClick={generateAnalyticsPDF}
-                        className="bg-blue-600 hover:bg-blue-500 text-white font-bold h-7 px-3 text-[10px] gap-1.5 shadow-lg shadow-blue-900/20"
-                    >
-                        <Printer className="w-3 h-3" />
-                        Print Report
-                    </Button>
-                    <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={generatePriceHistoryPDF}
-                        className="border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-white h-7 px-3 text-[10px] gap-1.5"
-                    >
-                        <FileBarChart className="w-3 h-3" />
-                        Price Audit
-                    </Button>
-                    <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={clearAllFilters}
-                        className="border-red-900/50 bg-red-900/10 text-red-400 hover:text-white hover:bg-red-900/40 h-7 px-3 text-[10px] gap-1.5"
-                        title="Reset all Analytics filters to default"
-                    >
-                        <FilterX className="w-3 h-3" />
-                        Clear Filters
-                    </Button>
-                </div>
-            </div>
+            )}
             
             {/* Bookmarks Bar */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-zinc-800/50">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1"><BookOpen className="w-3 h-3"/> Jump To:</span>
+            <div className={`flex flex-wrap items-center gap-1.5 ${isHeaderCollapsed ? '' : 'pt-2 border-t border-zinc-800/50'}`}>
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1">
+                    <button 
+                        onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+                        className="hover:text-white p-0.5 rounded hover:bg-zinc-800 transition-colors mr-1"
+                        title={isHeaderCollapsed ? "Expand Header" : "Collapse Header"}
+                    >
+                        {isHeaderCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                    </button>
+                    <BookOpen className="w-3 h-3"/> Jump To:
+                </span>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Invoices</Button>
