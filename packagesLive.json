@@ -41,10 +41,10 @@
       "addon:ceramic-trim-coat:midsize": "83",
       "addon:ceramic-trim-coat:truck": "105",
       "addon:ceramic-trim-coat:luxury": "138",
-      "addon:clay-bar:compact": "80",
-      "addon:clay-bar:midsize": "90",
-      "addon:clay-bar:truck": "100",
-      "addon:clay-bar:luxury": "120",
+      "addon:clay-bar:compact": "88",
+      "addon:clay-bar:midsize": "99",
+      "addon:clay-bar:truck": "110",
+      "addon:clay-bar:luxury": "132",
       "addon:deep-interior:compact": "165",
       "addon:deep-interior:midsize": "193",
       "addon:deep-interior:truck": "220",
@@ -272,7 +272,7 @@
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1784659206365
+    "version": 1785255125565
   },
   "vehicleTypesLive": [
     {
