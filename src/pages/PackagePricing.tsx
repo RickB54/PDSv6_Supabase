@@ -4637,6 +4637,7 @@ export default function PackagePricing() {
         addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted)}
         currentPrices={currentPrices}
         onDownloadAuditPDF={generatePriceAuditPDF}
+        onDownloadPricesPDF={downloadPricesPDF}
         onSavePrices={async (newPrices) => {
           const merged = { ...currentPrices, ...newPrices };
           setCurrentPrices(merged);

@@ -25,6 +25,7 @@ export const QuickPricingEditorModal = ({
   currentPrices: Record<string, string>;
   onSavePrices: (newPrices: Record<string, string>) => void;
   onDownloadAuditPDF?: () => void;
+  onDownloadPricesPDF?: () => void;
 }) => {
   const [localPrices, setLocalPrices] = useState<Record<string, string>>(currentPrices);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -130,17 +131,24 @@ export const QuickPricingEditorModal = ({
           <DialogTitle className="text-2xl font-black text-emerald-500 uppercase tracking-tight flex items-center gap-3">
             Quick Bulk Grid Editor
             <TooltipProvider>
-              <Tooltip>
+              <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
-                  <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-emerald-500 cursor-help transition-colors" />
+                  <HelpCircle className="w-8 h-8 text-zinc-400 hover:text-emerald-500 cursor-help transition-colors" />
                 </TooltipTrigger>
-                <TooltipContent className="bg-zinc-900 border-zinc-700 text-zinc-100 p-4 max-w-sm text-sm z-[10000]">
-                  <p className="font-bold text-emerald-500 mb-2">How to use this editor:</p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li>Type directly into any box to change its price.</li>
-                    <li>Check the box next to items to select them, then use the <strong>Bulk Edit</strong> tool to apply a flat price or percentage increase to all checked items.</li>
-                    <li>Use the <strong>+5%</strong> or <strong>+10%</strong> buttons to instantly boost an entire row.</li>
-                    <li>Click <strong>Save & Publish Live</strong> when you're done!</li>
+                <TooltipContent className="bg-white border-slate-200 text-slate-800 p-5 max-w-[350px] shadow-xl z-[10000] rounded-xl">
+                  <h3 className="font-bold text-lg text-slate-900 mb-1">Quick Bulk Grid</h3>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">CHEAT SHEET</p>
+                  
+                  <p className="mb-4 text-sm text-slate-600">
+                    This editor allows you to quickly adjust your pricing across all packages, add-ons, and vehicle sizes.
+                  </p>
+                  
+                  <p className="font-bold text-slate-900 mb-2">Recommended Actions:</p>
+                  <ul className="list-disc pl-5 space-y-2 text-sm text-slate-700">
+                    <li>Type directly into any box to change its price</li>
+                    <li>Check the boxes next to items to select them, then use the Bulk Edit tool to apply a flat price or percentage increase</li>
+                    <li>Use the +5% or +10% buttons to instantly boost an entire row</li>
+                    <li>Click Save & Publish Live when you're done</li>
                   </ul>
                 </TooltipContent>
               </Tooltip>
@@ -173,13 +181,20 @@ export const QuickPricingEditorModal = ({
                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={applyBulkPrice}>Apply</Button>
             </div>
             
-            {onDownloadAuditPDF && (
-              <Button size="lg" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 font-bold px-6 border-2 uppercase tracking-wider" onClick={onDownloadAuditPDF}>
-                Download Audit PDF
-              </Button>
-            )}
+            <div className="flex flex-col gap-1.5">
+              {onDownloadPricesPDF && (
+                <Button size="sm" variant="outline" className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold px-3 py-1 h-7 text-xs uppercase tracking-wider" onClick={onDownloadPricesPDF}>
+                  Print Current Chart
+                </Button>
+              )}
+              {onDownloadAuditPDF && (
+                <Button size="sm" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 font-bold px-3 py-1 h-7 text-xs uppercase tracking-wider" onClick={onDownloadAuditPDF}>
+                  Audit PDF
+                </Button>
+              )}
+            </div>
 
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-black px-8 shadow-lg shadow-blue-500/20 uppercase tracking-wider" onClick={handleSave}>
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-black px-8 shadow-lg shadow-blue-500/20 uppercase tracking-wider ml-2" onClick={handleSave}>
               Save & Publish Live
             </Button>
           </div>
