@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export const QuickPricingEditorModal = ({ 
@@ -20,17 +23,19 @@ export const QuickPricingEditorModal = ({
   addons: any[];
   currentPrices: Record<string, string>;
   onSavePrices: (newPrices: Record<string, string>) => void;
+  onDownloadAuditPDF?: () => void;
 }) => {
   const [localPrices, setLocalPrices] = useState<Record<string, string>>(currentPrices);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [bulkPrice, setBulkPrice] = useState("");
+  const [bulkMode, setBulkMode] = useState<"$" | "%">("$");
   
-  // Update localPrices when opened
   React.useEffect(() => {
     if (open) {
       setLocalPrices(currentPrices);
       setSelectedKeys(new Set());
       setBulkPrice("");
+      setBulkMode("$");
     }
   }, [open, currentPrices]);
 
@@ -68,8 +73,9 @@ export const QuickPricingEditorModal = ({
   };
 
   const applyBulkPrice = () => {
-    if (!bulkPrice || isNaN(parseFloat(bulkPrice))) {
-        toast({ title: "Invalid Price", variant: "destructive" });
+    const amount = parseFloat(bulkPrice);
+    if (!bulkPrice || isNaN(amount)) {
+        toast({ title: "Invalid Amount", variant: "destructive" });
         return;
     }
     if (selectedKeys.size === 0) {
@@ -79,72 +85,133 @@ export const QuickPricingEditorModal = ({
     
     setLocalPrices(prev => {
       const next = { ...prev };
-      selectedKeys.forEach(k => next[k] = bulkPrice);
+      selectedKeys.forEach(k => {
+        if (bulkMode === "$") {
+          next[k] = amount.toString();
+        } else {
+          // percentage increase
+          const currentVal = parseFloat(next[k] || "0");
+          const increase = currentVal * (amount / 100);
+          next[k] = Math.ceil(currentVal + increase).toString();
+        }
+      });
       return next;
     });
-    toast({ title: `Applied $${bulkPrice} to ${selectedKeys.size} items` });
+    
+    toast({ title: `Applied ${bulkMode === "$" ? "$" : ""}${amount}${bulkMode === "%" ? "% increase" : ""} to ${selectedKeys.size} items` });
     setSelectedKeys(new Set());
     setBulkPrice("");
+  };
+
+  const applyRowPercentage = (type: string, id: string, pct: number) => {
+    setLocalPrices(prev => {
+      const next = { ...prev };
+      vehicleTypes.forEach(v => {
+        const key = `${type}:${id}:${v}`;
+        const currentVal = parseFloat(next[key] || "0");
+        const increase = currentVal * (pct / 100);
+        next[key] = Math.ceil(currentVal + increase).toString();
+      });
+      return next;
+    });
+    toast({ title: `Applied +${pct}% to row` });
   };
 
   const handleSave = () => {
     onSavePrices(localPrices);
     onOpenChange(false);
-    toast({ title: "Pricing Updated", description: "Changes have been staged. Please hit Save All to confirm." });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-white border-zinc-300 text-zinc-950 flex flex-col p-0 z-[9999] shadow-2xl">
-        <div className="p-6 border-b border-zinc-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50">
-          <DialogTitle className="text-2xl font-black text-emerald-700 uppercase tracking-tight">Quick Bulk Grid Editor</DialogTitle>
+      <DialogContent className="!max-w-[95vw] w-full h-[90vh] bg-zinc-950 border-zinc-800 text-zinc-100 flex flex-col p-0 z-[9999] shadow-2xl">
+        <div className="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+          <DialogTitle className="text-2xl font-black text-emerald-500 uppercase tracking-tight flex items-center gap-3">
+            Quick Bulk Grid Editor
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-emerald-500 cursor-help transition-colors" />
+                </TooltipTrigger>
+                <TooltipContent className="bg-zinc-900 border-zinc-700 text-zinc-100 p-4 max-w-sm text-sm z-[10000]">
+                  <p className="font-bold text-emerald-500 mb-2">How to use this editor:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Type directly into any box to change its price.</li>
+                    <li>Check the box next to items to select them, then use the <strong>Bulk Edit</strong> tool to apply a flat price or percentage increase to all checked items.</li>
+                    <li>Use the <strong>+5%</strong> or <strong>+10%</strong> buttons to instantly boost an entire row.</li>
+                    <li>Click <strong>Save & Publish Live</strong> when you're done!</li>
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </DialogTitle>
+          
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white p-2 rounded-lg border border-zinc-300 shadow-sm">
-               <span className="text-sm font-bold text-zinc-700">Bulk Edit Selected:</span>
+            <div className="flex items-center gap-2 bg-zinc-950 p-2 rounded-lg border border-zinc-800">
+               <span className="text-sm font-bold text-zinc-400">Bulk Edit Selected:</span>
+               
+               <Select value={bulkMode} onValueChange={(val: any) => setBulkMode(val)}>
+                 <SelectTrigger className="w-16 h-9 bg-black border-zinc-800 text-white font-bold">
+                   <SelectValue />
+                 </SelectTrigger>
+                 <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[10000]">
+                   <SelectItem value="$">$ Flat</SelectItem>
+                   <SelectItem value="%">% Inc.</SelectItem>
+                 </SelectContent>
+               </Select>
+               
                <div className="relative">
-                 <span className="absolute left-2 top-2 text-zinc-500 font-bold">$</span>
+                 <span className="absolute left-2 top-2 text-zinc-500 font-bold">{bulkMode === "$" ? "$" : "%"}</span>
                  <Input 
-                   className="w-24 pl-6 h-9 bg-white border-zinc-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 font-mono font-bold text-zinc-900" 
+                   className="w-20 pl-6 h-9 bg-black border-zinc-700 focus:border-emerald-500 font-mono font-bold text-white placeholder:text-zinc-700" 
                    placeholder="0" 
                    value={bulkPrice}
                    onChange={e => setBulkPrice(e.target.value)}
                  />
                </div>
-               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={applyBulkPrice}>Apply</Button>
+               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={applyBulkPrice}>Apply</Button>
             </div>
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-500/20" onClick={handleSave}>
-              Save Grid Edits
+            
+            {onDownloadAuditPDF && (
+              <Button size="lg" variant="outline" className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10 font-bold px-6 border-2 uppercase tracking-wider" onClick={onDownloadAuditPDF}>
+                Download Audit PDF
+              </Button>
+            )}
+
+            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-black px-8 shadow-lg shadow-blue-500/20 uppercase tracking-wider" onClick={handleSave}>
+              Save & Publish Live
             </Button>
           </div>
         </div>
         
-        <ScrollArea className="flex-1 p-6 bg-zinc-100/50">
-          <div className="space-y-8">
+        <ScrollArea className="flex-1 p-6 bg-zinc-950">
+          <div className="space-y-10">
             {/* Packages */}
             <div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-wider mb-4 border-b-2 border-zinc-300 pb-2">Packages</h3>
-              <div className="overflow-x-auto rounded-xl border-2 border-zinc-300 bg-white shadow-sm">
+              <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 border-b border-zinc-800 pb-2">Packages</h3>
+              <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-zinc-200 border-b-2 border-zinc-300 text-zinc-800 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
+                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="p-4 w-12 text-center">Row</th>
+                      <th className="p-4 w-12 text-center">Sel</th>
                       <th className="p-4">Package Name</th>
                       {vehicleTypes.map(v => (
                         <th key={v} className="p-4 text-center">{vehicleLabels[v]}</th>
                       ))}
+                      <th className="p-4 text-center">Row Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {packages.map(pkg => (
-                      <tr key={pkg.id} className="border-b border-zinc-200 hover:bg-blue-50/50 transition-colors">
+                      <tr key={pkg.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors">
                         <td className="p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`package:${pkg.id}:${v}`))}
                             onCheckedChange={(c) => handleSelectRow('package', pkg.id, !!c)}
-                            className="border-zinc-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 scale-125"
+                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-blue-900 text-base">{pkg.name}</td>
+                        <td className="p-4 font-black text-blue-400 text-base">{pkg.name}</td>
                         {vehicleTypes.map(v => {
                           const key = `package:${pkg.id}:${v}`;
                           return (
@@ -153,12 +220,12 @@ export const QuickPricingEditorModal = ({
                                 <Checkbox 
                                   checked={selectedKeys.has(key)}
                                   onCheckedChange={(c) => handleCheckbox(key, !!c)}
-                                  className="border-zinc-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 scale-125"
+                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-110"
                                 />
                                 <div className="relative">
-                                  <span className="absolute left-2.5 top-1.5 text-zinc-500 font-bold text-sm">$</span>
+                                  <span className="absolute left-2 top-2 text-zinc-600 font-bold text-sm">$</span>
                                   <Input 
-                                    className="w-24 pl-6 h-9 bg-white border-zinc-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 text-center font-mono font-bold text-zinc-900 shadow-sm text-sm" 
+                                    className="w-24 pl-6 h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-sm" 
                                     value={localPrices[key] !== undefined ? localPrices[key] : (pkg.pricing[v] || 0)}
                                     onChange={(e) => handlePriceChange(key, e.target.value)}
                                   />
@@ -167,6 +234,12 @@ export const QuickPricingEditorModal = ({
                             </td>
                           );
                         })}
+                        <td className="p-2 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('package', pkg.id, 5)}>+5%</Button>
+                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('package', pkg.id, 10)}>+10%</Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -176,29 +249,30 @@ export const QuickPricingEditorModal = ({
 
             {/* Addons */}
             <div>
-              <h3 className="text-xl font-black text-zinc-900 uppercase tracking-wider mb-4 border-b-2 border-zinc-300 pb-2">Add-Ons</h3>
-              <div className="overflow-x-auto rounded-xl border-2 border-zinc-300 bg-white shadow-sm">
+              <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 border-b border-zinc-800 pb-2">Add-Ons</h3>
+              <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-zinc-200 border-b-2 border-zinc-300 text-zinc-800 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
+                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="p-4 w-12 text-center">Row</th>
+                      <th className="p-4 w-12 text-center">Sel</th>
                       <th className="p-4">Add-On Name</th>
                       {vehicleTypes.map(v => (
                         <th key={v} className="p-4 text-center">{vehicleLabels[v]}</th>
                       ))}
+                      <th className="p-4 text-center">Row Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {addons.map(addon => (
-                      <tr key={addon.id} className="border-b border-zinc-200 hover:bg-purple-50/50 transition-colors">
+                      <tr key={addon.id} className="border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors">
                         <td className="p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`addon:${addon.id}:${v}`))}
                             onCheckedChange={(c) => handleSelectRow('addon', addon.id, !!c)}
-                            className="border-zinc-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 scale-125"
+                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-purple-900 text-base">{addon.name}</td>
+                        <td className="p-4 font-black text-purple-400 text-base">{addon.name}</td>
                         {vehicleTypes.map(v => {
                           const key = `addon:${addon.id}:${v}`;
                           return (
@@ -207,12 +281,12 @@ export const QuickPricingEditorModal = ({
                                 <Checkbox 
                                   checked={selectedKeys.has(key)}
                                   onCheckedChange={(c) => handleCheckbox(key, !!c)}
-                                  className="border-zinc-400 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 scale-125"
+                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-110"
                                 />
                                 <div className="relative">
-                                  <span className="absolute left-2.5 top-1.5 text-zinc-500 font-bold text-sm">$</span>
+                                  <span className="absolute left-2 top-2 text-zinc-600 font-bold text-sm">$</span>
                                   <Input 
-                                    className="w-24 pl-6 h-9 bg-white border-zinc-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 text-center font-mono font-bold text-zinc-900 shadow-sm text-sm" 
+                                    className="w-24 pl-6 h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-sm" 
                                     value={localPrices[key] !== undefined ? localPrices[key] : (addon.pricing[v] || 0)}
                                     onChange={(e) => handlePriceChange(key, e.target.value)}
                                   />
@@ -221,6 +295,12 @@ export const QuickPricingEditorModal = ({
                             </td>
                           );
                         })}
+                        <td className="p-2 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('addon', addon.id, 5)}>+5%</Button>
+                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('addon', addon.id, 10)}>+10%</Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

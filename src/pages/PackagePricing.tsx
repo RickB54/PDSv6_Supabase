@@ -4636,9 +4636,30 @@ export default function PackagePricing() {
         packages={[...builtInPackages, ...getCustomPackages()].filter(p => !getPackageMeta(p.id)?.deleted)}
         addons={[...builtInAddOns, ...getCustomAddOns()].filter(a => !getAddOnMeta(a.id)?.deleted)}
         currentPrices={currentPrices}
-        onSavePrices={(newPrices) => {
-          // Merge new prices into current prices
-          setCurrentPrices(prev => ({ ...prev, ...newPrices }));
+        onDownloadAuditPDF={generatePriceAuditPDF}
+        onSavePrices={async (newPrices) => {
+          const merged = { ...currentPrices, ...newPrices };
+          setCurrentPrices(merged);
+          setSavedPrices(merged);
+          
+          toast.loading("Publishing prices to live website...");
+          try {
+            await saveToLocalforage(merged);
+            await saveToBackend(merged);
+            await postFullSync();
+            
+            // Helper functions may be available to force a refresh on the live site if open in another tab
+            if (typeof forceWebsiteTabRefresh === 'function') forceWebsiteTabRefresh();
+            if (typeof forceBookNowTabRefresh === 'function') forceBookNowTabRefresh();
+            
+            logPriceChange({ type: 'master', description: 'Quick Bulk Grid Editor Update', snapshot: merged });
+            toast.dismiss();
+            toast.success("Grid edits saved and published live!");
+          } catch (e) {
+            toast.dismiss();
+            toast.error("Failed to publish live. See console for details.");
+            console.error(e);
+          }
         }}
       />
     </div>
