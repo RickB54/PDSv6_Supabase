@@ -1218,9 +1218,32 @@ Precision. Protection. Perfection.`;
       setIsEmailModalOpen(false);
     } catch (err: any) {
       console.error("Email send failed:", err);
+      
+      let errorMessage = err.message || "Unknown error occurred";
+      
+      // Try to extract Resend API error details from the Edge Function response
+      if (err.context && typeof err.context.json === 'function') {
+          try {
+              const ctx = await err.context.json();
+              if (ctx && ctx.error) {
+                  let parsedError = ctx.error;
+                  try {
+                      const parsed = JSON.parse(ctx.error);
+                      if (parsed.message) parsedError = parsed.message;
+                  } catch(e) {}
+                  
+                  errorMessage = typeof parsedError === 'string' ? parsedError : JSON.stringify(parsedError);
+                  
+                  if (errorMessage.includes('verified')) {
+                      errorMessage += " (Resend Free Tier restricts sending to unverified emails like Yahoo/Gmail. Please verify your domain in Resend.)";
+                  }
+              }
+          } catch (e) {}
+      }
+
       toast({ 
         title: "Failed to send email", 
-        description: err.message || "Unknown error occurred", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {
