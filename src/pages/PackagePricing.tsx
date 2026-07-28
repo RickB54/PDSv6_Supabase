@@ -169,6 +169,9 @@ export default function PackagePricing() {
 
   useEffect(() => {
     setPriceHistory(getPriceChangeHistory());
+    const handleOpenQuickPricing = () => setQuickEditorOpen(true);
+    window.addEventListener('open-quick-pricing', handleOpenQuickPricing);
+    return () => window.removeEventListener('open-quick-pricing', handleOpenQuickPricing);
   }, []);
   
   const refreshHistory = () => {

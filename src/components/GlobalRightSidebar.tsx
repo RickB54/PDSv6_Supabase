@@ -24,7 +24,8 @@ import {
     BookOpen,
     Banknote,
     Receipt,
-    Zap
+    Zap,
+    BarChart2
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -112,6 +113,17 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         {/* Sub-section: Financial / Billing */}
         {isAdmin && (
             <>
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => {
+                    navigate('/package-pricing');
+                    setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
+                }} title="Quick Bulk Grid Editor" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
+                    <div className="relative flex items-center justify-center">
+                        <BarChart2 className="w-5 h-5 text-blue-800" />
+                        <DollarSign className="w-3 h-3 text-blue-800 absolute -bottom-1 -right-1 bg-zinc-950 rounded-full" />
+                    </div>
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Grid Editor</span>}
+                </Button>
+
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-green-500/10`}>
                     <div className="relative">
                         <Banknote className="w-5 h-5 text-green-500" />
