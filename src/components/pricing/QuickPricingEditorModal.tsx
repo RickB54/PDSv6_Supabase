@@ -6,8 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, BarChart2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import MarketPricingAnalysis from "@/components/analytics/MarketPricingAnalysis";
 
 export const QuickPricingEditorModal = ({ 
   open, 
@@ -34,6 +35,9 @@ export const QuickPricingEditorModal = ({
   const [bulkMode, setBulkMode] = useState<"$" | "%">("$");
   const [showAllPackages, setShowAllPackages] = useState(false);
   const [showAllAddons, setShowAllAddons] = useState(false);
+  
+  const [marketModalOpen, setMarketModalOpen] = useState(false);
+  const [marketCategory, setMarketCategory] = useState<'packages' | 'addons'>('packages');
   
   React.useEffect(() => {
     if (open) {
@@ -208,7 +212,20 @@ export const QuickPricingEditorModal = ({
             {/* Packages */}
             <div>
               <div className="flex items-center justify-between mb-4 border-b border-zinc-800 pb-2">
-                <h3 className="text-xl font-black text-white uppercase tracking-wider">Packages</h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-black text-white uppercase tracking-wider">Packages</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10 font-bold h-7 text-xs px-3 uppercase tracking-wider flex items-center gap-1.5"
+                    onClick={() => {
+                      setMarketCategory('packages');
+                      setMarketModalOpen(true);
+                    }}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" /> Market Comparison
+                  </Button>
+                </div>
                 <div className="flex bg-zinc-900 rounded-md p-1 border border-zinc-800">
                   <button 
                     onClick={() => setShowAllPackages(false)} 
@@ -288,7 +305,20 @@ export const QuickPricingEditorModal = ({
             {/* Addons */}
             <div>
               <div className="flex items-center justify-between mb-4 border-b border-zinc-800 pb-2">
-                <h3 className="text-xl font-black text-white uppercase tracking-wider">Add-Ons</h3>
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-black text-white uppercase tracking-wider">Add-Ons</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10 font-bold h-7 text-xs px-3 uppercase tracking-wider flex items-center gap-1.5"
+                    onClick={() => {
+                      setMarketCategory('addons');
+                      setMarketModalOpen(true);
+                    }}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" /> Market Comparison
+                  </Button>
+                </div>
                 <div className="flex bg-zinc-900 rounded-md p-1 border border-zinc-800">
                   <button 
                     onClick={() => setShowAllAddons(false)} 
@@ -367,6 +397,14 @@ export const QuickPricingEditorModal = ({
           </div>
         </ScrollArea>
       </DialogContent>
+      
+      {/* Market Comparison Modal */}
+      <Dialog open={marketModalOpen} onOpenChange={setMarketModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] bg-zinc-950 border-zinc-800 p-6 overflow-y-auto z-[10001]">
+          <DialogTitle className="sr-only">Market Pricing Analysis</DialogTitle>
+          <MarketPricingAnalysis initialCategory={marketCategory} />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

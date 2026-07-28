@@ -52,8 +52,8 @@ const getMarketAverage = (name: string, size: string, isPackage: boolean): numbe
   return Math.round(base * multiplier);
 };
 
-export default function MarketPricingAnalysis() {
-  const [category, setCategory] = useState<'packages' | 'addons'>('packages');
+export default function MarketPricingAnalysis({ initialCategory = 'packages' }: { initialCategory?: 'packages' | 'addons' }) {
+  const [category, setCategory] = useState<'packages' | 'addons'>(initialCategory);
   const [vehicleClass, setVehicleClass] = useState<string>('compact');
   const [showArchived, setShowArchived] = useState(false);
   const [savedPrices, setSavedPrices] = useState<Record<string, string>>({});
