@@ -117,9 +117,9 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                     navigate('/package-pricing');
                     setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
                 }} title="Quick Bulk Grid Editor" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
-                    <div className="relative flex items-center justify-center">
-                        <BarChart2 className="w-5 h-5 text-blue-800" />
-                        <DollarSign className="w-3 h-3 text-blue-800 absolute -bottom-1 -right-1 bg-zinc-950 rounded-full" />
+                    <div className="relative flex items-center justify-center w-5 h-5">
+                        <DollarSign className="w-5 h-5 text-blue-900 absolute translate-x-[1px] translate-y-[1px]" strokeWidth={3} />
+                        <DollarSign className="w-5 h-5 text-blue-500 absolute -translate-x-[1px] -translate-y-[1px]" strokeWidth={2} />
                     </div>
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Grid Editor</span>}
                 </Button>
