@@ -22,8 +22,14 @@ export function LetterMakerModal({ isOpen, onClose, customerId }: LetterMakerMod
         </DialogHeader>
         <div className="flex-1 overflow-y-auto relative">
           {isOpen && (
-              <Routes location={`/?customerId=${customerId}`}>
-                <Route path="/" element={<LetterMaker />} />
+              <Routes location={{
+                  pathname: window.location.pathname,
+                  search: `?customerId=${customerId}`,
+                  hash: '',
+                  state: null,
+                  key: 'letter-maker-modal'
+              }}>
+                <Route path="*" element={<LetterMaker />} />
               </Routes>
           )}
         </div>

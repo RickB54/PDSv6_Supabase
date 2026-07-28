@@ -36,7 +36,13 @@ export function PageModal({ isOpen, onClose, initialUrl, component: Component, t
         </DialogHeader>
         <div className="flex-1 overflow-y-auto relative bg-zinc-950">
           {isOpen && (
-              <Routes location={initialUrl}>
+              <Routes location={{
+                  pathname: window.location.pathname,
+                  search: initialUrl.includes('?') ? initialUrl.substring(initialUrl.indexOf('?')) : '',
+                  hash: '',
+                  state: null,
+                  key: 'modal'
+              }}>
                 <Route path="*" element={<Component />} />
               </Routes>
           )}
