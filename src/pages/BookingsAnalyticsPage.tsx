@@ -61,7 +61,7 @@ export default function BookingsAnalyticsPage() {
     }, [fetchData]);
 
     return (
-        <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw] overflow-x-hidden">
+        <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">
             <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
             
             <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
