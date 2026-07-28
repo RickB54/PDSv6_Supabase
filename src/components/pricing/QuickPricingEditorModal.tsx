@@ -95,7 +95,7 @@ export const QuickPricingEditorModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-white border-zinc-300 text-zinc-950 flex flex-col p-0 z-[100] shadow-2xl">
+      <DialogContent className="max-w-[95vw] w-full h-[90vh] bg-white border-zinc-300 text-zinc-950 flex flex-col p-0 z-[9999] shadow-2xl">
         <div className="p-6 border-b border-zinc-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-zinc-50">
           <DialogTitle className="text-2xl font-black text-emerald-700 uppercase tracking-tight">Quick Bulk Grid Editor</DialogTitle>
           <div className="flex items-center gap-4">
