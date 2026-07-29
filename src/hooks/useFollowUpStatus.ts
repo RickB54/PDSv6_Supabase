@@ -173,13 +173,6 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         ? addMonths(lastActivityDate, safeThreshold)
         : addDays(lastActivityDate, safeThreshold);
 
-      // If the due date falls in winter (Dec-Feb), push it to March 1st of the appropriate year
-      if (thresholdDate.getMonth() === 11) { // December
-        thresholdDate = new Date(thresholdDate.getFullYear() + 1, 2, 1);
-      } else if (thresholdDate.getMonth() === 0 || thresholdDate.getMonth() === 1) { // Jan or Feb
-        thresholdDate = new Date(thresholdDate.getFullYear(), 2, 1);
-      }
-
       const daysUntilDue = differenceInDays(thresholdDate, now);
       
       const isOverdue = daysUntilDue < 0;
