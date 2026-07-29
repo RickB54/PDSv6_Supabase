@@ -1,30 +1,30 @@
 {
   "packagesLive": {
     "savedPrices": {
-      "package:prime-essential-exterior:compact": "99",
-      "package:prime-essential-exterior:midsize": "121",
-      "package:prime-essential-exterior:truck": "132",
-      "package:prime-essential-exterior:luxury": "143",
-      "package:prime-essential-interior:compact": "198",
-      "package:prime-essential-interior:midsize": "220",
-      "package:prime-essential-interior:truck": "231",
-      "package:prime-essential-interior:luxury": "264",
-      "package:prime-essential-full:compact": "286",
-      "package:prime-essential-full:midsize": "327",
-      "package:prime-essential-full:truck": "351",
-      "package:prime-essential-full:luxury": "388",
       "package:prime-elite-exterior:compact": "176",
       "package:prime-elite-exterior:midsize": "198",
       "package:prime-elite-exterior:truck": "209",
       "package:prime-elite-exterior:luxury": "231",
-      "package:prime-elite-interior:compact": "429",
-      "package:prime-elite-interior:midsize": "523",
-      "package:prime-elite-interior:truck": "545",
-      "package:prime-elite-interior:luxury": "649",
       "package:prime-elite-full:compact": "545",
       "package:prime-elite-full:midsize": "655",
       "package:prime-elite-full:truck": "765",
       "package:prime-elite-full:luxury": "935",
+      "package:prime-elite-interior:compact": "429",
+      "package:prime-elite-interior:midsize": "523",
+      "package:prime-elite-interior:truck": "545",
+      "package:prime-elite-interior:luxury": "649",
+      "package:prime-essential-exterior:compact": "99",
+      "package:prime-essential-exterior:midsize": "121",
+      "package:prime-essential-exterior:truck": "132",
+      "package:prime-essential-exterior:luxury": "143",
+      "package:prime-essential-full:compact": "286",
+      "package:prime-essential-full:midsize": "327",
+      "package:prime-essential-full:truck": "351",
+      "package:prime-essential-full:luxury": "388",
+      "package:prime-essential-interior:compact": "198",
+      "package:prime-essential-interior:midsize": "220",
+      "package:prime-essential-interior:truck": "231",
+      "package:prime-essential-interior:luxury": "264",
       "addon:ceramic-protection-1yr:compact": "87",
       "addon:ceramic-protection-1yr:midsize": "120",
       "addon:ceramic-protection-1yr:truck": "142",
@@ -33,6 +33,10 @@
       "addon:ceramic-coating-2yr:midsize": "329",
       "addon:ceramic-coating-2yr:truck": "384",
       "addon:ceramic-coating-2yr:luxury": "494",
+      "addon:3rd-row-seating:compact": "55",
+      "addon:3rd-row-seating:midsize": "55",
+      "addon:3rd-row-seating:truck": "55",
+      "addon:3rd-row-seating:luxury": "55",
       "addon:ceramic-coating:compact": "550",
       "addon:ceramic-coating:midsize": "550",
       "addon:ceramic-coating:truck": "605",
@@ -57,6 +61,9 @@
       "addon:headlight-restoration:midsize": "44",
       "addon:headlight-restoration:truck": "55",
       "addon:headlight-restoration:luxury": "72",
+      "addon:large-wheel-cleaning:midsize": "35",
+      "addon:large-wheel-cleaning:truck": "50",
+      "addon:large-wheel-cleaning:luxury": "65",
       "addon:leather-conditioning:compact": "28",
       "addon:leather-conditioning:midsize": "33",
       "addon:leather-conditioning:truck": "39",
@@ -96,15 +103,7 @@
       "addon:wheel-cleaning:compact": "25",
       "addon:wheel-cleaning:midsize": "30",
       "addon:wheel-cleaning:truck": "40",
-      "addon:wheel-cleaning:luxury": "50",
-      "addon:3rd-row-seating:compact": "55",
-      "addon:3rd-row-seating:midsize": "55",
-      "addon:3rd-row-seating:truck": "55",
-      "addon:3rd-row-seating:luxury": "55",
-      "addon:large-wheel-cleaning:midsize": "35",
-      "addon:large-wheel-cleaning:truck": "50",
-      "addon:large-wheel-cleaning:luxury": "65",
-      "addon:large-wheel-cleaning:compact": "0"
+      "addon:wheel-cleaning:luxury": "50"
     },
     "packageMeta": {
       "prime-elite-exterior": {
@@ -179,6 +178,11 @@
         "visible": false,
         "deleted": false
       },
+      "3rd-row-seating": {
+        "id": "3rd-row-seating",
+        "visible": true,
+        "deleted": false
+      },
       "ceramic-coating": {
         "id": "ceramic-coating",
         "visible": false,
@@ -207,6 +211,11 @@
       "headlight-restoration": {
         "id": "headlight-restoration",
         "visible": false,
+        "deleted": false
+      },
+      "large-wheel-cleaning": {
+        "id": "large-wheel-cleaning",
+        "visible": true,
         "deleted": false
       },
       "leather-conditioning": {
@@ -258,21 +267,11 @@
         "id": "wheel-cleaning",
         "visible": true,
         "deleted": false
-      },
-      "3rd-row-seating": {
-        "id": "3rd-row-seating",
-        "visible": true,
-        "deleted": false
-      },
-      "large-wheel-cleaning": {
-        "id": "large-wheel-cleaning",
-        "visible": true,
-        "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1785258555486
+    "version": 1785358189825
   },
   "vehicleTypesLive": [
     {
