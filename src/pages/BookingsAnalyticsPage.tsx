@@ -11,6 +11,7 @@ import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart, Star } fro
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 export default function BookingsAnalyticsPage() {
     const { items, refresh } = useBookingsStore();
@@ -28,7 +29,7 @@ export default function BookingsAnalyticsPage() {
         return 'crm';
     });
     
-    const isDemoActive = localStorage.getItem("demo_mode_active") === "true";
+    const { isDemoMode } = useDemoMode();
 
     const fetchData = useCallback(async (showToast = false) => {
         setIsRefreshing(true);
@@ -85,7 +86,7 @@ export default function BookingsAnalyticsPage() {
                     >
                         CRM &amp; Analytics
                     </button>
-                    {!isDemoActive && (
+                    {!isDemoMode && (
                         <button
                             onClick={() => setActiveTab('bi')}
                             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -128,7 +129,7 @@ export default function BookingsAnalyticsPage() {
                 {activeTab === 'crm' && (
                     <BookingsAnalytics bookings={items} customers={customers} invoices={invoices} estimates={estimates} onRefresh={() => fetchData(true)} isRefreshing={isRefreshing} />
                 )}
-                {activeTab === 'bi' && !isDemoActive && (
+                {activeTab === 'bi' && !isDemoMode && (
                     <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
                 )}
                 {activeTab === 'reviews' && (

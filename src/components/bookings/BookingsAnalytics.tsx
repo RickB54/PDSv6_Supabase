@@ -1902,7 +1902,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
                 <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+                {!isDemoMode && (
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+                )}
 
                 <div className="flex-1 min-w-[20px]"></div>
                 <div className="flex items-center gap-1.5 border-l border-zinc-800/50 pl-2">

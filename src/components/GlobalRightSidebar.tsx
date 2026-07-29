@@ -32,19 +32,21 @@ import { getCurrentUser } from "@/lib/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { contentService } from "@/lib/content";
 
-const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean, pendingPayrollCount: number = 0) => (
+const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolean, pendingPayrollCount: number = 0, isDemoMode: boolean = false) => (
     <>
         {/* GROUP 1: Quick Helpful Items */}
-        <Button
-            variant="ghost"
-            size={collapsed ? "icon" : "default"}
-            onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
-            title="Phone Assistant"
-            className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
-        >
-            <Phone className="w-5 h-5 text-primary animate-pulse" />
-            {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
-        </Button>
+        {!isDemoMode && (
+            <Button
+                variant="ghost"
+                size={collapsed ? "icon" : "default"}
+                onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                title="Phone Assistant"
+                className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
+            >
+                <Phone className="w-5 h-5 text-primary animate-pulse" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
+            </Button>
+        )}
 
         {isAdmin && (
             <Button
@@ -80,7 +82,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
 
         {/* GROUP 2: Scheduling Workflow */}
         {/* Sub-section A: Active scheduling/calendars */}
-        {isAdmin && (
+        {isAdmin && !isDemoMode && (
             <Button
                 variant="ghost"
                 size={collapsed ? "icon" : "default"}
@@ -113,16 +115,18 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
         {/* Sub-section: Financial / Billing */}
         {isAdmin && (
             <>
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => {
-                    navigate('/package-pricing', { state: { returnTo: location.pathname } });
-                    setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
-                }} title="Pricing Control Center" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
-                    <div className="relative flex items-center justify-center w-5 h-5">
-                        <DollarSign className="w-5 h-5 text-blue-900 absolute translate-x-[1px] translate-y-[1px]" strokeWidth={3} />
-                        <DollarSign className="w-5 h-5 text-blue-500 absolute -translate-x-[1px] -translate-y-[1px]" strokeWidth={2} />
-                    </div>
-                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Pricing Control</span>}
-                </Button>
+                {!isDemoMode && (
+                    <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => {
+                        navigate('/package-pricing', { state: { returnTo: location.pathname } });
+                        setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
+                    }} title="Pricing Control Center" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
+                        <div className="relative flex items-center justify-center w-5 h-5">
+                            <DollarSign className="w-5 h-5 text-blue-900 absolute translate-x-[1px] translate-y-[1px]" strokeWidth={3} />
+                            <DollarSign className="w-5 h-5 text-blue-500 absolute -translate-x-[1px] -translate-y-[1px]" strokeWidth={2} />
+                        </div>
+                        {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Pricing Control</span>}
+                    </Button>
+                )}
 
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-green-500/10`}>
                     <div className="relative">
@@ -379,7 +383,7 @@ export function GlobalRightSidebar() {
                 </Button>
                 
                 <div className="flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0">
-                    {renderSidebarContent(collapsed, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll)}
+                    {renderSidebarContent(collapsed, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll, isDemoMode)}
                 </div>
             </div>
         );
@@ -406,7 +410,7 @@ export function GlobalRightSidebar() {
             </Button>
             
             <div className={`flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0 pb-4 ${collapsed ? 'items-center' : 'items-start'}`}>
-                {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll)}
+                {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll, isDemoMode)}
             </div>
         </div>
     );
