@@ -344,6 +344,10 @@ const FileManager = () => {
     
     // 2. Delete from Supabase
     try {
+      if (localStorage.getItem("demo_mode_active") === "true") {
+        toast({ title: "Simulation Mode", description: "PDF deleted locally." });
+        return;
+      }
       const { default: supabase } = await import('@/lib/supabase');
       const { error } = await supabase.from('pdf_records').delete().eq('id', id);
       if (error) console.error("Supabase PDF delete failed:", error);

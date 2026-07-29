@@ -424,6 +424,7 @@ const Settings = () => {
 
 
   const generateDeletionFailsafePDF = async (type: string, days?: any) => {
+    if (localStorage.getItem("demo_mode_active") === "true") return;
     try {
       const doc = new jsPDF();
       let y = 20;
@@ -584,6 +585,11 @@ const Settings = () => {
   };
 
   const deleteData = async (type: string) => {
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      toast({ title: "Simulation Mode", description: "Deletion simulated locally." });
+      setDeleteDialog(null);
+      return;
+    }
     try {
       const now = new Date();
       const days = Number(String(timeRange || '').trim());
@@ -1070,6 +1076,10 @@ const Settings = () => {
                       <AlertDialogCancel className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700 hover:text-white">Cancel</AlertDialogCancel>
                       <AlertDialogAction onClick={async () => {
                         try {
+                          if (localStorage.getItem("demo_mode_active") === "true") {
+                            toast({ title: "Simulation Mode", description: "Wipe test data simulated." });
+                            return;
+                          }
                           toast({ title: "Wiping Test Data..." });
                           const { data } = await supabase.from('customers').select('id').ilike('full_name', '%Rick Berube%').limit(1).maybeSingle();
                           if (data?.id) {

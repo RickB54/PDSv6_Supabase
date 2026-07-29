@@ -92,6 +92,10 @@ export default function FollowUpCenter() {
   };
 
   const handleSnooze = async (customerId: string, days: number) => {
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      toast.success(`Snoozed for ${days} days (Demo)`);
+      return;
+    }
     try {
       await supabase.from('engagements').insert({
         customer_id: customerId,
@@ -108,6 +112,11 @@ export default function FollowUpCenter() {
 
   const handleLogContact = async () => {
     if (!selectedCustomer) return;
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      toast.success("Contact logged successfully (Demo).");
+      setIsNoteDialogOpen(false);
+      return;
+    }
     try {
       await supabase.from('engagements').insert({
         customer_id: selectedCustomer.id,

@@ -52,9 +52,12 @@ export default function Payroll() {
       setSelectedIds(pending.map(r => r.id));
       const history = await getSupabasePayrollRecords('paid');
       setHistoryRecords(history);
-      
-      const { data: users } = await supabase.from('app_users').select('name, tax_classification').eq('tax_classification', '1099');
-      setContractors(users || []);
+      if (localStorage.getItem("demo_mode_active") === "true") {
+        setContractors([]);
+      } else {
+        const { data: users } = await supabase.from('app_users').select('name, tax_classification').eq('tax_classification', '1099');
+        setContractors(users || []);
+      }
     } catch (err) {
       console.error(err);
     } finally {

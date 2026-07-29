@@ -90,6 +90,7 @@ export default function Prospects() {
   const [loading, setLoading] = useState(true);
 
   const fetchEngagements = useCallback(async () => {
+    if (localStorage.getItem("demo_mode_active") === "true") return;
     try {
       const { data, error } = await supabase.from('engagements').select('*').order('created_at', { ascending: false });
       if (!error && data) setEngagements(data);

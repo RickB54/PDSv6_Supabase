@@ -2356,6 +2356,11 @@ Precision. Protection. Perfection.`;
                                             status: newStatusText,
                                             sentDate: newSentDate
                                         };
+                                        if (localStorage.getItem("demo_mode_active") === "true") {
+                                            toast({ title: "Simulation Mode", description: "Sent status updated locally." });
+                                            setSelectedEstimate(updated);
+                                            return;
+                                        }
                                         try {
                                             await upsertSupabaseEstimate(updated as any);
                                             setSelectedEstimate(updated);

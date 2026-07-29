@@ -20,7 +20,11 @@ export default function Orientation() {
         const loadUserStats = async () => {
             const user = getCurrentUser();
             if (!user?.id) return;
-
+            if (localStorage.getItem("demo_mode_active") === "true") {
+                setExamUnlocked(true);
+                setChecklistProgress(100);
+                return;
+            }
             // 1. Get exam_unlocked status
             const { data: uData } = await supabase.from('app_users').select('exam_unlocked').eq('id', user.id).maybeSingle();
             if (uData) setExamUnlocked(uData.exam_unlocked || false);

@@ -212,7 +212,9 @@ const LetterMaker = () => {
         }
 
         try {
-            if (customer.id && !customer.id.startsWith("id-")) {
+            if (localStorage.getItem("demo_mode_active") === "true") {
+                toast({ title: "Simulation Mode", description: "Letter logged to CRM locally." });
+            } else if (customer.id && !customer.id.startsWith("id-")) {
                 const { error } = await supabase.from('engagements').insert({
                     customer_id: customer.id,
                     customer_name: customer.name,

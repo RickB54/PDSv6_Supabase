@@ -1331,11 +1331,13 @@ const ServiceChecklist = () => {
         if (urlId) {
           setChecklistId(urlId);
           // DYNAMIC LOOKUP FIX: Fetch booking to ensure employee is set correctly
-          supabase.from('bookings').select('assigned_employee_id').eq('id', urlId).single().then(({ data, error }) => {
-            if (data?.assigned_employee_id && !searchParams.get("employeeId")) {
+          if (localStorage.getItem("demo_mode_active") !== "true") {
+            supabase.from('bookings').select('assigned_employee_id').eq('id', urlId).single().then(({ data, error }) => {
+              if (data?.assigned_employee_id && !searchParams.get("employeeId")) {
               setEmployeeAssigned(data.assigned_employee_id);
             }
           });
+          }
         }
         else if (state.checklistId) setChecklistId(state.checklistId);
 
@@ -1998,7 +2000,9 @@ const ServiceChecklist = () => {
       if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idToUse)) {
         try {
           step = 'update_booking_status';
-          await supabase.from('bookings').update({ status: 'done' }).eq('id', idToUse);
+          if (localStorage.getItem("demo_mode_active") !== "true") {
+            await supabase.from('bookings').update({ status: 'done' }).eq('id', idToUse);
+          }
           window.dispatchEvent(new Event('bookings-updated'));
         } catch (e) {
           console.warn("Failed to update booking status to done:", e);

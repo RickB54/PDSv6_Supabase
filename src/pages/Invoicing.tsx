@@ -555,6 +555,10 @@ const Invoicing = () => {
   // Safe Sort: Create a copy and handle invalid dates
   const toggleSentStatus = async (e: React.MouseEvent, invoice: Invoice) => {
     e.stopPropagation();
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      toast({ title: "Simulation Mode", description: "Sent status updated locally." });
+      return;
+    }
     const updated = { 
       ...invoice, 
       isSent: !invoice.isSent,
@@ -823,6 +827,11 @@ const Invoicing = () => {
     const updated = buildCurrentEditedInvoice();
 
     try {
+      if (localStorage.getItem("demo_mode_active") === "true") {
+        toast({ title: "Simulation Mode", description: "Invoice updated locally." });
+        setSelectedInvoice(null);
+        return;
+      }
       await upsertSupabaseInvoice(updated);
       
       if (updated.isSent && !selectedInvoice.isSent && updated.customerId) {

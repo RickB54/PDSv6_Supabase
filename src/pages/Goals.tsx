@@ -140,6 +140,13 @@ export default function Goals() {
         setIsEditing(false);
 
         try {
+            if (localStorage.getItem("demo_mode_active") === "true") {
+                toast({
+                    title: "Simulation Mode",
+                    description: "Goals updated locally. Synchronization disabled."
+                });
+                return;
+            }
             const { error } = await supabase.from('app_settings').upsert({
                 key: 'business_goals',
                 value: tempGoals,
