@@ -39,18 +39,16 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     "accounting", "company-budget", "estimates", "chemical-cards", 
     "dilution-calc", "dilution-chart-interactive", "dilution-chart-reference", 
     "dilution-chart-modal", "help-admin", "help-employee", "learn-lib", 
-    "orientation", "tasks", "service-checklist", "website-admin",
-    "phone-assistant", "availability-manager", "package-selection",
-    "vehicle-classification", "client-evaluation", "addon-upsell-script",
-    "employee-schedule", "bookings", "user-mgmt", "mileage", "taxes",
-    "package-pricing", "reports-customers", "reports-invoices",
+    "orientation", "tasks", "service-checklist", "package-selection",
+    "vehicle-classification", "employee-schedule", "bookings", "mileage", "taxes",
+    "reports-customers", "reports-invoices",
     "reports-inventory", "reports-employee", "reports-estimates",
     "reports-accounting", "reports-tax", "chem-train", "cert-prog",
     "interactive-demo", "staff-schedule", "company-employees",
     "team-chat", "follow-up-center", "discount-coupons", "blog",
     "blog-reorder", "user-settings", "vehicle-types", "mobile-setup",
     "detailing-vendors", "active-jobs", "job-history", "payments-cart",
-        "my-invoices", "personal-notes", "bookings-analytics", "file-manager", "letter-maker"
+    "my-invoices", "personal-notes", "bookings-analytics", "file-manager", "letter-maker"
   ];
 
   const [config, setConfig] = useState<DemoConfig>({

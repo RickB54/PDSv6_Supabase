@@ -666,6 +666,22 @@ export const getCustomerDetailedHistory = async (customerId: string) => {
  * Fetch ALL vehicles directly from Supabase (for the gallery)
  */
 export const getSupabaseAllVehicles = async (): Promise<Vehicle[]> => {
+    if (isDemoActive()) {
+        const custs = await getSupabaseCustomers();
+        const demoVehicles: Vehicle[] = [];
+        custs.forEach(c => {
+            if (c.vehicles) {
+                c.vehicles.forEach(v => {
+                    demoVehicles.push({
+                        ...v,
+                        customer_info: { id: c.id, name: c.name, type: c.type }
+                    });
+                });
+            }
+        });
+        return demoVehicles;
+    }
+    
     try {
         const { data, error } = await supabase
             .from('vehicles')

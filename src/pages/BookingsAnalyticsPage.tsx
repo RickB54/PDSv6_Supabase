@@ -23,10 +23,12 @@ export default function BookingsAnalyticsPage() {
     const [activeTab, setActiveTab] = useState<'crm' | 'bi' | 'employees' | 'reviews'>(() => {
         const tab = new URLSearchParams(window.location.search).get('tab');
         if (tab === 'employees') return 'employees';
-        if (tab === 'bi') return 'bi';
+        if (tab === 'bi' && localStorage.getItem("demo_mode_active") !== "true") return 'bi';
         if (tab === 'reviews') return 'reviews';
         return 'crm';
     });
+    
+    const isDemoActive = localStorage.getItem("demo_mode_active") === "true";
 
     const fetchData = useCallback(async (showToast = false) => {
         setIsRefreshing(true);
@@ -83,16 +85,18 @@ export default function BookingsAnalyticsPage() {
                     >
                         CRM &amp; Analytics
                     </button>
-                    <button
-                        onClick={() => setActiveTab('bi')}
-                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
-                            activeTab === 'bi'
-                                ? 'border-emerald-500 text-emerald-400'
-                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
-                        }`}
-                    >
-                        <Target className="w-3.5 h-3.5" /> Business Intelligence
-                    </button>
+                    {!isDemoActive && (
+                        <button
+                            onClick={() => setActiveTab('bi')}
+                            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                                activeTab === 'bi'
+                                    ? 'border-emerald-500 text-emerald-400'
+                                    : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Target className="w-3.5 h-3.5" /> Business Intelligence
+                        </button>
+                    )}
                     <button
                         onClick={() => setActiveTab('reviews')}
                         className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
@@ -124,7 +128,7 @@ export default function BookingsAnalyticsPage() {
                 {activeTab === 'crm' && (
                     <BookingsAnalytics bookings={items} customers={customers} invoices={invoices} estimates={estimates} onRefresh={() => fetchData(true)} isRefreshing={isRefreshing} />
                 )}
-                {activeTab === 'bi' && (
+                {activeTab === 'bi' && !isDemoActive && (
                     <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
                 )}
                 {activeTab === 'reviews' && (

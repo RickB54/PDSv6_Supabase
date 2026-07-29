@@ -159,6 +159,25 @@ const ProtectedRoute = ({ children, allowedRoles, user }: { children: React.Reac
     ? 'admin' 
     : user?.role;
 
+  const isDemoActive = localStorage.getItem("demo_mode_active") === "true";
+  const location = useRouterLocation();
+  
+  // Demo Mode Lockdown
+  if (isDemoActive) {
+    const blockedPaths = [
+      '/package-pricing',
+      '/user-management',
+      '/availability-manager',
+      '/compensation-payroll',
+      '/website-admin',
+      '/client-evaluation',
+      '/addon-upsell-script'
+    ];
+    if (blockedPaths.includes(location.pathname)) {
+      return <Navigate to="/bookings-analytics" replace />;
+    }
+  }
+
   // If we have no user and it's a restricted route, go to login
   if (!user && allowedRoles.length > 0) {
     return <Navigate to="/login" replace />;
@@ -532,7 +551,17 @@ const App = () => {
     window.addEventListener('storage', updateUser);
     try { initTaskWorkflowListeners(); } catch { }
 
-    const onOpenCallAssistant = () => setCallAssistantOpen(true);
+    const onOpenCallAssistant = () => {
+      if (localStorage.getItem("demo_mode_active") === "true") {
+        toast({
+          title: "Feature Unavailable",
+          description: "Phone Assistant is disabled in Training Mode.",
+          variant: "destructive"
+        });
+        return;
+      }
+      setCallAssistantOpen(true);
+    };
     const onOpenHelp = (e: any) => {
       const currentUser = getCurrentUser();
       const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
