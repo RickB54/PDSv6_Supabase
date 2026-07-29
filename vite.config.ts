@@ -161,6 +161,19 @@ export default defineConfig(({ mode }) => {
             if (url.startsWith('/api/contact/live') && method === 'GET') {
               return sendJson(res, state.contactLive);
             }
+            if (url === '/test-result' && method === 'POST') {
+              let body = '';
+              req.on('data', (chunk: any) => { body += chunk; });
+              req.on('end', () => {
+                try {
+                  fs.writeFileSync('test-result.json', body);
+                  return sendJson(res, { ok: true });
+                } catch (e) {
+                  res.statusCode = 500; return sendJson(res, { error: e.message });
+                }
+              });
+              return;
+            }
             return notFound(res);
           });
         },

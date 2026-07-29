@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, X, Send, User, RefreshCw, Bell } from 'lucide-react';
+import { MessageCircle, X, Send, User, RefreshCw, Bell, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
@@ -19,6 +19,9 @@ export function GlobalChatWidget() {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
     const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+    
+    const [adminHidden, setAdminHidden] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
+    const [forceShowPopup, setForceShowPopup] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -60,7 +63,18 @@ export function GlobalChatWidget() {
 
         updateIdentity();
         window.addEventListener('auth-changed', updateIdentity);
-        return () => window.removeEventListener('auth-changed', updateIdentity);
+        
+        const handleHideUpdate = () => {
+            const isHidden = localStorage.getItem('hide_chat_bot') === 'true';
+            setAdminHidden(isHidden);
+            if (!isHidden) setForceShowPopup(false);
+        };
+        window.addEventListener('hide-chat-bot-updated', handleHideUpdate);
+        
+        return () => {
+            window.removeEventListener('auth-changed', updateIdentity);
+            window.removeEventListener('hide-chat-bot-updated', handleHideUpdate);
+        };
     }, []);
 
     // Sync messages
@@ -109,6 +123,11 @@ export function GlobalChatWidget() {
                     if (isAdmin || isForMe) {
                         setHasUnread(true);
                     }
+                }
+
+                if (isAdmin && adminHidden) {
+                    setForceShowPopup(true);
+                    setIsOpen(true);
                 }
 
                 // Auto-select guest if I am admin and someone sends a message
@@ -182,6 +201,29 @@ export function GlobalChatWidget() {
         if (!guestName.trim() || !guestEmail.trim()) return;
         localStorage.setItem('guest_identity', JSON.stringify({ name: guestName, email: guestEmail }));
         setIsIdentified(true);
+    };
+
+    const handleClearChat = async () => {
+        if (!window.confirm("Are you sure you want to clear your chat history? This will permanently delete your stored conversation.")) return;
+        try {
+            await supabase.from('team_messages').delete().or(`sender_email.eq.${guestEmail},recipient_email.eq.${guestEmail}`);
+            setMessages([]);
+        } catch (e) {
+            console.error("Failed to clear chat", e);
+        }
+    };
+
+    const handleSaveChat = () => {
+        const text = visibleMessages.map(m => `[${new Date(m.created_at).toLocaleString()}] ${m.sender_name || m.sender_email}: ${m.content}`).join('\n');
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chat_history_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     const handleSend = async () => {
@@ -345,6 +387,8 @@ export function GlobalChatWidget() {
         };
     };
 
+    if (isAdminOrEmployee && adminHidden && !forceShowPopup) return null;
+
     return (
         <div 
             className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 font-sans touch-none"
@@ -382,6 +426,20 @@ export function GlobalChatWidget() {
                                     >
                                         <RefreshCw className={`h-4 w-4 text-white/80 ${isLoading ? 'animate-spin' : ''}`} />
                                     </button>
+                                    <button
+                                        onClick={handleSaveChat}
+                                        className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                        title="Save Chat History"
+                                    >
+                                        <Download className="h-4 w-4 text-white/80" />
+                                    </button>
+                                    <button
+                                        onClick={handleClearChat}
+                                        className="p-1.5 hover:bg-white/10 rounded transition-colors text-red-300 hover:text-red-400"
+                                        title="Clear Chat History"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
                                     <Button
                                         size="sm"
                                         variant="ghost"
@@ -400,7 +458,10 @@ export function GlobalChatWidget() {
                                     </Button>
                                 </>
                             )}
-                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary-foreground/20 text-white" onClick={() => setIsOpen(false)}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-primary-foreground/20 text-white" onClick={() => {
+                                setIsOpen(false);
+                                if (adminHidden) setForceShowPopup(false);
+                            }}>
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>

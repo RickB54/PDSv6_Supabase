@@ -130,18 +130,6 @@ const queryClient = new QueryClient();
 
 function ConditionalGlobalChat() {
   const location = useRouterLocation();
-  const [hidden, setHidden] = React.useState(() => localStorage.getItem('hide_chat_bot') === 'true');
-
-  React.useEffect(() => {
-    const handleUpdate = () => {
-      setHidden(localStorage.getItem('hide_chat_bot') === 'true');
-    };
-    window.addEventListener('hide-chat-bot-updated', handleUpdate);
-    return () => window.removeEventListener('hide-chat-bot-updated', handleUpdate);
-  }, []);
-
-  if (hidden) return null;
-
   const isTeamChatPage = location.pathname === '/team-chat';
   if (isTeamChatPage) return null;
   return <GlobalChatWidget />;
@@ -539,7 +527,7 @@ const App = () => {
         setUser(u);
       }
     };
-    
+
     window.addEventListener('auth-changed', updateUser);
     window.addEventListener('storage', updateUser);
     try { initTaskWorkflowListeners(); } catch { }
