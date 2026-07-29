@@ -190,6 +190,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           type: (initial.type || defaultType || 'customer').toLowerCase(),
           conditionInside: initial.conditionInside || cIn,
           conditionOutside: initial.conditionOutside || cOut,
+          has_google_review: initial.has_google_review || (initial.notes || '').includes('[HAS_GOOGLE_REVIEW]')
         });
       } else {
         setForm({
@@ -432,8 +433,12 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
     if (!payload.type) payload.type = defaultType;
 
     let cleanNotes = (payload.notes || "").replace(/\[Vehicle Condition\]\s*Inside:\s*([0-5])\/5\s*Outside:\s*([0-5])\/5/gi, "").trim();
+    cleanNotes = cleanNotes.replace(/\[HAS_GOOGLE_REVIEW\]/gi, "").trim();
     if (payload.conditionInside || payload.conditionOutside) {
       cleanNotes += `\n\n[Vehicle Condition]\nInside: ${payload.conditionInside || '?'}/5\nOutside: ${payload.conditionOutside || '?'}/5`;
+    }
+    if (payload.has_google_review) {
+      cleanNotes += `\n[HAS_GOOGLE_REVIEW]`;
     }
     payload.notes = cleanNotes;
 

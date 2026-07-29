@@ -165,6 +165,6 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
     const dueThisWeek = customersWithStatus.filter(c => c.isDueThisWeek && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
     const dueThisMonth = customersWithStatus.filter(c => c.isDueThisMonth && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
 
-    return { active: settings.active, overdue, dueThisWeek, dueThisMonth, loading, refresh: fetchEngagements, engagements };
+    return { active: settings.active, overdue, dueThisWeek, dueThisMonth, allWithStatus: customersWithStatus, loading, refresh: fetchEngagements, engagements };
   }, [customers, bookings, engagements, settingsLoading, loadingEngagements, settings]);
 }

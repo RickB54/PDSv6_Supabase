@@ -32,6 +32,7 @@ export interface UnifiedCustomer {
   conditionOutside?: string;
   lastService?: string;
   activity_log?: any[];
+  has_google_review?: boolean;
 }
 
 /**
@@ -101,6 +102,7 @@ function dedupeByKey(items: UnifiedCustomer[]): UnifiedCustomer[] {
         phone: c.phone || existing.phone,
         email: c.email || existing.email,
         address: c.address || existing.address,
+        has_google_review: c.has_google_review || existing.has_google_review,
         updatedAt: (new Date(c.updatedAt || 0) > new Date(existing.updatedAt || 0)) ? c.updatedAt : existing.updatedAt
       });
 
@@ -173,6 +175,7 @@ export async function getUnifiedCustomers(): Promise<UnifiedCustomer[]> {
       conditionInside: SC.conditionInside || '',
       conditionOutside: SC.conditionOutside || '',
       lastService: SC.lastService || '',
+      has_google_review: SC.has_google_review || false,
       createdAt: SC.created_at,
       updatedAt: SC.created_at
     }));

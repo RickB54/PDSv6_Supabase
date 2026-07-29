@@ -4,9 +4,10 @@ import { EmployeeAnalyticsPanel } from "@/components/analytics/EmployeeAnalytics
 import { BusinessIntelligencePanel } from "@/components/analytics/BusinessIntelligencePanel";
 import { useBookingsStore } from "@/store/bookings";
 import { getUnifiedCustomers } from "@/lib/customers";
+import ReviewIntelligence from "@/components/analytics/ReviewIntelligence";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart } from "lucide-react";
+import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -19,10 +20,11 @@ export default function BookingsAnalyticsPage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [estimates, setEstimates] = useState<any[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'crm' | 'bi' | 'employees'>(() => {
+    const [activeTab, setActiveTab] = useState<'crm' | 'bi' | 'employees' | 'reviews'>(() => {
         const tab = new URLSearchParams(window.location.search).get('tab');
         if (tab === 'employees') return 'employees';
         if (tab === 'bi') return 'bi';
+        if (tab === 'reviews') return 'reviews';
         return 'crm';
     });
 
@@ -92,6 +94,16 @@ export default function BookingsAnalyticsPage() {
                         <Target className="w-3.5 h-3.5" /> Business Intelligence
                     </button>
                     <button
+                        onClick={() => setActiveTab('reviews')}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                            activeTab === 'reviews'
+                                ? 'border-amber-500 text-amber-400'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        <Star className="w-3.5 h-3.5" /> Review Intelligence
+                    </button>
+                    <button
                         onClick={() => setActiveTab('employees')}
                         className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                             activeTab === 'employees'
@@ -114,6 +126,9 @@ export default function BookingsAnalyticsPage() {
                 )}
                 {activeTab === 'bi' && (
                     <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
+                )}
+                {activeTab === 'reviews' && (
+                    <ReviewIntelligence customers={customers} bookings={items} />
                 )}
                 {activeTab === 'employees' && (
                     <EmployeeAnalyticsPanel />

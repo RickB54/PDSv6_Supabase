@@ -91,22 +91,6 @@ export function BusinessIntelligencePanel({ bookings, customers, invoices = [], 
                 </div>
             </section>
 
-            {/* Review Intelligence Section */}
-            <section className="space-y-4 pt-6">
-                <div className="flex items-center gap-3 px-2">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                        <Star className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-white tracking-tight">Review Intelligence</h2>
-                        <p className="text-xs text-zinc-500 font-medium">Track your VIP customers and identify missed review opportunities.</p>
-                    </div>
-                </div>
-                
-                <div className="bg-[#09090b] rounded-2xl border border-zinc-800 shadow-2xl p-6">
-                    <ReviewIntelligence customers={customers} bookings={bookings} />
-                </div>
-            </section>
 
             {/* Market Pricing Analysis Section */}
             <section className="space-y-4 pt-6">
