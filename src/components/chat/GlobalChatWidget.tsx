@@ -388,7 +388,8 @@ export function GlobalChatWidget() {
         };
     };
 
-    if (isAdminOrEmployee && adminHidden && !forceShowPopup) return null;
+    const isSuperAdmin = getCurrentUser()?.role === 'admin';
+    if (isSuperAdmin && adminHidden && !forceShowPopup) return null;
 
     return (
         <div 
