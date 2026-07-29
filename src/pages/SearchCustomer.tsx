@@ -997,7 +997,7 @@ const SearchCustomer = () => {
                              );
                            })()}
                            {/* Retention Badge */}
-                           {(() => {
+                           {!(customer.notes || '').includes('[NO_FOLLOWUP]') && (() => {
                              let retLabel = 'Active';
                              let retColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30';
                              if (customer.type === 'prospect') {
