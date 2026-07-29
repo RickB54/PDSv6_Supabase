@@ -136,7 +136,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                         onClick={() => {
                            const subject = encodeURIComponent(`Following up on your detail - Prime Auto Detail`);
                            const firstName = (customer.name || 'Customer').split(' ')[0];
-                           const body = encodeURIComponent(`Hi ${firstName},\n\nHope you are enjoying your newly detailed vehicle!\n\nAs a local business, online reviews mean the world to us. If you have a quick minute, we would truly appreciate it if you could share your experience on our Google page:\n\n[YOUR GOOGLE REVIEW LINK HERE]\n\nThank you for choosing Prime Auto Detail!\n\nRick Berube\nPrime Auto Detail\n(978) 566-1008`);
+                           const body = encodeURIComponent(`Hi ${firstName},\n\nHope you are enjoying your newly detailed vehicle!\n\nAs a small local business, we rely heavily on the experiences our customers share online. If you have a minute, we'd truly appreciate you taking the time to leave us a review on Google. Your feedback helps other customers find us and supports the continued growth of our business.\n\nhttps://g.page/r/CUaXyAfwdcv1EBM/review\n\nThank you for choosing Prime Auto Detail!\n\nRick Berube\nPrime Auto Detail\n(978) 566-1008`);
                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(customer.email)}&su=${subject}&body=${body}`, '_blank');
                         }}
                       >
