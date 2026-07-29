@@ -140,13 +140,13 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(customer.email)}&su=${subject}&body=${body}`, '_blank');
                            
                            try {
-                             await supabase.from('engagements').insert({
+                             const { error } = await supabase.from('engagements').insert({
                                customer_id: customer.id,
                                customer_name: customer.name,
                                type: 'correspondence',
-                               subject: 'Google Review Request',
-                               note: `Sent Google Review request email to ${customer.email}.`
+                               note: `Google Review Request: Sent Google Review request email to ${customer.email}.`
                              });
+                             if (error) console.warn("Supabase insert error:", error);
                            } catch (err) {
                              console.warn("Could not log Google Review Request to engagements:", err);
                            }
