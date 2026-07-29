@@ -1003,14 +1003,18 @@ const SearchCustomer = () => {
                              if (customer.type === 'prospect') {
                                retLabel = 'Prospect';
                                retColor = 'bg-purple-500/10 text-purple-400 border-purple-500/30 cursor-pointer hover:bg-purple-500/20';
-                             } else if (followUpStatus.overdue.find(c => c.customer.id === customer.id)) {
-                               retLabel = 'Overdue for service';
-                               retColor = 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse cursor-pointer hover:bg-red-500/20';
-                             } else if (followUpStatus.dueThisWeek.find(c => c.customer.id === customer.id) || followUpStatus.dueThisMonth.find(c => c.customer.id === customer.id)) {
-                               retLabel = 'Due soon';
-                               retColor = 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-pointer hover:bg-amber-500/20';
                              } else {
-                               retColor += ' cursor-pointer hover:bg-emerald-500/20';
+                               const overdueItem = followUpStatus.overdue.find(c => c.customer.id === customer.id);
+                               if (overdueItem) {
+                                 const weeksOverdue = Math.abs(Math.floor((overdueItem.daysUntilDue || 0) / 7));
+                                 retLabel = weeksOverdue > 0 ? `${weeksOverdue} WK${weeksOverdue === 1 ? '' : 'S'} OVERDUE` : 'OVERDUE FOR SERVICE';
+                                 retColor = 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse cursor-pointer hover:bg-red-500/20';
+                               } else if (followUpStatus.dueThisWeek.find(c => c.customer.id === customer.id) || followUpStatus.dueThisMonth.find(c => c.customer.id === customer.id)) {
+                                 retLabel = 'Due soon';
+                                 retColor = 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-pointer hover:bg-amber-500/20';
+                               } else {
+                                 retColor += ' cursor-pointer hover:bg-emerald-500/20';
+                               }
                              }
                              return (
                                <Badge 

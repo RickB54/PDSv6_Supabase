@@ -24,7 +24,13 @@ export function useFollowUpSettings() {
     const loadSettings = async () => {
       const meta = await contentService.getServiceMeta("follow_up_settings");
       if (meta?.meta) {
-        setSettings(meta.meta);
+        // Auto-fix legacy test configurations (e.g. 3 days)
+        if (meta.meta.unit === 'days' && meta.meta.threshold < 30) {
+          setSettings(DEFAULT_FOLLOW_UP_SETTINGS);
+          saveSettings(DEFAULT_FOLLOW_UP_SETTINGS);
+        } else {
+          setSettings(meta.meta);
+        }
       }
       setLoading(false);
     };
@@ -148,6 +154,7 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         isDueThisWeek,
         isDueThisMonth,
         daysSince,
+        daysUntilDue,
         lastServiceValue
       };
     });
