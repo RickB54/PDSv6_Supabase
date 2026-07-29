@@ -59,32 +59,13 @@ export function ChatAudioAlert() {
         }
     };
 
-    // Request Notification Permission on mount/interaction
-    useEffect(() => {
-        if ("Notification" in window && Notification.permission === "default") {
-            const request = () => Notification.requestPermission();
-            document.addEventListener('click', request, { once: true });
-            return () => document.removeEventListener('click', request);
-        }
-    }, []);
 
-    // Trigger Desktop Notification
-    const sendDesktopNotification = (title: string, body: string) => {
-        if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(title, {
-                body,
-                icon: '/favicon.ico', // Optional: requires valid path
-                silent: true // We play our own sound
-            });
-        }
-    };
 
     // Test Alert Listener
     useEffect(() => {
         const handleTest = () => {
             console.log("🔔 TEST TRIGGERED");
             playSound();
-            sendDesktopNotification("Test Notification", "This is how alerts will appear outside the browser.");
         };
         window.addEventListener('test-chat-alert', handleTest);
         return () => window.removeEventListener('test-chat-alert', handleTest);
@@ -135,12 +116,6 @@ export function ChatAudioAlert() {
 
                         // 1. Audio
                         playSound();
-
-                        // 2. Desktop Notification
-                        sendDesktopNotification(
-                            "New Message",
-                            `From: ${newMsg.sender_name || 'Guest'}\n${newMsg.content}`
-                        );
 
                         // 3. Window Event
                         window.dispatchEvent(new CustomEvent('new-chat-alert'));

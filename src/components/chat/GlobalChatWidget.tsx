@@ -125,7 +125,8 @@ export function GlobalChatWidget() {
                     }
                 }
 
-                if (isAdmin && adminHidden) {
+                const isCurrentlyHidden = localStorage.getItem('hide_chat_bot') === 'true';
+                if (isAdmin && isCurrentlyHidden) {
                     setForceShowPopup(true);
                     setIsOpen(true);
                 }
