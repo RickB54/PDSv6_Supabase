@@ -6,13 +6,21 @@ import { differenceInDays, addDays, addMonths, isBefore, isWithinInterval, start
 
 export interface FollowUpSettings {
   active: boolean;
-  threshold: number;
+  thresholds: {
+    maintenance: number;
+    fullDetail: number;
+    ceramic: number;
+  };
   unit: 'days' | 'months';
 }
 
 export const DEFAULT_FOLLOW_UP_SETTINGS: FollowUpSettings = {
   active: true,
-  threshold: 6,
+  thresholds: {
+    maintenance: 3,
+    fullDetail: 6,
+    ceramic: 12
+  },
   unit: 'months'
 };
 
@@ -24,12 +32,15 @@ export function useFollowUpSettings() {
     const loadSettings = async () => {
       const meta = await contentService.getServiceMeta("follow_up_settings");
       if (meta?.meta) {
-        // Auto-fix legacy test configurations (e.g. 3 days)
-        if (meta.meta.unit === 'days' && meta.meta.threshold < 30) {
+        let loaded = meta.meta;
+        if (typeof loaded.threshold === 'number' && !loaded.thresholds) {
+          loaded.thresholds = DEFAULT_FOLLOW_UP_SETTINGS.thresholds;
+        }
+        if (loaded.unit === 'days' && loaded.thresholds?.maintenance < 30) {
           setSettings(DEFAULT_FOLLOW_UP_SETTINGS);
           saveSettings(DEFAULT_FOLLOW_UP_SETTINGS);
         } else {
-          setSettings(meta.meta);
+          setSettings(loaded);
         }
       }
       setLoading(false);
@@ -77,8 +88,15 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
     if (!settings.active || loading) return { active: settings.active, overdue: [], dueThisWeek: [], dueThisMonth: [], loading, refresh: fetchEngagements };
 
     const now = new Date();
-    const thresholdDays = settings.unit === 'months' ? settings.threshold * 30 : settings.threshold;
     
+    // Off-season logic: December (11), January (0), February (1)
+    const currentMonth = now.getMonth();
+    const isOffSeason = currentMonth === 11 || currentMonth === 0 || currentMonth === 1;
+    
+    if (isOffSeason) {
+      return { active: settings.active, overdue: [], dueThisWeek: [], dueThisMonth: [], loading: false, refresh: fetchEngagements, allWithStatus: [] };
+    }
+
     const weekStart = startOfWeek(now);
     const weekEnd = endOfWeek(now);
     const monthStart = startOfMonth(now);
@@ -100,17 +118,33 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         if (logDate > lastActivityDate) lastActivityDate = logDate;
       });
 
-      // 3. Bookings
+      // 3. Bookings & Tier Determination
       let lastServiceValue = 0;
+      let detectedTier: 'maintenance' | 'fullDetail' | 'ceramic' = 'maintenance';
+      
       const customerBookings = bookings.filter(b => 
-        b.customerId === customer.id || 
+        (b.customerId === customer.id || 
         (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
-        (customer.name && b.customer?.toLowerCase() === customer.name.toLowerCase())
+        (customer.name && b.customer?.toLowerCase() === customer.name.toLowerCase())) &&
+        (b.status === 'completed' || b.status === 'done')
       );
 
       customerBookings.forEach(b => {
         const bDate = new Date(b.date || (b as any).createdAt || (b as any).created_at);
-        if (bDate > lastActivityDate) lastActivityDate = bDate;
+        if (bDate > lastActivityDate) {
+           lastActivityDate = bDate;
+           // Determine tier from latest completed booking
+           const title = (b.title || '').toLowerCase();
+           const addons = (b.addons || []).map(a => a.toLowerCase()).join(' ');
+           
+           if (title.includes('ceramic') || addons.includes('ceramic')) {
+             detectedTier = 'ceramic';
+           } else if (title.includes('full')) {
+             detectedTier = 'fullDetail';
+           } else {
+             detectedTier = 'maintenance';
+           }
+        }
         if (b.notes && b.notes.trim() && bDate > lastActivityDate) {
           lastActivityDate = bDate;
         }
@@ -134,10 +168,17 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         if (eDate > lastActivityDate) lastActivityDate = eDate;
       });
 
-      const safeThreshold = Number(settings.threshold) || 1;
-      const thresholdDate = settings.unit === 'months' 
+      const safeThreshold = Number(settings.thresholds?.[detectedTier]) || 6;
+      let thresholdDate = settings.unit === 'months' 
         ? addMonths(lastActivityDate, safeThreshold)
         : addDays(lastActivityDate, safeThreshold);
+
+      // If the due date falls in winter (Dec-Feb), push it to March 1st of the appropriate year
+      if (thresholdDate.getMonth() === 11) { // December
+        thresholdDate = new Date(thresholdDate.getFullYear() + 1, 2, 1);
+      } else if (thresholdDate.getMonth() === 0 || thresholdDate.getMonth() === 1) { // Jan or Feb
+        thresholdDate = new Date(thresholdDate.getFullYear(), 2, 1);
+      }
 
       const daysUntilDue = differenceInDays(thresholdDate, now);
       
@@ -155,7 +196,8 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
         isDueThisMonth,
         daysSince,
         daysUntilDue,
-        lastServiceValue
+        lastServiceValue,
+        detectedTier
       };
     });
 

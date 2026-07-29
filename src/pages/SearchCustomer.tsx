@@ -1012,19 +1012,13 @@ const SearchCustomer = () => {
                                    retLabel = weeks > 0 ? `${weeks} WK${weeks === 1 ? '' : 'S'} OVERDUE` : 'OVERDUE FOR SERVICE';
                                    retColor = 'bg-red-500/10 text-red-500 border-red-500/30 animate-pulse cursor-pointer hover:bg-red-500/20';
                                  } else {
-                                   const weeks = Math.floor(days / 7);
-                                   if (weeks === 0) {
-                                     retLabel = `DUE IN ${days} DAY${days === 1 ? '' : 'S'}`;
-                                     retColor = 'bg-amber-500/10 text-amber-500 border-amber-500/30 cursor-pointer hover:bg-amber-500/20';
-                                   } else {
-                                     const months = Math.floor(days / 30);
-                                     if (months > 0) {
-                                       retLabel = `DUE IN ${months} MO${months === 1 ? '' : 'S'}`;
-                                     } else {
-                                       retLabel = `DUE IN ${weeks} WK${weeks === 1 ? '' : 'S'}`;
-                                     }
-                                     retColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20';
-                                   }
+                                   let tierStr = '';
+                                   if (statusItem.detectedTier === 'maintenance') tierStr = '3M TIER | ';
+                                   else if (statusItem.detectedTier === 'fullDetail') tierStr = '6M TIER | ';
+                                   else if (statusItem.detectedTier === 'ceramic') tierStr = '12M TIER | ';
+                                   
+                                   retLabel = `${tierStr}DUE IN ${days} DAY${days === 1 ? '' : 'S'}`;
+                                   retColor = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20';
                                  }
                                } else {
                                  retColor += ' cursor-pointer hover:bg-emerald-500/20';

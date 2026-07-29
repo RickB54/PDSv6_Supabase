@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Star, AlertCircle, ExternalLink, Mail, Zap } from "lucide-react";
-import { Customer } from "@/lib/supa-data";
+import { Customer, supabase } from "@/lib/supa-data";
 import { Booking } from "@/store/bookings";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -133,11 +133,23 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                         size="sm" 
                         variant="outline"
                         className="flex-1 sm:flex-none h-8 bg-zinc-900 border-zinc-700 text-blue-400 hover:text-blue-300 hover:bg-zinc-800 text-xs px-3"
-                        onClick={() => {
+                        onClick={async () => {
                            const subject = encodeURIComponent(`Following up on your detail - Prime Auto Detail`);
                            const firstName = (customer.name || 'Customer').split(' ')[0];
                            const body = encodeURIComponent(`Hi ${firstName},\n\nHope you are enjoying your newly detailed vehicle!\n\nAs a small local business, we rely heavily on the experiences our customers share online. If you have a minute, we'd truly appreciate you taking the time to leave us a review on Google. Your feedback helps other customers find us and supports the continued growth of our business.\n\nhttps://g.page/r/CUaXyAfwdcv1EBM/review\n\nThank you for choosing Prime Auto Detail!\n\nRick Berube\nPrime Auto Detail\n(978) 566-1008`);
                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=${encodeURIComponent(customer.email)}&su=${subject}&body=${body}`, '_blank');
+                           
+                           try {
+                             await supabase.from('engagements').insert({
+                               customer_id: customer.id,
+                               customer_name: customer.name,
+                               type: 'correspondence',
+                               subject: 'Google Review Request',
+                               note: `Sent Google Review request email to ${customer.email}.`
+                             });
+                           } catch (err) {
+                             console.warn("Could not log Google Review Request to engagements:", err);
+                           }
                         }}
                       >
                         <Mail className="w-3 h-3 mr-2" /> Request Review

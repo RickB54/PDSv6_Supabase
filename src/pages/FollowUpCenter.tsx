@@ -477,31 +477,63 @@ export default function FollowUpCenter() {
             </div>
             <div className="w-px h-8 bg-zinc-800 hidden sm:block"></div>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Threshold:</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center">
-                      <Input 
-                        type="number" 
-                        value={settings.threshold}
-                        onChange={(e) => saveSettings({ ...settings, threshold: parseInt(e.target.value) || 90 })}
-                        className="w-16 h-8 bg-zinc-950 border-zinc-700 text-center font-bold text-white rounded-l-md rounded-r-none"
-                      />
-                      <Select value={settings.unit} onValueChange={(v: 'days' | 'months') => saveSettings({ ...settings, unit: v })}>
-                        <SelectTrigger className="w-24 h-8 bg-zinc-800 border-zinc-700 text-white rounded-l-none text-xs font-bold uppercase tracking-wider">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
-                          <SelectItem value="days" className="font-bold text-xs uppercase tracking-wider">Days</SelectItem>
-                          <SelectItem value="months" className="font-bold text-xs uppercase tracking-wider">Months</SelectItem>
-                        </SelectContent>
-                      </Select>
+              <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Thresholds:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-8 bg-zinc-950 border-zinc-700 text-white font-bold text-xs">
+                    Configure Tiers
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4 shadow-xl text-white">
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-zinc-200">Follow-Up Tiers</h4>
+                    <p className="text-xs text-zinc-500">Configure how long until a customer is due for a follow-up based on their last service.</p>
+                    
+                    <div className="grid gap-3">
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-xs font-bold text-zinc-300 col-span-2">Maintenance / Exterior</Label>
+                        <Input 
+                          type="number" 
+                          value={settings.thresholds?.maintenance || 3}
+                          onChange={(e) => saveSettings({ ...settings, thresholds: { ...settings.thresholds, maintenance: parseInt(e.target.value) || 3 } })}
+                          className="h-8 bg-zinc-900 border-zinc-700 text-center font-bold text-white col-span-1"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-xs font-bold text-amber-500 col-span-2">Full Detail</Label>
+                        <Input 
+                          type="number" 
+                          value={settings.thresholds?.fullDetail || 6}
+                          onChange={(e) => saveSettings({ ...settings, thresholds: { ...settings.thresholds, fullDetail: parseInt(e.target.value) || 6 } })}
+                          className="h-8 bg-zinc-900 border-zinc-700 text-center font-bold text-white col-span-1"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-xs font-bold text-emerald-400 col-span-2">Ceramic Coating</Label>
+                        <Input 
+                          type="number" 
+                          value={settings.thresholds?.ceramic || 12}
+                          onChange={(e) => saveSettings({ ...settings, thresholds: { ...settings.thresholds, ceramic: parseInt(e.target.value) || 12 } })}
+                          className="h-8 bg-zinc-900 border-zinc-700 text-center font-bold text-white col-span-1"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-3 items-center gap-4 pt-2 border-t border-zinc-800">
+                        <Label className="text-xs font-bold text-zinc-500 col-span-2">Time Unit</Label>
+                        <Select value={settings.unit} onValueChange={(v: 'days' | 'months') => saveSettings({ ...settings, unit: v })}>
+                          <SelectTrigger className="col-span-1 h-8 bg-zinc-900 border-zinc-700 text-white font-bold text-xs uppercase px-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
+                            <SelectItem value="days" className="font-bold text-xs uppercase tracking-wider">Days</SelectItem>
+                            <SelectItem value="months" className="font-bold text-xs uppercase tracking-wider">Months</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Number of days since a customer's last service before they appear as Overdue. Default is 90 days.</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
