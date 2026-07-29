@@ -12,8 +12,8 @@ export interface FollowUpSettings {
 
 export const DEFAULT_FOLLOW_UP_SETTINGS: FollowUpSettings = {
   active: true,
-  threshold: 90,
-  unit: 'days'
+  threshold: 6,
+  unit: 'months'
 };
 
 export function useFollowUpSettings() {
@@ -152,7 +152,7 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
       };
     });
 
-    const isCustomer = (c: any) => (c.customer.type || 'customer').toLowerCase() !== 'prospect';
+    const isCustomer = (c: any) => (c.customer.type || 'customer').toLowerCase() !== 'prospect' && !(c.customer.notes || '').includes('[NO_FOLLOWUP]');
 
     const overdue = customersWithStatus.filter(c => c.isOverdue && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);
     const dueThisWeek = customersWithStatus.filter(c => c.isDueThisWeek && isCustomer(c)).sort((a, b) => b.daysSince - a.daysSince);

@@ -880,7 +880,7 @@ const SearchCustomer = () => {
                   <div className={cn("p-4 flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer transition-colors gap-4",
                     customer.is_archived ? "hover:bg-green-900/10" : "bg-blue-500/5 hover:bg-blue-500/10"
                   )} onClick={() => toggleCustomer(customer.id!)}>
-                    <div className="flex items-center gap-4 w-full md:w-auto min-w-0">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                       <div className={`shrink-0 h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
 
                       {/* Photo Thumbnails - clickable to open gallery */}
@@ -1189,6 +1189,33 @@ const SearchCustomer = () => {
                               >
                                 <Plus className="w-2.5 h-2.5" /> ADD VEHICLE
                               </Button>
+                            </div>
+                            <div className="flex justify-end mb-2">
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={async (e) => {
+                                   e.stopPropagation();
+                                   const isFollowUpDisabled = (customer.notes || '').includes('[NO_FOLLOWUP]');
+                                   const newNotes = isFollowUpDisabled 
+                                     ? (customer.notes || '').replace('[NO_FOLLOWUP]', '').trim()
+                                     : (customer.notes || '') + ' [NO_FOLLOWUP]';
+                                   
+                                   const updated = { ...customer, notes: newNotes.trim() };
+                                   const { upsertSupabaseCustomer } = await import('@/lib/supa-data');
+                                   await upsertSupabaseCustomer(updated);
+                                   setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
+                                   toast({ title: "Updated", description: `Follow-up alerts are now ${isFollowUpDisabled ? 'ON' : 'OFF'} for this customer.` });
+                                 }}
+                                 className={`h-7 text-xs ${
+                                   (customer.notes || '').includes('[NO_FOLLOWUP]')
+                                     ? 'text-zinc-400 border-zinc-700 bg-zinc-900'
+                                     : 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                                 }`}
+                               >
+                                 <Bell className="w-3 h-3 mr-1" />
+                                 Follow-Up Alerts: {(customer.notes || '').includes('[NO_FOLLOWUP]') ? 'OFF' : 'ON'}
+                               </Button>
                             </div>
                             <div className="grid grid-cols-1 gap-2">
                               {(() => {
