@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { useFollowUpStatus, useFollowUpSettings } from "@/hooks/useFollowUpStatus";
 import { toast } from "sonner";
 import { onSendReminderEmail, onSendProspectEmail } from "@/lib/bookingsSync";
