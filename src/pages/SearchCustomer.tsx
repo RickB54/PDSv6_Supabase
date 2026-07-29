@@ -877,11 +877,11 @@ const SearchCustomer = () => {
                     ? "bg-green-900/40 border-green-700 hover:bg-green-900/50"
                     : "bg-zinc-900/50 border-blue-500/20 hover:border-blue-500/40"
                 )}>
-                  <div className={cn("p-4 flex flex-col md:flex-row items-start md:items-center justify-between cursor-pointer transition-colors gap-4",
+                  <div className={cn("p-4 flex flex-col items-start justify-between cursor-pointer transition-colors gap-4 w-full",
                     customer.is_archived ? "hover:bg-green-900/10" : "bg-blue-500/5 hover:bg-blue-500/10"
                   )} onClick={() => toggleCustomer(customer.id!)}>
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className={`shrink-0 h-2 w-2 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
+                    <div className="flex items-start sm:items-center gap-4 w-full min-w-0">
+                      <div className={`shrink-0 h-2 w-2 mt-2 sm:mt-0 rounded-full ${isExpanded ? 'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.5)]' : 'bg-zinc-600'}`} />
 
                       {/* Photo Thumbnails - clickable to open gallery */}
                       {(() => {
@@ -1047,8 +1047,8 @@ const SearchCustomer = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end shrink-0">
-                      <div className="flex flex-wrap gap-1 md:mr-4">
+                    <div className="flex flex-wrap items-center gap-2 w-full justify-start sm:justify-end shrink-0 pt-2 border-t border-zinc-800/50">
+                      <div className="flex flex-wrap gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1127,7 +1127,9 @@ const SearchCustomer = () => {
                            </Button>
                          )}
                       </div>
-                      {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+                      <div className="ml-auto">
+                        {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+                      </div>
                     </div>
                   </div>
 
