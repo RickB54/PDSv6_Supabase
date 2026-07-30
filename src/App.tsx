@@ -488,7 +488,8 @@ const App = () => {
     let mounted = true;
     
     // ENVIRONMENTAL AUDIT (Separation of Demo vs Real)
-    const isDemoActive = localStorage.getItem("demo_mode_active") === "true";
+    const isDemoPath = window.location.pathname.toLowerCase().replace(/\/+/g, '/').startsWith('/demo');
+    const isDemoActive = localStorage.getItem("demo_mode_active") === "true" || isDemoPath;
     const modeStyle = isDemoActive 
       ? 'background: #b45309; color: #fff; font-weight: bold; padding: 4px 8px; border-radius: 4px;' 
       : 'background: #065f46; color: #fff; font-weight: bold; padding: 4px 8px; border-radius: 4px;';

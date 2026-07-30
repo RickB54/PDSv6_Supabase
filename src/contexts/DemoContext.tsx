@@ -68,6 +68,10 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isDemoPath = normalizedPath.startsWith("/demo");
   const isHome = normalizedPath === "/" || normalizedPath === "/index.html";
   
+  if (isDemoPath && !isPublicDemoDisabled && localStorage.getItem("demo_mode_active") !== "true") {
+      localStorage.setItem("demo_mode_active", "true");
+  }
+  
   // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
   const [stayInDemo, setStayInDemo] = useState(() => localStorage.getItem("demo_mode_active") === "true");
 
