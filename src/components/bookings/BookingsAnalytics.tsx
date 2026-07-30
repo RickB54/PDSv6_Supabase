@@ -725,13 +725,43 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         googleStars: 5
     });
 
-    const saveReview = () => {
+    const saveReview = async () => {
         if (!selectedBookingForReview) return;
         const updated = { ...bookingReviews, [selectedBookingForReview.id]: reviewForm };
         setBookingReviews(updated);
         localStorage.setItem('prime_booking_reviews', JSON.stringify(updated));
+        
+        const customerToUpdate = customers.find(c => c.name === selectedBookingForReview.customer);
+        if (customerToUpdate && customerToUpdate.has_google_review !== reviewForm.googleReview) {
+            try {
+                const { upsertCustomer } = await import('@/lib/db');
+                await upsertCustomer({ ...customerToUpdate, has_google_review: reviewForm.googleReview });
+                if (onRefresh) onRefresh();
+            } catch (err) { console.error(err); }
+        }
+
         setIsReviewModalOpen(false);
         toast.success("Operational review saved.");
+    };
+
+    const clearReview = async (booking: any) => {
+        if (!confirm("Clear this operational review? This will reset the sentiment and Google Star rating.")) return;
+        
+        const updated = { ...bookingReviews };
+        delete updated[booking.id];
+        setBookingReviews(updated);
+        localStorage.setItem('prime_booking_reviews', JSON.stringify(updated));
+        
+        const customerToUpdate = customers.find(c => c.name === booking.customer);
+        if (customerToUpdate && customerToUpdate.has_google_review) {
+            try {
+                const { upsertCustomer } = await import('@/lib/db');
+                await upsertCustomer({ ...customerToUpdate, has_google_review: false });
+                if (onRefresh) onRefresh();
+            } catch (err) { console.error(err); }
+        }
+        
+        toast.success("Review cleared.");
     };
 
     const openReview = (booking: any) => {
@@ -3752,19 +3782,32 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     ) : <span className="text-xs text-zinc-700">—</span>}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className={cn(
-                                                            "text-[10px] h-7 px-3 font-bold transition-all",
-                                                            review 
-                                                                ? "text-zinc-500 hover:text-white" 
-                                                                : "text-violet-400 hover:text-white bg-violet-500/5 hover:bg-violet-500/20 border border-violet-500/10"
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className={cn(
+                                                                "text-[10px] h-7 px-3 font-bold transition-all",
+                                                                review 
+                                                                    ? "text-zinc-500 hover:text-white" 
+                                                                    : "text-violet-400 hover:text-white bg-violet-500/5 hover:bg-violet-500/20 border border-violet-500/10"
+                                                            )}
+                                                            onClick={() => openReview(svc)}
+                                                        >
+                                                            {review ? 'Edit Report' : 'Log Feedback'}
+                                                        </Button>
+                                                        {review && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 w-7 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                                                onClick={() => clearReview(svc)}
+                                                                title="Clear Review"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </Button>
                                                         )}
-                                                        onClick={() => openReview(svc)}
-                                                    >
-                                                        {review ? 'Edit Report' : 'Log Feedback'}
-                                                    </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );

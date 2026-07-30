@@ -67,6 +67,9 @@ export default function BookingsAnalyticsPage() {
 
     useEffect(() => {
         fetchData();
+        const handleRefresh = () => fetchData(true);
+        window.addEventListener('refresh-analytics', handleRefresh);
+        return () => window.removeEventListener('refresh-analytics', handleRefresh);
     }, [fetchData]);
 
     return (
