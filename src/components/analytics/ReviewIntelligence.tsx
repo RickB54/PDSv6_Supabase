@@ -378,9 +378,9 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       </div>
 
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-[550px] overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-600 via-emerald-500 to-violet-600" />
-            <DialogHeader className="pt-4">
+        <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-[550px] overflow-hidden flex flex-col p-0 max-h-[90vh]">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-600 via-emerald-500 to-violet-600 z-50" />
+            <DialogHeader className="p-6 pb-2 shrink-0">
                 <DialogTitle className="text-xl font-bold text-zinc-100 flex items-center gap-2">
                     <Repeat className="w-5 h-5 text-violet-400" />
                     Post-Service Performance Review
@@ -390,7 +390,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 </CardDescription>
             </DialogHeader>
 
-            <div className="grid gap-6 py-4">
+            <div className="p-6 py-2 overflow-y-auto flex-1 space-y-6">
                 <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">How did you do? (Performance Notes)</Label>
                     <Textarea 
@@ -478,7 +478,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 )}
             </div>
 
-            <div className="flex justify-end gap-2 mt-4 border-t border-zinc-800 pt-6">
+            <div className="flex justify-end gap-2 border-t border-zinc-800 p-6 bg-zinc-950 shrink-0">
                 <Button variant="ghost" onClick={() => setIsReviewModalOpen(false)} className="text-zinc-500 hover:text-white">Cancel</Button>
                 <Button onClick={saveReview} className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 shadow-lg shadow-violet-600/20 active:scale-95 transition-transform">
                     Save Operational Review

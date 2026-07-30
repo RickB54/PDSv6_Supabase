@@ -103,6 +103,9 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Global demo mode check
   const isDemoMode = isAdminPreview || ((stayInDemo || location.pathname.toLowerCase().startsWith('/demo')) && !isPublicDemoDisabled);
+  console.log(`[DIAGNOSTIC-CONTEXT] DemoContext Evaluation:`, {
+    isDemoMode, isAdminPreview, stayInDemo, isDemoPath: location.pathname.toLowerCase().startsWith('/demo'), isPublicDemoDisabled
+  });
 
   useEffect(() => {
     localStorage.setItem("admin_demo_preview", isAdminPreview.toString());
@@ -116,6 +119,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Fast-path: check cache first
         const cached = localStorage.getItem("demo_config_cache");
+        console.log(`[DIAGNOSTIC-CONTEXT] loadConfig: Initial Cache read:`, cached);
         if (cached) {
           const parsed = JSON.parse(cached);
           setConfig(parsed);
@@ -132,6 +136,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         const meta = await contentService.getServiceMeta("demo_config");
+        console.log(`[DIAGNOSTIC-CONTEXT] loadConfig: Supabase Fetch read:`, meta?.meta);
         if (meta && meta.meta) {
           localStorage.setItem("demo_config_cache", JSON.stringify(meta.meta));
           setConfig(meta.meta);

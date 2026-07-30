@@ -4060,7 +4060,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </CardDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-6 py-4">
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1">
                         <div className="space-y-2">
                             <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">How did you do? (Performance Notes)</Label>
                             <Textarea 
@@ -4148,7 +4148,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-4 border-t border-zinc-800 pt-6">
+                    <div className="flex justify-end gap-2 border-t border-zinc-800 p-6 bg-zinc-950 shrink-0">
                         <Button variant="ghost" onClick={() => setIsReviewModalOpen(false)} className="text-zinc-500 hover:text-white">Cancel</Button>
                         <Button onClick={saveReview} className="bg-violet-600 hover:bg-violet-500 text-white font-bold px-8 shadow-lg shadow-violet-600/20 active:scale-95 transition-transform">
                             Save Operational Review

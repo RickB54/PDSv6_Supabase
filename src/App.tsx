@@ -214,6 +214,14 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   const { isDemoMode, mockUser, isLoading, isPublicDemoDisabled, disabledReason, isAdminPreview } = useDemoMode();
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
+
+  console.log(`[DIAGNOSTIC] App.tsx LayoutWrapper Render:`, {
+      path: location.pathname,
+      isDemoMode_fromContext: isDemoMode,
+      isPublicDemoDisabled_fromContext: isPublicDemoDisabled,
+      isAdminPreview_fromContext: isAdminPreview,
+      demo_mode_active_fromStorage: localStorage.getItem('demo_mode_active')
+  });
   const [businessStatus, setBusinessStatus] = useState<any>(() => {
     const cached = contentService.getServiceMetaSync("global_settings");
     return cached?.meta?.businessStatus || null;
@@ -606,8 +614,17 @@ const App = () => {
 
     const onDemoBlocked = (e: any) => {
       const now = Date.now();
-      if (now - globalLastDemoToastTime < 3000) return;
+      console.log(`[DIAGNOSTIC] onDemoBlocked fired at ${new Date(now).toISOString()}`);
+      console.log(`[DIAGNOSTIC] Triggered by action:`, e.detail?.action);
+      console.log(`[DIAGNOSTIC] Full Event Object:`, e);
+      console.log(`[DIAGNOSTIC] Time since last toast:`, now - globalLastDemoToastTime);
+
+      if (now - globalLastDemoToastTime < 3000) {
+          console.log(`[DIAGNOSTIC] Toast debounced (too soon).`);
+          return;
+      }
       globalLastDemoToastTime = now;
+      console.log(`[DIAGNOSTIC] Toast allowed to fire.`);
       
       const action = e.detail?.action || 'this action';
       toast({
