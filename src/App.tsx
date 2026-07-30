@@ -298,7 +298,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
               <Route path="/signup" element={<SignUp />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/update-password" element={<UpdatePassword />} />
-              <Route path="*" element={<DefaultRedirect user={user} />} />
+              <Route path="*" element={<DefaultRedirect user={effectiveUser} />} />
             </Routes>
             <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
           </div>
@@ -366,99 +366,99 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           {publicRoutes}
           <Route path="/dashboard/admin" element={<Navigate to="/bookings-analytics" replace />} />
           <Route path="/demo/dashboard" element={<Navigate to="/bookings-analytics" replace />} />
-          <Route path="/dashboard/employee" element={<ProtectedRoute user={user} allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
-          <Route path="/customer-dashboard" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
-          <Route path="/bookings" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
-          <Route path="/demo/bookings" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
-          <Route path="/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
-          <Route path="/time-profitability" element={<ProtectedRoute user={user} allowedRoles={['admin']}><TimeProfitabilityPage /></ProtectedRoute>} />
-          <Route path="/demo/bookings-analytics" element={<ProtectedRoute user={user} allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
-          <Route path="/goals" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Goals /></ProtectedRoute>} />
-          <Route path="/demo/goals" element={<ProtectedRoute user={user} allowedRoles={[]}><Goals /></ProtectedRoute>} />
-          <Route path="/search-customer" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
-          <Route path="/demo/search-customer" element={<ProtectedRoute user={user} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
-          <Route path="/prospects" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Prospects /></ProtectedRoute>} />
-          <Route path="/demo/prospects" element={<ProtectedRoute user={user} allowedRoles={[]}><Prospects /></ProtectedRoute>} />
-          <Route path="/service-checklist" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
-          <Route path="/tasks" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
-          <Route path="/demo/tasks" element={<ProtectedRoute user={user} allowedRoles={[]}><Tasks /></ProtectedRoute>} />
-          <Route path="/team-chat" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
-          <Route path="/jobs-completed" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
-          <Route path="/invoicing" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
-          <Route path="/demo/invoicing" element={<ProtectedRoute user={user} allowedRoles={[]}><Invoicing /></ProtectedRoute>} />
-          <Route path="/estimates" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
-          <Route path="/demo/estimates" element={<ProtectedRoute user={user} allowedRoles={[]}><Estimates /></ProtectedRoute>} />
-          <Route path="/accounting" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
-          <Route path="/payments" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Payments /></ProtectedRoute>} />
-          <Route path="/demo/accounting" element={<ProtectedRoute user={user} allowedRoles={[]}><Accounting /></ProtectedRoute>} />
-          <Route path="/payroll" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
-          <Route path="/demo/payroll" element={<ProtectedRoute user={user} allowedRoles={[]}><Payroll /></ProtectedRoute>} />
-          <Route path="/company-budget" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompanyBudget /></ProtectedRoute>} />
-          <Route path="/demo/company-budget" element={<ProtectedRoute user={user} allowedRoles={[]}><CompanyBudget /></ProtectedRoute>} />
-          <Route path="/discount-coupons" element={<ProtectedRoute user={user} allowedRoles={['admin']}><DiscountCoupons /></ProtectedRoute>} />
-          <Route path="/package-pricing" element={<ProtectedRoute user={user} allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
-          <Route path="/mileage" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
-          <Route path="/taxes" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
-          <Route path="/inventory-control" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><InventoryControl /></ProtectedRoute>} />
-          <Route path="/demo/inventory-control" element={<ProtectedRoute user={user} allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
-          <Route path="/file-manager" element={<ProtectedRoute user={user} allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
-          <Route path="/mobile-setup" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><MobileSetup /></ProtectedRoute>} />
-          <Route path="/shop-setup" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ShopSetup /></ProtectedRoute>} />
-          <Route path="/detailing-vendors" element={<ProtectedRoute user={user} allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
-          <Route path="/training-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
-          <Route path="/chemical-training" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
-          <Route path="/learning-library" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
-          <Route path="/chemicals" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
-          <Route path="/dilution-calculator" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><DilutionCalculator /></ProtectedRoute>} />
-          <Route path="/dilution-calculator/help" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><DilutionCalculatorHelp /></ProtectedRoute>} />
-          <Route path="/admin/chemicals" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />
-          <Route path="/orientation" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Orientation /></ProtectedRoute>} />
-          <Route path="/staff-schedule" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
-          <Route path="/user-management" element={<ProtectedRoute user={user} allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
-          <Route path="/admin-users" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
-          <Route path="/company-employees" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
-          <Route path="/employee-profile/:id" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EmployeeProfilePage /></ProtectedRoute>} />
-          <Route path="/compensation-payroll" element={<ProtectedRoute user={user} allowedRoles={['admin']}><CompensationPayroll /></ProtectedRoute>} />
-          <Route path="/exam/:examId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ExamPage /></ProtectedRoute>} />
-          <Route path="/exam-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />
-          <Route path="/certificate/:id" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><Certificate /></ProtectedRoute>} />
-          <Route path="/cheat-sheet" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><CheatSheet /></ProtectedRoute>} />
-          <Route path="/package-selection" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><PackageSelection /></ProtectedRoute>} />
-          <Route path="/vehicle-classification" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><VehicleClassification /></ProtectedRoute>} />
-          <Route path="/client-evaluation" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ClientEvaluation /></ProtectedRoute>} />
-          <Route path="/addon-upsell-script" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><AddonUpsellScript /></ProtectedRoute>} />
-          <Route path="/package-guide" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><PackageExplanationGuide /></ProtectedRoute>} />
-          <Route path="/availability-manager" element={<ProtectedRoute user={user} allowedRoles={['admin']}><AvailabilityManager /></ProtectedRoute>} />
-          <Route path="/website-admin" element={<ProtectedRoute user={user} allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
-          <Route path="/section/:sectionId" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
-          <Route path="/notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
-          <Route path="/sticky-notes" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><StickyNotes /></ProtectedRoute>} />
-          <Route path="/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
-          <Route path="/demo/vehicle-gallery" element={<ProtectedRoute user={user} allowedRoles={[]}><VehicleGallery /></ProtectedRoute>} />
-          <Route path="/app-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />
-          <Route path="/user-settings" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee', 'customer']}><UserSettings /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute user={user} allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-          <Route path="/demo/reports" element={<ProtectedRoute user={user} allowedRoles={[]}><Reports /></ProtectedRoute>} />
-          <Route path="/follow-up-center" element={<ProtectedRoute user={user} allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
-          <Route path="/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><StickerMaker /></ProtectedRoute>} />
-          <Route path="/demo/sticker-maker" element={<ProtectedRoute user={user} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
-          <Route path="/letter-maker" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><LetterMaker /></ProtectedRoute>} />
-          <Route path="/elite-master" element={<ProtectedRoute user={user} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
-          <Route path="/procedures-manual" element={<ProtectedRoute user={user} allowedRoles={['admin', 'employee']}><ProceduresBooklet /></ProtectedRoute>} />
+          <Route path="/dashboard/employee" element={<ProtectedRoute user={effectiveUser} allowedRoles={['employee', 'admin']}><EmployeeDashboard /></ProtectedRoute>} />
+          <Route path="/customer-dashboard" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><CustomerDashboard /></ProtectedRoute>} />
+          <Route path="/bookings" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><BookingsPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><BookingsPage /></ProtectedRoute>} />
+          <Route path="/bookings-analytics" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/time-profitability" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><TimeProfitabilityPage /></ProtectedRoute>} />
+          <Route path="/demo/bookings-analytics" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
+          <Route path="/goals" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><Goals /></ProtectedRoute>} />
+          <Route path="/demo/goals" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Goals /></ProtectedRoute>} />
+          <Route path="/search-customer" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/demo/search-customer" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/prospects" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Prospects /></ProtectedRoute>} />
+          <Route path="/demo/prospects" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Prospects /></ProtectedRoute>} />
+          <Route path="/service-checklist" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ServiceChecklist /></ProtectedRoute>} />
+          <Route path="/tasks" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><Tasks /></ProtectedRoute>} />
+          <Route path="/demo/tasks" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Tasks /></ProtectedRoute>} />
+          <Route path="/team-chat" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><TeamChat /></ProtectedRoute>} />
+          <Route path="/jobs-completed" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><JobsCompleted /></ProtectedRoute>} />
+          <Route path="/invoicing" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Invoicing /></ProtectedRoute>} />
+          <Route path="/demo/invoicing" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Invoicing /></ProtectedRoute>} />
+          <Route path="/estimates" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Estimates /></ProtectedRoute>} />
+          <Route path="/demo/estimates" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Estimates /></ProtectedRoute>} />
+          <Route path="/accounting" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Accounting /></ProtectedRoute>} />
+          <Route path="/payments" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Payments /></ProtectedRoute>} />
+          <Route path="/demo/accounting" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Accounting /></ProtectedRoute>} />
+          <Route path="/payroll" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Payroll /></ProtectedRoute>} />
+          <Route path="/demo/payroll" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Payroll /></ProtectedRoute>} />
+          <Route path="/company-budget" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><CompanyBudget /></ProtectedRoute>} />
+          <Route path="/demo/company-budget" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><CompanyBudget /></ProtectedRoute>} />
+          <Route path="/discount-coupons" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><DiscountCoupons /></ProtectedRoute>} />
+          <Route path="/package-pricing" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><PackagePricing /></ProtectedRoute>} />
+          <Route path="/mileage" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><MileageTracking /></ProtectedRoute>} />
+          <Route path="/taxes" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Taxes /></ProtectedRoute>} />
+          <Route path="/inventory-control" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><InventoryControl /></ProtectedRoute>} />
+          <Route path="/demo/inventory-control" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><InventoryControl /></ProtectedRoute>} />
+          <Route path="/file-manager" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><FileManager /></ProtectedRoute>} />
+          <Route path="/mobile-setup" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><MobileSetup /></ProtectedRoute>} />
+          <Route path="/shop-setup" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ShopSetup /></ProtectedRoute>} />
+          <Route path="/detailing-vendors" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><DetailingVendors /></ProtectedRoute>} />
+          <Route path="/training-manual" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><TrainingManual /></ProtectedRoute>} />
+          <Route path="/chemical-training" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ChemicalTraining /></ProtectedRoute>} />
+          <Route path="/learning-library" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><LearningLibrary /></ProtectedRoute>} />
+          <Route path="/chemicals" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ChemicalsLibrary /></ProtectedRoute>} />
+          <Route path="/dilution-calculator" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><DilutionCalculator /></ProtectedRoute>} />
+          <Route path="/dilution-calculator/help" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><DilutionCalculatorHelp /></ProtectedRoute>} />
+          <Route path="/admin/chemicals" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><AdminChemicals /></ProtectedRoute>} />
+          <Route path="/orientation" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><Orientation /></ProtectedRoute>} />
+          <Route path="/staff-schedule" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><StaffSchedule /></ProtectedRoute>} />
+          <Route path="/user-management" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+          <Route path="/admin-users" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><AdminUsers /></ProtectedRoute>} />
+          <Route path="/company-employees" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><CompanyEmployees /></ProtectedRoute>} />
+          <Route path="/employee-profile/:id" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><EmployeeProfilePage /></ProtectedRoute>} />
+          <Route path="/compensation-payroll" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><CompensationPayroll /></ProtectedRoute>} />
+          <Route path="/exam/:examId" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ExamPage /></ProtectedRoute>} />
+          <Route path="/exam-admin" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><ExamAdmin /></ProtectedRoute>} />
+          <Route path="/certificate/:id" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><Certificate /></ProtectedRoute>} />
+          <Route path="/cheat-sheet" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><CheatSheet /></ProtectedRoute>} />
+          <Route path="/package-selection" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><PackageSelection /></ProtectedRoute>} />
+          <Route path="/vehicle-classification" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><VehicleClassification /></ProtectedRoute>} />
+          <Route path="/client-evaluation" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ClientEvaluation /></ProtectedRoute>} />
+          <Route path="/addon-upsell-script" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><AddonUpsellScript /></ProtectedRoute>} />
+          <Route path="/package-guide" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><PackageExplanationGuide /></ProtectedRoute>} />
+          <Route path="/availability-manager" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><AvailabilityManager /></ProtectedRoute>} />
+          <Route path="/website-admin" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><WebsiteAdministration /></ProtectedRoute>} />
+          <Route path="/section/:sectionId" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><SectionLanding /></ProtectedRoute>} />
+          <Route path="/notes" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee', 'customer']}><PersonalNotes /></ProtectedRoute>} />
+          <Route path="/sticky-notes" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee', 'customer']}><StickyNotes /></ProtectedRoute>} />
+          <Route path="/vehicle-gallery" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><VehicleGallery /></ProtectedRoute>} />
+          <Route path="/demo/vehicle-gallery" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><VehicleGallery /></ProtectedRoute>} />
+          <Route path="/app-manual" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><AppManual /></ProtectedRoute>} />
+          <Route path="/user-settings" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee', 'customer']}><UserSettings /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+          <Route path="/demo/reports" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Reports /></ProtectedRoute>} />
+          <Route path="/follow-up-center" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
+          <Route path="/sticker-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/demo/sticker-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/letter-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><LetterMaker /></ProtectedRoute>} />
+          <Route path="/elite-master" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
+          <Route path="/procedures-manual" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><ProceduresBooklet /></ProtectedRoute>} />
           <Route path="/blog-reorder" element={<Navigate to="/elite-master" replace />} />
           <Route path="/demo" element={<Navigate to="/demo/dashboard" replace />} />
-          <Route path="/active-jobs" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
-          <Route path="/job-history" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
-          <Route path="/my-invoices" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><MyInvoices /></ProtectedRoute>} />
-          <Route path="/my-estimates" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><MyEstimates /></ProtectedRoute>} />
-          <Route path="/payments-cart" element={<ProtectedRoute user={user} allowedRoles={['customer', 'admin', 'employee']}><PaymentsAndCart /></ProtectedRoute>} />
-          <Route path="/customer-account" element={<ProtectedRoute user={user} allowedRoles={['customer']}><CustomerAccount /></ProtectedRoute>} />
-          <Route path="/customer-profile" element={<ProtectedRoute user={user} allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
-          <Route path="/portal" element={<ProtectedRoute user={user} allowedRoles={['customer']}><Portal /></ProtectedRoute>} />
+          <Route path="/active-jobs" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><ActiveJobs /></ProtectedRoute>} />
+          <Route path="/job-history" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><JobHistory /></ProtectedRoute>} />
+          <Route path="/my-invoices" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><MyInvoices /></ProtectedRoute>} />
+          <Route path="/my-estimates" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><MyEstimates /></ProtectedRoute>} />
+          <Route path="/payments-cart" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer', 'admin', 'employee']}><PaymentsAndCart /></ProtectedRoute>} />
+          <Route path="/customer-account" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer']}><CustomerAccount /></ProtectedRoute>} />
+          <Route path="/customer-profile" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer']}><CustomerProfile /></ProtectedRoute>} />
+          <Route path="/portal" element={<ProtectedRoute user={effectiveUser} allowedRoles={['customer']}><Portal /></ProtectedRoute>} />
           <Route path="/contact-support" element={<ContactSupport />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="*" element={<DefaultRedirect user={user} />} />
+          <Route path="*" element={<DefaultRedirect user={effectiveUser} />} />
         </Routes>
         {(helpRole || effectiveUser?.role || 'admin') === 'employee' ? (
           <EmployeeHelpModal open={helpOpen} onOpenChange={setHelpOpen} initialTopicId={helpId} />

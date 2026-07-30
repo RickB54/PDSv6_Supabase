@@ -199,6 +199,7 @@ export async function addEstimate<T>(estimate: T): Promise<GenericWithId & T> {
 }
 
 export async function deleteEstimate(id: string): Promise<void> {
+  if (blockDemo('deleteEstimate')) return;
   const estimates = await getEstimates();
   const filtered = estimates.filter((e: any) => e.id !== id);
   await setArray(KEYS.estimates, filtered);
@@ -250,6 +251,7 @@ export async function upsertInvoice<T extends Partial<GenericWithId>>(inv: T): P
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
+  if (blockDemo('deleteInvoice')) return;
   try {
     const { error } = await supabase.from('invoices').delete().eq('id', id);
     if (error) throw error;
@@ -301,6 +303,7 @@ export async function upsertExpense<T extends Partial<GenericWithId>>(exp: T): P
 }
 
 export async function deleteExpense(id: string): Promise<void> {
+  if (blockDemo('deleteExpense')) return;
   try {
     await supabase.from('tax_expenses').delete().eq('id', id);
   } catch {
@@ -315,6 +318,7 @@ export async function getSubContractors<T extends GenericWithId>(): Promise<T[]>
 }
 
 export async function upsertSubContractor<T extends Partial<GenericWithId>>(sub: T): Promise<GenericWithId & T> {
+  if (blockDemo('upsertSubContractor')) return arguments[0] as any;
   const list = await getArray<any>(KEYS.sub_contractors);
   const now = new Date().toISOString();
   let saved: any;
@@ -336,6 +340,7 @@ export async function upsertSubContractor<T extends Partial<GenericWithId>>(sub:
 }
 
 export async function deleteSubContractor(id: string) {
+  if (blockDemo('deleteSubContractor')) return;
   const list = await getSubContractors();
   const next = list.filter((x: any) => x.id !== id);
   await setArray(KEYS.sub_contractors, next);
@@ -347,6 +352,7 @@ export async function getClientUpsells<T = any>(): Promise<T[]> {
 }
 
 export async function upsertClientUpsell(data: any) {
+  if (blockDemo('upsertClientUpsell')) return arguments[0] as any;
   const list = await getClientUpsells();
   const idx = list.findIndex((x: any) => x.id === data.id);
   if (idx >= 0) {
@@ -358,6 +364,7 @@ export async function upsertClientUpsell(data: any) {
 }
 
 export async function deleteClientUpsell(id: string) {
+  if (blockDemo('deleteClientUpsell')) return;
   const list = await getClientUpsells();
   const next = list.filter((x: any) => x.id !== id);
   await setArray(KEYS.client_upsells, next);
@@ -374,6 +381,7 @@ export async function getClientEvaluations<T = any>(): Promise<T[]> {
 }
 
 export async function upsertClientEvaluation(data: any) {
+  if (blockDemo('upsertClientEvaluation')) return arguments[0] as any;
   const list = await getClientEvaluations();
   const idx = list.findIndex((x: any) => x.id === data.id);
   if (idx >= 0) {
@@ -385,6 +393,7 @@ export async function upsertClientEvaluation(data: any) {
 }
 
 export async function deleteClientEvaluation(id: string) {
+  if (blockDemo('deleteClientEvaluation')) return;
   const list = await getClientEvaluations();
   const next = list.filter((x: any) => x.id !== id);
   await setArray(KEYS.client_evaluations, next);
@@ -401,6 +410,7 @@ export async function getDetailingVendors<T extends GenericWithId>(): Promise<T[
 }
 
 export async function upsertDetailingVendor<T extends Partial<GenericWithId>>(vendor: T): Promise<GenericWithId & T> {
+  if (blockDemo('upsertDetailingVendor')) return arguments[0] as any;
   const list = await getArray<any>(KEYS.detailing_vendors);
   const now = new Date().toISOString();
   let saved: any;
@@ -422,6 +432,7 @@ export async function upsertDetailingVendor<T extends Partial<GenericWithId>>(ve
 }
 
 export async function deleteDetailingVendor(id: string) {
+  if (blockDemo('deleteDetailingVendor')) return;
   const list = await getDetailingVendors();
   const next = list.filter((x: any) => x.id !== id);
   await setArray(KEYS.detailing_vendors, next);
