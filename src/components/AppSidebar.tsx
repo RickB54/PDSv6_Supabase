@@ -455,6 +455,11 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
       tentativeBookingsCount: badgeCount,
       bookingsBadgeColor: badgeColor
     }).filter(group => {
+      // Hide the "View As" group completely if we are currently inside one of the simulated views
+      if (group.title === "View As" && (isViewingAsEmployee || isViewingAsCustomer)) {
+        return false;
+      }
+
       // Check if group title matches search
       const groupMatches = searchQuery && group.title.toLowerCase().includes(searchQuery.toLowerCase());
       
