@@ -51,6 +51,10 @@ const DUMMY_BOOKING_ID = '00000000-0000-0000-0000-000000000000';
  */
 async function syncToDB(alerts: AdminAlert[]): Promise<void> {
   try {
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      // Prevent background polling from triggering the global write-block toast
+      return;
+    }
     // Keep only last 200 for DB storage to keep it lightweight
     const trimmed = alerts.slice(Math.max(0, alerts.length - 200));
     await supabase.from('bookings').upsert({
