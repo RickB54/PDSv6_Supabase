@@ -93,7 +93,6 @@ async function load(): Promise<Task[]> {
     }
   } catch { }
   // Fallback to localStorage if localforage is unavailable or empty
-  const STORAGE_KEY = getStorageKey();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : [];
