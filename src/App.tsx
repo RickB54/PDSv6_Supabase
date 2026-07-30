@@ -211,7 +211,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   helpRole: any;
   helpId: string | undefined;
 }) => {
-  const { isDemoMode, mockUser, isLoading } = useDemoMode();
+  const { isDemoMode, mockUser, isLoading, isPublicDemoDisabled, disabledReason, isAdminPreview } = useDemoMode();
   const location = useRouterLocation();
   const isApp = isAppRoute(location.pathname);
   const [businessStatus, setBusinessStatus] = useState<any>(() => {
@@ -229,6 +229,27 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
       } catch {}
     })();
   }, []);
+
+  const normalizedPath = location.pathname.toLowerCase().replace(/\/+/g, '/');
+  if (normalizedPath.startsWith('/demo') && isPublicDemoDisabled && !isAdminPreview) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-zinc-950 to-zinc-950"></div>
+        <div className="z-10 flex flex-col items-center max-w-md animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 bg-red-500/10 rounded-2xl border border-red-500/20 flex items-center justify-center mb-6">
+               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+            </div>
+            <h1 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Demo Mode Offline</h1>
+            <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+               Access to the public simulation has been suspended.
+               <br /><br />
+               <span className="text-red-400 font-bold uppercase tracking-widest text-[11px]">Reason: {disabledReason || 'System Maintenance'}</span>
+            </p>
+            <button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-white text-black font-bold text-xs uppercase tracking-widest rounded hover:bg-zinc-200 transition-colors">Return to Home</button>
+        </div>
+      </div>
+    );
+  }
 
   // ONLY block public/website routes if we are explicitly in demo mode paths.
   // Otherwise, we allow the main content to render while security config loads in background.
@@ -475,6 +496,8 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   );
 };
 
+let globalLastDemoToastTime = 0;
+
 const App = () => {
   const { toast } = useToast();
   const [user, setUser] = useState(getCurrentUser());
@@ -581,11 +604,10 @@ const App = () => {
       setHelpOpen(true);
     };
 
-    let lastDemoBlockToastTime = 0;
     const onDemoBlocked = (e: any) => {
       const now = Date.now();
-      if (now - lastDemoBlockToastTime < 3000) return;
-      lastDemoBlockToastTime = now;
+      if (now - globalLastDemoToastTime < 3000) return;
+      globalLastDemoToastTime = now;
       
       const action = e.detail?.action || 'this action';
       toast({
