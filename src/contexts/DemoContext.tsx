@@ -71,6 +71,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   if (isDemoPath && !isPublicDemoDisabled && localStorage.getItem("demo_mode_active") !== "true") {
       localStorage.setItem("demo_mode_active", "true");
       localStorage.removeItem("pdfArchive");
+      localStorage.removeItem("demo_tasks");
   }
   
   // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
@@ -93,11 +94,13 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // clear the flag so it doesn't interfere with real inquiries.
       localStorage.removeItem("demo_mode_active");
       localStorage.removeItem("pdfArchive");
+      localStorage.removeItem("demo_tasks");
       setStayInDemo(false);
       console.log("[DemoContext] Auto-exited Training Session for public website integrity.");
     } else if (isDemoPath && isPublicDemoDisabled && !isAdminPreview) {
       localStorage.removeItem("demo_mode_active");
       localStorage.removeItem("pdfArchive");
+      localStorage.removeItem("demo_tasks");
       setStayInDemo(false);
       const reasonParam = encodeURIComponent(disabledReason || 'System Maintenance');
       navigate(`/login?demo_disabled=true&reason=${reasonParam}`);
@@ -171,8 +174,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Use current config as a primary whitelist if it exists and has and items
     if (config?.visibleSections && config.visibleSections.length > 0) {
-      // Always allow the new Letter Maker and View As items even if not in the saved remote config yet
-      if (['letter-maker', 'customer-view-dashboard', 'employee-view-dashboard'].includes(key)) return true;
+      // Always allow the new Letter Maker, View As items, and Shop Setup even if not in the saved remote config yet
+      if (['letter-maker', 'customer-view-dashboard', 'employee-view-dashboard', 'shop-setup'].includes(key)) return true;
       return config.visibleSections.includes(key);
     }
 
@@ -201,6 +204,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!val) {
       localStorage.removeItem("demo_mode_active");
       localStorage.removeItem("pdfArchive");
+      localStorage.removeItem("demo_tasks");
       setStayInDemo(false);
     }
     if (val) {
@@ -290,6 +294,7 @@ export const DemoBanner = () => {
             localStorage.removeItem("demo_mode_active");
             localStorage.removeItem("admin_demo_preview");
             localStorage.removeItem("pdfArchive");
+            localStorage.removeItem("demo_tasks");
             window.location.href = "/";
           }}
           className="px-3 py-1 bg-white text-orange-600 hover:bg-zinc-200 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95"

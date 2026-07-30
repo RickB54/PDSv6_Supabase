@@ -65,9 +65,16 @@ interface TasksState {
   addComment: (id: string, comment: { text: string; authorEmail?: string; authorName?: string }) => Promise<void>;
 }
 
-const STORAGE_KEY = "tasks";
+const getStorageKey = () => {
+  try {
+    return localStorage.getItem("demo_mode_active") === "true" ? "demo_tasks" : "tasks";
+  } catch {
+    return "tasks";
+  }
+};
 
 async function load(): Promise<Task[]> {
+  const STORAGE_KEY = getStorageKey();
   try {
     const list = (await localforage.getItem(STORAGE_KEY)) || [];
     const arr = Array.isArray(list) ? (list as Task[]) : [];
@@ -86,6 +93,7 @@ async function load(): Promise<Task[]> {
     }
   } catch { }
   // Fallback to localStorage if localforage is unavailable or empty
+  const STORAGE_KEY = getStorageKey();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const arr = raw ? JSON.parse(raw) : [];
@@ -107,6 +115,7 @@ async function load(): Promise<Task[]> {
 }
 
 async function save(items: Task[]): Promise<void> {
+  const STORAGE_KEY = getStorageKey();
   try {
     await localforage.setItem(STORAGE_KEY, items);
   } catch {

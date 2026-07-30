@@ -255,6 +255,8 @@ export default function NotificationBell() {
   // Background Sync for Online Bookings (ensure Admin is notified of public website activity)
   useEffect(() => {
     if (isEmployee || isFileManagerView) return;
+    const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
+    if (isDemoMode) return; // Prevent live sync and DB mutations during Demo Mode
 
     const syncBookings = async () => {
       try {
