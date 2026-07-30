@@ -27,9 +27,11 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
   const [searchTerm, setSearchTerm] = useState("");
   const [vipSearchTerm, setVipSearchTerm] = useState("");
   
+  const getReviewsKey = () => localStorage.getItem('demo_mode_active') === 'true' ? 'demo_prime_booking_reviews' : 'prime_booking_reviews';
+  
   const [bookingReviews, setBookingReviews] = useState<Record<string, any>>(() => {
     try {
-        return JSON.parse(localStorage.getItem('prime_booking_reviews') || '{}');
+        return JSON.parse(localStorage.getItem(getReviewsKey()) || '{}');
     } catch { return {}; }
   });
 
@@ -41,13 +43,14 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       mistakes: "",
       sentiment: "satisfied",
       googleReview: false,
-      googleStars: 5
+      googleStars: 5,
+      googleReviewText: ""
   });
 
   useEffect(() => {
       const handleRefresh = () => {
           try {
-              setBookingReviews(JSON.parse(localStorage.getItem('prime_booking_reviews') || '{}'));
+              setBookingReviews(JSON.parse(localStorage.getItem(getReviewsKey()) || '{}'));
           } catch {}
       };
       window.addEventListener('refresh-analytics', handleRefresh);
@@ -58,7 +61,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       if (!selectedBookingForReview) return;
       const updated = { ...bookingReviews, [selectedBookingForReview.id]: reviewForm };
       setBookingReviews(updated);
-      localStorage.setItem('prime_booking_reviews', JSON.stringify(updated));
+      localStorage.setItem(getReviewsKey(), JSON.stringify(updated));
       
       const customerToUpdate = customers.find(c => c.name === selectedBookingForReview.customer);
       if (customerToUpdate && customerToUpdate.has_google_review !== reviewForm.googleReview) {
@@ -77,7 +80,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       const updated = { ...bookingReviews };
       delete updated[booking.id];
       setBookingReviews(updated);
-      localStorage.setItem('prime_booking_reviews', JSON.stringify(updated));
+      localStorage.setItem(getReviewsKey(), JSON.stringify(updated));
       
       const customerToUpdate = customers.find(c => c.name === booking.customer);
       if (customerToUpdate && customerToUpdate.has_google_review) {
@@ -96,7 +99,8 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
           mistakes: "",
           sentiment: "satisfied",
           googleReview: false,
-          googleStars: 5
+          googleStars: 5,
+          googleReviewText: ""
       };
       setReviewForm(existing);
       setIsReviewModalOpen(true);
@@ -440,24 +444,35 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 </div>
 
                 {reviewForm.googleReview && (
-                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Google Star Rating</Label>
-                        <div className="flex gap-4">
-                            {[1,2,3,4,5].map(star => (
-                                <Button 
-                                    key={star}
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className={cn(
-                                        "flex-1 h-10 rounded-lg border transition-all",
-                                        reviewForm.googleStars >= star ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-zinc-900 border-zinc-800 text-zinc-700 hover:bg-zinc-800"
-                                    )}
-                                    onClick={() => setReviewForm(prev => ({ ...prev, googleStars: star }))}
-                                >
-                                    <Sparkles className={cn("w-4 h-4 mr-1", reviewForm.googleStars >= star ? "fill-current" : "")} />
-                                    {star}
-                                </Button>
-                            ))}
+                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Google Star Rating</Label>
+                            <div className="flex gap-4">
+                                {[1,2,3,4,5].map(star => (
+                                    <Button 
+                                        key={star}
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className={cn(
+                                            "flex-1 h-10 rounded-lg border transition-all",
+                                            reviewForm.googleStars >= star ? "bg-amber-500/10 border-amber-500/50 text-amber-500" : "bg-zinc-900 border-zinc-800 text-zinc-700 hover:bg-zinc-800"
+                                        )}
+                                        onClick={() => setReviewForm(prev => ({ ...prev, googleStars: star }))}
+                                    >
+                                        <Sparkles className={cn("w-4 h-4 mr-1", reviewForm.googleStars >= star ? "fill-current" : "")} />
+                                        {star}
+                                    </Button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Google Review Text</Label>
+                            <Textarea 
+                                className="bg-zinc-900 border-zinc-800 text-zinc-100 h-24 placeholder:text-zinc-700 resize-none focus:border-amber-500/50 transition-colors"
+                                placeholder="Paste the exact text of the review here..."
+                                value={reviewForm.googleReviewText}
+                                onChange={e => setReviewForm(prev => ({ ...prev, googleReviewText: e.target.value }))}
+                            />
                         </div>
                     </div>
                 )}
