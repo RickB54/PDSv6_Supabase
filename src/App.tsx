@@ -539,6 +539,8 @@ const App = () => {
     // ONE-TIME MIGRATION: prime_booking_reviews to Supabase
     (async () => {
         try {
+            // Force reset the flag for the next reload to catch any missed orphaned records
+            localStorage.removeItem('prime_booking_reviews_MIGRATED'); 
             const migrated = localStorage.getItem('prime_booking_reviews_MIGRATED');
             const raw = localStorage.getItem('prime_booking_reviews');
             if (raw && !migrated && !isDemoActive) {
