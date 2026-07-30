@@ -712,11 +712,26 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     };
 
     const getReviewsKey = () => localStorage.getItem('demo_mode_active') === 'true' ? 'demo_prime_booking_reviews' : 'prime_booking_reviews';
-    const [bookingReviews, setBookingReviews] = useState<Record<string, any>>(() => {
-        try {
-            return JSON.parse(localStorage.getItem(getReviewsKey()) || '{}');
-        } catch { return {}; }
-    });
+    const isDemoActive = () => localStorage.getItem('demo_mode_active') === 'true';
+    
+    const [bookingReviews, setBookingReviews] = useState<Record<string, any>>({});
+
+    useEffect(() => {
+        const loadReviews = async () => {
+            if (isDemoActive()) {
+                try {
+                    setBookingReviews(JSON.parse(localStorage.getItem('demo_prime_booking_reviews') || '{}'));
+                } catch { setBookingReviews({}); }
+            } else {
+                try {
+                    const { fetchPrimeBookingReviews } = await import('@/lib/supa-data');
+                    const remote = await fetchPrimeBookingReviews();
+                    setBookingReviews(remote);
+                } catch (e) { console.error('Failed to load reviews from Supabase', e); }
+            }
+        };
+        loadReviews();
+    }, []);
 
     const [reviewForm, setReviewForm] = useState({
         performance: "",
@@ -731,7 +746,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         if (!selectedBookingForReview) return;
         const updated = { ...bookingReviews, [selectedBookingForReview.id]: reviewForm };
         setBookingReviews(updated);
-        localStorage.setItem(getReviewsKey(), JSON.stringify(updated));
+        
+        if (isDemoActive()) {
+            localStorage.setItem('demo_prime_booking_reviews', JSON.stringify(updated));
+        } else {
+            try {
+                const { upsertPrimeBookingReview } = await import('@/lib/supa-data');
+                await upsertPrimeBookingReview(selectedBookingForReview.id, reviewForm);
+            } catch (err) {
+                console.error('Failed to save review to Supabase', err);
+            }
+        }
         
         const customerToUpdate = customers.find(c => c.name === selectedBookingForReview.customer);
         if (customerToUpdate && customerToUpdate.has_google_review !== reviewForm.googleReview) {
@@ -752,7 +777,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const updated = { ...bookingReviews };
         delete updated[booking.id];
         setBookingReviews(updated);
-        localStorage.setItem(getReviewsKey(), JSON.stringify(updated));
+        
+        if (isDemoActive()) {
+            localStorage.setItem('demo_prime_booking_reviews', JSON.stringify(updated));
+        } else {
+            try {
+                const { deletePrimeBookingReview } = await import('@/lib/supa-data');
+                await deletePrimeBookingReview(booking.id);
+            } catch (err) {
+                console.error('Failed to delete review from Supabase', err);
+            }
+        }
         
         const customerToUpdate = customers.find(c => c.name === booking.customer);
         if (customerToUpdate && customerToUpdate.has_google_review) {

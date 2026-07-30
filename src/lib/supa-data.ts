@@ -3122,3 +3122,42 @@ export const deletePayrollRecord = async (id: string) => {
         throw err;
     }
 };
+
+export const fetchPrimeBookingReviews = async () => {
+    const { data, error } = await supabase.from('prime_booking_reviews').select('*');
+    if (error) { console.error('fetchPrimeBookingReviews', error); return {}; }
+    const map: Record<string, any> = {};
+    data.forEach(r => {
+        map[r.booking_id] = {
+            performance: r.performance || '',
+            mistakes: r.mistakes || '',
+            sentiment: r.sentiment || 'pending',
+            googleReview: !!r.google_review,
+            googleStars: r.google_stars || 0,
+            googleReviewText: r.google_review_text || ''
+        };
+    });
+    return map;
+};
+
+export const upsertPrimeBookingReview = async (bookingId: string, review: any) => {
+    if (blockDemo('upsert booking review')) return null;
+    const { data, error } = await supabase.from('prime_booking_reviews').upsert({
+        booking_id: bookingId,
+        performance: review.performance || '',
+        mistakes: review.mistakes || '',
+        sentiment: review.sentiment || 'pending',
+        google_review: !!review.googleReview,
+        google_stars: review.googleStars || 0,
+        google_review_text: review.googleReviewText || ''
+    });
+    if (error) { console.error('upsertPrimeBookingReview', error); throw error; }
+    return data;
+};
+
+export const deletePrimeBookingReview = async (bookingId: string) => {
+    if (blockDemo('delete booking review')) return null;
+    const { error } = await supabase.from('prime_booking_reviews').delete().eq('booking_id', bookingId);
+    if (error) { console.error('deletePrimeBookingReview', error); throw error; }
+    return true;
+};

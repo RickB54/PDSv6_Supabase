@@ -535,6 +535,39 @@ const App = () => {
     }
     
     console.log("[App] Mounting...");
+
+    // ONE-TIME MIGRATION: prime_booking_reviews to Supabase
+    (async () => {
+        try {
+            const migrated = localStorage.getItem('prime_booking_reviews_MIGRATED');
+            const raw = localStorage.getItem('prime_booking_reviews');
+            if (raw && !migrated && !isDemoActive) {
+                const reviews = JSON.parse(raw);
+                const keys = Object.keys(reviews);
+                if (keys.length > 0) {
+                    console.log(`[MIGRATION] Found ${keys.length} legacy prime_booking_reviews. Migrating to Supabase...`);
+                    const { upsertPrimeBookingReview } = await import('@/lib/supa-data');
+                    let successCount = 0;
+                    for (const bookingId of keys) {
+                        try {
+                            await upsertPrimeBookingReview(bookingId, reviews[bookingId]);
+                            successCount++;
+                        } catch (err) {
+                            console.error('[MIGRATION] Failed to migrate review for booking:', bookingId, err);
+                        }
+                    }
+                    console.log(`[MIGRATION] Successfully migrated ${successCount} reviews.`);
+                    if (successCount === keys.length) {
+                        localStorage.setItem('prime_booking_reviews_MIGRATED', 'true');
+                        // Do not delete original yet, just in case they need to rollback
+                        console.log('[MIGRATION] Migration complete. LocalStorage key preserved but marked as migrated.');
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[MIGRATION] Fatal error during prime_booking_reviews migration:', err);
+        }
+    })();
     
     try {
       if (import.meta.env.VITE_AUTH_MODE === 'supabase') setAuthMode('supabase');
