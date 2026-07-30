@@ -19,7 +19,7 @@ const CustomerDashboard = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome, {isDemoActive() ? 'Paul Dickerson' : (user?.name || 'Customer')}!
+              Welcome, {isDemoActive() ? 'John Smith' : (user?.name || 'Customer')}!
             </h1>
             <div className="flex gap-2">
               <Button
