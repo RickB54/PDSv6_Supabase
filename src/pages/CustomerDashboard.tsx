@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser, logout } from "@/lib/auth";
+import { isDemoActive } from "@/lib/supa-data";
 import { useNavigate, Link } from "react-router-dom";
 import { MessageSquare, Clock, History, ShoppingCart, FileText, Settings, Key, CalendarDays, Newspaper, HelpCircle, FileBarChart, CheckSquare } from "lucide-react";
 import { useCartStore } from "@/store/cart";
@@ -17,7 +18,9 @@ const CustomerDashboard = () => {
       <main className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-foreground">Welcome, {user?.name || 'Customer'}!</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              Welcome, {isDemoActive() ? 'Paul Dickerson' : (user?.name || 'Customer')}!
+            </h1>
             <div className="flex gap-2">
               <Button
                 variant="ghost"

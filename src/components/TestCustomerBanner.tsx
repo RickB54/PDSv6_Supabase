@@ -31,6 +31,8 @@ export const TestCustomerBanner = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, initialX: 0, initialY: 0 });
+  
+  const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Prevent dragging if clicking a button
@@ -61,6 +63,7 @@ export const TestCustomerBanner = () => {
   };
 
   useEffect(() => {
+    if (isDemoMode) return;
     const checkTestAccount = async () => {
       try {
         const { data, error } = await supabase
@@ -174,7 +177,7 @@ export const TestCustomerBanner = () => {
     }
   };
 
-  if (!rickId) return null;
+  if (!rickId || isDemoMode) return null;
 
   return (
     <>

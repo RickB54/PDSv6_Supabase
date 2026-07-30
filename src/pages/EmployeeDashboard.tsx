@@ -29,6 +29,7 @@ import { savePDFToArchive } from "@/lib/pdfArchive";
 import { pushAdminAlert } from "@/lib/adminAlerts";
 import { getCurrentUser } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { isDemoActive } from "@/lib/supa-data";
 import { ADMIN_TRAINING_PHASES } from "@/lib/training-data";
 import HelpModal from "@/components/help/HelpModal";
 import localforage from "localforage";
@@ -148,6 +149,14 @@ const EmployeeDashboard = () => {
 
     const loadUserStats = async () => {
       if (!user?.id) return;
+      
+      if (isDemoActive()) {
+         setExamUnlocked(true);
+         setExamStatusStr(`Completed — Score: 98%`);
+         setTrainingProgress(100);
+         return;
+      }
+
       // 1. Get user record for exam_unlocked
       const { data: uData } = await supabase.from('app_users').select('exam_unlocked').eq('id', user.id).maybeSingle();
       if (uData) setExamUnlocked(uData.exam_unlocked || false);
@@ -208,21 +217,23 @@ const EmployeeDashboard = () => {
       savePDFToArchive("Employee Contact", actor, `emp_contact_${Date.now()}`, pdfDataUrl, { fileName, path: "Employee Contact/" });
 
       // Alert admin
-      pushAdminAlert("admin_email_sent", `Employee contact: ${subject}`, actor, { priority });
+      if (!isDemoActive()) {
+        pushAdminAlert("admin_email_sent", `Employee contact: ${subject}`, actor, { priority });
 
-      // Attempt background email via local API (port 6066)
-      try {
-        await fetch("/api/email/admin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ from: actor, subject, message, priority, pdfDataUrl })
-        });
-      } catch { }
+        // Attempt background email via local API (port 6066)
+        try {
+          await fetch("/api/email/admin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ from: actor, subject, message, priority, pdfDataUrl })
+          });
+        } catch { }
 
-      // Open Gmail compose for reliability
-      const body = `Priority: ${priority}\nEmployee: ${actor}\n\n${message}`;
-      const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(gmailLink, "_blank");
+        // Open Gmail compose for reliability
+        const body = `Priority: ${priority}\nEmployee: ${actor}\n\n${message}`;
+        const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=Rick.PrimeAutoDetail@gmail.com&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(gmailLink, "_blank");
+      }
 
       toast({ title: "Sent", description: "Your message was prepared; PDF saved in File Manager." });
       setSubject(""); setMessage(""); setPriority("URGENT");
@@ -240,7 +251,9 @@ const EmployeeDashboard = () => {
       <main className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-foreground">Employee Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground">
+              {isDemoActive() ? "Employee Dashboard - Brandon Rodriguez" : "Employee Dashboard"}
+            </h1>
             <div className="flex items-center gap-2">
               {certifiedDate && (
                 <Badge className="bg-green-600">Certified Detailer — {certifiedDate}</Badge>
