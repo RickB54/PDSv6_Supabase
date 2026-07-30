@@ -30,6 +30,19 @@ const getMockDataForTable = (table: string) => {
     case 'mileage_logs': return (mockData as any).MOCK_MILEAGE || [];
     case 'payroll_records': return (mockData as any).MOCK_PAYROLL || [];
     case 'tax_expenses': return (mockData as any).MOCK_ACCOUNTING?.transactions?.filter((t: any) => t.type === 'expense' || t.type === 'Expense') || [];
+    case 'tasks': return (mockData as any).MOCK_TASKS || [];
+    case 'coupons': return (mockData as any).MOCK_COUPONS || [];
+    case 'pdf_records': return (mockData as any).MOCK_PDF_RECORDS || [];
+    case 'personal_notebooks': return (mockData as any).MOCK_NOTEBOOKS || [];
+    case 'personal_sections': return (mockData as any).MOCK_SECTIONS || [];
+    case 'personal_notes': return (mockData as any).MOCK_NOTES || [];
+    case 'materials': return (mockData as any).MOCK_INVENTORY?.materials || [];
+    case 'chemicals': return (mockData as any).MOCK_INVENTORY?.chemicals || [];
+    case 'tools': return (mockData as any).MOCK_INVENTORY?.tools || [];
+    case 'chemical_library': return (mockData as any).MOCK_CHEMICAL_LIBRARY || [];
+    case 'manual_income': return (mockData as any).MOCK_ACCOUNTING?.transactions?.filter((t: any) => t.type === 'income' || t.type === 'Income') || [];
+    case 'tax_reports': return [];
+    case 'payments': return [];
     default: return [];
   }
 };
