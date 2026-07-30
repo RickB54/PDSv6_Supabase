@@ -393,6 +393,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     { title: 'Sticky Notes', url: '/sticky-notes', icon: CheckSquare, role: 'employee', key: 'sticky_notes', iconColor: 'text-yellow-500', helpTopicId: 'sticky-notes' }
 
   ].filter(item => {
+    if (isDemoMode && item.key === 'website-admin') return false;
     if (isDemoMode && item.key && !canAccess(item.key)) return false;
     
     // Role check for top items

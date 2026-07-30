@@ -72,9 +72,12 @@ const CustomerPortal = () => {
   const [showBookNow, setShowBookNow] = useState(false);
   const [bookingTestMode, setBookingTestMode] = useState(false);
   const [businessStatus, setBusinessStatus] = useState<any>(null);
+  
+  const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
+
   // Only show direct booking functions if the site is officially LIVE (not in Pre-Launch or Winter Mode)
   // Per user request, admins will use the Shuffle button on the Book Now page for diagnostic testing
-  const isEffectiveLive = businessStatus ? businessStatus.showBooking : showBookNow;
+  const isEffectiveLive = isDemoMode ? true : (businessStatus ? businessStatus.showBooking : showBookNow);
   // ... (rest of hook calls)
 
   // ... (skip down to AvailabilityPicker) ...

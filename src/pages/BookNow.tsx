@@ -682,6 +682,15 @@ const BookNow = () => {
       return;
     }
 
+    if (localStorage.getItem("demo_mode_active") === "true") {
+      toast({
+        title: "Simulation Active",
+        description: "Online booking is disabled while in Interactive Simulation Mode.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {

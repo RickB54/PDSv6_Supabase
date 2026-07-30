@@ -168,8 +168,8 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Use current config as a primary whitelist if it exists and has and items
     if (config?.visibleSections && config.visibleSections.length > 0) {
-      // Always allow the new Letter Maker even if not in the saved remote config yet
-      if (key === 'letter-maker') return true;
+      // Always allow the new Letter Maker and View As items even if not in the saved remote config yet
+      if (['letter-maker', 'customer-view-dashboard', 'employee-view-dashboard'].includes(key)) return true;
       return config.visibleSections.includes(key);
     }
 

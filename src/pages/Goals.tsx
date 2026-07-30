@@ -90,6 +90,26 @@ export default function Goals() {
     const loadAllData = async () => {
         setLoading(true);
         try {
+            if (localStorage.getItem("demo_mode_active") === "true") {
+                // Completely isolate in demo mode
+                const { MOCK_INVOICES } = await import('@/lib/demoMockData');
+                setInvoices(MOCK_INVOICES || []);
+                setReceivables([]);
+                
+                const demoGoals: GoalSet = {
+                    weeklyRevenue: 1500,
+                    monthlyRevenue: 6000,
+                    weeklyServices: 10,
+                    monthlyServices: 40,
+                    weeklyAddons: 5,
+                    monthlyAddons: 20
+                };
+                setGoals(demoGoals);
+                setTempGoals(demoGoals);
+                setLoading(false);
+                return;
+            }
+
             // 1. Fetch Invoices and Receivables
             const invs = await getInvoices();
             const recs = await getReceivables();
