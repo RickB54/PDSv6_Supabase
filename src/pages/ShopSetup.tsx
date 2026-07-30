@@ -322,6 +322,10 @@ const ShopSetup = () => {
 
   // ─── Remove media ─────────────────────────────────────
   const removeMedia = async (id: string) => {
+    if (isDemoMode) {
+      toast({ title: "Permission Denied", description: "Read-only mode active.", variant: "destructive" });
+      return;
+    }
     try {
       if (!confirm("Are you sure you want to delete this media from the shop setup?")) return;
       await deleteSetupMedia(id, CONTEXT_KEY);

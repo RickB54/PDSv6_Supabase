@@ -1012,6 +1012,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
 ];
 
 export const MOCK_GALLERY = [
+  // --- Gallery Images (category: general_gallery) ---
   {
     "id": "demo-gal-1",
     "title": "Prime Showroom Finish",
@@ -1044,6 +1045,56 @@ export const MOCK_GALLERY = [
     "resource_url": "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=1200",
     "is_published": true,
     "created_at": "2026-07-28T04:17:29.827Z"
+  },
+  {
+    "id": "demo-gal-4",
+    "title": "Interior Detail Mastery",
+    "description": "Complete extraction and leather conditioning for a flawless finish.",
+    "category": "general_gallery",
+    "type": "image",
+    "thumbnail_url": "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&q=80&w=800",
+    "resource_url": "https://images.unsplash.com/photo-1601362840469-51e4d8d58785?auto=format&fit=crop&q=80&w=1200",
+    "is_published": true,
+    "created_at": "2026-07-30T10:00:00.000Z"
+  },
+  {
+    "id": "demo-gal-5",
+    "title": "Ceramic Coating Application",
+    "description": "Applying a 9H ceramic coating for long-lasting hydrophobic protection.",
+    "category": "general_gallery",
+    "type": "image",
+    "thumbnail_url": "https://images.unsplash.com/photo-1610647752706-3bb12232b3ab?auto=format&fit=crop&q=80&w=800",
+    "resource_url": "https://images.unsplash.com/photo-1610647752706-3bb12232b3ab?auto=format&fit=crop&q=80&w=1200",
+    "is_published": true,
+    "created_at": "2026-07-30T11:00:00.000Z"
+  },
+
+  // --- Blog Posts (category: General) ---
+  {
+    "id": "demo-blog-1",
+    "title": "The Ultimate Guide to Ceramic Coatings",
+    "description": "Curious about ceramic coatings? We break down the science of 9H hardness, how it protects against UV damage, and why it's the best investment you can make for your vehicle's paint. Say goodbye to waxing!",
+    "category": "General",
+    "type": "article",
+    "thumbnail_url": "https://images.unsplash.com/photo-1610647752706-3bb12232b3ab?auto=format&fit=crop&q=80&w=800",
+    "resource_url": "https://images.unsplash.com/photo-1610647752706-3bb12232b3ab?auto=format&fit=crop&q=80&w=1200",
+    "is_published": true,
+    "is_verified": true,
+    "created_by": "demo@primeautodetail.com",
+    "created_at": "2026-07-20T10:00:00.000Z"
+  },
+  {
+    "id": "demo-blog-2",
+    "title": "Winter Prep: Protecting Your Ride",
+    "description": "Winter is tough on cars. From road salt to freezing temperatures, your clear coat takes a beating. Learn our top 5 tips for preparing your vehicle for the cold months, including undercarriage washes and sealant applications.",
+    "category": "General",
+    "type": "article",
+    "thumbnail_url": "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=800",
+    "resource_url": "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=1200",
+    "is_published": true,
+    "is_verified": true,
+    "created_by": "demo@primeautodetail.com",
+    "created_at": "2026-07-25T14:30:00.000Z"
   }
 ];
 

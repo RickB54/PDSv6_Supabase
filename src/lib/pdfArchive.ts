@@ -125,27 +125,30 @@ export function savePDFToArchive(
   existing.push(record);
   localStorage.setItem('pdfArchive', JSON.stringify(existing));
 
-  // 2. Supabase Persistence
-  const syncWithSupabase = async () => {
-    try {
-      const { default: supabase } = await import('@/lib/supabase');
-      const { error } = await supabase.from('pdf_records').upsert({
-        id: record.id,
-        file_name: record.fileName,
-        record_type: record.recordType,
-        customer_name: record.customerName,
-        date: record.date,
-        record_id: record.recordId,
-        pdf_data: record.pdfData,
-        path: record.path
-      });
-      if (error) console.warn("Supabase PDF sync failed:", error);
-      else console.log("✅ PDF archived to Supabase:", record.id);
-    } catch (e) {
-      console.warn("Supabase not available for PDF sync");
-    }
-  };
-  syncWithSupabase();
+  // 2. Supabase Persistence (Skip in Demo Mode)
+  const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
+  if (!isDemoMode) {
+    const syncWithSupabase = async () => {
+      try {
+        const { default: supabase } = await import('@/lib/supabase');
+        const { error } = await supabase.from('pdf_records').upsert({
+          id: record.id,
+          file_name: record.fileName,
+          record_type: record.recordType,
+          customer_name: record.customerName,
+          date: record.date,
+          record_id: record.recordId,
+          pdf_data: record.pdfData,
+          path: record.path
+        });
+        if (error) console.warn("Supabase PDF sync failed:", error);
+        else console.log("✅ PDF archived to Supabase:", record.id);
+      } catch (e) {
+        console.warn("Supabase not available for PDF sync");
+      }
+    };
+    syncWithSupabase();
+  }
 
   // Proactively notify current tab so sidebar badges refresh immediately
   try {

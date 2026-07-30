@@ -258,8 +258,12 @@ const MobileSetup = () => {
 
   // ─── Remove media ─────────────────────────────────────
   const removeMedia = async (id: string) => {
+    if (isDemoMode) {
+      toast({ title: "Permission Denied", description: "Read-only mode active.", variant: "destructive" });
+      return;
+    }
     try {
-      if (!confirm("Are you sure you want to delete this media?")) return;
+      if (!confirm("Are you sure you want to delete this media from the mobile setup?")) return;
       await deleteSetupMedia(id);
       setMedia((prev) => prev.filter((m) => m.id !== id));
       toast({ title: "Photo Removed", description: "Deleted from Supabase." });

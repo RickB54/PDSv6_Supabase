@@ -70,6 +70,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   if (isDemoPath && !isPublicDemoDisabled && localStorage.getItem("demo_mode_active") !== "true") {
       localStorage.setItem("demo_mode_active", "true");
+      localStorage.removeItem("pdfArchive");
   }
   
   // 2) Persistence flag (so clicking /dashboard doesn't kick you out)
@@ -91,10 +92,12 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // AUTO-EXIT: If we were in demo mode but navigated to a real website page, 
       // clear the flag so it doesn't interfere with real inquiries.
       localStorage.removeItem("demo_mode_active");
+      localStorage.removeItem("pdfArchive");
       setStayInDemo(false);
       console.log("[DemoContext] Auto-exited Training Session for public website integrity.");
     } else if (isDemoPath && isPublicDemoDisabled && !isAdminPreview) {
       localStorage.removeItem("demo_mode_active");
+      localStorage.removeItem("pdfArchive");
       setStayInDemo(false);
       const reasonParam = encodeURIComponent(disabledReason || 'System Maintenance');
       navigate(`/login?demo_disabled=true&reason=${reasonParam}`);
@@ -197,6 +200,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAdminPreview(val);
     if (!val) {
       localStorage.removeItem("demo_mode_active");
+      localStorage.removeItem("pdfArchive");
       setStayInDemo(false);
     }
     if (val) {
@@ -285,6 +289,7 @@ export const DemoBanner = () => {
           onClick={() => {
             localStorage.removeItem("demo_mode_active");
             localStorage.removeItem("admin_demo_preview");
+            localStorage.removeItem("pdfArchive");
             window.location.href = "/";
           }}
           className="px-3 py-1 bg-white text-orange-600 hover:bg-zinc-200 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transition-all hover:scale-105 active:scale-95"
