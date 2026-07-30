@@ -589,7 +589,7 @@ export const MOCK_EMPLOYEES = [
   },
   {
     "id": "demo-emp-3",
-    "name": "Brandon Rodriguez",
+    "name": "Marcus Detailer",
     "email": "brandon@demo.com",
     "role": "employee",
     "status": "Active"
@@ -687,7 +687,7 @@ export const MOCK_BOOKINGS = [
     "vehicleMake": "Toyota",
     "vehicleModel": "Sienna",
     "price": 350,
-    "assignedEmployee": "Brandon Rodriguez",
+    "assignedEmployee": "Marcus Detailer",
     "createdAt": "2026-07-22T04:17:29.827Z",
     "title": "Interior Steam Cleaning",
     "source": "Public Website",
@@ -817,7 +817,7 @@ export const MOCK_PAYROLL = [
   },
   {
     "id": "pay-3",
-    "name": "Brandon Rodriguez",
+    "name": "Marcus Detailer",
     "employee_id": "demo-emp-3",
     "grossPay": 900,
     "netPay": 720,

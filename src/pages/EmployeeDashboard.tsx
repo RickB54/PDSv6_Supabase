@@ -252,7 +252,7 @@ const EmployeeDashboard = () => {
         <div className="space-y-6 animate-fade-in">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-foreground">
-              {isDemoActive() ? "Employee Dashboard - Emily Carter" : "Employee Dashboard"}
+              {isDemoActive() ? "Employee Dashboard - Marcus Detailer" : "Employee Dashboard"}
             </h1>
             <div className="flex items-center gap-2">
               {certifiedDate && (
