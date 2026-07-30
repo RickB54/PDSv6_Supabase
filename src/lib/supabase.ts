@@ -64,6 +64,14 @@ const createChainableMock = (table: string, method: string) => {
     return mock;
   };
   
+  // Implement all other queried methods so they don't throw "is not a function"
+  const extraMethods = [
+    'contains', 'csv', 'filter', 'gte', 'gt', 'ilike', 'like', 'lt', 'lte', 'neq', 'or', 'range', 'is', 'textSearch', 'containedBy'
+  ];
+  extraMethods.forEach(method => {
+    mock[method] = chain;
+  });
+  
   mock.single = async () => ({ data: Array.isArray(currentData) ? currentData[0] || null : currentData, error: null });
   mock.maybeSingle = async () => ({ data: Array.isArray(currentData) ? currentData[0] || null : currentData, error: null });
   

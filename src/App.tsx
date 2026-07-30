@@ -581,7 +581,12 @@ const App = () => {
       setHelpOpen(true);
     };
 
+    let lastDemoBlockToastTime = 0;
     const onDemoBlocked = (e: any) => {
+      const now = Date.now();
+      if (now - lastDemoBlockToastTime < 3000) return;
+      lastDemoBlockToastTime = now;
+      
       const action = e.detail?.action || 'this action';
       toast({
         title: "Simulation Security Guard",
