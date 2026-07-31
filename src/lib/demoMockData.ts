@@ -937,7 +937,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "Spray on, wait 3-5 mins, rinse thoroughly.",
     "hazardRating": 2,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/51rP4y4W9uL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-2",
@@ -947,7 +948,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "Dilute 5:1 for maintenance, RTU for heavy grime.",
     "hazardRating": 1,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/61kF9B2HkPL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-3",
@@ -957,7 +959,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "Spray on microfiber, wipe panel, buff off.",
     "hazardRating": 1,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/61lB9yqY2AL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-4",
@@ -967,7 +970,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "Use for interiors 10:1, exteriors 5:1.",
     "hazardRating": 2,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/51BqUvE3QBL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-5",
@@ -977,7 +981,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "1 oz per 5 gallons of water.",
     "hazardRating": 1,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/81M1+hW0mKL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-6",
@@ -987,7 +992,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "1 oz per 2 gallons of water.",
     "hazardRating": 1,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/71YvU0D4+ZL._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-7",
@@ -997,7 +1003,8 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "sdsUrl": "#",
     "instructions": "Spray on wet panel, rinse off immediately.",
     "hazardRating": 1,
-    "pdsUrl": "#"
+    "pdsUrl": "#",
+    "primary_image_url": "https://m.media-amazon.com/images/I/61M0v4y6H-L._AC_SX679_.jpg"
   },
   {
     "id": "chem-lib-8",
