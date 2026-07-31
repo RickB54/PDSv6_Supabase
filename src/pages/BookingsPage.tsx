@@ -1962,9 +1962,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
       <div className="p-1 sm:p-6 space-y-6 lg:mt-4">
         {/* Unified Responsive Toolbar */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/50 shadow-sm">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/50 shadow-sm">
           
-          <div className="flex items-center justify-between w-full lg:w-auto gap-2">
+          <div className="flex items-center justify-between w-full md:w-auto gap-2">
             {/* View Mode Toggle */}
             <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 shadow-inner">
               <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-8 text-xs px-3">Day</Button>
@@ -1974,7 +1974,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             </div>
             
             {/* Mobile Actions (Visible on small screens, grouped) */}
-            <div className="flex gap-1.5 lg:hidden">
+            <div className="flex gap-1.5 md:hidden">
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => refresh()} title="Refresh"><RotateCcw className="h-3.5 w-3.5" /></Button>
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrintFullSchedule} title="Print"><Printer className="h-3.5 w-3.5" /></Button>
               {isAdmin && (
@@ -1989,7 +1989,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between w-full lg:w-auto gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full md:w-auto gap-4">
             {/* Date Navigation & Label */}
             <div className="flex items-center bg-secondary/30 rounded-md border border-border h-9 shadow-sm">
               <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
@@ -2003,7 +2003,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {/* Desktop/Tablet Actions */}
-              <div className="hidden lg:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shadow-sm">
+              <div className="hidden md:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shadow-sm">
                 <Button variant="ghost" size="icon" onClick={() => refresh()} className="h-7 w-7 text-zinc-400 hover:text-white" title="Refresh">
                   <RotateCcw className="h-3.5 w-3.5" />
                 </Button>
