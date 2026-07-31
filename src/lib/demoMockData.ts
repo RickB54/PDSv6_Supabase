@@ -16,7 +16,8 @@ export const MOCK_CUSTOMERS = [
         "type": "Luxury Sedan",
         "color": "Midnight Silver",
         "conditionInside": "Excellent",
-        "conditionOutside": "Minor swirl marks"
+        "conditionOutside": "Minor swirl marks",
+        "afterPhotos": ["/demo-media/veh-1-after.jpg"]
       }
     ],
     "notes": "Regular customer. Prefers non-scented cleaners.",
@@ -39,7 +40,8 @@ export const MOCK_CUSTOMERS = [
         "type": "Truck",
         "color": "Antimatter Blue",
         "conditionInside": "Moderate dirt",
-        "conditionOutside": "Muddy from construction site"
+        "conditionOutside": "Muddy from construction site",
+        "beforePhotos": ["/demo-media/veh-2-before.jpg"]
       }
     ],
     "notes": "New enthusiast client.",
@@ -62,7 +64,8 @@ export const MOCK_CUSTOMERS = [
         "type": "Coupe",
         "color": "Guards Red",
         "conditionInside": "Pristine",
-        "conditionOutside": "Track rubber"
+        "conditionOutside": "Track rubber",
+        "afterPhotos": ["/demo-media/veh-3-after.jpg"]
       }
     ],
     "notes": "Track day regular. Wants ceramic maintenance.",
@@ -164,6 +167,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-1",
       "name": "Premium Car Soap",
+      "imageUrl": "/demo-media/mat-1.jpg",
       "brand": "Chemical Guys",
       "category": "Soaps",
       "quantity": 15,
@@ -175,6 +179,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-2",
       "name": "Microfiber Towels (Blue)",
+      "imageUrl": "/demo-media/mat-2.jpg",
       "brand": "The Rag Company",
       "category": "Towels",
       "quantity": 120,
@@ -186,6 +191,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-3",
       "name": "Clay Bar Kit",
+      "imageUrl": "/demo-media/mat-3.jpg",
       "brand": "Meguiars",
       "category": "Decon",
       "quantity": 8,
@@ -197,6 +203,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-4",
       "name": "Ceramic Coating Applicators",
+      "imageUrl": "/demo-media/mat-4.jpg",
       "brand": "CarPro",
       "category": "Applicators",
       "quantity": 50,
@@ -208,6 +215,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-5",
       "name": "Detailing Brushes",
+      "imageUrl": "/demo-media/mat-5.jpg",
       "brand": "Detail Factory",
       "category": "Brushes",
       "quantity": 12,
@@ -219,6 +227,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-6",
       "name": "Nitrile Gloves",
+      "imageUrl": "/demo-media/mat-6.jpg",
       "brand": "Venom",
       "category": "PPE",
       "quantity": 5,
@@ -230,6 +239,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-7",
       "name": "Glass Cleaning Towels",
+      "imageUrl": "/demo-media/mat-7.jpg",
       "brand": "TRC",
       "category": "Towels",
       "quantity": 30,
@@ -241,6 +251,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-8",
       "name": "Tire Dressing Applicators",
+      "imageUrl": "/demo-media/mat-8.jpg",
       "brand": "Adams",
       "category": "Applicators",
       "quantity": 20,
@@ -252,6 +263,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-9",
       "name": "Masking Tape",
+      "imageUrl": "/demo-media/mat-9.jpg",
       "brand": "3M",
       "category": "Supplies",
       "quantity": 15,
@@ -263,6 +275,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "mat-10",
       "name": "Empty Spray Bottles",
+      "imageUrl": "/demo-media/mat-10.jpg",
       "brand": "Tolco",
       "category": "Supplies",
       "quantity": 24,
@@ -276,6 +289,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-1",
       "name": "Carnauba Wax",
+      "imageUrl": "/demo-media/inv-chem-1.jpg",
       "brand": "Meguiars",
       "currentStock": 8,
       "threshold": 10,
@@ -286,6 +300,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-2",
       "name": "All Purpose Cleaner",
+      "imageUrl": "/demo-media/inv-chem-2.jpg",
       "brand": "Koch Chemie",
       "currentStock": 3,
       "threshold": 5,
@@ -296,6 +311,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-3",
       "name": "Iron Remover",
+      "imageUrl": "/demo-media/inv-chem-3.jpg",
       "brand": "Gtechniq",
       "currentStock": 4,
       "threshold": 2,
@@ -306,6 +322,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-4",
       "name": "Wheel Cleaner",
+      "imageUrl": "/demo-media/inv-chem-4.jpg",
       "brand": "P&S",
       "currentStock": 6,
       "threshold": 3,
@@ -316,6 +333,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-5",
       "name": "Leather Cleaner",
+      "imageUrl": "/demo-media/inv-chem-5.jpg",
       "brand": "Colourlock",
       "currentStock": 5,
       "threshold": 2,
@@ -326,6 +344,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-6",
       "name": "Glass Cleaner",
+      "imageUrl": "/demo-media/inv-chem-6.jpg",
       "brand": "Stoner",
       "currentStock": 12,
       "threshold": 5,
@@ -336,6 +355,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-7",
       "name": "Ceramic Coating 9H",
+      "imageUrl": "/demo-media/inv-chem-7.jpg",
       "brand": "CarPro",
       "currentStock": 2,
       "threshold": 1,
@@ -346,6 +366,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-8",
       "name": "Tire Shine",
+      "imageUrl": "/demo-media/inv-chem-8.jpg",
       "brand": "Chemical Guys",
       "currentStock": 4,
       "threshold": 2,
@@ -356,6 +377,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-9",
       "name": "Snow Foam Auto Wash",
+      "imageUrl": "/demo-media/inv-chem-9.jpg",
       "brand": "Gyeon",
       "currentStock": 2,
       "threshold": 2,
@@ -366,6 +388,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "chem-10",
       "name": "Interior Detailer",
+      "imageUrl": "/demo-media/inv-chem-10.jpg",
       "brand": "P&S",
       "currentStock": 8,
       "threshold": 4,
@@ -378,6 +401,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "tool-1",
       "name": "High-Pressure Wash Gun",
+      "imageUrl": "/demo-media/tool-1.jpg",
       "price": 145,
       "purchaseDate": "2026-01-11T04:17:29.827Z",
       "warranty": "1 Year",
@@ -387,6 +411,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "tool-2",
       "name": "RUPES LHR15 Mark III",
+      "imageUrl": "/demo-media/tool-2.jpg",
       "price": 450,
       "purchaseDate": "2026-03-02T04:17:29.827Z",
       "warranty": "3 Years",
@@ -396,6 +421,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "tool-3",
       "name": "McCulloch Steam Cleaner",
+      "imageUrl": "/demo-media/tool-3.jpg",
       "price": 199.99,
       "purchaseDate": "2026-04-21T04:17:29.827Z",
       "warranty": "1 Year",
@@ -405,6 +431,7 @@ export const MOCK_INVENTORY = {
     {
       "id": "tool-4",
       "name": "Shop-Vac 5 Gallon",
+      "imageUrl": "/demo-media/tool-4.jpg",
       "price": 85,
       "purchaseDate": "2025-10-03T04:17:29.827Z",
       "warranty": "1 Year",
@@ -938,7 +965,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "Spray on, wait 3-5 mins, rinse thoroughly.",
     "hazardRating": 2,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/51rP4y4W9uL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-1.jpg"
   },
   {
     "id": "chem-lib-2",
@@ -949,7 +976,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "Dilute 5:1 for maintenance, RTU for heavy grime.",
     "hazardRating": 1,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/61kF9B2HkPL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-2.jpg"
   },
   {
     "id": "chem-lib-3",
@@ -960,7 +987,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "Spray on microfiber, wipe panel, buff off.",
     "hazardRating": 1,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/61lB9yqY2AL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-3.jpg"
   },
   {
     "id": "chem-lib-4",
@@ -971,7 +998,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "Use for interiors 10:1, exteriors 5:1.",
     "hazardRating": 2,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/51BqUvE3QBL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-4.jpg"
   },
   {
     "id": "chem-lib-5",
@@ -982,7 +1009,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "1 oz per 5 gallons of water.",
     "hazardRating": 1,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/81M1+hW0mKL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-5.jpg"
   },
   {
     "id": "chem-lib-6",
@@ -993,7 +1020,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "1 oz per 2 gallons of water.",
     "hazardRating": 1,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/71YvU0D4+ZL._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-6.jpg"
   },
   {
     "id": "chem-lib-7",
@@ -1004,7 +1031,7 @@ export const MOCK_CHEMICAL_LIBRARY = [
     "instructions": "Spray on wet panel, rinse off immediately.",
     "hazardRating": 1,
     "pdsUrl": "#",
-    "primary_image_url": "https://m.media-amazon.com/images/I/61M0v4y6H-L._AC_SX679_.jpg"
+    "primary_image_url": "/demo-media/chem-lib-7.jpg"
   },
   {
     "id": "chem-lib-8",
