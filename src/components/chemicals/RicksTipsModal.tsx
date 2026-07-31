@@ -270,7 +270,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
       { name: "Formula 4", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["20:1", "20:1", "20:1"], purpose: "Rapid drying aid and polymer sealant. Fights hard water spots in direct sunlight." },
       { name: "Spray Wax", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["RTU", "RTU", "RTU"], purpose: "Professional high-gloss paint protection. Apply to wet or dry surfaces." },
       { name: "Aqua Gloss", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["4:1", "2:1", "1:1 (RTU)"], purpose: "Water-based tire and trim dressing. High shine without the sling." },
-      { name: "Meguiar's APC", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "4:1", "4:1"], purpose: "Heavy-duty all-purpose cleaner for engines, wheel wells, and stubborn grease." }
+      { name: "Meguiar's APC", descs: ["Maintenance / Light", "Standard", "Heavy Dirt / Degreasing"], ratios: ["10:1", "4:1", "4:1"], purpose: "Heavy-duty all-purpose cleaner for engines, wheel wells, and stubborn grease." },
+      { name: "Purple X", descs: ["Standard Decon (Paint & Wheels)", "Heavy / Pre-Correction or Pre-Ceramic"], ratios: ["1:1 — 28 oz Purple X + 28 oz water", "RTU"], purpose: "Iron & fallout remover by Superior Products. Chemically dissolves embedded ferrous particles (brake dust, rail dust, industrial fallout) bonded inside the clear coat. Color change reaction indicates the product is actively working. Must be rinsed before drying on the surface.", instructions: "HOW TO TELL IF A VEHICLE NEEDS IRON DECONTAMINATION:\n\n1. RUN THE PLASTIC BAG TEST: Wrap a clean sandwich bag over your dry hand and glide it across a freshly washed, dry panel. If the surface feels glass-smooth → no Purple X needed (clay only). If it feels slightly rough or gritty → contamination is present → use Purple X.\n\n2. VISUAL CHECKS: Look for tiny orange or rust-colored specks embedded in paint, heavy orange staining on wheels, or a vehicle that hasn't had a decon in 12+ months.\n\n3. WHEN TO USE: Only on ~10% of vehicles. Mandatory before paint correction or ceramic coating. Skip on fresh paint, new vehicles, or already-decontaminated cars.\n\nAPPLICATION:\n• Work on a cool, shaded surface — never hot paint or in direct sunlight\n• Spray evenly across one panel at a time\n• Watch for the color change (clear → pink/purple) — this confirms it's working\n• Allow 2–4 minute dwell time — do NOT let it dry\n• Rinse thoroughly with pressure before product evaporates\n• Follow immediately with clay bar using ONR as lubricant\n\nCRITICAL WARNINGS:\n• Do NOT allow product to dry on any surface — rinse before evaporation\n• Do NOT use on uncoated bare metal — may cause staining\n• Do NOT mix with other chemicals in the same sprayer\n• Do NOT use on hot paint or in direct sunlight" }
     ];
 
     const seededDescs = [...currentDescs];
@@ -310,7 +311,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           const newData = {
             id: match.id,
             purpose: item.purpose,
-            instructions: "Apply to cool surface. Follow dilution ratios based on dirt level. Agitate if necessary and rinse or wipe clean.",
+            instructions: (item as any).instructions || "Apply to cool surface. Follow dilution ratios based on dirt level. Agitate if necessary and rinse or wipe clean.",
             dilutions: item.descs.map((d, i) => ({ scenario: d, ratio: item.ratios[i] }))
           };
           if (descIdx > -1) seededDescs[descIdx] = newData;
