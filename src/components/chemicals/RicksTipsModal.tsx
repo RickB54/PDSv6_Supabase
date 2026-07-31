@@ -614,40 +614,39 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
 
     // --- Helper: Premium Header ---
     const drawHeader = (title: string, subtitle: string) => {
-      // Background Accent
-      doc.setFillColor(15, 22, 41); // Deep Navy
-      doc.rect(0, 0, pageWidth, 40, 'F');
+      // White Background for printing
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F');
+      
+      // Top color bar
+      doc.setFillColor(100, 100, 200); 
+      doc.rect(0, 0, pageWidth, 8, 'F');
       
       // Title
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(24);
-      doc.setTextColor(192, 132, 252); // Purple-400
-      doc.text(title, 14, 20);
+      doc.setFontSize(22);
+      doc.setTextColor(0, 0, 0); 
+      doc.text(title, 14, 22);
       
       // Subtitle
       doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184); // Slate-400
+      doc.setTextColor(80, 80, 80);
       doc.setFont("helvetica", "normal");
-      doc.text(`${subtitle} | Printed: ${new Date().toLocaleString()}`, 14, 28);
+      doc.text(`${subtitle} | Printed: ${new Date().toLocaleString()}`, 14, 30);
       
-      // Logo Placeholder / Graphic element
-      doc.setDrawColor(192, 132, 252);
-      doc.setLineWidth(1);
-      doc.line(14, 32, 60, 32);
-      
-      return 50; // New Y
+      return 45; // New Y
     };
 
     // --- Helper: Section Title ---
-    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [192, 132, 252]) => {
+    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [0, 100, 200]) => {
       if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(color[0], color[1], color[2]);
       doc.text(text.toUpperCase(), 14, y);
-      doc.setDrawColor(color[0], color[1], color[2], 0.2);
+      doc.setDrawColor(color[0], color[1], color[2]);
       doc.setLineWidth(0.5);
-      doc.line(14, y + 2, 196, y + 2);
+      doc.line(14, y + 2, pageWidth - 14, y + 2);
       return y + 10;
     };
 
@@ -676,7 +675,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           getChemDesc(c.id)?.purpose || '—'
         ]),
         theme: 'grid',
-        headStyles: { fillColor: [15, 22, 41], textColor: [255, 255, 255], fontStyle: 'bold' },
+        headStyles: { fillColor: [100, 150, 255], textColor: [255, 255, 255], fontStyle: 'bold' },
         styles: { fontSize: 9, cellPadding: 4 },
         columnStyles: { 0: { fontStyle: 'bold' } }
       });
@@ -704,7 +703,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         head: [['Cleaning Scenario / Intensity', 'Target Dilution Ratio']],
         body: (currentDesc.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio || 'RTU']),
         theme: 'striped',
-        headStyles: { fillColor: [192, 132, 252] },
+        headStyles: { fillColor: [100, 150, 255] },
         styles: { fontSize: 10, cellPadding: 5 }
       });
 
@@ -810,12 +809,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
         
-        splitPurpose.forEach((line: string, i: number) => {
-          if (currentY > 280) { doc.addPage(); currentY = 20; }
-          doc.text(line, 40, currentY);
-          if (i < splitPurpose.length - 1) currentY += 5;
-        });
-        currentY += 8;
+        doc.text(splitPurpose, 40, currentY);
+        currentY += (splitPurpose.length * 6) + 8;
 
         if (currentY > 270) { doc.addPage(); currentY = 20; }
 
@@ -823,12 +818,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
         
-        splitInst.forEach((line: string, i: number) => {
-          if (currentY > 280) { doc.addPage(); currentY = 20; }
-          doc.text(line, 40, currentY);
-          if (i < splitInst.length - 1) currentY += 5;
-        });
-        currentY += 8;
+        doc.text(splitInst, 40, currentY);
+        currentY += (splitInst.length * 6) + 8;
 
         autoTable(doc, {
           startY: currentY,
@@ -836,7 +827,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           body: (desc?.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
           theme: 'striped',
           styles: { fontSize: 9 },
-          headStyles: { fillColor: [15, 22, 41] },
+          headStyles: { fillColor: [100, 150, 255] },
           margin: { left: 30 }
         });
         currentY = (doc as any).lastAutoTable.finalY + 15;
@@ -858,33 +849,32 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
     const pageWidth = doc.internal.pageSize.getWidth();
     let currentY = 20;
 
-    // --- Helper: Premium Header ---
     const drawHeader = (title: string, subtitle: string) => {
-      doc.setFillColor(15, 22, 41);
-      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F');
+      doc.setFillColor(100, 100, 200);
+      doc.rect(0, 0, pageWidth, 8, 'F');
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(28);
-      doc.setTextColor(192, 132, 252);
+      doc.setFontSize(22);
+      doc.setTextColor(0, 0, 0);
       doc.text(title, 14, 22);
       doc.setFontSize(10);
-      doc.setTextColor(148, 163, 184);
+      doc.setTextColor(80, 80, 80);
       doc.setFont("helvetica", "normal");
-      doc.text(`${subtitle} | Master Reference File`, 14, 32);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 38);
-      return 55;
+      doc.text(`${subtitle} | Generated: ${new Date().toLocaleString()}`, 14, 30);
+      return 45;
     };
 
-    // --- Helper: Section Title ---
-    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [192, 132, 252]) => {
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFontSize(16);
+    const drawSectionTitle = (text: string, y: number, color: [number, number, number] = [0, 100, 200]) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(color[0], color[1], color[2]);
       doc.text(text.toUpperCase(), 14, y);
-      doc.setDrawColor(color[0], color[1], color[2], 0.3);
-      doc.setLineWidth(0.8);
-      doc.line(14, y + 2, 196, y + 2);
-      return y + 12;
+      doc.setDrawColor(color[0], color[1], color[2]);
+      doc.setLineWidth(0.5);
+      doc.line(14, y + 2, pageWidth - 14, y + 2);
+      return y + 10;
     };
 
     if (type === 'packages') {
@@ -909,7 +899,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           head: [['Chemical Product', 'Brand', 'Category']],
           body: pkgChems.map(c => [c.name, c.brand || 'N/A', c.category || 'General']),
           theme: 'striped',
-          headStyles: { fillColor: [15, 22, 41] },
+          headStyles: { fillColor: [100, 150, 255] },
           styles: { fontSize: 9 },
           margin: { left: 20 }
         });
@@ -935,12 +925,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         doc.text("PURPOSE:", 14, currentY);
         doc.setFont("helvetica", "normal");
         
-        splitPurpose.forEach((line: string, i: number) => {
-          if (currentY > 280) { doc.addPage(); currentY = 20; }
-          doc.text(line, 40, currentY);
-          if (i < splitPurpose.length - 1) currentY += 5;
-        });
-        currentY += 8;
+        doc.text(splitPurpose, 40, currentY);
+        currentY += (splitPurpose.length * 6) + 8;
 
         if (currentY > 270) { doc.addPage(); currentY = 20; }
 
@@ -948,12 +934,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         doc.text("USAGE:", 14, currentY);
         doc.setFont("helvetica", "normal");
         
-        splitInst.forEach((line: string, i: number) => {
-          if (currentY > 280) { doc.addPage(); currentY = 20; }
-          doc.text(line, 40, currentY);
-          if (i < splitInst.length - 1) currentY += 5;
-        });
-        currentY += 8;
+        doc.text(splitInst, 40, currentY);
+        currentY += (splitInst.length * 6) + 8;
 
         autoTable(doc, {
           startY: currentY,
@@ -961,7 +943,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           body: (desc?.dilutions || DEFAULT_SCENARIOS).map(dil => [dil.scenario, dil.ratio]),
           theme: 'grid',
           styles: { fontSize: 9 },
-          headStyles: { fillColor: [15, 22, 41] },
+          headStyles: { fillColor: [100, 150, 255] },
           margin: { left: 40 }
         });
         currentY = (doc as any).lastAutoTable.finalY + 15;
