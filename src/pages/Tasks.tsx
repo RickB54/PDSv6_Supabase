@@ -877,6 +877,7 @@ export default function Tasks() {
                   )}
                 </SelectContent>
               </Select>
+              </div>
             </div>
             <div className="space-y-3 max-h-[400px] overflow-auto pr-1 mb-3 scrollbar-thin scrollbar-thumb-zinc-700">
               {(() => {
