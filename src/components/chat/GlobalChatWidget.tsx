@@ -141,6 +141,7 @@ export function GlobalChatWidget() {
                 if (isAdmin && newMsg.sender_email && newMsg.sender_email.toLowerCase() !== myEmail) {
                     setSelectedRecipient(newMsg.sender_email);
                 }
+                }
             })
             .subscribe();
 
