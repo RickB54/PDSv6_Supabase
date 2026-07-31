@@ -162,7 +162,11 @@ const FileManager = () => {
 
   const loadRecords = async () => {
     if (isDemoMode) {
-      setRecords([]);
+      setRecords([
+        { id: 'demo-pdf-1', fileName: 'Mock_Invoice_INV-1004.pdf', recordType: 'Invoice', customerName: 'John Doe', date: new Date().toLocaleDateString(), timestamp: new Date().toISOString(), recordId: 'inv-1004', pdfData: '' },
+        { id: 'demo-pdf-2', fileName: 'Mock_Estimate_EST-2099.pdf', recordType: 'Estimate', customerName: 'Jane Smith', date: new Date().toLocaleDateString(), timestamp: new Date().toISOString(), recordId: 'est-2099', pdfData: '' },
+        { id: 'demo-pdf-3', fileName: 'Mock_Employee_Training_Log.pdf', recordType: 'Employee Training', customerName: 'Internal', date: new Date().toLocaleDateString(), timestamp: new Date().toISOString(), recordId: 'trn-001', pdfData: '' }
+      ]);
       return;
     }
 

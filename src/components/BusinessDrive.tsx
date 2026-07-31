@@ -105,6 +105,21 @@ const getFileCategory = (file: DriveFile): string => {
     return 'Other';
 };
 
+const DEMO_FOLDERS: DriveFolder[] = [
+    { id: 'demo-1', name: "Business Docs", path: [] },
+    { id: 'demo-2', name: "Vendor Contracts", path: [] },
+    { id: 'demo-3', name: "Insurance", path: [] }
+];
+
+const DEMO_FILES: DriveFile[] = [
+    { id: 'file-1', name: "Employee_Handbook_2026.pdf", type: "application/pdf", size: "1.2 MB", modified: new Date().toISOString(), path: ["Business Docs"] },
+    { id: 'file-2', name: "Mock_P_and_L_Statement.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", size: "450 KB", modified: new Date().toISOString(), path: ["Business Docs"] },
+    { id: 'file-3', name: "Acme_Chemicals_Contract.pdf", type: "application/pdf", size: "2.5 MB", modified: new Date().toISOString(), path: ["Vendor Contracts"] },
+    { id: 'file-4', name: "Detailing_Supplies_Co_Agreement.pdf", type: "application/pdf", size: "1.8 MB", modified: new Date().toISOString(), path: ["Vendor Contracts"] },
+    { id: 'file-5', name: "General_Liability_Policy.pdf", type: "application/pdf", size: "3.1 MB", modified: new Date().toISOString(), path: ["Insurance"] },
+    { id: 'file-6', name: "Garage_Keepers_Insurance_Summary.pdf", type: "application/pdf", size: "850 KB", modified: new Date().toISOString(), path: ["Insurance"] }
+];
+
 export default function BusinessDrive() {
     const { toast } = useToast();
     const { isDemoMode } = useDemoMode();
@@ -181,8 +196,11 @@ export default function BusinessDrive() {
                 const { default: localforage } = await import('localforage');
                 const localDemoFiles = await localforage.getItem<DriveFile[]>('demo_business_drive_files_v3');
                 const localDemoFolders = await localforage.getItem<DriveFolder[]>('demo_business_drive_folders_v3');
-                setFiles(localDemoFiles || []);
-                setFolders(localDemoFolders || DEFAULT_FOLDERS);
+                
+                // If the demo drive is empty (first time), populate with mock demo data
+                setFiles((localDemoFiles && localDemoFiles.length > 0) ? localDemoFiles : DEMO_FILES);
+                setFolders((localDemoFolders && localDemoFolders.length > 0) ? localDemoFolders : DEMO_FOLDERS);
+                
                 setIsLoaded(true);
                 return;
             }
