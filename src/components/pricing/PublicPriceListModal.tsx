@@ -17,7 +17,7 @@ export const PublicPriceListModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[90vh] overflow-y-auto bg-white text-black p-0 border-none shadow-2xl z-[10005]">
-        <div className="p-6 sm:p-10">
+        <div className="p-4 sm:p-10">
           <div className="text-center mb-8 border-b-2 border-red-600 pb-4">
              <h2 className="text-3xl font-black text-red-600 uppercase tracking-tighter">Prime Auto Detail</h2>
              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mt-1">Master Price List</p>
@@ -26,16 +26,16 @@ export const PublicPriceListModal = ({
           <div className="space-y-8">
             {/* Packages */}
             <div>
-              <h3 className="text-red-600 font-black text-lg mb-3 uppercase tracking-wider">Service Packages</h3>
-              <div className="overflow-x-auto border rounded-lg border-slate-200">
-                <table className="w-full border-collapse min-w-[600px]">
+              <h3 className="text-red-600 font-black text-base sm:text-lg mb-2 sm:mb-3 uppercase tracking-wider">Service Packages</h3>
+              <div className="border rounded-lg border-slate-200 w-full overflow-hidden">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-red-600 text-white">
-                      <th className="p-3 border-r border-red-500 text-left uppercase text-xs font-bold tracking-wider">Package</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Compact</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Midsize</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Truck</th>
-                      <th className="p-3 text-center uppercase text-xs font-bold tracking-wider">Luxury</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-left uppercase text-[9px] sm:text-xs font-bold tracking-wider">Package</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Compact</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Midsize</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Truck</th>
+                      <th className="p-1.5 sm:p-3 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Luxury</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -46,11 +46,11 @@ export const PublicPriceListModal = ({
                       };
                       return (
                         <tr key={p.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50 hover:bg-slate-100"}>
-                          <td className="p-3 border border-slate-200 font-bold text-slate-800">{p.name}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('compact')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('midsize')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('truck')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('luxury')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-[10px] sm:text-base font-bold text-slate-800 leading-tight">{p.name}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('compact')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('midsize')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('truck')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('luxury')}</td>
                         </tr>
                       );
                     })}
@@ -61,16 +61,16 @@ export const PublicPriceListModal = ({
             
             {/* Add-Ons */}
             <div>
-              <h3 className="text-red-600 font-black text-lg mb-3 uppercase tracking-wider">Add-Ons</h3>
-              <div className="overflow-x-auto border rounded-lg border-slate-200">
-                <table className="w-full border-collapse min-w-[600px]">
+              <h3 className="text-red-600 font-black text-base sm:text-lg mb-2 sm:mb-3 uppercase tracking-wider">Add-Ons</h3>
+              <div className="border rounded-lg border-slate-200 w-full overflow-hidden">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-red-600 text-white">
-                      <th className="p-3 border-r border-red-500 text-left uppercase text-xs font-bold tracking-wider">Add-On</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Compact</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Midsize</th>
-                      <th className="p-3 border-r border-red-500 text-center uppercase text-xs font-bold tracking-wider">Truck</th>
-                      <th className="p-3 text-center uppercase text-xs font-bold tracking-wider">Luxury</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-left uppercase text-[9px] sm:text-xs font-bold tracking-wider">Add-On</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Compact</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Midsize</th>
+                      <th className="p-1.5 sm:p-3 border-r border-red-500 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Truck</th>
+                      <th className="p-1.5 sm:p-3 text-center uppercase text-[9px] sm:text-xs font-bold tracking-wider">Luxury</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -81,11 +81,11 @@ export const PublicPriceListModal = ({
                       };
                       return (
                         <tr key={a.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50 hover:bg-slate-100"}>
-                          <td className="p-3 border border-slate-200 font-bold text-slate-800">{a.name}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('compact')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('midsize')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('truck')}</td>
-                          <td className="p-3 border border-slate-200 text-center font-black text-slate-700">${getP('luxury')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-[10px] sm:text-base font-bold text-slate-800 leading-tight">{a.name}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('compact')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('midsize')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('truck')}</td>
+                          <td className="p-1.5 sm:p-3 border border-slate-200 text-center text-[11px] sm:text-base font-black text-slate-700">${getP('luxury')}</td>
                         </tr>
                       );
                     })}
