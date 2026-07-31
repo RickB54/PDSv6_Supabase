@@ -81,6 +81,22 @@ export default function Tasks() {
     }
   };
 
+  const handleClearTeamChat = async () => {
+    if (!isAdmin) return;
+    if (!window.confirm("WARNING: Are you sure you want to permanently delete ALL team chat history? This action cannot be undone.")) return;
+    try {
+      if (isDemoMode) {
+        setChatMessages([]);
+        return;
+      }
+      await supabase.from('team_messages').delete().neq('id', 'placeholder_force_all');
+      setChatMessages([]);
+    } catch (error) {
+      console.error('Failed to clear team chat:', error);
+      toast({ title: "Failed to clear history", variant: "destructive" });
+    }
+  };
+
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
     (async () => {
@@ -827,16 +843,26 @@ export default function Tasks() {
                 <MessageSquare className="w-5 h-5 text-primary" />
                 Team Chat
               </div>
-              <Select value={chatRecipient} onValueChange={setChatRecipient}>
-                <SelectTrigger className="w-[140px] h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Team</SelectItem>
-                  <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70">Staff</div>
-                  {employees.filter(e => e.email !== user?.email).map(e => (
-                    <SelectItem key={e.email || e.id} value={e.email || e.id}>{e.name || e.email}</SelectItem>
-                  ))}
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button
+                    onClick={handleClearTeamChat}
+                    className="p-1.5 hover:bg-red-900/40 rounded transition-colors text-red-500 hover:text-red-400"
+                    title="Clear All Chat History"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                <Select value={chatRecipient} onValueChange={setChatRecipient}>
+                  <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Team</SelectItem>
+                    <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70">Staff</div>
+                    {employees.filter(e => e.email !== user?.email).map(e => (
+                      <SelectItem key={e.email || e.id} value={e.email || e.id}>{e.name || e.email}</SelectItem>
+                    ))}
                   <div className="p-1 px-2 text-xs font-semibold text-muted-foreground uppercase opacity-70 border-t border-zinc-800 mt-1 pt-2">Customers</div>
                   {customers.map(c => (
                     <SelectItem key={c.email || c.id} value={c.email || c.id}>{c.name} {c.email ? `(${c.email})` : ''}</SelectItem>

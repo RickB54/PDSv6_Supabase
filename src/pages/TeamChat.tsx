@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, Send, User, RefreshCw } from 'lucide-react';
+import { MessageCircle, Send, User, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
@@ -20,6 +20,7 @@ export default function TeamChat() {
 
     // Auth user if available
     const [authUser, setAuthUser] = useState(getCurrentUser());
+    const isAdmin = authUser?.role === 'admin' || authUser?.email === 'rberube54@gmail.com' || authUser?.email === 'Rick.PrimeAutoDetail@gmail.com';
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -73,21 +74,27 @@ export default function TeamChat() {
                 }
             })
             .on('postgres_changes', {
-                event: 'INSERT',
+                event: '*',
                 schema: 'public',
                 table: 'team_messages'
             }, (payload) => {
-                console.log('📨 Real-time message received:', payload);
-                const newMsg = payload.new as TeamMessage;
-                // Avoid duplicate if we already have it from optimistic update
-                setMessages(prev => {
-                    const exists = prev.some(m => m.id === newMsg.id);
-                    if (exists) {
-                        console.log('⚠️ Message already exists, skipping duplicate');
-                        return prev;
-                    }
-                    return [...prev, newMsg];
-                });
+                if (payload.eventType === 'DELETE') {
+                    setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+                    return;
+                }
+                if (payload.eventType === 'INSERT') {
+                    console.log('📨 Real-time message received:', payload);
+                    const newMsg = payload.new as TeamMessage;
+                    // Avoid duplicate if we already have it from optimistic update
+                    setMessages(prev => {
+                        const exists = prev.some(m => m.id === newMsg.id);
+                        if (exists) {
+                            console.log('⚠️ Message already exists, skipping duplicate');
+                            return prev;
+                        }
+                        return [...prev, newMsg];
+                    });
+                }
             })
             .subscribe((status) => {
                 console.log('🔌 Subscription status:', status);
@@ -108,6 +115,17 @@ export default function TeamChat() {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    const handleClearAll = async () => {
+        if (!isAdmin) return;
+        if (!window.confirm("WARNING: Are you sure you want to permanently delete ALL team chat history? This action cannot be undone.")) return;
+        try {
+            await supabase.from('team_messages').delete().neq('id', 'placeholder_force_all');
+            setMessages([]);
+        } catch (error) {
+            console.error('Failed to clear history:', error);
+        }
+    };
 
     const handleIdentify = () => {
         if (!guestName.trim() || !guestEmail.trim()) return;
@@ -198,6 +216,15 @@ export default function TeamChat() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {isAdmin && (
+                                <button
+                                    onClick={handleClearAll}
+                                    className="p-2 hover:bg-red-900/40 rounded transition-colors text-red-500 hover:text-red-400"
+                                    title="Clear All Chat History"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
                             <button
                                 onClick={loadMessages}
                                 disabled={isLoading}
