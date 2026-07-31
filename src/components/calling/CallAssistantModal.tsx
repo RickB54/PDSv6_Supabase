@@ -1206,27 +1206,14 @@ ${firstVehicle.notes || ''}`.trim(),
                                                     </Button>
                                                 ))}
                                             </div>
-                                            <Select value={activeVehicle.mainGoal} onValueChange={(v) => updateVehicle(activeVehicleId, { mainGoal: v })}>
-                                                <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase text-zinc-100">
-                                                    <SelectValue placeholder="MAIN CUSTOMER GOAL" />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
-                                                    <SelectItem value="basic">Basic Clean</SelectItem>
-                                                    <SelectItem value="interior">Deep Interior Clean</SelectItem>
-                                                    <SelectItem value="exterior">Exterior Shine/Protection</SelectItem>
-                                                    <SelectItem value="odor">Odor Removal</SelectItem>
-                                                    <SelectItem value="full">Full Professional Detail</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-
                                             <div className="space-y-1.5 pt-2 border-t border-zinc-800">
-                                                <Label className="text-[9px] font-black uppercase text-zinc-400">Select Detailing Service (Optional)</Label>
+                                                <Label className="text-[9px] font-black uppercase text-zinc-400">Select Detailing Service</Label>
                                                 <Select value={activeVehicle.selectedServiceId || "none"} onValueChange={(v) => updateVehicle(activeVehicleId, { selectedServiceId: v === "none" ? null : v })}>
                                                     <SelectTrigger className="h-8 bg-zinc-950 border-zinc-800 text-[10px] font-black uppercase text-zinc-100">
-                                                        <SelectValue placeholder="NO SERVICE SELECTED" />
+                                                        <SelectValue placeholder="UNDECIDED" />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-200">
-                                                        <SelectItem value="none">-- NO SERVICE SELECTED --</SelectItem>
+                                                        <SelectItem value="none">Undecided</SelectItem>
                                                         {livePackages.map(pkg => (
                                                             <SelectItem key={pkg.id} value={pkg.id}>{pkg.name.toUpperCase()}</SelectItem>
                                                         ))}
