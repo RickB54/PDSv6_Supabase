@@ -905,15 +905,15 @@ ${firstVehicle.notes || ''}`.trim(),
 
     return (
         <Dialog open={open} onOpenChange={handleCloseAttempt}>
-            <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-background border-border shadow-2xl rounded-2xl">
-                <div className="p-3 sm:p-4 bg-primary/10 border-b border-primary/20 flex items-center justify-between shrink-0">
+            <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-slate-950 border-slate-800 text-slate-100 shadow-2xl rounded-2xl">
+                <div className="p-3 sm:p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-2">
-                        <Phone className="w-5 h-5 text-primary animate-pulse shrink-0" />
+                        <Phone className="w-5 h-5 text-blue-400 animate-pulse shrink-0" />
                         <div>
                             <DialogTitle className="text-base sm:text-xl font-black uppercase tracking-tighter leading-none">
                                 Call Assistant
                             </DialogTitle>
-                            <DialogDescription className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                            <DialogDescription className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                                 Live Pricing Scenarios
                             </DialogDescription>
                         </div>
@@ -940,7 +940,7 @@ ${firstVehicle.notes || ''}`.trim(),
                 <div className="flex-1 overflow-y-auto p-0 custom-scrollbar bg-zinc-950/20">
                     <Accordion type="single" collapsible defaultValue="caller-info" className="w-full">
                         {/* SECTION 1: CALLER IDENTITY */}
-                        <AccordionItem value="caller-info" className="border-b border-zinc-800/80 bg-purple-950/25 shadow-sm">
+                        <AccordionItem value="caller-info" className="border-b border-zinc-800/80 bg-purple-900/20 shadow-sm">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-purple-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
                                     <div className="bg-purple-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(147,51,234,0.5)]">
@@ -979,7 +979,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                     )}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Full Name</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Full Name</Label>
                                             <Input
                                                 placeholder="Enter Client Name"
                                                 value={callerName}
@@ -988,7 +988,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Phone Number</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Phone Number</Label>
                                             <Input
                                                 placeholder="555-0199"
                                                 value={callerPhone}
@@ -997,7 +997,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email Address</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Email Address</Label>
                                             <Input
                                                 placeholder="customer@example.com"
                                                 value={callerEmail}
@@ -1007,7 +1007,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Call Notes & Special Requests</Label>
+                                        <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Call Notes & Special Requests</Label>
                                         <Textarea
                                             placeholder="Type any notes from this call here..."
                                             value={activeVehicle.notes}
@@ -1020,7 +1020,7 @@ ${firstVehicle.notes || ''}`.trim(),
                         </AccordionItem>
 
                         {/* SECTION 2: VEHICLE CONTEXT & EVALUATION */}
-                        <AccordionItem value="pre-qual" className="border-b border-zinc-800/80 bg-blue-950/25 shadow-sm">
+                        <AccordionItem value="pre-qual" className="border-b border-zinc-800/80 bg-blue-900/20 shadow-sm">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-blue-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
                                     <div className="bg-blue-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(59,130,246,0.5)]">
@@ -1180,7 +1180,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         key={m.id}
                                                         variant={activeVehicle.seatMaterial === m.id ? "secondary" : "ghost"}
                                                         onClick={() => updateVehicle(activeVehicleId, { seatMaterial: m.id })}
-                                                        className={`flex-1 h-7 text-[9px] font-bold uppercase ${activeVehicle.seatMaterial === m.id ? 'bg-emerald-500/20 text-emerald-300' : 'text-muted-foreground'}`}
+                                                        className={`flex-1 h-7 text-[9px] font-bold uppercase ${activeVehicle.seatMaterial === m.id ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400'}`}
                                                     >
                                                         {m.label}
                                                     </Button>
@@ -1275,7 +1275,7 @@ ${firstVehicle.notes || ''}`.trim(),
                         </AccordionItem>
 
                         {/* SECTION 3: LIVE PRICING SCENARIOS */}
-                        <AccordionItem value="live-pricing" className="border-b border-zinc-800/80 bg-emerald-950/20 shadow-sm">
+                        <AccordionItem value="live-pricing" className="border-b border-zinc-800/80 bg-emerald-900/20 shadow-sm">
                             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-emerald-900/10 transition-colors">
                                 <div className="flex items-center gap-3 w-full text-left">
                                     <div className="bg-emerald-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-[0_0_10px_rgba(16,185,129,0.5)]">
@@ -1309,7 +1309,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                 className="h-8 flex-1 bg-transparent border-none font-black uppercase tracking-widest text-xs p-0 focus-visible:ring-0 placeholder:text-zinc-700 text-zinc-100"
                                                                 placeholder="Scenario Label..."
                                                             />
-                                                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter shrink-0">
+                                                            <div className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter shrink-0">
                                                                 {activeVehicle.type || 'select type'}
                                                             </div>
                                                         </div>
@@ -1357,7 +1357,7 @@ ${firstVehicle.notes || ''}`.trim(),
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <div>
-                                                            <Label className="text-[10px] font-black uppercase text-muted-foreground mb-3 block tracking-widest">Select Package</Label>
+                                                            <Label className="text-[10px] font-black uppercase text-slate-400 mb-3 block tracking-widest">Select Package</Label>
                                                             <div className="grid grid-cols-1 gap-1.5">
                                                                 {livePackages.map(pkg => (
                                                                     <div
@@ -1376,7 +1376,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                                     >
                                                                         <div className="flex-1">
                                                                             <div className="text-xs font-black uppercase text-zinc-100">{pkg.name}</div>
-                                                                            <div className="text-[10px] text-muted-foreground leading-tight">{pkg.description || pkg.descriptionOverride}</div>
+                                                                            <div className="text-[10px] text-slate-400 leading-tight">{pkg.description || pkg.descriptionOverride}</div>
                                                                         </div>
                                                                         {scenario.packageId === pkg.id && <CheckCircle2 className="w-4 h-4 text-primary ml-2 shrink-0" />}
                                                                     </div>
@@ -1388,7 +1388,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                             <Accordion type="single" collapsible className="w-full">
                                                                 <AccordionItem value="addons" className="border-none">
                                                                     <AccordionTrigger className="p-0 hover:no-underline py-2">
-                                                                        <Label className="text-[10px] font-black uppercase text-muted-foreground block tracking-widest cursor-pointer">Extra Add-Ons (Instant Math)</Label>
+                                                                        <Label className="text-[10px] font-black uppercase text-slate-400 block tracking-widest cursor-pointer">Extra Add-Ons (Instant Math)</Label>
                                                                     </AccordionTrigger>
                                                                     <AccordionContent className="pt-2">
                                                                         <div className="space-y-0.5 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar border border-zinc-800/50 rounded-lg p-2 bg-black/20">
@@ -1593,7 +1593,7 @@ ${firstVehicle.notes || ''}`.trim(),
 
                 <div className="p-3 border-t border-border bg-muted/30 flex flex-col gap-3 w-full shrink-0">
                     {/* Desktop Only Legend info */}
-                    <div className="hidden lg:flex gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <div className="hidden lg:flex gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${callerName ? 'text-primary' : 'text-zinc-700'}`} /> Identity</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.make ? 'text-primary' : 'text-zinc-700'}`} /> Vehicle</div>
                         <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.selectedScenarioId ? 'text-primary' : 'text-zinc-700'}`} /> Selection</div>
