@@ -567,37 +567,13 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
 
 
   const handleSavePDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    
-    // Header
-    doc.setFillColor(15, 22, 41);
-    doc.rect(0, 0, pageWidth, 40, 'F');
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(24);
-    doc.setTextColor(192, 132, 252);
-    doc.text("Rick's Command Center", 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(148, 163, 184);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Professional Detailing Advice | Printed: ${new Date().toLocaleDateString()}`, 14, 28);
-    
-    // Content
-    doc.setFontSize(14);
-    doc.setTextColor(192, 132, 252);
-    doc.setFont("helvetica", "bold");
-    doc.text("Strategic Recommendations", 14, 50);
-    doc.setDrawColor(192, 132, 252, 0.3);
-    doc.line(14, 52, 196, 52);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("helvetica", "normal");
-    const splitNotes = doc.splitTextToSize(currentTip.notes || "No custom advice set.", 182);
-    doc.text(splitNotes, 14, 62);
-    
-    doc.save(`Ricks_Advice_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("Advice Exported Successfully");
+    if (activeTab === 'package') {
+      handlePrint('single-package', true);
+    } else if (activeTab === 'description') {
+      handlePrint('single-chemical', true);
+    } else if (activeTab === 'prep') {
+      handlePrint('full-prep', true);
+    }
   };
 
   const generateCleanPrintHtml = (title: string, content: string) => {
@@ -631,7 +607,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
     `;
   };
 
-  const handlePrint = (type: 'single-package' | 'single-chemical' | 'master-packages' | 'master-chemicals' | 'prep-interior' | 'prep-exterior' | 'batch-selected') => {
+  const handlePrint = (type: 'single-package' | 'single-chemical' | 'master-packages' | 'master-chemicals' | 'prep-interior' | 'prep-exterior' | 'batch-selected' | 'full-prep', download = false) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     let currentY = 20;
@@ -867,7 +843,11 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
       });
     }
 
-    window.open(doc.output('bloburl'), '_blank');
+    if (download) {
+      doc.save(`Ricks_${type}_${new Date().toISOString().split('T')[0]}.pdf`);
+    } else {
+      window.open(doc.output('bloburl'), '_blank');
+    }
     toast.success("Professional Document Generated");
   };
 
