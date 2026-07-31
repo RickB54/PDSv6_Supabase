@@ -1471,8 +1471,21 @@ const CompanyBudget = () => {
                                             </ResponsiveContainer>
                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <div className="text-center">
-                                                    <p className="text-sm text-muted-foreground">Total</p>
-                                                    <p className="text-2xl font-bold">${(totalIncome + totalExpense).toFixed(0)}</p>
+                                                    {filterType === 'all' ? (
+                                                        <>
+                                                            <p className="text-sm text-muted-foreground">Net Total</p>
+                                                            <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                                {netProfit < 0 ? '-' : ''}${Math.abs(netProfit).toFixed(0)}
+                                                            </p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-sm text-muted-foreground capitalize">Total {filterType}</p>
+                                                            <p className="text-2xl font-bold">
+                                                                ${(filterType === 'income' ? totalIncome : totalExpense).toFixed(0)}
+                                                            </p>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
