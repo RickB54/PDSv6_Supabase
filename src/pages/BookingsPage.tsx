@@ -1962,7 +1962,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
       <div className="p-1 sm:p-6 space-y-6 lg:mt-4">
         {/* Unified Responsive Toolbar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-2 lg:gap-4 mb-4 bg-zinc-900/40 p-2 sm:p-3 rounded-xl border border-zinc-800/50 shadow-sm overflow-x-auto">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-2 lg:gap-4 mb-4 bg-zinc-900/40 p-2 sm:p-3 rounded-xl border border-zinc-800/50 shadow-sm">
           
           <div className="flex items-center justify-between w-full md:w-auto gap-1 sm:gap-2">
             {/* View Mode Toggle */}
