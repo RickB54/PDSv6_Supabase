@@ -1977,6 +1977,15 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             <div className="flex gap-1.5 lg:hidden">
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => refresh()} title="Refresh"><RotateCcw className="h-3.5 w-3.5" /></Button>
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={handlePrintFullSchedule} title="Print"><Printer className="h-3.5 w-3.5" /></Button>
+              {isAdmin && (
+                <Button className="sm:hidden bg-primary hover:bg-primary/90 h-8 w-8 shadow-sm shrink-0" size="icon" onClick={() => {
+                  setSelectedDate(new Date());
+                  setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
+                  setIsAddModalOpen(true);
+                }}>
+                  <Plus className="h-4 w-4 text-white" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -2030,7 +2039,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
               {/* New Booking Button */}
               {isAdmin && (
-                <Button className="bg-primary hover:bg-primary/90 h-9 text-xs font-bold shadow-sm w-full sm:w-auto" onClick={() => {
+                <Button className="hidden sm:flex bg-primary hover:bg-primary/90 h-9 text-xs font-bold shadow-sm w-auto" onClick={() => {
                   setSelectedDate(new Date());
                   setFormData(prev => ({ ...prev, bookedBy: getCurrentUser()?.name || '' }));
                   setIsAddModalOpen(true);
