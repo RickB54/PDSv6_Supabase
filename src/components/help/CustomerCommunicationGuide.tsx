@@ -203,7 +203,23 @@ export function CustomerCommunicationGuide() {
   const [activeSection, setActiveSection] = useState<number | null>(0);
 
   const toggleSection = (idx: number) => {
-    setActiveSection(prev => prev === idx ? null : idx);
+    if (activeSection === idx) {
+      setActiveSection(null);
+      // Scroll back to top
+      const container = document.getElementById('comm-guide-scroll-container');
+      if (container) {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } else {
+      setActiveSection(idx);
+      // Small delay to allow the accordion to render open before calculating height
+      setTimeout(() => {
+        const el = document.getElementById(`comm-guide-section-${idx}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+    }
   };
 
   const sections = [
@@ -420,7 +436,7 @@ export function CustomerCommunicationGuide() {
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white border-slate-200 shadow-2xl">
+      <DialogContent id="comm-guide-scroll-container" className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white border-slate-200 shadow-2xl">
         {/* Sticky Header */}
         <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
@@ -448,7 +464,7 @@ export function CustomerCommunicationGuide() {
               {sections.map((section, idx) => {
                 const isActive = activeSection === idx;
                 return (
-                  <div key={idx} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200">
+                  <div key={idx} id={`comm-guide-section-${idx}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-all duration-200 scroll-mt-24">
                     <button
                       onClick={() => toggleSection(idx)}
                       className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 focus:outline-none focus:bg-slate-50 transition-colors"
