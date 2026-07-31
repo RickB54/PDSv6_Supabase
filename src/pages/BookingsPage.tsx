@@ -2020,15 +2020,14 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <TooltipTrigger asChild>
                     <Button 
                       variant="outline" 
-                      size="sm" 
+                      size="icon" 
                       onClick={handleSyncGoogleCalendar} 
                       className={cn(
-                        "h-9 text-xs gap-1.5 transition-all px-3 hidden sm:flex shadow-sm",
+                        "h-8 w-8 transition-all hidden sm:flex shadow-sm shrink-0",
                         isGoogleSynced ? "border-blue-500/50 text-blue-400 bg-blue-500/5 hover:bg-blue-500/10" : "border-zinc-700 text-zinc-400 hover:bg-zinc-800"
                       )}
                     >
-                      <CalendarIcon className={cn("h-3.5 w-3.5", isGoogleSynced && "animate-pulse")} />
-                      {isGoogleSynced ? "Personal Sync" : "Personal Calendar"}
+                      <CalendarIcon className={cn("h-4 w-4", isGoogleSynced && "animate-pulse")} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
