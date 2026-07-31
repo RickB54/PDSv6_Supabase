@@ -117,9 +117,13 @@ export default function Tasks() {
     // Subscribe to Realtime Updates
     const channel = supabase
       .channel('tasks_team_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
-        const newMsg = payload.new as TeamMessage;
-        setChatMessages(prev => [...prev, newMsg]);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_messages' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setChatMessages(prev => prev.filter(m => m.id !== payload.old.id));
+        } else if (payload.eventType === 'INSERT') {
+          const newMsg = payload.new as TeamMessage;
+          setChatMessages(prev => [...prev, newMsg]);
+        }
       })
       .subscribe();
 

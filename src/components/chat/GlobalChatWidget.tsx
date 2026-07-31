@@ -87,9 +87,15 @@ export function GlobalChatWidget() {
         // Subscribe
         const channel = supabase
             .channel('global_widget_team_messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
-                const newMsg = payload.new as TeamMessage;
-                setMessages(prev => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'team_messages' }, (payload) => {
+                if (payload.eventType === 'DELETE') {
+                    setMessages(prev => prev.filter(m => m.id !== payload.old.id));
+                    return;
+                }
+                
+                if (payload.eventType === 'INSERT') {
+                    const newMsg = payload.new as TeamMessage;
+                    setMessages(prev => {
                     // 1. Check if we already have this exact ID
                     if (prev.some(m => m.id === newMsg.id)) return prev;
 
