@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -86,6 +86,9 @@ const CompanyEmployees = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [employeeToArchive, setEmployeeToArchive] = useState<string | null>(null);
+  const [archivedFilter, setArchivedFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUploadTarget, setPhotoUploadTarget] = useState<string | null>(null);
@@ -267,6 +270,67 @@ const CompanyEmployees = () => {
     setEmployeeToDelete(null);
   };
 
+  const handleArchive = async () => {
+    if (!employeeToArchive) return;
+    const emp = employees.find(e => e.email === employeeToArchive);
+    if (!emp) return;
+
+    // SAFETY CHECK: Prevent self-archiving
+    if (user?.email?.toLowerCase() === emp.email.toLowerCase()) {
+      toast({
+        title: "Action Blocked",
+        description: "You cannot archive your own account while logged in.",
+        variant: "destructive"
+      });
+      setArchiveConfirmOpen(false);
+      setEmployeeToArchive(null);
+      return;
+    }
+
+    // SAFETY CHECK: Prevent archiving Admins
+    if (emp.role === 'Admin') {
+      toast({
+        title: "Action Blocked",
+        description: "Admin accounts cannot be archived.",
+        variant: "destructive"
+      });
+      setArchiveConfirmOpen(false);
+      setEmployeeToArchive(null);
+      return;
+    }
+
+    const isCurrentlyArchived = (emp as any).status === 'Inactive';
+    const newStatus = isCurrentlyArchived ? 'Active' : 'Inactive';
+
+    try {
+      const { error } = await supabase
+        .from('app_users')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('email', emp.email);
+
+      if (error) throw error;
+
+      // Update local state immediately
+      const updated = employees.map(e =>
+        e.email === emp.email ? { ...e, status: newStatus as any } : e
+      );
+      await saveEmployees(updated);
+
+      toast({
+        title: isCurrentlyArchived ? 'Employee Restored' : 'Employee Archived',
+        description: isCurrentlyArchived
+          ? `${emp.name} has been restored to active status.`
+          : `${emp.name} has been archived and is now hidden from the active roster.`
+      });
+    } catch (err) {
+      console.error('Archive/restore failed:', err);
+      toast({ title: 'Error', description: 'Failed to update employee status.', variant: 'destructive' });
+    }
+
+    setArchiveConfirmOpen(false);
+    setEmployeeToArchive(null);
+  };
+
   const handlePay = async () => {
     if (!payEmployee) return;
     const amt = parseFloat(payAmount) || 0;
@@ -434,8 +498,36 @@ const CompanyEmployees = () => {
             <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-md">
               <Users className="h-4 w-4 text-zinc-500" />
               <span className="text-sm font-medium text-zinc-400">Employees:</span>
-              <span className="text-white font-bold">{employees.length}</span>
+              <span className="text-white font-bold">{employees.filter(e => (e as any).status !== 'Inactive').length}</span>
+              {employees.some(e => (e as any).status === 'Inactive') && (
+                <span className="text-xs text-zinc-600 ml-1">({employees.filter(e => (e as any).status === 'Inactive').length} archived)</span>
+              )}
             </div>
+            <Select value={archivedFilter} onValueChange={(v) => setArchivedFilter(v as any)}>
+              <SelectTrigger className={`w-[150px] bg-zinc-950 border-zinc-800 text-xs font-medium h-9 ${
+                archivedFilter === 'archived' ? 'border-amber-500/40 text-amber-400' :
+                archivedFilter === 'all' ? 'border-indigo-500/40 text-indigo-400' :
+                'text-zinc-400'
+              }`}>
+                <div className="flex items-center gap-1.5">
+                  {archivedFilter === 'archived' ? <Archive className="h-3.5 w-3.5" /> :
+                   archivedFilter === 'all' ? <Eye className="h-3.5 w-3.5" /> :
+                   <Users className="h-3.5 w-3.5" />}
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                <SelectItem value="active" className="text-xs">
+                  <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-indigo-400" /> Active Only</span>
+                </SelectItem>
+                <SelectItem value="archived" className="text-xs">
+                  <span className="flex items-center gap-1.5"><Archive className="h-3.5 w-3.5 text-amber-400" /> Archived Only</span>
+                </SelectItem>
+                <SelectItem value="all" className="text-xs">
+                  <span className="flex items-center gap-1.5"><Eye className="h-3.5 w-3.5 text-zinc-400" /> All Employees</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={selectedEmployee || "all"} onValueChange={(val) => setSelectedEmployee(val === "all" ? "" : val)}>
               <SelectTrigger className="w-[180px] bg-zinc-950 border-zinc-800"><SelectValue placeholder="All Staff" /></SelectTrigger>
               <SelectContent>
@@ -461,12 +553,20 @@ const CompanyEmployees = () => {
 
         {/* Employee Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {employees.map(emp => {
+          {employees.filter(emp => {
+            const isArchived = (emp as any).status === 'Inactive';
+            if (archivedFilter === 'archived') return isArchived;
+            if (archivedFilter === 'all') return true;
+            return !isArchived; // 'active' — default
+          }).map(emp => {
+            const isArchived = (emp as any).status === 'Inactive';
             const owed = owedMap[emp.email] || 0;
             const myBadges = employeeBadges[emp.email] || [];
 
             return (
-              <Card key={emp.email} className="bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-6 flex flex-col gap-5 min-h-[280px]">
+              <Card key={emp.email} className={`bg-zinc-900 border-zinc-800 hover:border-indigo-500/30 transition-all p-6 flex flex-col gap-5 min-h-[280px] ${
+                isArchived ? 'opacity-60 border-dashed border-zinc-700' : ''
+              }`}>
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">
                       <div 
@@ -492,6 +592,9 @@ const CompanyEmployees = () => {
                       <div className="flex items-center gap-2 text-xs text-zinc-500">
                         {emp.role === 'Admin' ? <Shield className="h-3 w-3 text-amber-500" /> : <User className="h-3 w-3" />}
                         {emp.role}
+                        {isArchived && (
+                          <span className="ml-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">Archived</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -549,7 +652,25 @@ const CompanyEmployees = () => {
                   <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-zinc-400 hover:text-white hover:bg-zinc-800 flex justify-center" onClick={() => openEdit(emp)}><Edit className="h-4 w-4 mr-1.5" /> Edit</Button>
                   <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-blue-400 hover:text-blue-300 hover:bg-blue-950/20 flex justify-center" onClick={() => navigate(`/employee-profile/${emp.id || emp.email}`)}><UserCircle className="h-4 w-4 mr-1.5" /> Profile</Button>
                   <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/20 flex justify-center" onClick={() => navigate(`/compensation-payroll?employee=${emp.email}`)}><Calculator className="h-4 w-4 mr-1.5" /> Calc</Button>
-                  <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/20 flex justify-center" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-4 w-4 mr-1.5" /> Pay</Button>
+                  {!isArchived && (
+                    <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/20 flex justify-center" onClick={() => { setPayEmployee(emp); setPayAmount(owedMap[emp.email]?.toString() || ""); setPayDialogOpen(true) }}><Wallet className="h-4 w-4 mr-1.5" /> Pay</Button>
+                  )}
+                  {emp.role !== 'Admin' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`flex-1 h-9 min-w-[70px] flex justify-center ${
+                        isArchived
+                          ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-950/20'
+                          : 'text-amber-500/70 hover:text-amber-400 hover:bg-amber-950/20'
+                      }`}
+                      onClick={() => { setEmployeeToArchive(emp.email); setArchiveConfirmOpen(true); }}
+                    >
+                      {isArchived
+                        ? <><ArchiveRestore className="h-4 w-4 mr-1.5" /> Restore</>  
+                        : <><Archive className="h-4 w-4 mr-1.5" /> Archive</>}
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="flex-1 h-9 min-w-[70px] text-zinc-500 hover:text-red-400 hover:bg-red-950/20 flex justify-center" onClick={() => { setEmployeeToDelete(emp.email); setDeleteConfirmOpen(true) }}><Trash2 className="h-4 w-4 mr-1.5" /> Del</Button>
                 </div>
               </Card>
@@ -738,6 +859,36 @@ const CompanyEmployees = () => {
           <DialogFooter><Button onClick={handlePay} className="bg-green-600 hover:bg-green-700">Confirm Payment</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Archive Confirm Dialog */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {employees.find(e => e.email === employeeToArchive)?.status === 'Inactive'
+                ? <><ArchiveRestore className="h-5 w-5 text-amber-400" /> Restore Employee?</>
+                : <><Archive className="h-5 w-5 text-amber-500" /> Archive Employee?</>}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              {employees.find(e => e.email === employeeToArchive && (e as any).status === 'Inactive')
+                ? `This will restore ${employees.find(e => e.email === employeeToArchive)?.name} to active status. They will reappear on the active roster.`
+                : `This will archive ${employees.find(e => e.email === employeeToArchive)?.name}. They will be hidden from the active roster but all their data and history will be preserved. You can restore them at any time.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleArchive}
+              className={employees.find(e => e.email === employeeToArchive && (e as any).status === 'Inactive')
+                ? 'bg-green-600 hover:bg-green-700'
+                : 'bg-amber-600 hover:bg-amber-700'
+              }
+            >
+              {employees.find(e => e.email === employeeToArchive && (e as any).status === 'Inactive') ? 'Restore' : 'Archive'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="bg-zinc-900 border-zinc-800 text-white">
