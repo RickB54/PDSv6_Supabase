@@ -1962,9 +1962,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
       <div className="p-1 sm:p-6 space-y-6 lg:mt-4">
         {/* Unified Responsive Toolbar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4 bg-zinc-900/40 p-3 rounded-xl border border-zinc-800/50 shadow-sm">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-2 lg:gap-4 mb-4 bg-zinc-900/40 p-2 sm:p-3 rounded-xl border border-zinc-800/50 shadow-sm overflow-x-auto">
           
-          <div className="flex items-center justify-between w-full md:w-auto gap-2">
+          <div className="flex items-center justify-between w-full md:w-auto gap-1 sm:gap-2">
             {/* View Mode Toggle */}
             <div className="flex bg-zinc-900 rounded-lg p-1 border border-zinc-800 shadow-inner">
               <Button variant={viewMode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('day')} className="h-8 text-xs px-3">Day</Button>
@@ -1989,19 +1989,19 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between w-full md:w-auto gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between w-full md:w-auto gap-2 lg:gap-4">
             {/* Date Navigation & Label */}
-            <div className="flex items-center bg-secondary/30 rounded-md border border-border h-9 shadow-sm">
-              <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
-              <span className="font-semibold text-sm min-w-[150px] text-center tracking-tight text-zinc-200">
-                {viewMode === 'day' ? format(currentDate, "EEEE, MMM d, yyyy") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
+            <div className="flex items-center bg-secondary/30 rounded-md border border-border h-8 shadow-sm">
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="font-semibold text-xs min-w-[100px] sm:min-w-[120px] text-center tracking-tight text-zinc-200">
+                {viewMode === 'day' ? format(currentDate, "EEEE, MMM d") : viewMode === 'year' ? format(currentDate, "yyyy") : format(currentDate, "MMMM yyyy")}
               </span>
-              <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
-              <div className="w-px h-5 bg-border mx-1" />
-              <Button variant="ghost" size="sm" onClick={handleToday} className="h-9 px-3 text-xs font-semibold hover:bg-zinc-800">Today</Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
+              <div className="w-px h-4 bg-border mx-0.5" />
+              <Button variant="ghost" size="sm" onClick={handleToday} className="h-8 px-2 text-xs font-semibold hover:bg-zinc-800">Today</Button>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
               {/* Desktop/Tablet Actions */}
               <div className="hidden md:flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 shadow-sm">
                 <Button variant="ghost" size="icon" onClick={() => refresh()} className="h-7 w-7 text-zinc-400 hover:text-white" title="Refresh">
