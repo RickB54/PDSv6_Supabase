@@ -1067,7 +1067,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         key={t.id}
                                                         variant={activeVehicle.type === t.id ? "default" : "outline"}
                                                         onClick={() => updateVehicle(activeVehicleId, { type: t.id as any })}
-                                                        className={`h-9 text-[9px] font-black uppercase px-1 ${activeVehicle.type === t.id ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] border-blue-400' : 'border-zinc-700 text-zinc-400'}`}
+                                                        className={`h-9 text-[9px] font-black uppercase px-1 ${activeVehicle.type === t.id ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)] border-blue-400' : 'border-zinc-700 text-black'}`}
                                                     >
                                                         {t.label}
                                                     </Button>
@@ -1089,7 +1089,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         key={c.id}
                                                         variant={activeVehicle.condition === c.id ? "default" : "outline"}
                                                         onClick={() => updateVehicle(activeVehicleId, { condition: c.id as any })}
-                                                        className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.condition === c.id ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                        className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.condition === c.id ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700 text-black'}`}
                                                     >
                                                         {c.label}
                                                     </Button>
@@ -1104,14 +1104,14 @@ ${firstVehicle.notes || ''}`.trim(),
                                             <div className="flex gap-1">
                                                 <Button 
                                                     variant={activeVehicle.dailyDriver ? "default" : "outline"}
-                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700 text-black'}`}
                                                     onClick={() => updateVehicle(activeVehicleId, { dailyDriver: true })}
                                                 >
                                                     Daily
                                                 </Button>
                                                 <Button 
                                                     variant={!activeVehicle.dailyDriver ? "default" : "outline"}
-                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${!activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700'}`}
+                                                    className={`flex-1 h-8 text-[9px] font-black uppercase ${!activeVehicle.dailyDriver ? 'bg-blue-600 hover:bg-blue-500' : 'border-zinc-700 text-black'}`}
                                                     onClick={() => updateVehicle(activeVehicleId, { dailyDriver: false })}
                                                 >
                                                     Weekend
@@ -1164,7 +1164,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         key={i.id}
                                                         variant={activeVehicle.interiorCondition === i.id ? "secondary" : "outline"}
                                                         onClick={() => updateVehicle(activeVehicleId, { interiorCondition: i.id })}
-                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.interiorCondition === i.id ? 'bg-blue-600/20 text-blue-300 border-blue-500/50' : 'border-zinc-700'}`}
+                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.interiorCondition === i.id ? 'bg-blue-600/20 text-blue-300 border-blue-500/50' : 'border-zinc-700 text-black'}`}
                                                     >
                                                         {i.label}
                                                     </Button>
@@ -1200,7 +1200,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                                         key={p.id}
                                                         variant={activeVehicle.paintCondition === p.id ? "secondary" : "outline"}
                                                         onClick={() => updateVehicle(activeVehicleId, { paintCondition: p.id })}
-                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.paintCondition === p.id ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'border-zinc-700'}`}
+                                                        className={`h-7 text-[9px] font-bold uppercase px-2 ${activeVehicle.paintCondition === p.id ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'border-zinc-700 text-black'}`}
                                                     >
                                                         {p.label}
                                                     </Button>
@@ -1462,7 +1462,7 @@ ${firstVehicle.notes || ''}`.trim(),
                                             );
                                         })}
 
-                                        <Button variant="outline" onClick={() => addScenario(activeVehicleId)} className="w-full border-dashed py-6 border-zinc-800 hover:border-primary/50 hover:bg-primary/5 group text-zinc-300">
+                                        <Button variant="outline" onClick={() => addScenario(activeVehicleId)} className="w-full border-dashed py-6 border-zinc-800 hover:border-primary/50 hover:bg-primary/5 group text-black">
                                             <Plus className="w-4 h-4 mr-2" /> Add Comparison Scenario
                                         </Button>
 
