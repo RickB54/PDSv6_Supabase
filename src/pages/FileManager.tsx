@@ -161,6 +161,11 @@ const FileManager = () => {
   }, [location.search]);
 
   const loadRecords = async () => {
+    if (isDemoMode) {
+      setRecords([]);
+      return;
+    }
+
     // 1. Load from localStorage (legacy/immediate)
     const stored = localStorage.getItem('pdfArchive');
     let localRecords: PDFRecord[] = [];

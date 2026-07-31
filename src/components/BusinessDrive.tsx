@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage-utils";
 import supabase from "@/lib/supabase";
+import { useDemoMode } from "@/contexts/DemoContext";
 
 interface DriveFile {
     id: string;
@@ -106,6 +107,7 @@ const getFileCategory = (file: DriveFile): string => {
 
 export default function BusinessDrive() {
     const { toast } = useToast();
+    const { isDemoMode } = useDemoMode();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [sortType, setSortType] = useState<'upload' | 'modified' | 'name'>('upload');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -136,6 +138,7 @@ export default function BusinessDrive() {
     const [isSyncing, setIsSyncing] = useState(false);
 
     const handleSync = async (showToast = false) => {
+        if (isDemoMode) return; // Completely disable sync in demo mode
         setIsSyncing(true);
         if (showToast) toast({ title: "Syncing...", description: "Fetching latest data from your cloud drive." });
         
@@ -173,6 +176,17 @@ export default function BusinessDrive() {
     // Persistence & Cloud Sync to avoid QuotaExceededError and enable cross-device usage
     useEffect(() => {
         const loadData = async () => {
+            if (isDemoMode) {
+                // In demo mode, load from demo keys or use defaults, do NOT sync with cloud
+                const { default: localforage } = await import('localforage');
+                const localDemoFiles = await localforage.getItem<DriveFile[]>('demo_business_drive_files_v3');
+                const localDemoFolders = await localforage.getItem<DriveFolder[]>('demo_business_drive_folders_v3');
+                setFiles(localDemoFiles || []);
+                setFolders(localDemoFolders || DEFAULT_FOLDERS);
+                setIsLoaded(true);
+                return;
+            }
+
             try {
                 const { default: localforage } = await import('localforage');
                 
@@ -224,6 +238,13 @@ export default function BusinessDrive() {
         const saveData = async () => {
             try {
                 const { default: localforage } = await import('localforage');
+                
+                if (isDemoMode) {
+                    await localforage.setItem('demo_business_drive_files_v3', files);
+                    await localforage.setItem('demo_business_drive_folders_v3', folders);
+                    return; // Do NOT push to cloud sync in demo mode
+                }
+
                 const { getCurrentUser } = await import('@/lib/auth');
                 const user = getCurrentUser();
 
