@@ -556,21 +556,12 @@ export default function StaffSchedule() {
                         {view === 'year' && <div className="p-10 text-center text-zinc-500">Year view coming soon (use Month for details)</div>}
                     </div>
 
-                    {/* Bottom Detail Panel */}
-                    <div className="mt-2 h-auto min-h-[140px] md:h-[140px] shrink-0 bg-[#0f0f13] border border-zinc-800 rounded-xl flex shadow-2xl relative overflow-hidden transition-all">
-                        {!selectedShift ? (
-                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic py-8">
-                                Select a shift to view details, notes, and status.
-                            </div>
-                        ) : (
-                            <div className="flex flex-1 p-4 sm:p-6 gap-4 sm:gap-6 animate-in slide-in-from-bottom-5 overflow-y-auto relative pt-10 sm:pt-6">
-                                <button 
-                                    onClick={() => setSelectedShiftId(null)}
-                                    className="absolute top-2 right-2 p-2 lg:hidden text-zinc-400 hover:text-white rounded-full bg-zinc-900/80 hover:bg-zinc-800 transition-colors z-50 border border-zinc-700/50"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                                <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
+                    {/* Shift Detail Popup */}
+                    <Dialog open={!!selectedShift} onOpenChange={(open) => { if (!open) setSelectedShiftId(null); }}>
+                        <DialogContent className="max-w-4xl bg-[#0f0f13] border-zinc-800 text-white p-0 overflow-hidden shadow-2xl rounded-2xl">
+                            {selectedShift && (
+                                <div className="flex flex-1 p-6 sm:p-8 gap-4 sm:gap-6 relative min-h-[250px] max-h-[85vh] overflow-y-auto">
+                                    <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
 
                                 {/* Content Wrapper */}
                                 <div className="flex flex-1 flex-col lg:flex-row gap-6 min-w-0">
@@ -668,8 +659,9 @@ export default function StaffSchedule() {
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
                 </main>
 
                 {/* Right integration sidebar removed (moved to global) */}
