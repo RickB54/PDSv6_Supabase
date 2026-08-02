@@ -546,7 +546,7 @@ const CustomerPortal = () => {
                   </div>
 
                   {/* Description */}
-                  <p className="text-muted-foreground text-sm min-h-[40px] leading-relaxed">
+                  <p className="text-muted-foreground text-sm min-h-[40px] leading-relaxed whitespace-pre-wrap">
                     {pkg.description}
                   </p>
 

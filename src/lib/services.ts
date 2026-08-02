@@ -24,36 +24,42 @@ export function getServiceInstructions(name: string, id?: string): string {
   if (sid === 'prep-walkaround') return "Customer walkaround & expectations. Review the service package with the client. Confirm any special requests or areas of concern.";
 
   // 2. Wheels & Tires
-  if (n.includes('wheels & tires first')) return "Chemical: Dark Fury 4:1 or 7:1 (Alternative: Meguiar's APC 4:1). Application: Agitate with brush. Dwell Time: No dwell needed.";
+  if (n.includes('wheels & tires first')) return "Chemical: Dark Fury 4:1 or 7:1 (Alternative: Meguiar's APC 4:1). Application: Agitate with brush. Dwell Time: No dwell needed. If Engine Bay Cleaning addon is included, perform engine bay cleaning first before wheels. Use Dirt Buster or Muscle Magic at appropriate dilution. Cover sensitive electronics before applying any chemical or water pressure. Rinse thoroughly and allow to dry before proceeding to wheels.";
 
   // 3. Pre-Treat
-  if (n.includes('pre-treat bugs')) return "Chemical: Road Warrior 4:1 (Alternative: Pink Perfection 4:1). Dwell Time: 3–5 minutes. Application Tip: Spray on dry surface before rinsing.";
+  if (n.includes('pre-treat bugs')) return "Chemical: Road Warrior 4:1 (Alternative: Pink Perfection 4:1). Dwell Time: 3–5 minutes. Application Tip: Spray on dry surface before rinsing. Road Warrior works well on bug removal — especially on front grill, hood, and front bumper. SP alternatives: Muscle Magic diluted for heavy grime, or Dirt Buster on concentrated areas. Apply to dry surface before any rinse or foam. Pay extra attention to lower front panels, grille openings, and hood leading edge.";
 
   // 4. Foam Bath
-  if (n.includes('foam bath')) return "Chemical: Cherry Foam 5:1 or McGuire’s Gold Class 5:1. Dwell Time: 3–5 minutes. Application Tip: Apply thick layer of foam and let it dwell to loosen grime.";
+  if (n.includes('foam bath')) return "Chemical: Cherry Foam 5:1 or McGuire’s Gold Class 5:1. Dwell Time: 3–5 minutes. Application Tip: Apply thick layer of foam and let it dwell to loosen grime. Apply thick even layer from top to bottom. Do not let foam dry on paint — work in shade when possible or mist with water if foam starts to dry before dwell time is complete.";
+
+    if (n.includes('pre-rinse')) return "Skip this step if vehicle is a clean maintenance detail. Rinse top to bottom always. Open doors slightly while rinsing to allow water to flow through jambs without flooding interior.";
+  if (n.includes('hand wash')) return "Use multiple clean microfiber towels or wash mitts. Use one side of the towel at a time then flip to the clean side before moving to the next panel. Work top to bottom — roof first, lower rocker panels and bumpers last. Driver's side front to back, passenger side back to front. Never use a towel or mitt that has touched wheels or lower panels on upper paint surfaces.";
+  if (n.includes('final rinse')) return "Rinse top to bottom. If Clay Bar Decon addon is included, proceed directly to clay bar step while paint is still wet — do not dry first. Use APC as lubricant, work panel by panel, fold clay frequently. Clay is complete when paint feels glass smooth.";
+  if (n.includes('remove personal items')) return "Remove all personal items, trash, and loose belongings from the vehicle before starting any interior work. Set aside safely for the customer.";
+  if (n.includes('interior protectant')) return "Apply P&S Xpress 3:1 or SP Cover All 4:1 to all interior plastics, vinyl, and trim as final protectant and protective coat. Use clean microfiber applicator. Work driver's side front to back, passenger side back to front. Complete this step before cleaning windows so any overspray is caught in the glass step. Note: this step may alternatively be done as the very last step — if so, use extra care not to get any product on windshield, screens, or electronics.";
 
   // 5. Drying
-  if (n.includes('drying')) return "Chemical: Formula 4 20:1 sprayed on wet paint. Application Tip: Use a clean microfiber drying towel or air blower.";
+  if (n.includes('drying')) return "Chemical: Formula 4 20:1 sprayed on wet paint. Application Tip: Use a clean microfiber drying towel or air blower. Open all door jambs, trunk, and hood during drying to prevent water dripping after job is complete. Dry jambs as part of this step. Formula 4 at 20:1 acts as drying aid and adds light protection simultaneously.";
 
   // 6. Paint Protection
-  if (n.includes('paint protection')) return "Chemical: Formula 4 20:1. Application Tip: Formula 4 is used as a drying aid AND minimal protection (lasts 2 - 5 or 6 weeks).";
+  if (n.includes('paint protection')) return "Chemical: Formula 4 20:1. Application Tip: Formula 4 is used as a drying aid AND minimal protection (lasts 2 - 5 or 6 weeks). Formula 4 is already applied during drying step and serves dual purpose. This step confirms protection has been applied. No additional product needed unless a separate wax or sealant addon is included.";
 
   // 7. Interior Plastics / Trim
-  if (n.includes('plastics / vinyl / trim')) return "Chemical: Pink Perfection 10:1, final pass with P&S Xpress 3:1 or Cover All 4:1. Application Tip: Use a soft brush for crevices and wipe with clean microfiber.";
+  if (n.includes('plastics / vinyl / trim')) return "Chemical: Pink Perfection 10:1, final pass with P&S Xpress 3:1 or Cover All 4:1. Application Tip: Use a soft brush for crevices and wipe with clean microfiber. Does It All Enzyme Cleaner for organic stains on vinyl and trim. Green All at appropriate dilution for general plastics. Avoid over-application of dressing near driver's line of sight — glare on dashboard is a safety issue.";
 
   // 8. Fabric / Carpet
-  if (n.includes('fabric / carpet')) return "Chemical: Carpet Bomber 7:1 (standard) or 5:1 (heavy). Application Tip: Agitate with brush and pull out dirt with extractor if needed.";
+  if (n.includes('fabric / carpet')) return "Chemical: Carpet Bomber 7:1 (standard) or 5:1 (heavy). Application Tip: Agitate with brush and pull out dirt with extractor if needed. Agitate with stiff carpet brush or drill brush in straight strokes, not circular. Blot with clean microfiber to pull out loosened soil. For organic stains: SP Does It All Enzyme Cleaner — apply, dwell, agitate, blot. Pet hair removal tools (Lilly Brush or 5-pack set) before any chemical application if pet hair is present. Deep Interior Detail or Stain Treatment addon: use extractor at this step.";
 
   // 9. Odor & Stain
   if (n.includes('odor & stain treatment')) return "Chemical: Terminator RTU. Application Tip: Targeted odor neutralization (food, smoke, pet). Do not mask—neutralize.";
 
   // 10. General Interior
-  if (n.includes('vacuum')) return "Remove floor mats first. Vacuum all carpets, seats, and crevices from top to bottom. Use stiff brush to agitate embedded debris.";
-  if (n.includes('dashboard') || n.includes('steering wheel')) return "Use a soft brush and microfiber to clean the instrument cluster, steering wheel buttons, and dashboard seams.";
-  if (n.includes('mats')) return "Remove mats from vehicle. Pressure wash rubber mats or vacuum and detail carpet mats. Dry completely before reinstalling.";
-  if (n.includes('glass')) return "Use distinct glass towel. Spray cleaner on towel, not glass (to avoid overspray). Wipe in box pattern for streak-free finish.";
-  if (n.includes('jamb')) return "Degrease and wipe all door, trunk, and hood jambs. Ensure no cleaner residue remains on weather stripping.";
-  if (n.includes('inspection')) return "Final walkthrough of the interior to ensure all standards are met and no spots were missed.";
+  if (n.includes('vacuum')) return "Vacuum all carpets, seats, and crevices from top to bottom. Use stiff brush to agitate embedded debris. Blow out interior with compressed air first — vents, seat tracks, under seats, around pedals, rear to front — so vacuum picks up loosened debris. Use crevice tool for seat tracks and tight areas. Work rear to front within each section.";
+  if (n.includes('dashboard') || n.includes('steering wheel')) return "Use a soft brush and microfiber to clean the instrument cluster, steering wheel buttons, and dashboard seams. Use Does It All Enzyme Cleaner or Pink Perfection 10:1 for general wipe-down. Detail brush for vent slats, button gaps, and seam areas. Steering wheel gets extra attention — oils and grime build up quickly. Work driver's side front to back, passenger side back to front.";
+  if (n.includes('mats')) return "Remove mats from vehicle. Pressure wash rubber mats or vacuum and detail carpet mats. Dry completely before reinstalling. Use drill brush set — select appropriate brush size and pressure based on mat type and dirtiness. Primary chemicals: Carpet Bomber + Terminator duo at appropriate dilution. Backup when those run low: Zap It at appropriate dilution. For organic stains including urine, blood, food spills, and pet soiling: SP Does It All Enzyme Cleaner — apply, allow to dwell, agitate, and wipe. Rubber mats: rinse thoroughly after agitation. Carpet mats: blot dry, set aside to dry completely before reinstalling.";
+  if (n.includes('glass')) return "Use distinct glass towel. Spray cleaner on towel, not glass (to avoid overspray). Wipe in box pattern for streak-free finish. Use Invisible Glass — spray on dedicated glass towel only, never directly on glass. Two-pass method: first pass removes product and loosens film, second pass clears streaks. Interior windshield is most difficult — film builds from off-gassing plastics and HVAC. Check from multiple angles in light to confirm no haze.";
+  if (n.includes('jamb')) return "Degrease and wipe all door, trunk, and hood jambs. Ensure no cleaner residue remains on weather stripping. Use Dirt Buster or APC at appropriate dilution. Detail brush for hinge areas and tight corners. Wipe dry thoroughly. Driver's side front to back, passenger side back to front. Include hood jamb and trunk jamb. Avoid saturating weather stripping — clean and wipe immediately.";
+  if (n.includes('inspection')) return "Final walkthrough of the interior to ensure all standards are met and no spots were missed. Sit in driver's seat and check windshield for haze from multiple angles. Open each door and confirm jambs are clean and dry. Confirm floor mats reinstalled correctly. Interior should smell clean — not chemical. If Deep Interior Detail addon was performed, confirm carpet and seats are dry before returning vehicle.";
 
   return "Perform this step with care. Ensure quality standards are met before proceeding.";
 }
@@ -99,7 +105,14 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-exterior',
     name: 'Prime Essential Exterior',
-    description: 'A professional exterior cleaning restoration.',
+    description: `(avg. time: 1.5 - 2 hours)
+✓ Thorough wheel and tire cleaning
+✓ Foam bath and professional hand wash
+✓ Paint decontamination (chemical bug and tar removal)
+✓ 1-month spray sealant for gloss and protection
+✓ Streak-free exterior glass cleaning
+✓ Door jambs degreased and wiped down
+✓ Tire shine applied`, 
     basePrice: 99,
     pricing: { compact: 99, midsize: 121, truck: 132, luxury: 143 },
     steps: [
@@ -107,7 +120,7 @@ export const servicePackages: ServicePackage[] = [
       { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
       { id: 'ext-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
       { id: 'ext-foam', name: 'Foam Bath', category: 'exterior' },
-      { id: 'ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'ext-wash', name: 'Hand Wash (Top to Bottom)', category: 'exterior' },
       { id: 'ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'ext-drying', name: 'Drying', category: 'exterior' },
       { id: 'ext-protection', name: 'Paint Protection', category: 'exterior' }
@@ -116,15 +129,24 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-interior',
     name: 'Prime Essential Interior',
-    description: 'Quickly freshen up your car’s interior.',
+    description: `(avg. time: 2 - 2.5 hours)
+✓ Thorough vacuuming (seats, floors, and floor mats)
+✓ Drill-brush agitation on all carpets and floor mats
+✓ Full interior wipe-down with enzyme cleaner
+✓ UV protection applied to all plastics, vinyl, and trim
+✓ Streak-free interior glass cleaning
+✓ Light stain treatment (heavy staining requires add-on)
+✓ Pet hair removal (excessive hair requires add-on)`, 
     basePrice: 198,
     pricing: { compact: 198, midsize: 220, truck: 231, luxury: 264 },
     steps: [
+      { id: 'int-personal', name: 'Remove Personal Items & Trash', category: 'interior' },
       { id: 'int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'int-protectant', name: 'Interior Protectant / Plastics Finisher', category: 'interior' },
       { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'interior' },
       { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
       { id: 'int-inspection', name: 'Final Interior Inspection', category: 'interior' }
@@ -133,7 +155,22 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
-    description: 'Includes everything in the Essential Interior & Essential Exterior combined.',
+    description: `(avg. time: 3.5 - 4.5 hours)
+Includes all Essential Exterior AND Essential Interior services:
+
+✓ Thorough wheel and tire cleaning
+✓ Foam bath and professional hand wash
+✓ Paint decontamination (chemical bug and tar removal)
+✓ 1-month spray sealant for gloss and protection
+✓ Streak-free exterior and interior glass cleaning
+✓ Door jambs degreased and wiped down
+✓ Tire shine applied
+✓ Thorough vacuuming (seats, floors, and floor mats)
+✓ Drill-brush agitation on all carpets and floor mats
+✓ Full interior wipe-down with enzyme cleaner
+✓ UV protection applied to all plastics, vinyl, and trim
+✓ Light stain treatment (heavy staining requires add-on)
+✓ Pet hair removal (excessive hair requires add-on)`, 
     basePrice: 286,
     pricing: { compact: 286, midsize: 327, truck: 351, luxury: 388 },
     steps: [
@@ -141,15 +178,17 @@ export const servicePackages: ServicePackage[] = [
       { id: 'ext-rinse', name: 'Pre-Rinse whole vehicle', category: 'exterior' },
       { id: 'ext-bugs', name: 'Pre-Treat bugs / heavy grime', category: 'exterior' },
       { id: 'ext-foam', name: 'Foam Bath', category: 'exterior' },
-      { id: 'ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'ext-wash', name: 'Hand Wash (Top to Bottom)', category: 'exterior' },
       { id: 'ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'ext-drying', name: 'Drying', category: 'exterior' },
       { id: 'ext-protection', name: 'Paint Protection', category: 'exterior' },
+      { id: 'int-personal', name: 'Remove Personal Items & Trash', category: 'interior' },
       { id: 'int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
       { id: 'int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'int-protectant', name: 'Interior Protectant / Plastics Finisher', category: 'interior' },
       { id: 'int-glass', name: 'Windows & Glass (streak-free)', category: 'interior' },
       { id: 'int-jambs', name: 'Clean Door Jambs & Trunk Jambs', category: 'interior' },
       { id: 'int-inspection', name: 'Final Interior Inspection', category: 'interior' }
@@ -170,7 +209,7 @@ export const servicePackages: ServicePackage[] = [
       { id: 'elite-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
       { id: 'elite-clay', name: 'Clay Bar Treatment', category: 'exterior' },
       { id: 'elite-decon', name: 'Paint Decontamination', category: 'exterior' },
-      { id: 'elite-ext-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'elite-ext-wash', name: 'Hand Wash (Top to Bottom)', category: 'exterior' },
       { id: 'elite-ext-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'elite-ext-drying', name: 'Drying', category: 'exterior' },
       { id: 'elite-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
@@ -186,11 +225,13 @@ export const servicePackages: ServicePackage[] = [
     basePrice: 429,
     pricing: { compact: 429, midsize: 523, truck: 545, luxury: 649 },
     steps: [
+      { id: 'elite-int-personal', name: 'Remove Personal Items & Trash', category: 'interior' },
       { id: 'elite-int-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'elite-int-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
       { id: 'elite-int-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'elite-int-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'elite-int-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'elite-int-protectant', name: 'Interior Protectant / Plastics Finisher', category: 'interior' },
       { id: 'elite-int-odor', name: 'Odor & Stain Treatment', category: 'interior' },
       { id: 'elite-int-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
       { id: 'elite-int-panels', name: 'Steam Clean All Panels', category: 'interior' },
@@ -218,17 +259,19 @@ export const servicePackages: ServicePackage[] = [
       { id: 'elite-full-well', name: 'Wheel Wells Cleaned', category: 'exterior' },
       { id: 'elite-full-clay', name: 'Clay Bar Treatment', category: 'exterior' },
       { id: 'elite-full-decon', name: 'Paint Decontamination', category: 'exterior' },
-      { id: 'elite-full-wash', name: 'Two-Bucket Hand Wash (Top to Bottom)', category: 'exterior' },
+      { id: 'elite-full-wash', name: 'Hand Wash (Top to Bottom)', category: 'exterior' },
       { id: 'elite-full-final-rinse', name: 'Final Rinse', category: 'exterior' },
       { id: 'elite-full-drying', name: 'Drying', category: 'exterior' },
       { id: 'elite-full-trim', name: 'Black Trim Restore & UV Protection', category: 'exterior' },
       { id: 'elite-full-ceramic', name: 'Premium Ceramic Sealant Protection', category: 'exterior' },
       { id: 'elite-full-ext-protection', name: 'Paint Protection', category: 'exterior' },
+      { id: 'elite-full-personal', name: 'Remove Personal Items & Trash', category: 'interior' },
       { id: 'elite-full-vac', name: 'Thorough Vacuum (Top to Bottom)', category: 'interior' },
       { id: 'elite-full-mats', name: 'Clean Floor Mats & Area Rugs', category: 'interior' },
       { id: 'elite-full-dash', name: 'Clean Dashboard, Steering Wheel & Console', category: 'interior' },
       { id: 'elite-full-plastics', name: 'Clean All Interior Plastics / Vinyl / Trim', category: 'interior' },
       { id: 'elite-full-fabric', name: 'Clean Fabric / Carpet / Seats', category: 'interior' },
+      { id: 'elite-full-protectant', name: 'Interior Protectant / Plastics Finisher', category: 'interior' },
       { id: 'elite-full-odor', name: 'Odor & Stain Treatment', category: 'interior' },
       { id: 'elite-full-trunk', name: 'Vacuum Trunk Space', category: 'interior' },
       { id: 'elite-full-panels', name: 'Steam Clean All Panels', category: 'interior' },
