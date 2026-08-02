@@ -479,29 +479,31 @@ const CompanyEmployees = () => {
                 <Users className="h-8 w-8" />
               </div>
               <div>
-                <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <div className="flex flex-wrap items-start md:items-center gap-4">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2 w-full xl:w-auto mb-2 xl:mb-0">
                     Staff Management <PaymentWorkflowHelp variant="staff-management" />
                   </h2>
                   <EmploymentComplianceGuide />
-                  <Button 
-                    variant="outline" 
-                    className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 ml-2"
-                    onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Onboarding Checklist
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 ml-2"
-                    onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Vehicle Detail Checklist
-                  </Button>
+                  <div className="flex flex-col gap-2 w-full sm:w-auto">
+                    <Button 
+                      variant="outline" 
+                      className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 justify-start"
+                      onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Onboarding Checklist
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 justify-start"
+                      onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Vehicle Detail Checklist
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-zinc-400 text-sm mt-1">Manage employees, track revenue, and history</p>
+                <p className="text-zinc-400 text-sm mt-3">Manage employees, track revenue, and history</p>
               </div>
             </div>
 
