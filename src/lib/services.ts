@@ -70,6 +70,7 @@ export interface ServicePackage {
   id: string;
   name: string;
   description: string;
+  longDescription?: string;
   basePrice: number;
   pricing: Record<VehicleType, number>;
   steps: ServiceStep[];
@@ -105,14 +106,13 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-exterior',
     name: 'Prime Essential Exterior',
-    description: `(avg. time: 1.5 - 2 hours)
-✓ Thorough wheel and tire cleaning
-✓ Foam bath and professional hand wash
-✓ Paint decontamination (chemical bug and tar removal)
-✓ 1-month spray sealant for gloss and protection
-✓ Streak-free exterior glass cleaning
-✓ Door jambs degreased and wiped down
-✓ Tire shine applied`, 
+    description: `A professional exterior cleaning and protection service. Includes wheel and tire cleaning, foam bath hand wash, paint protection, and streak-free glass.`,
+    longDescription: `✓ Thorough wheel and tire cleaning including barrel and face
+✓ Tire dressing for a clean, finished look
+✓ Full vehicle pre-rinse and decontamination treatment
+✓ Professional hand wash using premium foam cannon and quality microfiber — safe for all paint finishes
+✓ Paint protection coating lasting 2-5 weeks — shields against UV, water spots, and light contamination
+✓ Streak-free exterior glass`,
     basePrice: 99,
     pricing: { compact: 99, midsize: 121, truck: 132, luxury: 143 },
     steps: [
@@ -129,14 +129,14 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-interior',
     name: 'Prime Essential Interior',
-    description: `(avg. time: 2 - 2.5 hours)
-✓ Thorough vacuuming (seats, floors, and floor mats)
-✓ Drill-brush agitation on all carpets and floor mats
-✓ Full interior wipe-down with enzyme cleaner
-✓ UV protection applied to all plastics, vinyl, and trim
-✓ Streak-free interior glass cleaning
-✓ Light stain treatment (heavy staining requires add-on)
-✓ Pet hair removal (excessive hair requires add-on)`, 
+    description: `A thorough interior refresh. Includes complete vacuum, floor mat cleaning, full surface wipe-down, fabric and carpet cleaning, and streak-free glass.`,
+    longDescription: `✓ Complete vacuum of all carpets, seats, and crevices — floor mats removed and cleaned separately
+✓ Dashboard, steering wheel, center console, and all interior plastics cleaned and detailed
+✓ All vinyl and trim surfaces cleaned and protected
+✓ Fabric and carpet cleaned and refreshed
+✓ Door jamb and trunk jamb cleaning
+✓ Streak-free interior and exterior glass
+✓ Final walkthrough inspection to ensure nothing is missed`,
     basePrice: 198,
     pricing: { compact: 198, midsize: 220, truck: 231, luxury: 264 },
     steps: [
@@ -155,22 +155,10 @@ export const servicePackages: ServicePackage[] = [
   {
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
-    description: `(avg. time: 3.5 - 4.5 hours)
-Includes all Essential Exterior AND Essential Interior services:
-
-✓ Thorough wheel and tire cleaning
-✓ Foam bath and professional hand wash
-✓ Paint decontamination (chemical bug and tar removal)
-✓ 1-month spray sealant for gloss and protection
-✓ Streak-free exterior and interior glass cleaning
-✓ Door jambs degreased and wiped down
-✓ Tire shine applied
-✓ Thorough vacuuming (seats, floors, and floor mats)
-✓ Drill-brush agitation on all carpets and floor mats
-✓ Full interior wipe-down with enzyme cleaner
-✓ UV protection applied to all plastics, vinyl, and trim
-✓ Light stain treatment (heavy staining requires add-on)
-✓ Pet hair removal (excessive hair requires add-on)`, 
+    description: `Everything in Prime Essential Exterior AND Prime Essential Interior combined — a complete inside and out professional detail in one visit.`,
+    longDescription: `✓ Everything in Prime Essential Exterior
+✓ Everything in Prime Essential Interior
+✓ Complete inside and out professional detail in one visit`,
     basePrice: 286,
     pricing: { compact: 286, midsize: 327, truck: 351, luxury: 388 },
     steps: [

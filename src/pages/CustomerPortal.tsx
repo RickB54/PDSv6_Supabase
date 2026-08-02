@@ -1017,19 +1017,7 @@ const CustomerPortal = () => {
           <div className="space-y-6">
             <div>
               <h4 className="font-bold mb-2 text-blue-900 uppercase text-sm tracking-wider">Why Choose This Package?</h4>
-              <p className="text-zinc-600 leading-relaxed">{learnMorePackage?.description}</p>
-            </div>
-
-            <div>
-              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">What's Included:</h4>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-                {learnMorePackage?.steps.map((step: any, idx: number) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-blue-600 mt-1 font-bold">✓</span>
-                    <span className="text-zinc-600 text-sm">{typeof step === 'string' ? step : step.name}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-zinc-600 leading-relaxed whitespace-pre-wrap">{learnMorePackage?.longDescription || learnMorePackage?.description}</p>
             </div>
 
             {/* Add-Ons Accordion in Modal */}
