@@ -271,6 +271,8 @@ const ServiceChecklist = () => {
   const [sessionHistory, setSessionHistory] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem('checklist_sessions') || '[]'); } catch { return []; }
   });
+  const [pendingNavDest, setPendingNavDest] = useState<string | null>(null);
+
 
   const resetForm = () => {
     setChecklistId("");
@@ -1408,47 +1410,50 @@ const ServiceChecklist = () => {
   }, [checklistSteps]);
 
 
+
   // 3. Save State on Change
+  const saveCurrentSession = () => {
+    const sState = {
+      checklistId, customerName: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || 'Generic Customer',
+      packageName: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 'Custom Package',
+      selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
+      checklistSteps, notes, destinationFee, employeeAssigned, discountValue, discountType, jobStartTime,
+      isTimerRunning, totalElapsedMs, elapsedTime, itemDurations, sectionDurations,
+      chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, timestamp: Date.now()
+    };
+    
+    setSessionHistory(prev => {
+      // @ts-ignore
+      const id = window.currentChecklistSessionId || Date.now().toString();
+      // @ts-ignore
+      window.currentChecklistSessionId = id;
+      
+      const existingIdx = prev.findIndex(s => s.sessionId === id);
+      const newEntry = {
+         sessionId: id,
+         date: new Date().toISOString(),
+         jobId: checklistId,
+         customerName: sState.customerName,
+         employeeAssigned,
+         packageName: sState.packageName,
+         state: sState
+      };
+      const newList = [...prev];
+      if (existingIdx >= 0) newList[existingIdx] = newEntry;
+      else newList.unshift(newEntry);
+      
+      if (newList.length > 50) newList.pop(); // Keep only last 50
+      
+      localStorage.setItem('checklist_sessions', JSON.stringify(newList));
+      return newList;
+    });
+    setHasUnsavedChanges(false);
+    toast({ title: "Progress Saved", description: "Your checklist progress has been saved to history." });
+  };
+
   useEffect(() => {
-    // Autosave logic removed. 
-    // We only set hasUnsavedChanges when dependencies change.
     if (initialLoaded) {
       setHasUnsavedChanges(true);
-      
-      const sState = {
-        checklistId, customerName: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || 'Generic Customer',
-        packageName: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 'Custom Package',
-        selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
-        checklistSteps, notes, destinationFee, employeeAssigned, discountValue, discountType, jobStartTime,
-        isTimerRunning, totalElapsedMs, elapsedTime, itemDurations, sectionDurations,
-        chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, timestamp: Date.now()
-      };
-      
-      setSessionHistory(prev => {
-        // @ts-ignore
-        const id = window.currentChecklistSessionId || Date.now().toString();
-        // @ts-ignore
-        window.currentChecklistSessionId = id;
-        
-        const existingIdx = prev.findIndex(s => s.sessionId === id);
-        const newEntry = {
-           sessionId: id,
-           date: new Date().toISOString(),
-           jobId: checklistId,
-           customerName: sState.customerName,
-           employeeAssigned,
-           packageName: sState.packageName,
-           state: sState
-        };
-        const newList = [...prev];
-        if (existingIdx >= 0) newList[existingIdx] = newEntry;
-        else newList.unshift(newEntry);
-        
-        if (newList.length > 50) newList.pop(); // Keep only last 50
-        
-        localStorage.setItem('checklist_sessions', JSON.stringify(newList));
-        return newList;
-      });
     }
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
@@ -1456,6 +1461,42 @@ const ServiceChecklist = () => {
     discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
     chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent, sectionDurations
   ]);
+
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+      
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      
+      if (anchor && anchor.href) {
+        if (!anchor.href.startsWith('http')) return;
+        
+        try {
+          const targetUrl = new URL(anchor.href);
+          if (targetUrl.origin === window.location.origin && targetUrl.pathname !== window.location.pathname) {
+            e.preventDefault();
+            e.stopPropagation();
+            setPendingNavDest(targetUrl.pathname + targetUrl.search + targetUrl.hash);
+          }
+        } catch {}
+      }
+    };
+    
+    window.addEventListener('click', handleGlobalClick, { capture: true });
+    return () => window.removeEventListener('click', handleGlobalClick, { capture: true });
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // --- PERSISTENCE LOGIC END ---
 
@@ -2265,6 +2306,15 @@ const ServiceChecklist = () => {
           >
             <Scale className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Dilution Calc</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={saveCurrentSession}
+            disabled={!hasUnsavedChanges}
+            className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-9 px-3", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
+          >
+            <Save className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Save Progress</span>
           </Button>
         </div>
       </PageHeader>
@@ -4275,6 +4325,28 @@ const ServiceChecklist = () => {
           <div className="h-32 md:h-24" aria-hidden="true" />
         </div>
       </main>
+      <AlertDialog open={!!pendingNavDest} onOpenChange={(open) => { if (!open) setPendingNavDest(null); }}>
+        <AlertDialogContent className="bg-zinc-950 border border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Unsaved Checklist Progress</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              You are about to leave the checklist with unsaved progress. Would you like to save it to your history before leaving?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingNavDest(null)} className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={() => { 
+               setHasUnsavedChanges(false);
+               if (pendingNavDest) navigate(pendingNavDest);
+            }}>Discard & Leave</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={() => {
+               saveCurrentSession();
+               setHasUnsavedChanges(false);
+               if (pendingNavDest) navigate(pendingNavDest);
+            }}>Save & Leave</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <ChemicalStepModal
         open={chemModalOpen}
         onOpenChange={setChemModalOpen}
