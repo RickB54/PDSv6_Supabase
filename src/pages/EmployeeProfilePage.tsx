@@ -984,7 +984,7 @@ export default function EmployeeProfilePage() {
                   <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}>
                     <FileText className="h-3.5 w-3.5 mr-1.5" /> View Onboarding Checklist
                   </Button>
-                  <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}>
+                  <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('Vehicle_Detail_Checklist.pdf')}>
                     <FileText className="h-3.5 w-3.5 mr-1.5" /> View Vehicle Detail Checklist
                   </Button>
                 </div>

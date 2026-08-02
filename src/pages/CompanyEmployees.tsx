@@ -496,7 +496,7 @@ const CompanyEmployees = () => {
                     <Button 
                       variant="outline" 
                       className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 justify-start"
-                      onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}
+                      onClick={() => openPdf('Vehicle_Detail_Checklist.pdf')}
                     >
                       <FileText className="w-4 h-4 mr-2" />
                       Vehicle Detail Checklist

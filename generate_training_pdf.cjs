@@ -12,7 +12,7 @@ const pdfPath = 'PAD_Employee_Facing_Training_Checklist.pdf';
 const stream = fs.createWriteStream(pdfPath);
 doc.pipe(stream);
 
-doc.fontSize(20).text('PAD Employee Training Checklist', { align: 'center' });
+doc.fontSize(20).text('Vehicle Detail Checklist', { align: 'center' });
 doc.moveDown();
 
 function addStep(title, points) {
