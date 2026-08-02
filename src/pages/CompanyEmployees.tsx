@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye, GraduationCap } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye, GraduationCap, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -92,6 +92,7 @@ const CompanyEmployees = () => {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoUploadTarget, setPhotoUploadTarget] = useState<string | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const [form, setForm] = useState<{
     name: string;
@@ -233,6 +234,15 @@ const CompanyEmployees = () => {
   const generatePDF = () => {
     // Simplified PDF gen call
     toast({ title: "Report Generated", description: "PDF downloaded." });
+  };
+
+  const openPdf = async (filename: string) => {
+    const { data } = await supabase.storage.from('training-documents').createSignedUrl(filename, 60);
+    if (data?.signedUrl) {
+      setPdfUrl(data.signedUrl);
+    } else {
+      toast({ title: 'Error', description: 'Could not load PDF. Make sure it is uploaded to the training-documents bucket.', variant: 'destructive' });
+    }
   };
 
   const impersonateEmployee = async (emp: Employee) => {
@@ -476,11 +486,19 @@ const CompanyEmployees = () => {
                   <EmploymentComplianceGuide />
                   <Button 
                     variant="outline" 
-                    className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 ml-2"
-                    onClick={() => navigate(`/employee-profile/${user?.id || user?.email}?tab=training`)}
+                    className="border-amber-500/30 text-amber-500 hover:bg-amber-500/10 hover:text-amber-400 ml-2"
+                    onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}
                   >
-                    <GraduationCap className="w-4 h-4 mr-2" />
-                    Training Progress
+                    <FileText className="w-4 h-4 mr-2" />
+                    Onboarding Checklist
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 ml-2"
+                    onClick={() => openPdf('PAD_Employee_Facing_Training_Checklist.pdf')}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Vehicle Detail Checklist
                   </Button>
                 </div>
                 <p className="text-zinc-400 text-sm mt-1">Manage employees, track revenue, and history</p>
@@ -925,6 +943,16 @@ const CompanyEmployees = () => {
         className="hidden" 
       />
 
+      <Dialog open={!!pdfUrl} onOpenChange={() => setPdfUrl(null)}>
+        <DialogContent className="max-w-4xl h-[85vh] bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 border-b border-zinc-800 flex-shrink-0">
+            <DialogTitle>PDF Viewer</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full bg-zinc-900">
+            {pdfUrl && <iframe src={pdfUrl} className="w-full h-full border-0" />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
