@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone } from 'lucide-react';
+import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone, HelpCircle, Info } from 'lucide-react';
 
 interface TipSelectionScreenProps {
   jobId: string;
@@ -24,6 +24,7 @@ export default function TipSelectionScreen({
   onCashPayment
 }: TipSelectionScreenProps) {
   const [loading, setLoading] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   
   const [selectedTip, setSelectedTip] = useState<number | null | 'custom' | undefined>(undefined);
   const [customTip, setCustomTip] = useState<string>('');
@@ -120,12 +121,21 @@ export default function TipSelectionScreen({
         {/* Top Header - Condensed for Mobile */}
         <div className="bg-gray-50 px-6 py-4 text-center border-b border-gray-100 flex-shrink-0 relative">
           {!loading && (
-            <button 
-              onClick={onCancel} 
-              className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X size={24} />
-            </button>
+            <>
+              <button 
+                onClick={() => setShowInfo(!showInfo)} 
+                className="absolute top-6 right-16 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+                title="What does this do?"
+              >
+                <HelpCircle size={24} />
+              </button>
+              <button 
+                onClick={onCancel} 
+                className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </>
           )}
           <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Final Details</h2>
           <div className="flex flex-col items-center gap-1">
@@ -140,6 +150,16 @@ export default function TipSelectionScreen({
 
         {/* Scrollable Content Body */}
         <div className="p-4 sm:p-8 flex-1 overflow-y-auto w-full pb-8">
+          {showInfo && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl text-xs flex flex-col gap-1 mx-auto max-w-md animate-in fade-in zoom-in-95 duration-200">
+              <span className="font-bold flex items-center gap-1"><Info size={14} /> Standalone Invoice Process</span>
+              <span className="opacity-90">Quick Pay instantly creates a <b>new, standalone invoice</b> for walk-ins or quick tips.</span>
+              <span className="opacity-90 mt-1 border-t border-blue-200 pt-1">
+                If you want to record a payment for an <b>Active Checklist</b> or an <b>Existing Booking</b>, you must do so from the <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="font-bold underline text-blue-900">Invoices page</a>.
+              </span>
+            </div>
+          )}
+
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-accent gap-6 h-full">
               <Loader2 size={64} className="animate-spin" />

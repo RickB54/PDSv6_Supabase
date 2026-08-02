@@ -4338,6 +4338,23 @@ const ServiceChecklist = () => {
                              <Button 
                                size="sm" 
                                variant="ghost" 
+                               className="h-8 w-8 p-0 rounded-full hover:bg-orange-500/20 hover:text-orange-400"
+                               title="Reset form — clears checklist for fresh start, keeps this history entry"
+                               onClick={() => {
+                                 if (confirm("Reset this session? This clears the checklist form for a fresh start. The history entry will remain.")) {
+                                   resetForm();
+                                   // @ts-ignore
+                                   window.currentChecklistSessionId = null;
+                                   toast({ title: "Form Reset", description: "Checklist cleared. History record kept." });
+                                   window.scrollTo({ top: 0, behavior: "smooth" });
+                                 }
+                               }}
+                             >
+                               <RotateCcw className="h-4 w-4" />
+                             </Button>
+                             <Button 
+                               size="sm" 
+                               variant="ghost" 
                                className="h-8 w-8 p-0 rounded-full hover:bg-red-500/20 hover:text-red-400"
                                onClick={() => {
                                  if (!isAdminUser) {
@@ -4395,9 +4412,14 @@ const ServiceChecklist = () => {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingNavDest(null)} className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={() => { 
+               // Fully clear the form so the user doesn't see stale data on return
+               resetForm();
                setHasUnsavedChanges(false);
+               setPendingNavDest(null);
                // @ts-ignore
                window.hasUnsavedChecklistChanges = false;
+               // @ts-ignore
+               window.currentChecklistSessionId = null;
                if (pendingNavDest) navigate(pendingNavDest);
             }}>Discard & Leave</Button>
             <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={() => {

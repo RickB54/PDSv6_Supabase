@@ -19,6 +19,7 @@ export default function QuickPayModal() {
   
   // Phase 1: Enter Amount, Phase 2: Tip Selection
   const [phase, setPhase] = useState<1 | 2>(1);
+  const [showInfo, setShowInfo] = useState(false);
   
   const [amountStr, setAmountStr] = useState('');
   
@@ -165,6 +166,13 @@ export default function QuickPayModal() {
         {/* Header */}
         <div className="bg-gray-50 px-6 py-6 text-center border-b border-gray-100 flex-shrink-0 relative">
           <button 
+            onClick={() => setShowInfo(!showInfo)} 
+            className="absolute top-4 right-14 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+            title="What does this do?"
+          >
+            <HelpCircle size={20} />
+          </button>
+          <button 
             onClick={handleClose} 
             className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
           >
@@ -190,13 +198,15 @@ export default function QuickPayModal() {
         {/* Content */}
         <div className="p-6">
           
-          <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl text-xs flex flex-col gap-1">
-            <span className="font-bold flex items-center gap-1"><Info size={14} /> Standalone Invoice Process</span>
-            <span className="opacity-90">Quick Pay instantly creates a <b>new, standalone invoice</b> for walk-ins or quick tips.</span>
-            <span className="opacity-90 mt-1 border-t border-blue-200 pt-1">
-              If you want to record a payment for an <b>Active Checklist</b> or an <b>Existing Booking</b>, you must do so from the <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="font-bold underline text-blue-900">Invoices page</a>.
-            </span>
-          </div>
+          {showInfo && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+              <span className="font-bold flex items-center gap-1"><Info size={14} /> Standalone Invoice Process</span>
+              <span className="opacity-90">Quick Pay instantly creates a <b>new, standalone invoice</b> for walk-ins or quick tips.</span>
+              <span className="opacity-90 mt-1 border-t border-blue-200 pt-1">
+                If you want to record a payment for an <b>Active Checklist</b> or an <b>Existing Booking</b>, you must do so from the <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="font-bold underline text-blue-900">Invoices page</a>.
+              </span>
+            </div>
+          )}
           
           {suggestedAmount !== null && suggestedAmount > 0 && (
             <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors" onClick={useSuggested}>
