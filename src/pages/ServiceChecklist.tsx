@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 import localforage from "localforage";
 import api from "@/lib/api";
@@ -272,6 +273,8 @@ const ServiceChecklist = () => {
     try { return JSON.parse(localStorage.getItem('checklist_sessions') || '[]'); } catch { return []; }
   });
   const [pendingNavDest, setPendingNavDest] = useState<string | null>(null);
+  const [expandedSession, setExpandedSession] = useState<any>(null);
+
 
 
   const resetForm = () => {
@@ -4241,6 +4244,14 @@ const ServiceChecklist = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               className="text-xs h-8 bg-black hover:bg-zinc-800 border-white/10"
+                               onClick={() => setExpandedSession(session)}
+                             >
+                               <Info className="h-3 w-3 mr-1 text-blue-400" /> Details
+                             </Button>
                              <Button 
                                size="sm" 
                                variant="outline"
@@ -4354,6 +4365,103 @@ const ServiceChecklist = () => {
         stepName={currentStepName}
         isAdmin={getCurrentUser()?.role === 'admin' || getCurrentUser()?.role === 'owner'}
       />
+      <Dialog open={!!expandedSession} onOpenChange={(o) => { if (!o) setExpandedSession(null); }}>
+        <DialogContent className="bg-zinc-950 border border-zinc-800 shadow-2xl max-w-md">
+          {expandedSession && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-black text-white flex items-center gap-2">
+                  <HistoryIcon className="text-purple-500 w-5 h-5" />
+                  Session Details
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Saved on {new Date(expandedSession.date).toLocaleString()}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4 my-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Customer</span>
+                     <span className="font-bold text-white text-sm">{expandedSession.customerName || 'Generic'}</span>
+                  </div>
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Package</span>
+                     <span className="font-bold text-emerald-400 text-sm line-clamp-2 leading-tight">{expandedSession.packageName || 'Service'}</span>
+                  </div>
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Vehicle</span>
+                     <span className="font-bold text-white text-sm capitalize">{expandedSession.state?.vehicleType || 'Not specified'}</span>
+                  </div>
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-1">Service Type</span>
+                     <span className={cn("font-black text-sm", (expandedSession.state?.destinationFee > 0) ? "text-amber-400" : "text-blue-400")}>
+                       {expandedSession.state?.destinationFee > 0 ? "Mobile Detailing" : "Shop Location"}
+                     </span>
+                  </div>
+                </div>
+
+                {(expandedSession.state?.selectedAddOns?.length > 0) && (
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5">
+                    <span className="text-[10px] uppercase font-bold text-zinc-500 block mb-2">Add-Ons Included</span>
+                    <div className="flex flex-wrap gap-2">
+                      {expandedSession.state.selectedAddOns.map((id: string) => {
+                         const all = [...addOns, ...getCustomAddOns()];
+                         const name = all.find(a => a.id === id)?.name || id;
+                         return <Badge key={id} className="bg-blue-500/20 text-blue-300 border-blue-500/30 font-bold">{name}</Badge>;
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-3">
+                   <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block">Time Elapsed</span>
+                     <span className="font-mono font-bold text-white text-sm">{expandedSession.state?.elapsedTime || "00:00:00"}</span>
+                  </div>
+                  <div className="bg-zinc-900/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+                     <span className="text-[10px] uppercase font-bold text-zinc-500 block">Notes Included</span>
+                     <span className="font-bold text-zinc-300 text-sm">{(expandedSession.state?.notes?.length > 0) ? "Yes" : "None"}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-4">
+                 <Button variant="outline" onClick={() => setExpandedSession(null)} className="border-zinc-700 text-zinc-300 hover:text-white">Close</Button>
+                 <Button className="bg-blue-600 hover:bg-blue-500 font-bold shadow-lg shadow-blue-900/40" onClick={() => {
+                    const state = expandedSession.state;
+                    setChecklistId(state.checklistId);
+                    setSelectedCustomer(state.selectedCustomer);
+                    setSelectedPackage(state.selectedPackage);
+                    setVehicleType(state.vehicleType || 'choose');
+                    setSelectedAddOns(state.selectedAddOns || []);
+                    setNotes(state.notes || "");
+                    setJobStartTime(state.jobStartTime || null);
+                    setIsTimerRunning(!!state.isTimerRunning);
+                    setTotalElapsedMs(state.totalElapsedMs || 0);
+                    setElapsedTime(state.elapsedTime || "00:00:00");
+                    setItemDurations(state.itemDurations || {});
+                    setSectionDurations(state.sectionDurations || {});
+                    setChemRows(state.chemRows || []);
+                    setMatRows(state.matRows || []);
+                    setToolRows(state.toolRows || []);
+                    if (state.checklistSteps) {
+                      window.sessionStorage.setItem('pending_draft_steps', JSON.stringify(state.checklistSteps));
+                    }
+                    const services = [state.selectedPackage, ...(state.selectedAddOns || [])].filter(Boolean);
+                    setSelectedServices(services);
+                    toast({ title: "Session Restored", description: `Restored progress for ${expandedSession.customerName}.` });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setExpandedSession(null);
+                    setHistoryOpen(false);
+                 }}>
+                   <RotateCcw className="w-4 h-4 mr-2" /> Restore Session
+                 </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       <ChemicalDecisionModal
         open={decisionModalOpen}
         onOpenChange={setDecisionModalOpen}
