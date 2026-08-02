@@ -2789,7 +2789,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Place of Service</label>
+                  <label className="text-right text-sm font-medium text-orange-400">Place of Service</label>
                   <div className="col-span-3">
                     <select
                       className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:ring-purple-500/20"
@@ -2803,7 +2803,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Service</label>
+                  <label className="text-right text-sm font-medium text-emerald-400">Service</label>
                   <div className="col-span-3 flex gap-2">
                     <div className="relative flex-1">
                       <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
@@ -2890,7 +2890,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                 {/* Booking Status */}
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Status</label>
+                  <label className={cn("text-right text-sm font-medium", getStatusColor(formData.status as any).match(/text-[a-z]+-\d{3,4}/)?.[0] || "text-gray-400")}>Status</label>
                   <div className="col-span-3">
                     <select
                       className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -2910,7 +2910,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                 {/* Discount Option */}
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-amber-400">Discount</label>
+                  <label className="text-right text-sm font-medium text-red-400">Discount</label>
                   <div className="col-span-3 grid grid-cols-3 gap-2">
                     <select
                       className="flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
@@ -3144,7 +3144,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Assign To</label>
+                  <label className="text-right text-sm font-medium text-purple-400">Assign To</label>
                   <div className="col-span-3 relative">
                     <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <select

@@ -1457,6 +1457,8 @@ const ServiceChecklist = () => {
   useEffect(() => {
     if (initialLoaded) {
       setHasUnsavedChanges(true);
+      // @ts-ignore
+      window.hasUnsavedChecklistChanges = true;
     }
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
@@ -1464,6 +1466,21 @@ const ServiceChecklist = () => {
     discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
     chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent, sectionDurations
   ]);
+
+  useEffect(() => {
+    const handleSaveRequest = (e: any) => {
+       const dest = e.detail;
+       setPendingNavDest(dest);
+    };
+    window.addEventListener('request-checklist-save', handleSaveRequest);
+    
+    // Clean up flag on unmount
+    return () => {
+       window.removeEventListener('request-checklist-save', handleSaveRequest);
+       // @ts-ignore
+       window.hasUnsavedChecklistChanges = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -1498,7 +1515,11 @@ const ServiceChecklist = () => {
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // @ts-ignore
+      window.hasUnsavedChecklistChanges = false;
+    };
   }, [hasUnsavedChanges]);
 
   // --- PERSISTENCE LOGIC END ---
@@ -4348,11 +4369,15 @@ const ServiceChecklist = () => {
             <AlertDialogCancel onClick={() => setPendingNavDest(null)} className="bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700">Cancel</AlertDialogCancel>
             <Button variant="destructive" onClick={() => { 
                setHasUnsavedChanges(false);
+               // @ts-ignore
+               window.hasUnsavedChecklistChanges = false;
                if (pendingNavDest) navigate(pendingNavDest);
             }}>Discard & Leave</Button>
             <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={() => {
                saveCurrentSession();
                setHasUnsavedChanges(false);
+               // @ts-ignore
+               window.hasUnsavedChecklistChanges = false;
                if (pendingNavDest) navigate(pendingNavDest);
             }}>Save & Leave</Button>
           </AlertDialogFooter>

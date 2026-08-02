@@ -489,6 +489,13 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
   const isAnyOpen = MENU_GROUPS.some(g => openGroups[g.title]);
 
   const handleNavClick = (e: React.MouseEvent, url: string, topicId?: string) => {
+    // @ts-ignore
+    if (window.hasUnsavedChecklistChanges && location.pathname === '/service-checklist') {
+       e.preventDefault();
+       window.dispatchEvent(new CustomEvent('request-checklist-save', { detail: url }));
+       return;
+    }
+    
     if (openMobile) setOpenMobile(false);
     
     if (url === '/letter-maker' || url.startsWith('/letter-maker') || url.includes('/letter-maker')) {
@@ -781,8 +788,14 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                             "hover:text-white hover:bg-zinc-800 font-bold uppercase tracking-wider text-[10px] flex-1",
                             isGroupActive ? "text-[#2563eb] font-black" : "text-zinc-400"
                           )}
-                          onClick={() => {
+                          onClick={(e) => {
                             const sectionId = group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            // @ts-ignore
+                            if (window.hasUnsavedChecklistChanges && location.pathname === '/service-checklist') {
+                               e.preventDefault();
+                               window.dispatchEvent(new CustomEvent('request-checklist-save', { detail: `/section/${sectionId}` }));
+                               return;
+                            }
                             navigate(`/section/${sectionId}`);
                           }}
                         >
