@@ -558,107 +558,100 @@ export default function StaffSchedule() {
 
                     {/* Shift Detail Popup */}
                     <Dialog open={!!selectedShift} onOpenChange={(open) => { if (!open) setSelectedShiftId(null); }}>
-                        <DialogContent className="max-w-4xl bg-[#0f0f13] border-zinc-800 text-white p-0 overflow-hidden shadow-2xl rounded-2xl">
+                        <DialogContent className="w-[95vw] max-w-2xl bg-[#0f0f13] border-zinc-800 text-white p-0 overflow-hidden shadow-2xl rounded-2xl">
                             {selectedShift && (
-                                <div className="flex flex-1 p-6 sm:p-8 gap-4 sm:gap-6 relative min-h-[250px] max-h-[85vh] overflow-y-auto">
-                                    <div className="w-[4px] bg-blue-500 rounded-full self-stretch shrink-0" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : selectedShift.color }} />
+                                <div className="flex flex-col relative max-h-[90vh] overflow-y-auto">
+                                    {/* Color accent bar at top */}
+                                    <div className="h-1 w-full rounded-t-2xl" style={{ backgroundColor: selectedShift.status === 'sick' ? '#ef4444' : selectedShift.color === 'blue' ? '#3b82f6' : (selectedShift.color || '#3b82f6') }} />
 
-                                {/* Content Wrapper */}
-                                <div className="flex flex-1 flex-col lg:flex-row gap-6 min-w-0">
-                                    {/* Info Column */}
-                                    <div className="space-y-1 min-w-[150px]">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Employee</div>
-                                        <div className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
-                                            {selectedShift.employeeName}
-                                            {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">SICK</Badge>}
-                                            {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">NO SHOW</Badge>}
+                                    {/* Top info row: Employee + Time side by side */}
+                                    <div className="flex flex-wrap gap-6 px-6 pt-6 pb-4">
+                                        {/* Employee */}
+                                        <div className="space-y-1 flex-1 min-w-[140px]">
+                                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Employee</div>
+                                            <div className="text-xl font-black text-white flex items-center gap-2 flex-wrap">
+                                                {selectedShift.employeeName}
+                                                {selectedShift.status === 'sick' && <Badge variant="destructive" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">SICK</Badge>}
+                                                {selectedShift.status === 'no-show' && <Badge variant="secondary" className="text-[9px] font-black h-5 px-1.5 uppercase tracking-widest">NO SHOW</Badge>}
+                                            </div>
+                                            <div className="text-xs font-bold text-zinc-500 uppercase tracking-tight">{selectedShift.role}</div>
                                         </div>
-                                        <div className="text-xs font-bold text-zinc-500 uppercase tracking-tight">{selectedShift.role}</div>
+
+                                        {/* Shift Schedule */}
+                                        <div className="space-y-1 flex-1 min-w-[140px]">
+                                            <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Shift Schedule</div>
+                                            <div className="text-lg text-zinc-200 font-black flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-blue-500 shrink-0" />
+                                                {formatTime12(selectedShift.startTime)} – {formatTime12(selectedShift.endTime)}
+                                            </div>
+                                            <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
+                                        </div>
                                     </div>
 
-                                    {/* Time Column */}
-                                    <div className="space-y-1 min-w-[150px] border-t lg:border-t-0 pt-4 lg:pt-0 lg:border-l border-zinc-800 lg:pl-6">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Shift Schedule</div>
-                                        <div className="text-lg text-zinc-200 font-black flex items-center gap-2">
-                                            <Clock className="w-4 h-4 text-blue-500" />
-                                            {formatTime12(selectedShift.startTime)} - {formatTime12(selectedShift.endTime)}
-                                        </div>
-                                        <div className="text-[11px] font-bold text-zinc-500 uppercase tracking-tight">{format(parseISO(selectedShift.date), 'EEEE, MMMM do')}</div>
-                                    </div>
-
-                                    {/* Notes Column */}
-                                    <div className="flex-1 border-t lg:border-t-0 pt-4 lg:pt-0 lg:border-l border-zinc-800 lg:pl-6 bg-transparent lg:bg-zinc-900/30 rounded-r-xl lg:p-4">
+                                    {/* Notes section */}
+                                    <div className="mx-6 mb-4 bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
                                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-black mb-2">Shift Notes & Intel</div>
                                         <p className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed font-medium">
                                             {selectedShift.notes || <span className="text-zinc-600 italic">No operational notes provided for this shift.</span>}
                                         </p>
                                     </div>
 
-                                    {/* Actions */}
-                                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 justify-center pt-4 lg:pt-0 lg:ml-4 min-w-full lg:min-w-[160px]">
+                                    {/* Actions row — always full width, wraps on small screens */}
+                                    <div className="flex flex-wrap gap-2 px-6 pb-6">
                                         {isAdmin && (
-                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
+                                            <Button variant="ghost" size="sm" className="h-11 flex-1 min-w-[120px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 font-black uppercase tracking-widest text-[10px]" onClick={() => {
                                                 navigate(`/payroll?tab=checks&employee=${encodeURIComponent(selectedShift.employeeName)}`);
                                             }}>
-                                                <DollarSign className="w-4 h-4 mr-2" /> Payroll Sync
+                                                <DollarSign className="w-4 h-4 mr-1.5" /> Payroll Sync
                                             </Button>
                                         )}
-                                        <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
+                                        <Button variant="ghost" size="sm" className="h-11 flex-1 min-w-[120px] bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 font-black uppercase tracking-widest text-[10px]" onClick={() => {
                                             if (selectedShift.isBooking && selectedShift.bookingData) {
                                                 const b = selectedShift.bookingData;
                                                 const params = new URLSearchParams();
                                                 if (b.customer_id) params.set('customerId', b.customer_id);
                                                 if (b.customer_name || b.customer) params.set('customerName', b.customer_name || b.customer);
                                                 params.set('id', b.id);
-                                                
-                                                // Find service ID
                                                 const allServices = [...servicePackages, ...getCustomPackages()];
                                                 const svcName = b.service_package || b.title;
                                                 const svc = allServices.find(s => s.name === svcName);
                                                 if (svc) params.set('package', svc.id);
-
                                                 if (b.vehicle) params.set('vehicleType', b.vehicle);
                                                 if (b.vehicle_year) params.set('vehicleYear', b.vehicle_year);
                                                 if (b.vehicle_make) params.set('vehicleMake', b.vehicle_make);
                                                 if (b.vehicle_model) params.set('vehicleModel', b.vehicle_model);
                                                 if (b.vehicle_color) params.set('vehicleColor', b.vehicle_color);
-                                                
                                                 const bAddons = typeof b.addons === 'string' ? JSON.parse(b.addons || '[]') : (b.addons || []);
                                                 if (Array.isArray(bAddons) && bAddons.length > 0) {
                                                     const allAddons = [...addOns, ...getCustomAddOns()];
                                                     const aids = bAddons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
                                                     if (aids.length > 0) params.set('addons', aids.join(','));
                                                 }
-
                                                 params.set('employeeId', selectedShift.employeeId);
                                                 params.set('employee', selectedShift.employeeName);
-
                                                 navigate(`/service-checklist?${params.toString()}`);
                                             } else {
                                                 navigate(`/service-checklist?employee=${encodeURIComponent(selectedShift.employeeName)}&employeeId=${encodeURIComponent(selectedShift.employeeId)}`);
                                             }
                                         }}>
-                                            <CheckSquare className="w-4 h-4 mr-2" /> Launch Job
+                                            <CheckSquare className="w-4 h-4 mr-1.5" /> Launch Job
                                         </Button>
                                         {selectedShift.isBooking && selectedShift.bookingData && (
-                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => {
+                                            <Button variant="ghost" size="sm" className="h-11 flex-1 min-w-[120px] bg-purple-500/10 text-purple-500 border border-purple-500/20 hover:bg-purple-500/20 font-black uppercase tracking-widest text-[10px]" onClick={() => {
                                                 navigate(`/bookings?id=${selectedShift.bookingData.id}`);
                                             }}>
-                                                <LayoutDashboard className="w-4 h-4 mr-2" /> View Booking
+                                                <LayoutDashboard className="w-4 h-4 mr-1.5" /> View Booking
                                             </Button>
                                         )}
-                                        <div className="flex gap-2 w-full">
-                                            {isAdmin && !selectedShift.isBooking && (
-                                                <>
-                                                    <Button variant="destructive" size="sm" className="h-10 sm:h-12 px-3 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
-                                                    <Button variant="outline" size="sm" className="h-10 sm:h-12 flex-1 font-black uppercase tracking-widest text-[10px] border-zinc-800" onClick={() => handleEditShift(selectedShift)}>Edit Shift</Button>
-                                                </>
-                                            )}
-                                            <Button variant="ghost" size="sm" className="h-10 sm:h-12 border border-zinc-800" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4 text-zinc-500" /></Button>
-                                        </div>
+                                        {isAdmin && !selectedShift.isBooking && (
+                                            <>
+                                                <Button variant="destructive" size="sm" className="h-11 px-3 bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20" onClick={() => handleDeleteShift(selectedShift.id)} title="Delete Shift"><Trash2 className="w-4 h-4" /></Button>
+                                                <Button variant="outline" size="sm" className="h-11 flex-1 min-w-[100px] font-black uppercase tracking-widest text-[10px] border-zinc-800" onClick={() => handleEditShift(selectedShift)}>Edit Shift</Button>
+                                            </>
+                                        )}
+                                        <Button variant="ghost" size="sm" className="h-11 px-3 border border-zinc-800" onClick={() => setSelectedShiftId(null)}><X className="w-4 h-4 text-zinc-500" /></Button>
                                     </div>
                                 </div>
-                            </div>
                             )}
                         </DialogContent>
                     </Dialog>
