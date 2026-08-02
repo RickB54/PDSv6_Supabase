@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -474,6 +474,14 @@ const CompanyEmployees = () => {
                     Staff Management <PaymentWorkflowHelp variant="staff-management" />
                   </h2>
                   <EmploymentComplianceGuide />
+                  <Button 
+                    variant="outline" 
+                    className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 ml-2"
+                    onClick={() => navigate(`/employee-profile/${user?.id || user?.email}?tab=training`)}
+                  >
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    Training Progress
+                  </Button>
                 </div>
                 <p className="text-zinc-400 text-sm mt-1">Manage employees, track revenue, and history</p>
               </div>
