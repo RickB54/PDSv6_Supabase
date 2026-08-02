@@ -184,13 +184,6 @@ export default function QuickPayModal() {
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
             <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Quick Pay</h2>
-            <button 
-              onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'quick-pay-in-person' } }))}
-              className="p-1 text-gray-400 hover:text-emerald-500 transition-colors"
-              title="Quick Pay Help"
-            >
-              <HelpCircle size={18} />
-            </button>
           </div>
           <p className="text-gray-500 text-sm mt-1">Receive an in-person payment</p>
         </div>
@@ -199,12 +192,47 @@ export default function QuickPayModal() {
         <div className="p-6">
           
           {showInfo && (
-            <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl text-xs flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
-              <span className="font-bold flex items-center gap-1"><Info size={14} /> Standalone Invoice Process</span>
-              <span className="opacity-90">Quick Pay instantly creates a <b>new, standalone invoice</b> for walk-ins or quick tips.</span>
-              <span className="opacity-90 mt-1 border-t border-blue-200 pt-1">
-                If you want to record a payment for an <b>Active Checklist</b> or an <b>Existing Booking</b>, you must do so from the <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="font-bold underline text-blue-900">Invoices page</a>.
-              </span>
+            <div className="mb-5 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm">
+              <div className="px-4 pt-4 pb-2 border-b border-blue-200/60">
+                <div className="font-extrabold text-sm flex items-center gap-2">
+                  <Info size={15} className="text-blue-600 shrink-0" />
+                  Payment Process Guide
+                </div>
+                <p className="text-xs text-blue-700/80 mt-1">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
+              </div>
+              <div className="px-4 py-3 flex flex-col gap-3">
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-green-500 text-white text-xs font-black flex items-center justify-center">1</span>
+                  <div>
+                    <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Go to <b>Invoices</b> → open the customer's invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>. The amount registers in Accounting immediately.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-black flex items-center justify-center">2</span>
+                  <div>
+                    <p className="font-bold text-xs text-gray-900">📱 Pay on Device (Stripe)</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand the phone/tablet to the customer to enter their card. Processes via Stripe securely.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-black flex items-center justify-center">3</span>
+                  <div>
+                    <p className="font-bold text-xs text-gray-900">📷 Show QR Code (Remote)</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — the customer scans it with their phone camera and pays from home or on-site without touching your device.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <span className="shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-black flex items-center justify-center">4</span>
+                  <div>
+                    <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
+                    <p className="text-xs text-gray-600 mt-0.5">Enter an amount here → Continue → choose tip → <b>Pay with Cash</b>. Creates a <b>new</b> standalone invoice — does <b>not</b> link to any existing booking.</p>
+                  </div>
+                </div>
+                <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="mt-1 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
+                  → Go to Invoices page now
+                </a>
+              </div>
             </div>
           )}
           
