@@ -156,9 +156,20 @@ export const servicePackages: ServicePackage[] = [
     id: 'prime-essential-full',
     name: 'Prime Essential Full Detail',
     description: `Everything in Prime Essential Exterior AND Prime Essential Interior combined — a complete inside and out professional detail in one visit.`,
-    longDescription: `✓ Everything in Prime Essential Exterior
-✓ Everything in Prime Essential Interior
-✓ Complete inside and out professional detail in one visit`,
+    longDescription: `✓ Thorough wheel and tire cleaning including barrel and face
+✓ Tire dressing for a clean, finished look
+✓ Full vehicle pre-rinse and decontamination treatment
+✓ Professional hand wash using premium foam cannon and quality microfiber — safe for all paint finishes
+✓ Paint protection coating lasting 2-5 weeks — shields against UV, water spots, and light contamination
+✓ Streak-free exterior glass
+
+✓ Complete vacuum of all carpets, seats, and crevices — floor mats removed and cleaned separately
+✓ Dashboard, steering wheel, center console, and all interior plastics cleaned and detailed
+✓ All vinyl and trim surfaces cleaned and protected
+✓ Fabric and carpet cleaned and refreshed
+✓ Door jamb and trunk jamb cleaning
+✓ Streak-free interior and exterior glass
+✓ Final walkthrough inspection to ensure nothing is missed`,
     basePrice: 286,
     pricing: { compact: 286, midsize: 327, truck: 351, luxury: 388 },
     steps: [
