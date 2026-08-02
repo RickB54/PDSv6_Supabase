@@ -2317,22 +2317,6 @@ const ServiceChecklist = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/chemical-training')} 
-            className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-9 px-3"
-          >
-            <Beaker className="w-4 h-4 md:mr-2" /> 
-            <span className="hidden md:inline">Chemical Decision</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/dilution-calculator')} 
-            className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-9 px-3"
-          >
-            <Scale className="w-4 h-4 md:mr-2" />
-            <span className="hidden md:inline">Dilution Calc</span>
-          </Button>
-          <Button 
-            variant="outline" 
             onClick={saveCurrentSession}
             disabled={!hasUnsavedChanges}
             className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-9 px-3", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
@@ -2366,6 +2350,26 @@ const ServiceChecklist = () => {
                 >
                   <HelpCircle className="h-4 w-4" />
                 </Button>
+                
+                {/* Moved Buttons */}
+                <div className="flex gap-2 ml-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/chemical-training')} 
+                    className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                  >
+                    <Beaker className="w-3 h-3 md:w-4 md:h-4 md:mr-2" /> 
+                    <span className="hidden md:inline">Chemical Decision</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/dilution-calculator')} 
+                    className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                  >
+                    <Scale className="w-3 h-3 md:w-4 md:h-4 md:mr-2" />
+                    <span className="hidden md:inline">Dilution Calc</span>
+                  </Button>
+                </div>
               </div>
               <p className="text-zinc-500 text-[10px] md:text-xs max-w-xl hidden sm:block">Quality control & estimation workflow</p>
             </div>
@@ -4230,13 +4234,36 @@ const ServiceChecklist = () => {
                         </span>
                       </div>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="opacity-0 group-hover:opacity-100 h-10 w-10 rounded-full hover:bg-blue-500/20 hover:text-blue-400 transition-all shrink-0 ml-4"
-                    >
-                      <RotateCcw className="h-5 w-5" />
-                    </Button>
+                    <div className="flex shrink-0">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="opacity-0 group-hover:opacity-100 h-10 w-10 rounded-full hover:bg-blue-500/20 hover:text-blue-400 transition-all ml-2"
+                        title="Load Job"
+                      >
+                        <RotateCcw className="h-5 w-5" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="opacity-0 group-hover:opacity-100 h-10 w-10 rounded-full hover:bg-red-500/20 hover:text-red-400 transition-all ml-1"
+                        title="Delete Job"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm('Delete this history item permanently? This cannot be undone.')) {
+                            try {
+                              await deleteSupabaseBooking(booking.id);
+                              setCustomerHistory(prev => prev.filter(b => b.id !== booking.id));
+                              toast({ title: "Deleted", description: "History item deleted." });
+                            } catch(err) {
+                              toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
+                            }
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </div>
                   </div>
                 )})}
                 

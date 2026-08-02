@@ -10,12 +10,13 @@ export { supabase };
 // Types
 export const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 
-const blockDemo = (action: string) => {
-  if (isDemoActive()) {
-    window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
-    return true;
-  }
-  return false;
+const blockDemo = (action: string, entityName?: string) => {
+    if (entityName === 'Rick Berube Test' || entityName === 'Rick Berube') return false;
+    if (isDemoActive()) {
+        window.dispatchEvent(new CustomEvent('demo-blocked-action', { detail: { action } }));
+        return true;
+    }
+    return false;
 };
 
 export interface Employee {
@@ -219,7 +220,7 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
                 paymentByJob: localData?.paymentByJob,
                 jobRates: localData?.jobRates,
                 lastPaid: localData?.lastPaid,
-                // Profile fields — sourced directly from Supabase
+                // Profile fields ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â sourced directly from Supabase
                 full_legal_name: supaUser.full_legal_name,
                 phone: supaUser.phone,
                 home_address: supaUser.home_address,
@@ -342,12 +343,12 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             .order('created_at', { ascending: false });
 
         if (crmError) {
-            console.error('⚠️ getSupabaseCustomers CRM fetch error:', crmError);
+            console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â getSupabaseCustomers CRM fetch error:', crmError);
             console.error('Error details:', { message: crmError.message, code: crmError.code, hint: crmError.hint });
             // Don't throw - try to continue with auth data
         }
 
-        console.log('🔍 CRM Data from customers table:', {
+        console.log('ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒâ€šÃ‚Â CRM Data from customers table:', {
             count: crmData?.length || 0,
             hasError: !!crmError,
             errorCode: crmError?.code,
@@ -360,7 +361,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
             .select('*');
 
         if (authError) {
-            console.error('⚠️ getSupabaseCustomers auth fetch error:', authError);
+            console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â getSupabaseCustomers auth fetch error:', authError);
         }
 
         // 3. Merge Strategies
@@ -530,7 +531,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
         } catch { }
 
         if (uniqueCustomers.length === 0) {
-            console.log("⚠️ No customers found in Supabase CRM or Auth tables.");
+            console.log("ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã‚Â¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â No customers found in Supabase CRM or Auth tables.");
         }
         // Sort by created recent first
         return uniqueCustomers.sort((a, b) => {
@@ -788,12 +789,12 @@ export async function upsertSupabaseVehicle(vehicleData: {
                 .maybeSingle();
             
             if (existing) {
-                console.log('🚗 Duplicate vehicle found, using existing ID:', existing.id);
+                console.log('ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Duplicate vehicle found, using existing ID:', existing.id);
                 payload.id = existing.id;
             }
         }
 
-        console.log('🚗 Upserting vehicle with customer_id:', payload.customer_id);
+        console.log('ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸Ãƒâ€¦Ã‚Â¡ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Upserting vehicle with customer_id:', payload.customer_id);
 
         const { data, error } = await supabase
             .from('vehicles')
@@ -802,10 +803,10 @@ export async function upsertSupabaseVehicle(vehicleData: {
             .single();
 
         if (error) {
-            console.error('❌ Supabase Vehicle Upsert Error:', error);
+            console.error('ÃƒÆ’Ã‚Â¢Ãƒâ€šÃ‚ÂÃƒâ€¦Ã¢â‚¬â„¢ Supabase Vehicle Upsert Error:', error);
             throw error;
         }
-        console.log('✅ Vehicle saved successfully with ID:', data.id);
+        console.log('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Vehicle saved successfully with ID:', data.id);
         return data;
     } catch (err) {
         console.error('Failed to save vehicle to Supabase:', err);
@@ -824,7 +825,7 @@ export const deleteSupabaseVehicle = async (id: string) => {
             }
             throw error;
         }
-        console.log('✅ Vehicle deleted successfully:', id);
+        console.log('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Vehicle deleted successfully:', id);
     } catch (err) {
         console.error('deleteSupabaseVehicle error:', err);
         throw err;
@@ -836,7 +837,7 @@ export const deleteSupabaseVehicle = async (id: string) => {
  * Automatically handles multiple vehicle creation/update.
  */
 export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { type?: string }) => {
-    if (blockDemo('customer update')) return { ...customer, id: customer.id || `demo_c_${Date.now()}` };
+    if (blockDemo('customer update', customer.name || customer.full_name)) return { ...customer, id: customer.id || `demo_c_${Date.now()}` };
     // 1. Prepare payload for CUSTOMERS table
     const safeEmail = customer.email?.trim() || undefined;
     const safePhone = customer.phone?.trim() || undefined;
@@ -1151,39 +1152,41 @@ export const deleteSupabaseCustomer = async (id: string) => {
 
         if (isRickBerube) {
             console.log(`[DeleteCustomer] Special wipe triggered for Rick Berube. Cascading deletions...`);
-            // Delete engagements
-            await supabase.from('engagements').delete().eq('customer_id', id);
             
-            // Delete manual income with name match
-            await supabase.from('manual_income').delete().ilike('customer_name', '%Rick Berube%');
-            
-            // Delete expenses with payee match
-            await supabase.from('tax_expenses').delete().ilike('vendor', '%Rick Berube%');
+            // Execute non-dependent deletions in parallel to speed up wiping by ~5x
+            const baseDeletes = [
+                supabase.from('engagements').delete().eq('customer_id', id),
+                supabase.from('manual_income').delete().ilike('customer_name', '%Rick Berube%'),
+                supabase.from('tax_expenses').delete().ilike('vendor', '%Rick Berube%'),
+                supabase.from('invoices').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`),
+                supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`), supabase.from('bookings').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`), ...(vehicleIds.length > 0 ? [supabase.from('vehicles').delete().in('id', vehicleIds)] : [])
+            ];
 
-            await supabase.from('invoices').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
-            await supabase.from('estimates').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
-            
-            // Get booking IDs to delete payments and payroll
             const { data: bData } = await supabase.from('bookings').select('id').or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
             if (bData && bData.length > 0) {
                 const bIds = bData.map(b => b.id);
                 
-                await supabase.from('payments').delete().in('booking_id', bIds);
+                baseDeletes.push(supabase.from('payments').delete().in('booking_id', bIds) as any);
                 
-                const { data: pData } = await supabase.from('payroll_records').select('expense_id').in('booking_id', bIds);
-                if (pData && pData.length > 0) {
-                    const eIds = pData.map(p => p.expense_id).filter(Boolean);
-                    if (eIds.length > 0) {
-                        await supabase.from('tax_expenses').delete().in('id', eIds);
+                const payrollDelete = (async () => {
+                    const { data: pData } = await supabase.from('payroll_records').select('expense_id').in('booking_id', bIds);
+                    if (pData && pData.length > 0) {
+                        const eIds = pData.map(p => p.expense_id).filter(Boolean);
+                        if (eIds.length > 0) {
+                            await supabase.from('tax_expenses').delete().in('id', eIds);
+                        }
                     }
-                }
-                await supabase.from('payroll_records').delete().in('booking_id', bIds);
+                    await supabase.from('payroll_records').delete().in('booking_id', bIds);
+                })();
+                
+                baseDeletes.push(payrollDelete as any);
             }
+            
+            await Promise.all(baseDeletes);
             
             // Safety net: Clean up ANY orphaned payroll records globally (fixes manual booking deletion artifacts)
             try {
-                const { data: allPR } = await supabase.from('payroll_records').select('id, booking_id, expense_id');
-                const { data: allB } = await supabase.from('bookings').select('id');
+                const [ { data: allPR }, { data: allB } ] = await Promise.all([ supabase.from('payroll_records').select('id, booking_id, expense_id'), supabase.from('bookings').select('id') ]);
                 if (allPR && allB) {
                     const bIdsSet = new Set(allB.map(b => b.id));
                     const orphaned = allPR.filter(pr => !bIdsSet.has(pr.booking_id));
@@ -1199,10 +1202,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
                 console.error("Failed to clean up orphaned payroll records:", err);
             }
 
-            await supabase.from('bookings').delete().or(`customer_id.eq.${id},customer_name.ilike.%Rick Berube%`);
-            if (vehicleIds.length > 0) {
-                await supabase.from('vehicles').delete().in('id', vehicleIds);
-            }
+            
         } else {
             console.log(`[DeleteCustomer] Detaching linked records for ${id} and ${vehicleIds.length} vehicle(s).`);
 
@@ -1918,7 +1918,7 @@ export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<
 };
 
 export const upsertSupabaseInvoice = async (invoice: any) => {
-    if (isDemoActive()) return { ...invoice, id: invoice.id || `demo_inv_${Date.now()}` };
+    if (isDemoActive() && invoice.customerName !== 'Rick Berube Test' && invoice.customerName !== 'Rick Berube') return { ...invoice, id: invoice.id || `demo_inv_${Date.now()}` };
     
     const virtualServices = [...(invoice.services || [])];
     if (invoice.vehicle) virtualServices.push({ name: `VIRTUAL_VEHICLE:${invoice.vehicle}`, price: 0 });

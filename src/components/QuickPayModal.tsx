@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle } from 'lucide-react';
+import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle, Info } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
 import { getUnifiedCustomers } from '@/lib/customers';
 import { upsertSupabaseCustomer, upsertSupabaseInvoice } from '@/lib/supa-data';
@@ -132,7 +132,11 @@ export default function QuickPayModal() {
 
           try {
             await upsertSupabaseInvoice(invoiceData);
-            toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Invoice & Accounting updated.` });
+            toast({ 
+              title: 'Standalone Invoice Generated', 
+              description: 'A Quick Pay invoice was created. NOTE: To pay an existing Checklist/Booking, please visit the Invoices page directly.',
+              duration: 8000
+            });
           } catch (e) {
             console.error("Failed to record cash payment:", e);
             toast({ title: 'Error', description: 'Failed to record payment in accounting.', variant: 'destructive' });
@@ -185,6 +189,14 @@ export default function QuickPayModal() {
 
         {/* Content */}
         <div className="p-6">
+          
+          <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-xl text-xs flex flex-col gap-1">
+            <span className="font-bold flex items-center gap-1"><Info size={14} /> Standalone Invoice Process</span>
+            <span className="opacity-90">Quick Pay instantly creates a <b>new, standalone invoice</b> for walk-ins or quick tips.</span>
+            <span className="opacity-90 mt-1 border-t border-blue-200 pt-1">
+              If you want to record a payment for an <b>Active Checklist</b> or an <b>Existing Booking</b>, you must do so from the <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="font-bold underline text-blue-900">Invoices page</a>.
+            </span>
+          </div>
           
           {suggestedAmount !== null && suggestedAmount > 0 && (
             <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors" onClick={useSuggested}>

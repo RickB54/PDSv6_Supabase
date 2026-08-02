@@ -353,6 +353,16 @@ export function GlobalRightSidebar() {
     if (isPerspectiveMode) dynamicTop += 40;
     if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
+    const handleNavigate = (path: string) => {
+        if (location.pathname === '/service-checklist' && path !== '/service-checklist') {
+            window.dispatchEvent(new CustomEvent('request-checklist-save', { detail: path }));
+            setOpenMobile(false);
+            return;
+        }
+        setOpenMobile(false);
+        navigate(path);
+    };
+
     if (isMobile) {
         return (
             <div 
@@ -383,7 +393,7 @@ export function GlobalRightSidebar() {
                 </Button>
                 
                 <div className="flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0">
-                    {renderSidebarContent(collapsed, (path: string) => { setOpenMobile(false); navigate(path); }, isAdmin, pendingPayroll, isDemoMode)}
+                    {renderSidebarContent(collapsed, handleNavigate, isAdmin, pendingPayroll, isDemoMode)}
                 </div>
             </div>
         );
@@ -410,7 +420,7 @@ export function GlobalRightSidebar() {
             </Button>
             
             <div className={`flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0 pb-4 ${collapsed ? 'items-center' : 'items-start'}`}>
-                {renderSidebarContent(collapsed, navigate, isAdmin, pendingPayroll, isDemoMode)}
+                {renderSidebarContent(collapsed, handleNavigate, isAdmin, pendingPayroll, isDemoMode)}
             </div>
         </div>
     );

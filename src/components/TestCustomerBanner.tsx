@@ -116,6 +116,14 @@ export const TestCustomerBanner = () => {
             details = `The following test data were ${type}: ${parts.join(', ')}.`;
         }
       }
+      
+      // Clean up localStorage checklist_sessions just in case
+      try {
+        const sessions = JSON.parse(localStorage.getItem('checklist_sessions') || '[]');
+        const filtered = sessions.filter((s: any) => s.customerName !== 'Rick Berube Test' && s.customerName !== 'Rick Berube' && s.customerName !== 'Unknown Customer' && s.customerName !== 'Walk-In Customer');
+        localStorage.setItem('checklist_sessions', JSON.stringify(filtered));
+      } catch(e) {}
+
       setWipeResult({ msg, details });
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Failed to wipe data", variant: "destructive" });
@@ -181,13 +189,14 @@ export const TestCustomerBanner = () => {
 
   return (
     <>
-      {isDeleting && (
-        <div className="fixed inset-0 z-[100000] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center text-white">
-          <RefreshCw className="h-12 w-12 animate-spin text-red-500 mb-4" />
-          <h2 className="text-2xl font-black uppercase tracking-widest text-red-400">Wiping Test Data</h2>
-          <p className="text-zinc-400 mt-2 font-medium">Please wait while the sandbox is completely cleared...</p>
-        </div>
-      )}
+      <AlertDialog open={isDeleting}>
+        <AlertDialogContent className="bg-black/95 border border-red-500/50 shadow-2xl flex flex-col items-center justify-center py-12 z-[100000]">
+          <RefreshCw className="h-16 w-16 animate-spin text-red-500 mb-6" />
+          <h2 className="text-3xl font-black uppercase tracking-widest text-red-400 text-center mb-2">Wiping Test Data</h2>
+          <p className="text-zinc-400 text-center font-medium text-lg">Please wait while the sandbox is completely cleared...</p>
+          <p className="text-red-500/80 text-sm mt-4 animate-pulse font-bold">DO NOT CLOSE THIS PAGE</p>
+        </AlertDialogContent>
+      </AlertDialog>
       <style>
       {`
         @keyframes slow-glow {
