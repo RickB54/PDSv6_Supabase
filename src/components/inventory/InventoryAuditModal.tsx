@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, CheckCircle, Plus, Minus, Info, AlertTriangle, ChevronDown, ChevronUp, Printer, Filter, ArrowDownUp, Check } from 'lucide-react';
+import { Search, X, CheckCircle, Plus, Minus, Info, AlertTriangle, ChevronDown, ChevronUp, Printer, Filter, ArrowDownUp, Check, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, saveTool, saveUsageHistory } from '@/lib/inventory-data';
@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/lib/auth';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InventoryAuditModalProps {
   open: boolean;
@@ -68,9 +70,25 @@ const RATIO_PRESETS = [
   { label: '20:1', parts: 20 },
   { label: '256:1', parts: 256 }, // e.g., 1/2 oz per gallon
 ];
+const normalizeSize = (size?: string) => {
+  if (!size) return '';
+  const lower = size.toLowerCase().trim();
+  if (lower.includes('gal')) return '1 Gallon';
+  const ozMatch = lower.match(/(\d+)\s*oz/);
+  if (ozMatch) return `${ozMatch[1]} oz`;
+  const numMatch = lower.match(/^(\d+)$/);
+  if (numMatch) return `${numMatch[1]} oz`;
+  return size.trim();
+};
 
 export default function InventoryAuditModal({ open, onOpenChange, chemicals, supplies, equipment, onRefresh }: InventoryAuditModalProps) {
   const { toast } = useToast();
+  
+  const normalizedChemicals = useMemo(() => chemicals.map(c => ({
+    ...c,
+    bottleSize: normalizeSize(c.bottleSize)
+  })), [chemicals]);
+
   const [activeTab, setActiveTab] = useState<TabType>('chemicals');
   const [search, setSearch] = useState('');
   const [hideCounted, setHideCounted] = useState(false);
@@ -99,7 +117,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       setSupplyAudit({});
       setEquipAudit({});
       const initialChem: Record<string, ChemicalAuditState> = {};
-      chemicals.forEach(c => {
+      normalizedChemicals.forEach(c => {
         initialChem[c.id] = {
           isConcentrate: c.isConcentrate !== false, // default true
           usedAsIsJugs: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
@@ -242,7 +260,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
   };
 
-  const filteredChemicals = getFilteredItems(chemicals, chemAudit, isChemCounted).filter(c => {
+  const filteredChemicals = getFilteredItems(normalizedChemicals, chemAudit, isChemCounted).filter(c => {
     if (filterTags.length > 0 && !filterTags.some(t => c.tags?.includes(t))) return false;
     if (filterBrands.length > 0 && (!c.brand || !filterBrands.includes(c.brand))) return false;
     if (filterShelves.length > 0 && (!c.shelfLocation || !filterShelves.includes(c.shelfLocation))) return false;
@@ -285,21 +303,78 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => (supplyAudit[id]?.counted ?? 0) > 0);
   const filteredEquip = getFilteredItems(equipment, equipAudit, id => (equipAudit[id]?.counted ?? 0) > 0);
 
-  const numCountedChems = chemicals.filter(c => isChemCounted(c.id)).length;
+  const numCountedChems = normalizedChemicals.filter(c => isChemCounted(c.id)).length;
   const numCountedSupplies = supplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
   const numCountedEquip = equipment.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
 
-  const allTags = useMemo(() => Array.from(new Set(chemicals.flatMap(c => c.tags || []))).sort(), [chemicals]);
-  const allBrands = useMemo(() => Array.from(new Set(chemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [chemicals]);
-  const allShelves = useMemo(() => Array.from(new Set(chemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [chemicals]);
-  const allSizes = useMemo(() => Array.from(new Set(chemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [chemicals]);
+  const allTags = useMemo(() => Array.from(new Set(normalizedChemicals.flatMap(c => c.tags || []))).sort(), [normalizedChemicals]);
+  const allBrands = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+  const allShelves = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+  const allSizes = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Inventory Audit Checklist', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Date: ______________`, 150, 22);
+
+    let currentY = 30;
+
+    if (activeTab === 'chemicals') {
+      groupedChemicals.forEach(([groupName, groupItems]) => {
+        if (groupItems.length === 0) return;
+        
+        autoTable(doc, {
+          startY: currentY,
+          head: [[groupName, 'DB Qty', 'Actual Count']],
+          body: groupItems.map(c => [
+            `${c.brand ? c.brand + ' / ' : ''}${c.name} (${c.bottleSize || 'N/A'})`,
+            c.currentStock,
+            ''
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+          styles: { textColor: [0, 0, 0] },
+          columnStyles: {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 30, halign: 'center' },
+            2: { cellWidth: 40 }
+          },
+          margin: { top: 10 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      });
+    } else {
+      const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
+      autoTable(doc, {
+        startY: currentY,
+        head: [[activeTab === 'supplies' ? 'Supplies' : 'Equipment', 'DB Qty', 'Actual Count']],
+        body: items.map((item: any) => [
+          item.name,
+          item.quantity || 1,
+          ''
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { textColor: [0, 0, 0] },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 30, halign: 'center' },
+          2: { cellWidth: 40 }
+        }
+      });
+    }
+
+    doc.save(`Inventory_Audit_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const handleConfirmUpdate = async () => {
     setIsSubmitting(true);
     const user = getCurrentUser();
     try {
       // 1. Process Chemicals
-      for (const chem of chemicals) {
+      for (const chem of normalizedChemicals) {
         if (!isChemCounted(chem.id)) continue;
         const newStock = Number(getChemTotalStock(chem.id, chem).toFixed(2));
         if (newStock !== chem.currentStock || chem.isConcentrate !== chemAudit[chem.id].isConcentrate) {
@@ -375,7 +450,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] print:h-auto print:min-h-screen flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:overflow-visible">
+      <DialogContent className="max-w-4xl w-full h-[90vh] print:!block print:!static print:!transform-none print:!w-full print:!max-w-none print:!h-auto print:!min-h-0 print:!m-0 print:!p-0 print:!border-none print:!shadow-none flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:!overflow-visible">
         <DialogHeader className="p-4 border-b border-purple-500/20 bg-zinc-900 shrink-0 print:hidden">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
@@ -621,7 +696,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             <span className={!s.isConcentrate ? 'text-white' : 'text-zinc-500'}>Used As-Is</span>
                             <Switch checked={s.isConcentrate} onCheckedChange={() => toggleChemMode(c.id, 'isConcentrate')} className="data-[state=checked]:bg-purple-500" />
                             <span className={s.isConcentrate ? 'text-white font-bold' : 'text-zinc-500'}>Concentrate</span>
-                            <TooltipProvider><Tooltip><TooltipTrigger><Info className="h-4 w-4 text-zinc-500 ml-2" /></TooltipTrigger><TooltipContent>Is this diluted with water (Concentrate) or used directly from the bottle (Used As-Is)?</TooltipContent></Tooltip></TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help inline-flex"><Info className="h-4 w-4 text-zinc-500 ml-2" /></span>
+                                </TooltipTrigger>
+                                <TooltipContent className="z-[99999] bg-zinc-800 text-white border-zinc-700">
+                                  <p>Is this diluted with water (Concentrate) or used directly from the bottle (Used As-Is)?</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
 
@@ -640,7 +724,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                 <span className={!s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Quick (Gallons)</span>
                                 <Switch checked={s.detailedMode} onCheckedChange={() => toggleChemMode(c.id, 'detailedMode')} className="data-[state=checked]:bg-purple-500" />
                                 <span className={s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Detailed (w/ Bottles)</span>
-                                <TooltipProvider><Tooltip><TooltipTrigger><Info className="h-4 w-4 text-zinc-500 ml-2" /></TooltipTrigger><TooltipContent>Quick ignores spray bottles (fast reserve check). Detailed adds individual spray bottles converted back to concentrate oz.</TooltipContent></Tooltip></TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help inline-flex"><Info className="h-4 w-4 text-zinc-500 ml-2" /></span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 max-w-xs text-center">
+                                      <p>Quick ignores spray bottles (fast reserve check). Detailed adds individual spray bottles converted back to concentrate oz.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               </div>
                             </div>
 
@@ -781,12 +874,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         </DialogFooter>
 
         {/* PRINT LAYOUT */}
-        <div className="hidden print:block p-8 bg-white text-black print:absolute print:inset-0 print:min-h-screen">
-          <h1 className="text-2xl font-bold mb-6 text-center border-b pb-4">Inventory Audit Checklist</h1>
+        <div className="hidden print:block bg-white text-black print:absolute print:left-0 print:top-0 print:w-full print:bg-white print:p-8 print:m-0" style={{ zIndex: 99999 }}>
+          <h1 className="text-2xl font-bold mb-6 text-center border-b border-black pb-4">Inventory Audit Checklist</h1>
           <div className="text-right text-sm text-gray-500 mb-6">Date: ______________</div>
           
           {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => (
-            <div key={groupName} className="mb-8 break-inside-avoid">
+            <div key={groupName} className="mb-8 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
               <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">{groupName}</h2>
               <table className="w-full border-collapse border border-black text-left text-sm">
                 <thead>
@@ -794,7 +887,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     <th className="p-2 border border-black w-8 text-center">✓</th>
                     <th className="p-2 border border-black">Item</th>
                     <th className="p-2 border border-black w-24 text-center">DB Qty</th>
-                    <th className="p-2 border border-black w-40">Actual Count</th>
+                    <th className="p-2 border border-black w-40 text-center">Actual Count</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -805,7 +898,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <div className="font-bold">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
                         <div className="text-xs text-gray-600">{c.bottleSize}</div>
                       </td>
-                      <td className="p-2 border border-black text-center">{c.currentStock}</td>
+                      <td className="p-2 border border-black text-center font-bold text-lg">{c.currentStock}</td>
                       <td className="p-2 border border-black"></td>
                     </tr>
                   ))}
@@ -815,7 +908,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           ))}
           
           {activeTab !== 'chemicals' && (
-            <div className="mb-8 break-inside-avoid">
+            <div className="mb-8 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
               <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">{activeTab === 'supplies' ? 'Supplies' : 'Equipment'}</h2>
               <table className="w-full border-collapse border border-black text-left text-sm">
                 <thead>
@@ -823,7 +916,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     <th className="p-2 border border-black w-8 text-center">✓</th>
                     <th className="p-2 border border-black">Item</th>
                     <th className="p-2 border border-black w-24 text-center">DB Qty</th>
-                    <th className="p-2 border border-black w-40">Actual Count</th>
+                    <th className="p-2 border border-black w-40 text-center">Actual Count</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -831,7 +924,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     <tr key={item.id} className="border-b border-black break-inside-avoid">
                       <td className="p-2 border border-black text-center"><div className="w-4 h-4 border border-black mx-auto"></div></td>
                       <td className="p-2 border border-black font-bold">{item.name}</td>
-                      <td className="p-2 border border-black text-center">{item.quantity || 1}</td>
+                      <td className="p-2 border border-black text-center font-bold text-lg">{item.quantity || 1}</td>
                       <td className="p-2 border border-black"></td>
                     </tr>
                   ))}
