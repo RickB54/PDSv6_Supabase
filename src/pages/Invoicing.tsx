@@ -16,6 +16,7 @@ import {
   Customer
 } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
+import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -278,11 +279,7 @@ const Invoicing = () => {
   const calculateTotal = () => {
     if (isPriceLocked) return lockedTotal;
     const subtotal = calculateSubtotal();
-    if (invoiceDiscountType === 'percent') {
-      return Math.round(Math.max(0, subtotal * (1 - (invoiceDiscount / 100))));
-    } else {
-      return Math.round(Math.max(0, subtotal - invoiceDiscount));
-    }
+    return applyDiscount(subtotal, invoiceDiscount, invoiceDiscountType);
   };
 
   const handleCustomerChange = async (cid: string) => {
@@ -440,9 +437,7 @@ const Invoicing = () => {
       const vehicleDesc = customVehicle || `${customer.year || ''} ${customer.vehicle || ''} ${customer.model || ''}`;
       
       const subtotal = calculateSubtotal();
-      const finalDiscountAmount = invoiceDiscountType === 'percent'
-        ? subtotal * (invoiceDiscount / 100)
-        : invoiceDiscount;
+      const finalDiscountAmount = calculateDiscount(subtotal, invoiceDiscount, invoiceDiscountType);
 
       const invoice: Invoice = {
         invoiceNumber: currentInvoiceNumber || generateInvoiceNumber(),
@@ -774,9 +769,7 @@ const Invoicing = () => {
   const buildCurrentEditedInvoice = (): Invoice => {
     if (!selectedInvoice) return {} as Invoice;
     const subtotal = editServices.reduce((sum, s) => sum + s.price, 0);
-    const finalDiscountAmount = editDiscountType === 'percent'
-      ? subtotal * (editDiscountValue / 100)
-      : editDiscountValue;
+    const finalDiscountAmount = calculateDiscount(subtotal, editDiscountValue, editDiscountType);
 
     let newTotal = editPriceLocked 
       ? editLockedTotal 
@@ -2014,9 +2007,7 @@ Precision. Protection. Perfection.`;
                       disabled={services.length === 0 || !selectedCustomer}
                       onClick={() => {
                         const subtotal = calculateSubtotal();
-                        const finalDiscountAmount = invoiceDiscountType === 'percent'
-                          ? subtotal * (invoiceDiscount / 100)
-                          : invoiceDiscount;
+                        const finalDiscountAmount = calculateDiscount(subtotal, invoiceDiscount, invoiceDiscountType);
 
                         const tempInv: Invoice = {
                           invoiceNumber: currentInvoiceNumber || generateInvoiceNumber(),

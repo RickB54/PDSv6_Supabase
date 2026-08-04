@@ -22,6 +22,7 @@ import { getCustomServices, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { generateBookingPDF, uploadToFileManager } from "@/lib/bookingsSync";
 import { useCouponsStore } from "@/store/coupons";
 import { isSupabaseEnabled } from "@/lib/auth";
+import { calculateDiscount } from "@/lib/discountUtils";
 import * as bookingsSvc from "@/services/supabase/bookings";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
@@ -533,7 +534,7 @@ const BookNow = () => {
   }, 0);
   const total = packagePrice + addOnsTotal + urlDestFee;
   const appliedDiscount = matchedCoupon
-    ? (matchedCoupon.percent ? (total * matchedCoupon.percent / 100) : (matchedCoupon.amount || 0))
+    ? calculateDiscount(total, matchedCoupon.percent || matchedCoupon.amount || 0, matchedCoupon.percent ? 'percent' : 'amount')
     : 0;
   const discountedTotal = Math.round(Math.max(0, total - appliedDiscount));
 

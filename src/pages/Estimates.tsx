@@ -21,6 +21,7 @@ import jsPDF from "jspdf";
 import { cn } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
+import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
 import {
     Select,
     SelectContent,
@@ -363,11 +364,7 @@ const Estimates = () => {
 
     const calculateTotal = () => {
         const subtotal = services.reduce((sum, s) => sum + s.price, 0);
-        if (discountType === 'percent') {
-            return Math.round(subtotal * (1 - (discount / 100)));
-        } else {
-            return Math.round(Math.max(0, subtotal - discount));
-        }
+        return applyDiscount(subtotal, discount, discountType);
     };
 
     const createEstimate = async () => {
@@ -771,9 +768,7 @@ const Estimates = () => {
                     }
                 }
 
-                const discountAmount = resolvedType === 'percent'
-                    ? subtotal * (estimate.discount / 100)
-                    : estimate.discount;
+                const discountAmount = calculateDiscount(subtotal, estimate.discount, resolvedType || 'percent');
                 const discountLabel = resolvedType === 'percent'
                     ? `Discount (${estimate.discount}%):`
                     : `Discount:`;
