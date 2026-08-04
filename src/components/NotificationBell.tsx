@@ -267,7 +267,7 @@ export default function NotificationBell() {
         // 2. Sync 'tentative' bookings and deduplicate via DB flag
         const { data, error } = await supabase
           .from('bookings')
-          .select('id, customer_id, date, package_name, metadata, customer_name')
+          .select('id, customer_id, scheduled_at, service_package, booking_vehicle')
           .in('status', ['tentative', 'TENTATIVE'])
           .limit(20);
 
@@ -276,7 +276,7 @@ export default function NotificationBell() {
           let addedAny = false;
 
           for (const b of (data || [])) {
-            let meta = b.metadata || {};
+            let meta = b.booking_vehicle || {};
             if (typeof meta === 'string') {
               try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
             }
@@ -331,7 +331,7 @@ export default function NotificationBell() {
                 }
               }
 
-              const serviceStr = b.package_name || meta.service_package || meta.package || 'Service';
+              const serviceStr = b.service_package || meta.service_package || meta.package || 'Service';
 
               toast({
                 title: "New Online Booking!",
@@ -348,7 +348,7 @@ export default function NotificationBell() {
               
               // MARK AS NOTIFIED IN DB (Syncs to all devices)
               await supabase.from('bookings').update({
-                metadata: { ...meta, notified: true }
+                booking_vehicle: { ...meta, notified: true }
               }).eq('id', b.id);
 
               addedAny = true;

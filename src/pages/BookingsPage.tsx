@@ -634,6 +634,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
            params.set('discountValue', String(c.percent || c.amount || 0));
            params.set('discountType', c.percent ? 'percent' : 'dollar');
            params.set('discountCode', c.code);
+        } else {
+           params.set('discountCode', formData.discountCode);
+           if (selectedBooking?.discountAmount) {
+             params.set('discountValue', String(selectedBooking.discountAmount));
+             params.set('discountType', 'dollar');
+           }
+        }
+      } else if (selectedBooking?.discountAmount) {
+        params.set('discountValue', String(selectedBooking.discountAmount));
+        params.set('discountType', 'dollar');
+        if (selectedBooking.discountCode && selectedBooking.discountCode !== 'CUSTOM') {
+          params.set('discountCode', selectedBooking.discountCode);
         }
       }
     }

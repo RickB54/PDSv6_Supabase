@@ -4035,27 +4035,11 @@ const ServiceChecklist = () => {
                   className={`md:col-span-2 text-white font-black italic h-12 text-lg transition-all ${
                     isJobCompleted 
                       ? 'bg-emerald-600/50 cursor-not-allowed opacity-50' 
-                      : 'bg-red-600 hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.3)]'
+                      : 'bg-purple-600 hover:bg-purple-700 shadow-[0_0_20px_rgba(147,51,234,0.3)]'
                   }`}
                 >
                   <CheckCircle2 className="h-5 w-5 mr-3" />
                   {isJobCompleted ? 'JOB FINISHED & LOCKED' : 'FINISH & COMPLETE JOB'}
-                </Button>
-                <Button 
-                  onClick={async () => {
-                    const idToUse = checklistId || await saveGenericChecklist();
-                    if (!idToUse) {
-                      toast({ title: 'Error', description: 'Could not link job. Cannot process payment.', variant: 'destructive' });
-                      return;
-                    }
-                    setFinishedJobId(idToUse);
-                    setShowTipScreen(true);
-                  }} 
-                  className="md:col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-16 md:h-14 text-lg md:text-xl shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-2 border-emerald-400/50 mt-2 rounded-xl flex-col md:flex-row leading-tight px-4"
-                >
-                  <div className="text-center">
-                    COLLECT IN-PERSON <br className="md:hidden" /> PAYMENT (W/ TIP)
-                  </div>
                 </Button>
               </div>
 
