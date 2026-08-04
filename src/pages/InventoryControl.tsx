@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert, X } from "lucide-react";
+import { CheckCircle, Plus, AlertTriangle, Printer, Save, Trash2, TrendingUp, Package, ChevronDown, ChevronUp, FileText, HelpCircle, RefreshCw, Unlink as UnlinkIcon, Pencil, Info, Search, Download, Tag, Eye, EyeOff, Settings, ArrowRight, Calculator, MonitorSmartphone, Smartphone, Copy, ShieldAlert, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ import * as inventoryData from "@/lib/inventory-data";
 import api from "@/lib/api";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import UnifiedInventoryModal from "@/components/inventory/UnifiedInventoryModal";
+import InventoryAuditModal from "@/components/inventory/InventoryAuditModal";
 import ImportWizardModal from "@/components/inventory/ImportWizardModal";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -228,6 +229,7 @@ const InventoryControl = () => {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [inventoryImportOpen, setInventoryImportOpen] = useState(false);
+  const [inventoryAuditOpen, setInventoryAuditOpen] = useState(false);
   const [inventoryCleanupOpen, setInventoryCleanupOpen] = useState(false);
   const [bulkCleanupWarningOpen, setBulkCleanupWarningOpen] = useState(false);
   const [activeImportTab, setActiveImportTab] = useState<"chemicals" | "supplies" | "equipment" | "tools" | "materials">("chemicals");
@@ -2421,6 +2423,16 @@ const InventoryControl = () => {
           /* Data Management Actions */
           <div className="flex flex-wrap gap-4">
             <Button
+              onClick={() => setInventoryAuditOpen(true)}
+              className="h-12 bg-purple-600 hover:bg-purple-500 text-white group border border-purple-500/50 shadow-lg shadow-purple-500/20"
+            >
+              <CheckCircle className="h-5 w-5 mr-2" />
+              <div className="text-left">
+                <div className="font-bold text-sm">Inventory Audit</div>
+              </div>
+            </Button>
+            
+            <Button
               onClick={() => setInventoryImportOpen(true)}
               variant="outline"
               className="h-12 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800 hover:text-white hover:border-amber-500/50 group"
@@ -3584,6 +3596,15 @@ const InventoryControl = () => {
           setIsRatiosOnlyModalOpen(false);
           navigate('/dilution-calculator');
         }}
+      />
+      
+      <InventoryAuditModal
+        open={inventoryAuditOpen}
+        onOpenChange={setInventoryAuditOpen}
+        chemicals={chemicals}
+        supplies={supplies}
+        equipment={equipment}
+        onRefresh={loadData}
       />
       </div>
     </ThumbnailZoomContext.Provider>

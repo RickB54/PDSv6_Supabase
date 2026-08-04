@@ -69,6 +69,7 @@ export interface Chemical {
     actualPrice?: number;
     salePrice?: number;
     notes?: string;
+    isConcentrate?: boolean;
 }
 
 export interface Material {
@@ -171,7 +172,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         purchaseDate: item.purchase_date,
         actualPrice: item.actual_price,
         salePrice: item.sale_price,
-        notes: item.notes
+        notes: item.notes,
+        isConcentrate: item.is_concentrate ?? true
     }));
 }
 
@@ -197,6 +199,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         actual_price: chemical.actualPrice || null,
         sale_price: chemical.salePrice || null,
         notes: chemical.notes || null,
+        is_concentrate: chemical.isConcentrate ?? true,
         updated_at: new Date().toISOString()
     };
 
@@ -222,6 +225,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
+                else if (errMsg.includes('is_concentrate') && 'is_concentrate' in sanitized) { delete sanitized.is_concentrate; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitized.where_purchased;
@@ -229,6 +233,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                     delete sanitized.purchase_date;
                     delete sanitized.actual_price;
                     delete sanitized.sale_price;
+                    delete sanitized.is_concentrate;
                 }
                 const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
                 currentErr = retryErr;
@@ -253,7 +258,8 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
-                updatedAt: dbData.updated_at
+                updatedAt: dbData.updated_at,
+                isConcentrate: dbData.is_concentrate
             } as any;
         } else {
             throw error;
