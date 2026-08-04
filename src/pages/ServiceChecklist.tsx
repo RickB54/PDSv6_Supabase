@@ -45,6 +45,7 @@ import { generateInvoiceNumber } from "@/lib/utils";
 import logo from "@/assets/pds-final-logo.png";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { useToast } from "@/hooks/use-toast";
+import { calculateDiscount as utilsCalculateDiscount } from "@/lib/discountUtils";
 import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -1094,7 +1095,7 @@ const ServiceChecklist = () => {
       y += 6;
     }
     
-    const finalTotal = Math.round(subtotal - (discountType === 'percent' ? (subtotal * (parseFloat(discountValue) / 100)) : (parseFloat(discountValue) || 0)));
+    const finalTotal = Math.round(Math.max(0, subtotal - utilsCalculateDiscount(subtotal, parseFloat(discountValue) || 0, discountType)));
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('TOTAL AMOUNT:', 25, y);
@@ -1626,13 +1627,7 @@ const ServiceChecklist = () => {
   };
 
   const calculateDiscount = () => {
-    const subtotal = calculateSubtotal();
-    if (!discountValue) return 0;
-    const value = parseFloat(discountValue);
-    if (discountType === "percent") {
-      return (subtotal * value) / 100;
-    }
-    return value;
+    return utilsCalculateDiscount(calculateSubtotal(), parseFloat(discountValue) || 0, discountType);
   };
 
   const getAdjustedTime = () => {
