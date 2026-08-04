@@ -12,7 +12,8 @@ import {
     Trash2, 
     Maximize, 
     Minimize,
-    Play
+    Play,
+    Pencil
 } from "lucide-react";
 import { VideoEmbed } from "@/components/video/VideoEmbed";
 
@@ -28,6 +29,7 @@ interface PhotoGalleryProps {
     onOpenChange: (open: boolean) => void;
     isAdmin?: boolean;
     onSetPrimary?: (index: number) => void;
+    onEdit?: (index: number) => void;
     onDelete?: (index: number) => void;
 }
 
@@ -38,6 +40,7 @@ export const PhotoGalleryLightbox = ({
     onOpenChange,
     isAdmin = false,
     onSetPrimary,
+    onEdit,
     onDelete
 }: PhotoGalleryProps) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -186,7 +189,19 @@ export const PhotoGalleryLightbox = ({
                                 <Download className="h-4 w-4" />
                             </Button>
 
-                            {isAdmin && (
+                            {isAdmin && onEdit && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => onEdit?.(currentIndex)}
+                                    className="text-blue-400 hover:bg-blue-500/20 bg-blue-500/5 backdrop-blur-md rounded-full h-9 w-9 border border-blue-500/20 mr-1"
+                                    title="Edit Photo Category/Details"
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            )}
+
+                            {isAdmin && onDelete && (
                                 <Button
                                     variant="ghost"
                                     size="icon"

@@ -186,7 +186,9 @@ const FileManager = () => {
         .order('timestamp', { ascending: false });
 
       if (error) {
-        console.error("Failed to load PDF records from Supabase:", error);
+        if (error.code !== 'PGRST205') {
+          console.error("Failed to load PDF records from Supabase:", error);
+        }
         setRecords(localRecords);
       } else if (data) {
         const remoteRecords: PDFRecord[] = data.map((r: any) => ({

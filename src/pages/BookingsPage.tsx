@@ -592,6 +592,15 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         const aids = bookingArg.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
         params.set('addons', aids.join(','));
       }
+      
+      if (bookingArg.discountAmount) {
+        params.set('discountValue', String(bookingArg.discountAmount));
+        // Bookings store discount as an amount, so we pass it as a dollar discount to Checklist
+        params.set('discountType', 'dollar'); 
+        if (bookingArg.discountCode && bookingArg.discountCode !== 'CUSTOM') {
+          params.set('discountCode', bookingArg.discountCode);
+        }
+      }
     } else {
       if (selectedCustomer?.id) params.set('customerId', selectedCustomer.id);
       if (formData.customer) params.set('customerName', formData.customer);
@@ -614,6 +623,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       if (formData.addons.length > 0) {
         const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
         params.set('addons', aids.join(','));
+      }
+      
+      if (formData.discountType === 'custom' && formData.customDiscount) {
+        params.set('discountValue', formData.customDiscount);
+        params.set('discountType', 'dollar');
+      } else if (formData.discountType === 'coupon' && formData.discountCode) {
+        const c = useCouponsStore.getState().items.find(x => x.code === formData.discountCode);
+        if (c) {
+           params.set('discountValue', String(c.percent || c.amount || 0));
+           params.set('discountType', c.percent ? 'percent' : 'dollar');
+           params.set('discountCode', c.code);
+        }
       }
     }
 
@@ -4179,26 +4200,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                 className="h-6 text-[10px] gap-1"
                                                 onClick={async (e) => {
                                                   e.stopPropagation();
-                                                  // Fall back to the event object if the booking isn't in the local store
                                                   const booking = items.find(i => i.id === event.id) || event as any;
-                                                  const params = new URLSearchParams();
-                                                  if (customer.name) params.set('customerName', customer.name);
-                                                  const title = booking.title || (booking as any).service_package || '';
-                                                  if (title) {
-                                                    const svc = allServices.find(s => s.name === title);
-                                                    if (svc) params.set('package', svc.id);
-                                                  }
-                                                  const vehicleType = booking.vehicle || (booking as any).vehicleType || '';
-                                                  if (vehicleType) params.set('vehicleType', vehicleType);
-                                                  const addons = booking.addons || (booking as any).add_ons || [];
-                                                  if (Array.isArray(addons) && addons.length) {
-                                                    const aids = addons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
-                                                    if (aids.length) params.set('addons', aids.join(','));
-                                                  }
-                                                  if (booking.id) params.set('id', booking.id);
-                                                  const emp = booking.assignedEmployee || booking.assigned_employee_id;
-                                                  if (emp) params.set('employeeId', emp);
-                                                  navigate(`/service-checklist?${params.toString()}`);
+                                                  handleStartJob(booking);
                                                 }}
                                               >
                                                 <Wrench className="h-2.5 w-2.5" /> Start Job

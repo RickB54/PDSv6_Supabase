@@ -265,16 +265,18 @@ export default function NotificationBell() {
         refresh();
 
         // 2. Sync 'tentative' bookings and deduplicate via DB flag
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('bookings')
-          .select('id, customer_id, scheduled_at, service_package, booking_vehicle, customer_name')
+          .select('id, customer_id, date, package_name, metadata, customer_name')
           .in('status', ['tentative', 'TENTATIVE'])
           .limit(20);
+
+          if (error) console.error("Error fetching tentative bookings:", error);
 
           let addedAny = false;
 
           for (const b of (data || [])) {
-            let meta = b.booking_vehicle || {};
+            let meta = b.metadata || {};
             if (typeof meta === 'string') {
               try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
             }
@@ -329,22 +331,24 @@ export default function NotificationBell() {
                 }
               }
 
+              const serviceStr = b.package_name || meta.service_package || meta.package || 'Service';
+
               toast({
                 title: "New Online Booking!",
-                description: `${custName} just booked a ${b.service_package}.`,
+                description: `${custName} just booked a ${serviceStr}.`,
                 variant: "default",
               });
 
               notify(
                 'booking_created',
-                `NEW ONLINE REQUEST: ${custName} - ${b.service_package}`,
+                `NEW ONLINE REQUEST: ${custName} - ${serviceStr}`,
                 'Customer Web',
                 { id: syncId, recordId: b.id, bookingId: b.id, customerId: activeCustomerId }
               );
               
               // MARK AS NOTIFIED IN DB (Syncs to all devices)
               await supabase.from('bookings').update({
-                booking_vehicle: { ...meta, notified: true }
+                metadata: { ...meta, notified: true }
               }).eq('id', b.id);
 
               addedAny = true;

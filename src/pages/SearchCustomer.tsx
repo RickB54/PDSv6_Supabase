@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { ActivityLog } from "@/components/customers/ActivityLog";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -513,6 +514,7 @@ const SearchCustomer = () => {
   const [galleryInitialIndex, setGalleryInitialIndex] = useState(0);
   const [galleryMetadata, setGalleryMetadata] = useState<any[]>([]);
   const [photoToDelete, setPhotoToDelete] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
+  const [photoToEdit, setPhotoToEdit] = useState<{ index?: number; metadata?: any; customer: Customer } | null>(null);
 
   const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: any; title: string; icon: any }>({ isOpen: false, url: '', component: null, title: 'Letter Maker', icon: <PenTool className="w-5 h-5 text-blue-500" /> });
 
@@ -613,6 +615,51 @@ const SearchCustomer = () => {
       toast({ title: "Error", description: "Failed to delete photo.", variant: "destructive" });
     } finally {
       setPhotoToDelete(null);
+    }
+  };
+
+  const confirmEditPhoto = async (newField: string) => {
+    if (!photoToEdit) return;
+    const { index, metadata, customer } = photoToEdit;
+    const m = metadata || (index !== undefined ? galleryMetadata[index] : null);
+    if (!m) return;
+
+    try {
+      const updatedCustomer = { ...customer };
+      let photoUrl = '';
+      if (m.type === 'customer') {
+        const arr = [...(updatedCustomer[m.field as keyof Customer] as string[])];
+        photoUrl = arr[m.arrayIndex];
+        arr.splice(m.arrayIndex, 1);
+        (updatedCustomer as any)[m.field] = arr;
+        
+        const newArr = [...((updatedCustomer[newField as keyof Customer] as string[]) || [])];
+        newArr.push(photoUrl);
+        (updatedCustomer as any)[newField] = newArr;
+      } else if (m.type === 'vehicle') {
+        const vehicles = [...(updatedCustomer.vehicles || [])];
+        const v = { ...vehicles[m.vehicleIndex] };
+        const arr = [...(v[m.field as keyof typeof v] as string[])];
+        photoUrl = arr[m.arrayIndex];
+        arr.splice(m.arrayIndex, 1);
+        (v as any)[m.field] = arr;
+        
+        const newArr = [...((v[newField as keyof typeof v] as string[]) || [])];
+        newArr.push(photoUrl);
+        (v as any)[newField] = newArr;
+        vehicles[m.vehicleIndex] = v;
+        updatedCustomer.vehicles = vehicles;
+      }
+
+      const { upsertSupabaseCustomer } = await import('@/lib/supa-data');
+      await upsertSupabaseCustomer(updatedCustomer);
+      toast({ title: "Updated", description: "Photo moved successfully." });
+      setGalleryOpen(false);
+      refresh();
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to move photo.", variant: "destructive" });
+    } finally {
+      setPhotoToEdit(null);
     }
   };
 
@@ -1773,15 +1820,39 @@ const SearchCustomer = () => {
         open={galleryOpen}
         onOpenChange={setGalleryOpen}
         isAdmin={isAdmin}
+        onEdit={(idx) => {
+          const m = galleryMetadata[idx];
+          if (!m) return;
+          const customer = customers.find(c => c.id === m.customerId);
+          if (customer) {
+            setPhotoToEdit({ index: idx, metadata: m, customer });
+          }
+        }}
         onDelete={(idx) => {
           const m = galleryMetadata[idx];
           if (!m) return;
           const customer = customers.find(c => c.id === m.customerId);
           if (customer) {
-            setPhotoToDelete({ index: idx, customer });
+            setPhotoToDelete({ index: idx, metadata: m, customer });
           }
         }}
       />
+
+      <Dialog open={photoToEdit !== null} onOpenChange={() => setPhotoToEdit(null)}>
+        <DialogContent className="z-[200]">
+          <DialogHeader>
+            <DialogTitle>Move Photo</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-zinc-400">Select the new category for this photo:</p>
+            <div className="grid grid-cols-3 gap-2">
+               <Button variant="outline" onClick={() => confirmEditPhoto('beforePhotos')} className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10">Before</Button>
+               <Button variant="outline" onClick={() => confirmEditPhoto('afterPhotos')} className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">After</Button>
+               <Button variant="outline" onClick={() => confirmEditPhoto('generalPhotos')} className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10">General</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
         <AlertDialogContent className="z-[200]">

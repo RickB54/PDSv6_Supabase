@@ -1323,6 +1323,10 @@ const ServiceChecklist = () => {
         const urlVType = searchParams.get("vehicleType");
         const urlAddons = searchParams.get("addons");
         const urlEmp = searchParams.get("employeeId");
+        
+        const urlDiscountValue = searchParams.get("discountValue");
+        const urlDiscountType = searchParams.get("discountType");
+        const urlDiscountCode = searchParams.get("discountCode");
 
         if (state.selectedCustomer) setSelectedCustomer(state.selectedCustomer);
         if (state.selectedPackage && !urlPkg) setSelectedPackage(state.selectedPackage);
@@ -1331,8 +1335,21 @@ const ServiceChecklist = () => {
         if (state.destinationFee) setDestinationFee(state.destinationFee);
         if (state.notes) setNotes(state.notes);
         if (state.employeeAssigned && !urlEmp) setEmployeeAssigned(state.employeeAssigned);
-        if (state.discountValue) setDiscountValue(state.discountValue);
-        if (state.discountType) setDiscountType(state.discountType);
+        
+        if (urlDiscountValue) setDiscountValue(urlDiscountValue);
+        else if (state.discountValue) setDiscountValue(state.discountValue);
+        
+        if (urlDiscountType) setDiscountType(urlDiscountType as "percent" | "dollar");
+        else if (state.discountType) setDiscountType(state.discountType);
+        
+        if (urlDiscountCode) {
+           setDiscountCode(urlDiscountCode);
+           setDiscountMethod('coupon');
+           setDiscountExpanded(true);
+        } else if (state.discountValue || urlDiscountValue) {
+           setDiscountMethod('custom');
+           setDiscountExpanded(true);
+        }
 
         if (urlId) {
           setChecklistId(urlId);

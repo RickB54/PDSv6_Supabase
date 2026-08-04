@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Search, Image as ImageIcon, Video, X, Car, Loader2,
-    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2, Download
+    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2, Download, Pencil
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/lib/supa-data";
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/contexts/DemoContext";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,12 +126,14 @@ function Lightbox({
     startIndex, 
     onClose, 
     isAdmin = false,
+    onEdit,
     onDelete 
 }: { 
     items: MediaItem[]; 
     startIndex: number; 
     onClose: () => void;
     isAdmin?: boolean;
+    onEdit?: (idx: number) => void;
     onDelete?: (idx: number) => void;
 }) {
     const [idx, setIdx] = useState(startIndex);
@@ -190,6 +192,17 @@ function Lightbox({
                                     >
                                         <Download className="h-4 w-4" />
                                     </Button>
+                                    {onEdit && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => onEdit(idx)}
+                                            className="text-blue-400 hover:bg-blue-600/50 h-8 w-8"
+                                            title="Edit Photo Category"
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -354,7 +367,6 @@ function CustomerCard({
     customer: Customer; 
     onOpen: (items: MediaItem[], idx: number) => void; 
     onAddMedia: (customer: Customer) => void; 
-    isAdmin?: boolean; 
     onDelete: (item: MediaItem) => void;
     showBackLink?: boolean;
     returnTarget?: string;
@@ -594,6 +606,7 @@ export default function VehicleGallery() {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [modalTab, setModalTab] = useState("media");
     const [photoToDelete, setPhotoToDelete] = useState<{ item: MediaItem } | null>(null);
+    const [photoToEdit, setPhotoToEdit] = useState<{ item: MediaItem } | null>(null);
 
     const isAdmin = user?.role === 'admin' || isDemoMode;
 
@@ -666,6 +679,67 @@ export default function VehicleGallery() {
             toast({ title: "Error", description: "Failed to delete photo.", variant: "destructive" });
         } finally {
             setPhotoToDelete(null);
+        }
+    };
+
+    const confirmEditPhoto = async (newField: string) => {
+        if (!photoToEdit) return;
+        const { item } = photoToEdit;
+        if (!item.customerId || !item.source) return;
+
+        try {
+            const customer = customers.find(c => c.id === item.customerId);
+            if (!customer) return;
+
+            const updatedCustomer = { ...customer };
+            const m = item.source;
+            let photoUrl = '';
+
+            if (m.type === 'customer') {
+                const field = updatedCustomer[m.field as keyof Customer];
+                if (Array.isArray(field)) {
+                    const arr = [...field];
+                    photoUrl = arr[m.arrayIndex];
+                    arr.splice(m.arrayIndex, 1);
+                    (updatedCustomer as any)[m.field] = arr;
+                    
+                    const newArr = [...(((updatedCustomer as any)[newField] as string[]) || [])];
+                    newArr.push(photoUrl);
+                    (updatedCustomer as any)[newField] = newArr;
+                }
+            } else if (m.type === 'vehicle') {
+                const vehicles = [...(updatedCustomer.vehicles || [])];
+                const vIdx = m.vehicleIndex!;
+                const v = { ...vehicles[vIdx] };
+                const field = v[m.field as keyof typeof v];
+                
+                if (Array.isArray(field)) {
+                    const arr = [...field];
+                    photoUrl = arr[m.arrayIndex];
+                    arr.splice(m.arrayIndex, 1);
+                    (v as any)[m.field] = arr;
+                    
+                    const newArr = [...(((v as any)[newField] as string[]) || [])];
+                    newArr.push(photoUrl);
+                    (v as any)[newField] = newArr;
+                    vehicles[vIdx] = v;
+                    updatedCustomer.vehicles = vehicles;
+                }
+            }
+
+            if (!photoUrl) {
+                toast({ title: "Error", description: "Could not modify photo.", variant: "destructive" });
+                return;
+            }
+
+            await upsertSupabaseCustomer(updatedCustomer);
+            toast({ title: "Updated", description: "Photo category changed." });
+            setLightboxItems(null);
+            await refreshData();
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to move photo.", variant: "destructive" });
+        } finally {
+            setPhotoToEdit(null);
         }
     };
 
@@ -923,12 +997,32 @@ export default function VehicleGallery() {
                     startIndex={lightboxIdx}
                     onClose={() => setLightboxItems(null)}
                     isAdmin={isAdmin}
+                    onEdit={(idx) => {
+                        const item = lightboxItems[idx];
+                        if (item) setPhotoToEdit({ item });
+                    }}
                     onDelete={(idx) => {
                         const item = lightboxItems[idx];
                         if (item) setPhotoToDelete({ item });
                     }}
                 />
             )}
+
+            <Dialog open={photoToEdit !== null} onOpenChange={() => setPhotoToEdit(null)}>
+                <DialogContent className="z-[200] bg-zinc-950 border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Move Photo</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <p className="text-sm text-zinc-400">Select the new category for this photo:</p>
+                        <div className="grid grid-cols-3 gap-2">
+                           <Button variant="outline" onClick={() => confirmEditPhoto('beforePhotos')} className="border-orange-500/30 text-orange-400 hover:bg-orange-500/10">Before</Button>
+                           <Button variant="outline" onClick={() => confirmEditPhoto('afterPhotos')} className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10">After</Button>
+                           <Button variant="outline" onClick={() => confirmEditPhoto('generalPhotos')} className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10">General</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog open={photoToDelete !== null} onOpenChange={() => setPhotoToDelete(null)}>
                 <AlertDialogContent className="z-[200]">
