@@ -3,13 +3,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, CheckCircle, Plus, Minus, Info, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, X, CheckCircle, Plus, Minus, Info, AlertTriangle, ChevronDown, ChevronUp, Printer, Filter, ArrowDownUp, Check } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, saveTool, saveUsageHistory } from '@/lib/inventory-data';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/lib/auth';
 
 interface InventoryAuditModalProps {
@@ -35,7 +37,8 @@ interface JugEntry {
 
 interface BottleEntry {
   id: string; // unique local ID
-  sizeOz: number; // 32, 24, or custom
+  sizePreset: string; // '32', '24', '16', 'custom'
+  sizeOz: number; // actual size
   fillLevel: number; // 1, 0.75, 0.5, 0.25, 0
   ratioParts: number; // For 4:1, parts = 4 (water). Chem = 1 part. Total parts = 5.
 }
@@ -73,6 +76,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [hideCounted, setHideCounted] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filters & Sorting
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterBrands, setFilterBrands] = useState<string[]>([]);
+  const [filterShelves, setFilterShelves] = useState<string[]>([]);
+  const [filterSizes, setFilterSizes] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string[]>(['shelfLocation', 'brand']); // Multiple sort criteria
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Expanded items in accordion
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
@@ -148,7 +159,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         ...prev,
         [id]: {
           ...state,
-          bottles: [...state.bottles, { id: crypto.randomUUID(), sizeOz: 32, fillLevel: 1, ratioParts: 10 }]
+          bottles: [...state.bottles, { id: crypto.randomUUID(), sizePreset: '32', sizeOz: 32, fillLevel: 1, ratioParts: 10 }]
         }
       };
     });
@@ -231,13 +242,57 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
   };
 
-  const filteredChemicals = getFilteredItems(chemicals, chemAudit, isChemCounted);
+  const filteredChemicals = getFilteredItems(chemicals, chemAudit, isChemCounted).filter(c => {
+    if (filterTags.length > 0 && !filterTags.some(t => c.tags?.includes(t))) return false;
+    if (filterBrands.length > 0 && (!c.brand || !filterBrands.includes(c.brand))) return false;
+    if (filterShelves.length > 0 && (!c.shelfLocation || !filterShelves.includes(c.shelfLocation))) return false;
+    if (filterSizes.length > 0 && (!c.bottleSize || !filterSizes.includes(c.bottleSize))) return false;
+    return true;
+  }).sort((a, b) => {
+    for (const field of sortBy) {
+      let valA = (a as any)[field] || '';
+      let valB = (b as any)[field] || '';
+      // tags is an array, let's join it for sorting
+      if (field === 'tags') {
+        valA = (a.tags || []).join(',');
+        valB = (b.tags || []).join(',');
+      }
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+    }
+    // Fallback to name
+    return a.name.localeCompare(b.name);
+  });
+
+  const groupedChemicals = useMemo(() => {
+    const groups: Record<string, typeof filteredChemicals> = {};
+    const primarySort = sortBy[0] || 'name';
+    
+    filteredChemicals.forEach(c => {
+      let key = (c as any)[primarySort] || 'Uncategorized';
+      if (primarySort === 'tags') {
+        key = c.tags && c.tags.length > 0 ? c.tags.join(', ') : 'Untagged';
+      } else if (primarySort === 'name') {
+        key = 'All Chemicals';
+      }
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    });
+    
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredChemicals, sortBy]);
+
   const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => (supplyAudit[id]?.counted ?? 0) > 0);
   const filteredEquip = getFilteredItems(equipment, equipAudit, id => (equipAudit[id]?.counted ?? 0) > 0);
 
   const numCountedChems = chemicals.filter(c => isChemCounted(c.id)).length;
   const numCountedSupplies = supplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
   const numCountedEquip = equipment.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
+
+  const allTags = useMemo(() => Array.from(new Set(chemicals.flatMap(c => c.tags || []))).sort(), [chemicals]);
+  const allBrands = useMemo(() => Array.from(new Set(chemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [chemicals]);
+  const allShelves = useMemo(() => Array.from(new Set(chemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [chemicals]);
+  const allSizes = useMemo(() => Array.from(new Set(chemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [chemicals]);
 
   const handleConfirmUpdate = async () => {
     setIsSubmitting(true);
@@ -320,8 +375,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 bg-zinc-950 border-purple-500/30 shadow-2xl overflow-hidden">
-        <DialogHeader className="p-4 border-b border-purple-500/20 bg-zinc-900 shrink-0">
+      <DialogContent className="max-w-4xl w-full h-[90vh] print:h-auto print:min-h-screen flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:overflow-visible">
+        <DialogHeader className="p-4 border-b border-purple-500/20 bg-zinc-900 shrink-0 print:hidden">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-purple-500" /> 
@@ -415,22 +470,136 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     <Label htmlFor="hide-counted" className="text-xs text-zinc-400">Hide Counted</Label>
                   </div>
                 </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
-                  <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+                    <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
+                  </div>
+                  {activeTab === 'chemicals' && (
+                    <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300 relative">
+                          <Filter className="h-4 w-4 mr-2" />
+                          Filters
+                          {(filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) > 0 && (
+                            <Badge className="ml-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 text-[10px]">
+                              {filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length}
+                            </Badge>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 text-white p-4" align="end">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
+                            <h4 className="font-bold">Filter & Sort</h4>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 text-xs text-zinc-400" 
+                              onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); setSortBy(['shelfLocation', 'brand']); }}
+                            >
+                              Reset
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label className="text-xs text-zinc-500 uppercase">Sort Order</Label>
+                            <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
+                              <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="shelfLocation,brand">Shelf → Brand</SelectItem>
+                                <SelectItem value="brand,name">Brand → Name</SelectItem>
+                                <SelectItem value="tags,name">Group/Tag → Name</SelectItem>
+                                <SelectItem value="bottleSize,name">Size → Name</SelectItem>
+                                <SelectItem value="name">Name Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2 max-h-[40vh] overflow-auto pr-2">
+                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Tags (Groups)</Label>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {allTags.map(t => (
+                                <Badge 
+                                  key={t} 
+                                  variant="outline" 
+                                  className={`cursor-pointer ${filterTags.includes(t) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                  onClick={() => setFilterTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
+                                >
+                                  {t}
+                                </Badge>
+                              ))}
+                            </div>
+
+                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf Location</Label>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {allShelves.map(s => (
+                                <Badge 
+                                  key={s} 
+                                  variant="outline" 
+                                  className={`cursor-pointer ${filterShelves.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                  onClick={() => setFilterShelves(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                                >
+                                  {s}
+                                </Badge>
+                              ))}
+                            </div>
+
+                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Brand</Label>
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {allBrands.map(b => (
+                                <Badge 
+                                  key={b} 
+                                  variant="outline" 
+                                  className={`cursor-pointer ${filterBrands.includes(b) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                  onClick={() => setFilterBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b])}
+                                >
+                                  {b}
+                                </Badge>
+                              ))}
+                            </div>
+                            
+                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Size</Label>
+                            <div className="flex flex-wrap gap-1">
+                              {allSizes.map(s => (
+                                <Badge 
+                                  key={s} 
+                                  variant="outline" 
+                                  className={`cursor-pointer ${filterSizes.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                  onClick={() => setFilterSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                                >
+                                  {s}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                  <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()}>
+                    <Printer className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 space-y-4">
-              {activeTab === 'chemicals' && filteredChemicals.map(c => {
-                const s = chemAudit[c.id];
-                if (!s) return null;
-                const isCounted = isChemCounted(c.id);
-                const isExpanded = expandedItems[c.id];
-                
-                return (
-                  <div key={c.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-purple-950/20 border-purple-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+            <div className="flex-1 overflow-auto p-4 space-y-4 print:hidden">
+              {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => (
+                <div key={groupName} className="space-y-4">
+                  {groupName !== 'All Chemicals' && (
+                    <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest border-b border-purple-500/20 pb-1 mt-4">
+                      {groupName}
+                    </h3>
+                  )}
+                  {groupItems.map(c => {
+                    const s = chemAudit[c.id];
+                    if (!s) return null;
+                    const isCounted = isChemCounted(c.id);
+                    const isExpanded = expandedItems[c.id];
+                    
+                    return (
+                      <div key={c.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-purple-950/20 border-purple-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
                     <div className="flex items-center justify-between p-3 cursor-pointer select-none" onClick={() => toggleExpand(c.id)}>
                       <div className="flex items-center gap-3">
                         {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400" /> : <div className="h-5 w-5 rounded-full border border-zinc-600" />}
@@ -496,14 +665,31 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                       <div key={b.id} className="flex flex-wrap items-center gap-3 p-3 bg-zinc-900 border border-zinc-700 rounded relative">
                                         <div className="flex-1 min-w-[120px]">
                                           <Label className="text-[10px] text-zinc-500">Size</Label>
-                                          <Select value={b.sizeOz.toString()} onValueChange={v => updateBottle(c.id, b.id, { sizeOz: parseInt(v) })}>
+                                          <Select value={b.sizePreset} onValueChange={v => {
+                                            if (v === 'custom') {
+                                              updateBottle(c.id, b.id, { sizePreset: v });
+                                            } else {
+                                              updateBottle(c.id, b.id, { sizePreset: v, sizeOz: parseInt(v) });
+                                            }
+                                          }}>
                                             <SelectTrigger className="h-8 bg-zinc-950 text-white"><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                               <SelectItem value="32">32 oz</SelectItem>
                                               <SelectItem value="24">24 oz</SelectItem>
                                               <SelectItem value="16">16 oz</SelectItem>
+                                              <SelectItem value="custom">Custom (oz)</SelectItem>
                                             </SelectContent>
                                           </Select>
+                                          {b.sizePreset === 'custom' && (
+                                            <Input
+                                              type="number"
+                                              min="1"
+                                              className="h-8 mt-2 bg-zinc-950 text-white"
+                                              placeholder="oz"
+                                              value={b.sizeOz || ''}
+                                              onChange={(e) => updateBottle(c.id, b.id, { sizeOz: parseInt(e.target.value) || 0 })}
+                                            />
+                                          )}
                                         </div>
                                         <div className="flex-1 min-w-[120px]">
                                           <Label className="text-[10px] text-zinc-500">Fill Level</Label>
@@ -546,6 +732,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </div>
                 );
               })}
+              </div>
+            ))}
 
               {/* Supplies & Equipment Generic Tally */}
               {(activeTab === 'supplies' ? filteredSupplies : activeTab === 'equipment' ? filteredEquip : []).map((item: any) => {
@@ -577,7 +765,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           </div>
         )}
 
-        <DialogFooter className="p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex justify-between">
+        <DialogFooter className="p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex justify-between print:hidden">
           <Button variant="ghost" onClick={() => reviewMode ? setReviewMode(false) : onOpenChange(false)}>
             {reviewMode ? 'Back to Audit' : 'Cancel'}
           </Button>
@@ -591,6 +779,67 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </Button>
           )}
         </DialogFooter>
+
+        {/* PRINT LAYOUT */}
+        <div className="hidden print:block p-8 bg-white text-black print:absolute print:inset-0 print:min-h-screen">
+          <h1 className="text-2xl font-bold mb-6 text-center border-b pb-4">Inventory Audit Checklist</h1>
+          <div className="text-right text-sm text-gray-500 mb-6">Date: ______________</div>
+          
+          {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => (
+            <div key={groupName} className="mb-8 break-inside-avoid">
+              <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">{groupName}</h2>
+              <table className="w-full border-collapse border border-black text-left text-sm">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-black">
+                    <th className="p-2 border border-black w-8 text-center">✓</th>
+                    <th className="p-2 border border-black">Item</th>
+                    <th className="p-2 border border-black w-24 text-center">DB Qty</th>
+                    <th className="p-2 border border-black w-40">Actual Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupItems.map(c => (
+                    <tr key={c.id} className="border-b border-black break-inside-avoid">
+                      <td className="p-2 border border-black text-center"><div className="w-4 h-4 border border-black mx-auto"></div></td>
+                      <td className="p-2 border border-black">
+                        <div className="font-bold">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
+                        <div className="text-xs text-gray-600">{c.bottleSize}</div>
+                      </td>
+                      <td className="p-2 border border-black text-center">{c.currentStock}</td>
+                      <td className="p-2 border border-black"></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          
+          {activeTab !== 'chemicals' && (
+            <div className="mb-8 break-inside-avoid">
+              <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">{activeTab === 'supplies' ? 'Supplies' : 'Equipment'}</h2>
+              <table className="w-full border-collapse border border-black text-left text-sm">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-black">
+                    <th className="p-2 border border-black w-8 text-center">✓</th>
+                    <th className="p-2 border border-black">Item</th>
+                    <th className="p-2 border border-black w-24 text-center">DB Qty</th>
+                    <th className="p-2 border border-black w-40">Actual Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(activeTab === 'supplies' ? filteredSupplies : filteredEquip).map((item: any) => (
+                    <tr key={item.id} className="border-b border-black break-inside-avoid">
+                      <td className="p-2 border border-black text-center"><div className="w-4 h-4 border border-black mx-auto"></div></td>
+                      <td className="p-2 border border-black font-bold">{item.name}</td>
+                      <td className="p-2 border border-black text-center">{item.quantity || 1}</td>
+                      <td className="p-2 border border-black"></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
