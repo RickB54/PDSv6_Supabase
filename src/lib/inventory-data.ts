@@ -70,6 +70,8 @@ export interface Chemical {
     salePrice?: number;
     notes?: string;
     isConcentrate?: boolean;
+    tags?: string[];
+    shelfLocation?: string;
 }
 
 export interface Material {
@@ -173,7 +175,9 @@ export async function getChemicals(): Promise<Chemical[]> {
         actualPrice: item.actual_price,
         salePrice: item.sale_price,
         notes: item.notes,
-        isConcentrate: item.is_concentrate ?? true
+        isConcentrate: item.is_concentrate ?? true,
+        tags: item.tags || [],
+        shelfLocation: item.shelf_location || ''
     }));
 }
 
@@ -200,6 +204,8 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         sale_price: chemical.salePrice || null,
         notes: chemical.notes || null,
         is_concentrate: chemical.isConcentrate ?? true,
+        tags: chemical.tags || [],
+        shelf_location: chemical.shelfLocation || null,
         updated_at: new Date().toISOString()
     };
 
@@ -226,6 +232,8 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
                 else if (errMsg.includes('is_concentrate') && 'is_concentrate' in sanitized) { delete sanitized.is_concentrate; dropped = true; }
+                else if (errMsg.includes('tags') && 'tags' in sanitized) { delete sanitized.tags; dropped = true; }
+                else if (errMsg.includes('shelf_location') && 'shelf_location' in sanitized) { delete sanitized.shelf_location; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitized.where_purchased;
@@ -234,6 +242,8 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                     delete sanitized.actual_price;
                     delete sanitized.sale_price;
                     delete sanitized.is_concentrate;
+                    delete sanitized.tags;
+                    delete sanitized.shelf_location;
                 }
                 const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
                 currentErr = retryErr;
@@ -259,7 +269,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
                 updatedAt: dbData.updated_at,
-                isConcentrate: dbData.is_concentrate
+                isConcentrate: dbData.is_concentrate,
+                tags: dbData.tags,
+                shelfLocation: dbData.shelf_location
             } as any;
         } else {
             throw error;
