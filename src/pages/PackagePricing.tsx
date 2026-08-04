@@ -137,7 +137,10 @@ export default function PackagePricing() {
     imageDataUrl: "",
   });
   const [newAddonForm, setNewAddonForm] = useState({
+    id: "",
     name: "",
+    description: "",
+    learnMoreLink: "",
     // dynamic pricing inputs keyed by vehicle type id
     pricing: { compact: "", midsize: "", truck: "", luxury: "" } as Record<string, string>,
   });
@@ -2688,19 +2691,28 @@ export default function PackagePricing() {
 
   const handleNewAddonSave = async () => {
     if (isDemoActive()) {
-      toast.error("Demo Mode: New add-on creation is disabled.");
+      toast.error("Demo Mode: Add-on modification is disabled.");
       return;
     }
-    const id = `custom-addon-${Date.now()}`;
+    const isEditing = !!newAddonForm.id;
+    const id = newAddonForm.id || `custom-addon-${Date.now()}`;
     const pricing = {
       compact: Math.ceil(parseFloat(newAddonForm.pricing.compact || "") || 0),
       midsize: Math.ceil(parseFloat(newAddonForm.pricing.midsize || "") || 0),
       truck: Math.ceil(parseFloat(newAddonForm.pricing.truck || "") || 0),
       luxury: Math.ceil(parseFloat(newAddonForm.pricing.luxury || "") || 0),
     };
-    saveCustomAddOn({ id, name: newAddonForm.name || 'New Add-On', pricing });
-    // New add-ons default OFF on live site
-    setAddOnMeta(id, { visible: false });
+    saveCustomAddOn({ 
+      id, 
+      name: newAddonForm.name || 'New Add-On', 
+      description: newAddonForm.description,
+      learnMoreLink: newAddonForm.learnMoreLink,
+      pricing 
+    });
+    // New add-ons default OFF on live site, existing preserve visibility
+    if (!isEditing) {
+      setAddOnMeta(id, { visible: false });
+    }
     setAddAddonOpen(false);
     // Insert entered prices for all live vehicle options into savedPrices/currentPrices
     const updatedPrices: PriceMap = { ...savedPrices };
@@ -2716,9 +2728,25 @@ export default function PackagePricing() {
     forceWebsiteTabRefresh();
     forceBookNowTabRefresh();
     openPackagesLiveInBrowser();
-    toast.success("New add-on added and synced");
+    toast.success(isEditing ? "Add-on updated and synced" : "New add-on added and synced");
     // Reset form fields
-    setNewAddonForm({ name: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
+    setNewAddonForm({ id: '', name: '', description: '', learnMoreLink: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
+  };
+
+  const openEditAddonModal = (addon: any) => {
+    setNewAddonForm({
+      id: addon.id,
+      name: addon.name || "",
+      description: addon.description || "",
+      learnMoreLink: addon.learnMoreLink || "",
+      pricing: {
+        compact: currentPrices[getKey('addon', addon.id, 'compact')] || addon.pricing?.compact || "",
+        midsize: currentPrices[getKey('addon', addon.id, 'midsize')] || addon.pricing?.midsize || "",
+        truck: currentPrices[getKey('addon', addon.id, 'truck')] || addon.pricing?.truck || "",
+        luxury: currentPrices[getKey('addon', addon.id, 'luxury')] || addon.pricing?.luxury || ""
+      }
+    });
+    setAddAddonOpen(true);
   };
 
   const legacyIds = ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail', 'prime-2026-exterior', 'prime-2026-interior', 'prime-2026-full'];
@@ -3407,6 +3435,7 @@ export default function PackagePricing() {
                       >
                         Save
                       </Button>
+                      <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditAddonModal(addon)}>Edit Details</Button>
                       <Button variant="outline" className="border-red-600 text-red-500" onClick={() => openEditServices('addon', addon.id)}>Edit Services</Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -3601,16 +3630,27 @@ export default function PackagePricing() {
           </DialogContent>
         </Dialog>
 
-        {/* Add New Add-On Modal */}
-        <Dialog open={addAddonOpen} onOpenChange={setAddAddonOpen}>
+        {/* Add/Edit Add-On Modal */}
+        <Dialog open={addAddonOpen} onOpenChange={(o) => {
+          setAddAddonOpen(o);
+          if (!o) setNewAddonForm({ id: '', name: '', description: '', learnMoreLink: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
+        }}>
           <DialogContent className="sm:max-w-[95vw] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Add-On</DialogTitle>
+              <DialogTitle>{newAddonForm.id ? "Edit Add-On" : "Add New Add-On"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div>
                 <Label>Name</Label>
                 <Input value={newAddonForm.name} onChange={(e) => setNewAddonForm(prev => ({ ...prev, name: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Input placeholder="Short description of the add-on service" value={newAddonForm.description || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, description: e.target.value }))} />
+              </div>
+              <div>
+                <Label>Learn More Link (Optional URL)</Label>
+                <Input placeholder="e.g. /services/pet-hair-removal" value={newAddonForm.learnMoreLink || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, learnMoreLink: e.target.value }))} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {vehicleOptions.map(sz => (
@@ -3623,7 +3663,7 @@ export default function PackagePricing() {
               </div>
             </div>
             <DialogFooter className="button-group-responsive">
-              <Button onClick={handleNewAddonSave} className="bg-red-600">Create Add-On</Button>
+              <Button onClick={handleNewAddonSave} className="bg-red-600">{newAddonForm.id ? "Save Changes" : "Create Add-On"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

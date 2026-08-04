@@ -3121,7 +3121,7 @@ const InventoryControl = () => {
                             </div>
                             {t.actualPrice && t.actualPrice > t.price && (
                               <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
-                                Save ${(t.actualPrice - t.price).toFixed(2)}
+                                Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
                               </span>
                             )}
                             {t.price > 0 && t.quantity > 1 && (
@@ -3183,7 +3183,12 @@ const InventoryControl = () => {
                             <>{!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</>
                           )}
                         </div>
-                        {t.wherePurchased && <div className="text-sm text-purple-400 font-bold italic">Purchased at: {t.wherePurchased}</div>}
+                        {t.actualPrice && t.actualPrice > t.price && (
+                          <div className="text-xs text-green-400 font-bold mt-0.5">
+                            Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
+                          </div>
+                        )}
+                        {t.wherePurchased && <div className="text-sm text-purple-400 font-bold italic mt-0.5">Purchased at: {t.wherePurchased}</div>}
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">

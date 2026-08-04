@@ -268,7 +268,7 @@ export default function NotificationBell() {
         const { data } = await supabase
           .from('bookings')
           .select('id, customer_id, scheduled_at, service_package, booking_vehicle, customer_name')
-          .ilike('status', 'tentative')
+          .in('status', ['tentative', 'TENTATIVE'])
           .limit(20);
 
           let addedAny = false;

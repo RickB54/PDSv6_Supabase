@@ -309,6 +309,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
       toast.info(`Uploading ${total} item${total > 1 ? 's' : ''}...`, { description: "Processing media archive." });
 
       const uploadedUrls: string[] = [];
+      let successCount = 0;
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
@@ -321,11 +322,23 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`;
         const filePath = `customers/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage.from('customer-photos').upload(filePath, fileToUpload);
-        if (uploadError) throw uploadError;
+        const { data, error: uploadError } = await supabase.storage.from('customer-photos').upload(filePath, fileToUpload);
+        if (uploadError) {
+          throw new Error(uploadError.message || 'Upload failed');
+        }
+        if (!data) {
+          throw new Error('Upload returned no data');
+        }
 
         const { data: { publicUrl } } = supabase.storage.from('customer-photos').getPublicUrl(filePath);
-        uploadedUrls.push(publicUrl);
+        if (publicUrl) {
+          uploadedUrls.push(publicUrl);
+          successCount++;
+        }
+      }
+
+      if (successCount === 0) {
+         throw new Error("No files were successfully uploaded.");
       }
 
       setForm(prev => {
@@ -334,7 +347,6 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           const vehicle = { ...updatedVehicles[vehicleIndex] };
           const currentMedia = (vehicle as any)[type] || [];
           const updatedMedia = [...currentMedia, ...uploadedUrls];
-          // Deduplicate if needed
           const uniqueMedia = Array.from(new Set(updatedMedia));
           (vehicle as any)[type] = uniqueMedia;
           updatedVehicles[vehicleIndex] = vehicle;
@@ -346,10 +358,10 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
           return { ...prev, [type]: uniqueMedia };
         }
       });
-      toast.success(`Successfully uploaded ${total} item${total > 1 ? 's' : ''}!`);
+      toast.success(`Successfully uploaded ${successCount} item${successCount > 1 ? 's' : ''}!`);
     } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error("Upload Failed", { description: error.message });
+      toast.error("Upload Failed", { description: error.message || "An unknown error occurred during upload." });
     } finally {
       setLoading(false);
     }
@@ -369,6 +381,32 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         return { ...prev, [type]: current.filter((_: any, i: number) => i !== index) };
       }
     });
+  };
+
+  const moveMedia = (fromType: 'generalPhotos' | 'beforePhotos' | 'afterPhotos', toType: 'generalPhotos' | 'beforePhotos' | 'afterPhotos', index: number, vehicleIndex?: number) => {
+    setForm(prev => {
+      if (vehicleIndex !== undefined && vehicleIndex !== -1 && prev.vehicles && prev.vehicles[vehicleIndex]) {
+        const updatedVehicles = [...prev.vehicles];
+        const vehicle = { ...updatedVehicles[vehicleIndex] };
+        const urlToMove = (vehicle as any)[fromType]?.[index];
+        if (!urlToMove) return prev;
+        
+        (vehicle as any)[fromType] = ((vehicle as any)[fromType] || []).filter((_: any, i: number) => i !== index);
+        (vehicle as any)[toType] = [...((vehicle as any)[toType] || []), urlToMove];
+        
+        updatedVehicles[vehicleIndex] = vehicle;
+        return { ...prev, vehicles: updatedVehicles };
+      } else {
+        const urlToMove = (prev as any)[fromType]?.[index];
+        if (!urlToMove) return prev;
+        
+        const newFrom = ((prev as any)[fromType] || []).filter((_: any, i: number) => i !== index);
+        const newTo = [...((prev as any)[toType] || []), urlToMove];
+        
+        return { ...prev, [fromType]: newFrom, [toType]: newTo };
+      }
+    });
+    toast.success(`Moved photo to ${toType === 'beforePhotos' ? 'Before' : 'After'} Photos`);
   };
 
   const handleAddVideo = (url: string, description: string, vehicleIndex?: number) => {
@@ -784,9 +822,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                             <h4 className="text-[11px] font-black uppercase tracking-widest text-zinc-300">{vLabel}</h4>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <MediaUploadField label="Before Photos" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
-                            <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
-                            <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                            <MediaUploadField label="Before Photos" type="beforePhotos" photos={vehicle.beforePhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
+                            <MediaUploadField label="After Photos" type="afterPhotos" photos={vehicle.afterPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
+                            <MediaUploadField label="General Media" type="generalPhotos" photos={vehicle.generalPhotos || []} vIdx={vIdx} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
                           </div>
                           <div className="pt-4 border-t border-zinc-800/50">
                             <VideoLinkField 
@@ -807,9 +845,9 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                         <span className="text-[9px] text-zinc-600 font-bold ml-2">(no vehicle linked — add one in Profile tab to organize by vehicle)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
-                        <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
-                        <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} canEdit={isAdmin || canAddMedia} />
+                        <MediaUploadField label="Before Photos" type="beforePhotos" photos={form.beforePhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
+                        <MediaUploadField label="After Photos" type="afterPhotos" photos={form.afterPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
+                        <MediaUploadField label="General Media" type="generalPhotos" photos={form.generalPhotos || []} vIdx={-1} onUpload={handleFileUpload} onRemove={removeMedia} onMove={moveMedia} canEdit={isAdmin || canAddMedia} />
                       </div>
                       <div className="pt-4 border-t border-zinc-800/50">
                         <VideoLinkField 
@@ -958,10 +996,11 @@ interface MediaUploadFieldProps {
   vIdx: number;
   onUpload: (files: FileList | File[], type: 'generalPhotos'|'beforePhotos'|'afterPhotos', vIdx: number) => void;
   onRemove: (type: 'generalPhotos'|'beforePhotos'|'afterPhotos', index: number, vIdx: number) => void;
+  onMove?: (fromType: 'generalPhotos'|'beforePhotos'|'afterPhotos', toType: 'generalPhotos'|'beforePhotos'|'afterPhotos', index: number, vIdx: number) => void;
   canEdit?: boolean;
 }
 
-function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, canEdit = true }: MediaUploadFieldProps) {
+function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, onMove, canEdit = true }: MediaUploadFieldProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const currentPhotos = photos || [];
@@ -971,7 +1010,6 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, canEd
     if (files && files.length > 0) {
       onUpload(files, type, vIdx);
     }
-    // Reset so same file can be selected again and onChange doesn't double-fire
     e.target.value = '';
   };
 
@@ -983,9 +1021,21 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, canEd
           <div key={idx} className="relative aspect-square rounded bg-zinc-950 border border-zinc-800 overflow-hidden group">
             <img src={url} className="w-full h-full object-cover" />
             {canEdit && (
-              <button onClick={() => onRemove(type, idx, vIdx)} className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => onRemove(type, idx, vIdx)} className="absolute top-1 right-1 p-1 bg-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" title="Remove photo">
                 <X className="w-2 h-2 text-white" />
               </button>
+            )}
+            {canEdit && onMove && type === 'beforePhotos' && (
+              <button onClick={() => onMove('beforePhotos', 'afterPhotos', idx, vIdx)} className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[9px] font-bold bg-blue-600 rounded opacity-0 group-hover:opacity-100 transition-opacity text-white">Move to After</button>
+            )}
+            {canEdit && onMove && type === 'afterPhotos' && (
+              <button onClick={() => onMove('afterPhotos', 'beforePhotos', idx, vIdx)} className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[9px] font-bold bg-blue-600 rounded opacity-0 group-hover:opacity-100 transition-opacity text-white">Move to Before</button>
+            )}
+            {canEdit && onMove && type === 'generalPhotos' && (
+              <div className="absolute bottom-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => onMove('generalPhotos', 'beforePhotos', idx, vIdx)} className="px-1.5 py-0.5 text-[9px] font-bold bg-zinc-800 hover:bg-blue-600 rounded text-white" title="Move to Before">B</button>
+                <button onClick={() => onMove('generalPhotos', 'afterPhotos', idx, vIdx)} className="px-1.5 py-0.5 text-[9px] font-bold bg-zinc-800 hover:bg-blue-600 rounded text-white" title="Move to After">A</button>
+              </div>
             )}
           </div>
         ))}
@@ -995,9 +1045,7 @@ function MediaUploadField({ label, type, photos, vIdx, onUpload, onRemove, canEd
             onClick={() => fileRef.current?.click()}
           >
             <Plus className="w-4 h-4 text-zinc-700" />
-            {/* Gallery / file picker */}
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFile} />
-            {/* Camera capture - separate input, button stops propagation so only camera fires */}
             <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
             <button
               type="button"
