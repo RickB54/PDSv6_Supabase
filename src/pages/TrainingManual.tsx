@@ -411,6 +411,94 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
             currentY += 5;
         });
 
+        // Section 3: Chemical Dilution & Application Index
+        currentY += 5;
+        checkPageBreak(25);
+        doc.setFontSize(13);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(16, 185, 129); // Emerald Green
+        doc.text("SECTION 3 — CHEMICAL DILUTION & APPLICATION INDEX", 14, currentY);
+        doc.setDrawColor(16, 185, 129);
+        doc.setLineWidth(0.5);
+        doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
+        currentY += 10;
+
+        const renderChemicalTable = (subHeading: string, colorRGB: [number, number, number], items: { name: string; dilution: string; usage: string }[]) => {
+            checkPageBreak(15);
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(...colorRGB);
+            doc.text(subHeading, 14, currentY);
+            currentY += 6;
+
+            // Table Header Row
+            checkPageBreak(8);
+            doc.setFillColor(241, 245, 249); // Slate-100 background
+            doc.rect(14, currentY, pageWidth - 28, 7, 'F');
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59);
+            doc.text("Chemical Name", 16, currentY + 5);
+            doc.text("Dilution Ratio", 70, currentY + 5);
+            doc.text("Application & Key Usage Notes", 115, currentY + 5);
+            currentY += 8;
+
+            // Rows
+            items.forEach((item, index) => {
+                const splitUsage = doc.splitTextToSize(item.usage, pageWidth - 130);
+                const rowHeight = Math.max(7, splitUsage.length * 4.5 + 3);
+                checkPageBreak(rowHeight + 2);
+
+                if (index % 2 === 1) {
+                    doc.setFillColor(248, 250, 252); // Alternating light row background
+                    doc.rect(14, currentY, pageWidth - 28, rowHeight, 'F');
+                }
+
+                doc.setFontSize(8.5);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(15, 23, 42);
+                doc.text(item.name, 16, currentY + 4.5);
+
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(37, 99, 235); // Blue for dilution ratio
+                doc.text(item.dilution, 70, currentY + 4.5);
+
+                doc.setTextColor(51, 65, 85);
+                splitUsage.forEach((uLine: string, uIdx: number) => {
+                    doc.text(uLine, 115, currentY + 4.5 + (uIdx * 4.5));
+                });
+
+                // Row border bottom
+                doc.setDrawColor(226, 232, 240);
+                doc.setLineWidth(0.2);
+                doc.line(14, currentY + rowHeight, pageWidth - 14, currentY + rowHeight);
+
+                currentY += rowHeight + 1;
+            });
+            currentY += 6;
+        };
+
+        const exteriorChemicals = [
+            { name: "Dark Fury", dilution: "4:1 (light) / 7:1 (heavy)", usage: "Wheels & tires. Agitate with barrel/detail brush & rinse immediately. Do not dwell on bare metal." },
+            { name: "Dirt Buster / Muscle Magic", dilution: "Diluted per label", usage: "Pre-treat lower rocker panels & engine bay heavy contamination. Cover electronics before rinsing." },
+            { name: "Road Warrior", dilution: "4:1 ratio", usage: "Bug pre-treatment on front grill, hood & bumper. Apply dry, dwell 3-5 min MAX before rinsing." },
+            { name: "Meguiar's Gold Class / Cherry Foam", dilution: "5:1 in foam cannon", usage: "Exterior foam cannon bath. Dwell 3-5 min top to bottom. Mist with water if foam begins drying." },
+            { name: "Formula 4", dilution: "20:1 ratio", usage: "Spray on wet paint during drying. Serves dual purpose: drying aid + protection (2-5 weeks)." }
+        ];
+
+        const interiorChemicals = [
+            { name: "Carpet Bomber", dilution: "7:1 (std) / 5:1 (heavy)", usage: "Carpets, fabric seats & floor mats. Agitate in straight strokes with stiff carpet/drill brush." },
+            { name: "Terminator duo / Zap It", dilution: "Diluted per label", usage: "Spot treatment & carpet backup cleaner for stubborn stains." },
+            { name: "SP Does It All Enzyme Cleaner", dilution: "Ready to use", usage: "Organic stains (urine, food, blood, pet soiling), dashboard wipe-down, vinyl & trim." },
+            { name: "Pink Perfection", dilution: "10:1 ratio", usage: "Dashboard, steering wheel, console, interior plastics, vinyl & trim general cleaning." },
+            { name: "Green All", dilution: "Diluted per label", usage: "General interior plastics cleaning with soft brush." },
+            { name: "P&S Xpress / SP Cover All", dilution: "3:1 (Xpress) / 4:1 (Cover All)", usage: "Interior protectant & plastics finisher coat. Apply with clean microfiber applicator." },
+            { name: "Invisible Glass", dilution: "Ready to use", usage: "Windows & glass. Spray on dedicated glass towel ONLY — two-pass streak-free method." }
+        ];
+
+        renderChemicalTable("A. Exterior Detail Chemical Reference", [37, 99, 235], exteriorChemicals);
+        renderChemicalTable("B. Interior Detail Chemical Reference", [147, 51, 234], interiorChemicals);
+
         doc.save(`Prime_Detailing_SOPs_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
