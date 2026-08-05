@@ -86,6 +86,8 @@ export interface AddOn {
   applicableVehicleTypes?: VehicleType[];
   /** Set to false to hide this add-on from all customer-facing forms without deleting it */
   active?: boolean;
+  /** Full description to display in the Learn More modal */
+  learnMoreLink?: string;
 }
 
 // Pricing overrides (persisted) allow admin to update package pricing globally
@@ -305,6 +307,31 @@ export const addOns: AddOn[] = [
   { id: 'odor-eliminator', name: 'Odor Eliminator', category: 'interior', description: 'Targeted application of professional-grade odor neutralizing agents. We don\'t just mask the smell; we use chemical neutralizers to attack and eliminate the source of minor food, smoke, or pet odors.', basePrice: 17, pricing: { compact: 17, midsize: 22, truck: 28, luxury: 39 }, active: true },
   { id: 'ceramic-protection-1yr', name: '1-Year Ceramic Protection', category: 'exterior', description: 'Premium Graphene Ceramic Spray Coating applied after a thorough prep wash. It chemically bonds to the paint to deliver up to 1 year of superior high-gloss shine, extreme water beading, and simplified maintenance washes.', basePrice: 87, pricing: { compact: 87, midsize: 120, truck: 142, luxury: 164 }, active: true },
   { id: '3rd-row-seating', name: '3rd Row Seating', category: 'interior', description: 'An additional interior detail extension required for vehicles equipped with a third row of seating. This covers the extra time and labor needed to thoroughly vacuum, clean, and detail the rear-most passenger area and cargo space.', basePrice: 55, pricing: { compact: 55, midsize: 55, truck: 55, luxury: 55 }, applicableVehicleTypes: ['truck', 'luxury'], active: true },
+  { 
+    id: 'water-spot-removal', 
+    name: 'Water Spot Removal', 
+    category: 'exterior', 
+    description: 'Removes stubborn mineral/water deposits from paint, glass, chrome, and trim using specialized acid-safe cleaners and careful hand labor — an intensive process, priced accordingly. Best done before any wax, sealant, or ceramic coating for a clean, defect-free finish.', 
+    learnMoreLink: `Removes stubborn mineral/water deposits from paint, glass, chrome, and trim using specialized acid-safe cleaners and careful hand labor — an intensive process, priced accordingly. Best done before any wax, sealant, or ceramic coating for a clean, defect-free finish.
+
+Benefits:
+✓ Restores flawless clarity to paint and exterior glass
+✓ Eliminates etched-in calcium and hard water mineral deposits
+✓ Prepares surfaces perfectly for waxes, sealants, or ceramic coatings
+✓ Prevents permanent clear-coat damage caused by untreated mineral etching
+
+Process & Precautions:
+We utilize specialized, professional-grade acid-based mineral descalers designed specifically for automotive clear coats. These chemicals dissolve calcium deposits safely without abrasive damage. The process is performed panel-by-panel entirely by hand in a controlled environment to ensure the acid is neutralized immediately, guaranteeing zero harm to your vehicle's paint, plastics, or trim.
+
+Estimated Time & Pricing:
+• Compact/Sedan: ~1.25 hrs | $125
+• Mid-Size/SUV: ~1.75 hrs | $175
+• Truck/Van/Large SUV: ~2.5 hrs | $250
+• Luxury/High-End: ~2.75 hrs | $275`, 
+    basePrice: 125, 
+    pricing: { compact: 125, midsize: 175, truck: 250, luxury: 275 }, 
+    active: true 
+  },
 
   // --- INACTIVE (set active: false to hide from customer forms; re-enable by setting active: true) ---
   { id: 'clay-bar', name: 'Clay Bar & Iron Decontamination', category: 'exterior', description: 'A professional deep decontamination process using specialized clay to pull embedded contaminants, industrial fallout, and iron particles from the clear coat, leaving the paint as smooth as glass.', basePrice: 88, pricing: { compact: 88, midsize: 99, truck: 110, luxury: 132 }, active: false },

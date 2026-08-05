@@ -103,15 +103,7 @@
       "addon:wheel-cleaning:compact": "25",
       "addon:wheel-cleaning:midsize": "30",
       "addon:wheel-cleaning:truck": "40",
-      "addon:wheel-cleaning:luxury": "50",
-      "addon:custom-addon-1785881561501:compact": "125",
-      "addon:custom-addon-1785881561501:midsize": "175",
-      "addon:custom-addon-1785881561501:truck": "250",
-      "addon:custom-addon-1785881561501:luxury": "275",
-      "addon:custom-addon-1785938573586:compact": "125",
-      "addon:custom-addon-1785938573586:midsize": "175",
-      "addon:custom-addon-1785938573586:truck": "250",
-      "addon:custom-addon-1785938573586:luxury": "275"
+      "addon:wheel-cleaning:luxury": "50"
     },
     "packageMeta": {
       "prime-elite-exterior": {
@@ -275,33 +267,10 @@
         "id": "wheel-cleaning",
         "visible": true,
         "deleted": false
-      },
-      "custom-addon-1785881561501": {
-        "id": "custom-addon-1785881561501",
-        "visible": true,
-        "deleted": false
-      },
-      "custom-addon-1785938573586": {
-        "id": "custom-addon-1785938573586",
-        "visible": true,
-        "deleted": false
       }
     },
     "customPackages": [],
-    "customAddOns": [
-      {
-        "id": "custom-addon-1785938573586",
-        "name": "Water Spot Removal",
-        "description": "Professional water spot removal targeting stubborn mineral deposits on paint, glass, chrome, and trim using specialized acid-safe",
-        "learnMoreLink": "Hard water spots can leave behind stubborn mineral deposits that dull your vehicle's paint, glass, chrome, and trim. If left untreated, these deposits can eventually etch into the surface, making them much more difficult—or even impossible—to completely remove.\nOur Water Spot Removal service safely targets and removes mineral buildup using professional-grade products and specialized techniques designed to restore clarity and shine without causing unnecessary damage.\nThis service may include:\nRemoval of mineral deposits from painted surfaces\nWater spot treatment for exterior glass\nCleaning of chrome and glossy trim affected by hard water\nSurface inspection before and after treatment\nBenefits\nRestores clarity and gloss to your vehicle\nImproves visibility through cleaner glass\nHelps prevent permanent mineral etching when addressed early\nPrepares surfaces for waxing, sealants, or ceramic coatings\nEnhances your vehicle's overall appearance\nPlease Note: Results depend on the severity and age of the water spots. While most mineral deposits can be significantly reduced or removed, deeply etched water spots that have permanently damaged the paint or glass may not be completely correctable without more extensive paint correction or glass polishing.",
-        "pricing": {
-          "compact": 125,
-          "midsize": 175,
-          "truck": 250,
-          "luxury": 275
-        }
-      }
-    ],
+    "customAddOns": [],
     "version": 1785938659388
   },
   "vehicleTypesLive": [

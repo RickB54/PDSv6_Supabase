@@ -1474,12 +1474,29 @@ const ServiceChecklist = () => {
 
   useEffect(() => {
     if (initialLoaded) {
-      const isUntouched = !selectedCustomer && !selectedPackage && !notes && selectedAddOns.length === 0 && checklistSteps.every(s => !s.checked) && !jobStartTime && !discountValue && !destinationFee && chemRows.length === 0 && matRows.length === 0 && toolRows.length === 0 && !milesTraveled;
-      if (completedAt) {
+      // If the job is marked as completed, it's definitely not "unsaved"
+      if (completedAt || isJobCompleted) {
         setHasUnsavedChanges(false);
         // @ts-ignore
         window.hasUnsavedChecklistChanges = false;
-      } else if (isUntouched) {
+        return;
+      }
+
+      // Check if any actual work or data entry has begun
+      const hasCustomer = !!selectedCustomer;
+      const hasPackage = !!selectedPackage;
+      const hasNotes = !!notes;
+      const hasAddOns = selectedAddOns.length > 0;
+      const hasCheckedSteps = checklistSteps.some(s => s.checked);
+      const timerStarted = !!jobStartTime || !!masterStartTime;
+      const hasDiscount = !!discountValue;
+      const hasDestFee = !!destinationFee && destinationFee > 0;
+      const hasMaterials = chemRows.length > 0 || matRows.length > 0 || toolRows.length > 0;
+      const hasMileage = !!milesTraveled && milesTraveled > 0;
+
+      const isUntouched = !(hasCustomer || hasPackage || hasNotes || hasAddOns || hasCheckedSteps || timerStarted || hasDiscount || hasDestFee || hasMaterials || hasMileage);
+
+      if (isUntouched) {
         setHasUnsavedChanges(false);
         // @ts-ignore
         window.hasUnsavedChecklistChanges = false;
@@ -1490,10 +1507,11 @@ const ServiceChecklist = () => {
       }
     }
   }, [
-    selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
-    checklistSteps, notes, destinationFee, employeeAssigned, 
-    discountValue, discountType, jobStartTime, isTimerRunning, totalElapsedMs, elapsedTime, itemDurations,
-    chemRows, matRows, toolRows, milesTraveled, odometerStart, odometerEnd, checklistId, progressPercent, sectionDurations
+    initialLoaded,
+    selectedCustomer, selectedPackage, selectedAddOns, 
+    checklistSteps, notes, destinationFee, discountValue, 
+    jobStartTime, masterStartTime, chemRows, matRows, toolRows, 
+    milesTraveled, completedAt, isJobCompleted
   ]);
 
   useEffect(() => {
