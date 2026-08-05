@@ -731,19 +731,43 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
         await upsertSupabaseEstimate(estimatePayload);
     };
 
+    const formatEmployeeCallSummary = () => {
+        let summary = `📞 PHONE ASSISTANT DATA SUMMARY\n`;
+        summary += `------------------------------\n`;
+        summary += `Caller Name: ${callerName || 'Not specified'}\n`;
+        if (callerPhone) summary += `Phone: ${callerPhone}\n`;
+        if (callerEmail) summary += `Email: ${callerEmail}\n`;
+        
+        vehicles.forEach((v, idx) => {
+            const scenario = v.scenarios.find(s => s.id === v.selectedScenarioId);
+            summary += `\n🚘 Vehicle ${idx + 1}: ${v.year || ''} ${v.make || ''} ${v.model || ''} [Category: ${v.type.toUpperCase()}]\n`;
+            if (scenario) {
+                summary += `Package Selected: ${scenario.packageName || 'Custom'}\n`;
+                if (scenario.addOnIds && scenario.addOnIds.length > 0) {
+                    summary += `Add-ons: ${scenario.addOnIds.join(', ')}\n`;
+                }
+                summary += `Estimated Quote: $${scenario.price || 0}\n`;
+            }
+            if (v.notes) summary += `Vehicle Notes: ${v.notes}\n`;
+        });
+        return summary;
+    };
+
     const handleHandoff = () => {
         if (isEmployee) {
+            const summaryText = formatEmployeeCallSummary();
             toast({
-                title: "🔒 Employee Access Notice",
-                description: "Employees cannot save customer accounts or estimates. Please click 'Notify Admin' to send caller details to management.",
-                variant: "default"
+                title: "✅ Phone Data Saved to Notify Admin",
+                description: "Call details & pricing pre-filled into Notify Admin modal.",
             });
             window.dispatchEvent(new CustomEvent('open-notify-admin', { 
                 detail: { 
-                    subject: `Phone Inquiry Handoff: ${callerName || 'Caller'}`, 
-                    message: `Customer: ${callerName || 'N/A'}\nPhone: ${callerPhone || 'N/A'}\nEmail: ${callerEmail || 'N/A'}\nNotes: ${vehicles[0]?.notes || 'N/A'}`
+                    subject: `Phone Inquiry Handoff: ${callerName || 'New Caller'}`, 
+                    message: summaryText,
+                    mode: 'urgent'
                 } 
             }));
+            onOpenChange(false);
             return;
         }
         // Prepare data for Evaluation
@@ -758,55 +782,30 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
         // 1. Determine Type based on Scenario label
         const firstVehicle = vehicles[0];
         const selectedScenario = firstVehicle.scenarios.find(s => s.id === firstVehicle.selectedScenarioId);
-        const isUndecided = selectedScenario?.label.includes("Scenario C");
-        const accountType = isUndecided ? 'prospect' : 'customer';
 
-        // 2. Persist to Database if Caller Name is provided
+        // Auto-Generate Estimate & Save Customer/Prospect Simultaneously!
         if (callerName) {
             try {
                 const timestamp = new Date().toLocaleString("en-US", {
                     dateStyle: "medium",
                     timeStyle: "short"
                 });
-
-                const mappedVehicle = {
-                    make: firstVehicle.make || '',
-                    model: firstVehicle.model || '',
-                    year: firstVehicle.year || '',
-                    color: firstVehicle.color || '',
-                    type: firstVehicle.type || 'midsize',
-                    mileage: firstVehicle.mileage || '',
-                    conditionInside: firstVehicle.interiorCondition || '',
-                    conditionOutside: firstVehicle.paintCondition || ''
-                };
-
-                const actualServiceId = selectedScenario?.packageId || firstVehicle.selectedServiceId;
-                const selectedServicePkg = livePackages.find(p => p.id === actualServiceId) || servicePackages.find(p => p.id === actualServiceId);
-                const selectedServiceName = selectedServicePkg ? selectedServicePkg.name : 'None';
-
+                const accountType = "prospect";
                 const customerData = {
-                    name: callerName || "Unknown Caller",
+                    id: callerPhone ? `cust_${callerPhone.replace(/\D/g, '')}` : `cust_${Date.now()}`,
+                    name: callerName,
                     phone: callerPhone,
                     email: callerEmail,
-                    type: accountType,
-                    notes: `Added via Phone Assistant. This person was a caller on ${timestamp}.
-
-[EVALUATION SUMMARY]
-• Detailing Service: ${selectedServiceName.toUpperCase()}
-• Color: ${firstVehicle.color || 'N/A'}
-• Dirt Level: ${firstVehicle.condition?.toUpperCase() || 'N/A'}
-• Usage: ${firstVehicle.dailyDriver ? 'Daily Driver' : 'Weekend'}
-• Storage: ${firstVehicle.garaged || 'N/A'}
-• Mileage: ${firstVehicle.mileage || 'N/A'}
-• Detail History: ${firstVehicle.detailHistory || 'N/A'}
-• Seat Material: ${firstVehicle.seatMaterial || 'N/A'}
-• Interior Condition: ${firstVehicle.interiorCondition || 'N/A'}
-• Paint Condition: ${firstVehicle.paintCondition || 'N/A'}
-• Customer Goal: ${firstVehicle.mainGoal || 'N/A'}
-
-${firstVehicle.notes || ''}`.trim(),
-                    vehicle_info: mappedVehicle,
-                    vehicles: [mappedVehicle]
+                    notes: `Created via Call Assistant on ${timestamp}. Notes: ${firstVehicle.notes || 'None'}`,
+                    accountType: accountType,
+                    status: 'lead',
+                    vehicles: vehicles.map(v => ({
+                        id: `veh_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                        make: v.make || 'Unknown',
+                        model: v.model || 'Unknown',
+                        year: v.year || '',
+                        type: v.type
+                    }))
                 };
 
                 upsertSupabaseCustomer(customerData).then(async (savedCustomer) => {
@@ -838,19 +837,22 @@ ${firstVehicle.notes || ''}`.trim(),
 
     const handleSaveProspectOnly = async () => {
         if (isEmployee) {
+            const summaryText = formatEmployeeCallSummary();
             toast({
-                title: "🔒 Employee Access Notice",
-                description: "Employees cannot save customer accounts or prospects directly. Contact Admin via Notify Admin.",
-                variant: "default"
+                title: "✅ Prospect Data Saved to Notify Admin",
+                description: "Caller info pre-filled into Notify Admin for profile creation.",
             });
             window.dispatchEvent(new CustomEvent('open-notify-admin', { 
                 detail: { 
-                    subject: `New Customer/Prospect Request: ${callerName || 'Caller'}`, 
-                    message: `Customer Name: ${callerName || 'N/A'}\nPhone: ${callerPhone || 'N/A'}\nEmail: ${callerEmail || 'N/A'}`
+                    subject: `New Customer Profile Request: ${callerName || 'New Prospect'}`, 
+                    message: summaryText,
+                    mode: 'standard'
                 } 
             }));
+            onOpenChange(false);
             return;
-        }
+        } 
+        
         if (!callerName) {
             toast({
                 title: "Information Required",

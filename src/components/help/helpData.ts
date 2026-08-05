@@ -3367,15 +3367,15 @@ export const employeeMenuTopics: HelpTopic[] = [
   {
     id: 'phone-assistant',
     title: 'Phone Assistant',
-    summary: 'Scripted guide for handling customer calls.',
+    summary: 'Scripted guide for handling customer calls with live pricing & auto-transfer to Notify Admin.',
     content: [
       '**What this is**: The Phone Assistant provides a step-by-step script and live pricing calculator to follow when a customer calls.',
       '',
-      '**Employee Access & Rights**: As an employee, you can view live pricing, vehicle classifications, and scripts. Saving customer profiles, creating prospects, or processing payments is restricted to Admin.',
+      '**Employee Access & Save Workflow**: As an employee, you can view live pricing, vehicle classifications, and scripts. When you click **Save** or **Confirm & Go** in the Phone Assistant, caller details, vehicle type, and package quotes are automatically formatted and pre-filled into the **Notify Admin** modal!',
       '',
-      '**How to handle new customers or payments**: When a customer wants to add their profile or pay for a service, click the **"Notify Admin"** button inside the Phone Assistant or on your dashboard. Use **"⚡ Urgent Live Chat"** if the customer is on the phone or on-site ready to pay right now!',
+      '**How to handle new customers or payments**: After clicking Save in the Phone Assistant, review the pre-filled message in the **Notify Admin** modal. Click **⚡ Urgent Live Chat** if the customer is on the phone or on-site ready to pay right now, or send a **Standard Notification** for admin profile creation.',
       '',
-      '**Important notes**: Never attempt to take customer payments or bypass admin authorization.'
+      '**Important notes**: Employees cannot directly alter the customer database; all new accounts or payments must go through the Notify Admin workflow.'
     ],
     section: 'menu'
   },

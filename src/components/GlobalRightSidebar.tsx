@@ -25,7 +25,8 @@ import {
     Banknote,
     Receipt,
     Zap,
-    BarChart2
+    BarChart2,
+    Bell
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -36,16 +37,29 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
     <>
         {/* GROUP 1: Quick Helpful Items */}
         {!isDemoMode && (
-            <Button
-                variant="ghost"
-                size={collapsed ? "icon" : "default"}
-                onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
-                title="Phone Assistant"
-                className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
-            >
-                <Phone className="w-5 h-5 text-primary animate-pulse" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
-            </Button>
+            <>
+                <Button
+                    variant="ghost"
+                    size={collapsed ? "icon" : "default"}
+                    onClick={() => window.dispatchEvent(new Event('open-call-assistant'))}
+                    title="Phone Assistant"
+                    className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-primary/20 hover:text-primary transition-all`}
+                >
+                    <Phone className="w-5 h-5 text-primary animate-pulse" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
+                </Button>
+
+                <Button
+                    variant="ghost"
+                    size={collapsed ? "icon" : "default"}
+                    onClick={() => window.dispatchEvent(new Event('open-notify-admin'))}
+                    title="Notify Admin"
+                    className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-red-500/20 transition-all`}
+                >
+                    <Bell className="w-5 h-5 text-red-500" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notify Admin</span>}
+                </Button>
+            </>
         )}
 
         {isAdmin && (

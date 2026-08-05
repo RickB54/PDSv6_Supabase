@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Pencil, Trash2, HelpCircle, Info } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import OrientationModal from "@/components/training/OrientationModal";
 import { useLocation } from "react-router-dom";
@@ -41,7 +41,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
-import { MessageCircle, Send, Zap, Bell, CheckCircle2 } from "lucide-react";
+import { MessageCircle, Send, Zap, Bell, CheckCircle2, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TeamMessage, getTeamMessages, sendTeamMessage } from "@/lib/supa-data";
 
@@ -432,20 +432,49 @@ const EmployeeDashboard = () => {
                 <Bell className="w-5 h-5 text-red-500 animate-pulse" /> NOTIFY ADMIN
               </DialogTitle>
               
-              {/* Tooltip & Usage Guide */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors">
-                      <HelpCircle className="w-4 h-4 text-blue-400" /> How to use
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-zinc-900 border border-zinc-700 text-zinc-200 max-w-xs p-3 text-xs leading-relaxed z-[10000]">
-                    <strong className="text-red-400 block mb-1">📢 Employee Contact Guide</strong>
-                    Employees cannot modify customer accounts or take payments directly. Use <strong>Standard Message</strong> for requests or click <strong>⚡ Urgent Live Chat</strong> for immediate admin assistance (e.g. customer waiting for payment).
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* Popover Usage Guide */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors cursor-pointer">
+                    <HelpCircle className="w-4 h-4 text-blue-400" /> How to use
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="bottom" align="end" className="w-80 sm:w-96 bg-white border-slate-200 text-slate-900 p-5 shadow-2xl z-[100000] font-sans text-xs relative rounded-xl normal-case not-italic tracking-normal font-normal">
+                  <PopoverClose className="absolute right-3.5 top-3.5 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900 cursor-pointer">
+                    <X className="h-4 w-4" />
+                  </PopoverClose>
+                  <div>
+                    <h4 className="font-bold text-base text-slate-900 leading-tight pr-6">Employee Contact Guide</h4>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 pb-2.5 border-b border-slate-100">Cheat Sheet</p>
+                  </div>
+                  
+                  <div className="space-y-3.5 mt-3">
+                    <div className="flex gap-2.5 items-start">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-bold text-slate-900 text-xs">1. Phone Assistant Auto-Save</h5>
+                        <p className="text-slate-600 leading-relaxed">When you click <strong>Save</strong> or <strong>Confirm & Go</strong> in the Phone Assistant, caller info, vehicle type, and package info are automatically formatted and pre-filled into this modal!</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2.5 items-start">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-bold text-slate-900 text-xs">2. Urgent Live Chat (Immediate)</h5>
+                        <p className="text-slate-600 leading-relaxed">Use for immediate needs like a customer standing in front of you ready to pay, or a live call waiting. Admin gets alerted instantly!</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2.5 items-start">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h5 className="font-bold text-slate-900 text-xs">3. Standard Notification</h5>
+                        <p className="text-slate-600 leading-relaxed">Use for general questions, profile update requests, or non-urgent scheduling notes for admin review.</p>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Sub-header instruction banner */}
