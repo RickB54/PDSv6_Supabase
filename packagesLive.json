@@ -103,7 +103,19 @@
       "addon:wheel-cleaning:compact": "25",
       "addon:wheel-cleaning:midsize": "30",
       "addon:wheel-cleaning:truck": "40",
-      "addon:wheel-cleaning:luxury": "50"
+      "addon:wheel-cleaning:luxury": "50",
+      "addon:custom-addon-1785881561501:compact": "125",
+      "addon:custom-addon-1785881561501:midsize": "175",
+      "addon:custom-addon-1785881561501:truck": "250",
+      "addon:custom-addon-1785881561501:luxury": "275",
+      "addon:custom-addon-1785938573586:compact": "125",
+      "addon:custom-addon-1785938573586:midsize": "175",
+      "addon:custom-addon-1785938573586:truck": "250",
+      "addon:custom-addon-1785938573586:luxury": "275",
+      "addon:custom-addon-1785942382440:compact": "0",
+      "addon:custom-addon-1785942382440:midsize": "0",
+      "addon:custom-addon-1785942382440:truck": "0",
+      "addon:custom-addon-1785942382440:luxury": "0"
     },
     "packageMeta": {
       "prime-elite-exterior": {
@@ -267,11 +279,33 @@
         "id": "wheel-cleaning",
         "visible": true,
         "deleted": false
+      },
+      "custom-addon-1785881561501": {
+        "id": "custom-addon-1785881561501",
+        "visible": true,
+        "deleted": false
+      },
+      "custom-addon-1785938573586": {
+        "id": "custom-addon-1785938573586",
+        "visible": true,
+        "deleted": false
       }
     },
     "customPackages": [],
-    "customAddOns": [],
-    "version": 1785938659388
+    "customAddOns": [
+      {
+        "id": "custom-addon-1785938573586",
+        "name": "Water Spot Removal",
+        "description": "Professional water spot removal targeting stubborn mineral deposits on paint, glass, chrome, and trim using specialized acid-safe cleaners and hand techniques — priced by the hour due to the labor-intensive process required to safely lift embedded minerals without damaging the surface. Highly recommended before any wax, sealant, or ceramic coating for a clean, defect-free finish.",
+        "pricing": {
+          "compact": 125,
+          "midsize": 175,
+          "truck": 250,
+          "luxury": 275
+        }
+      }
+    ],
+    "version": 1785942527716
   },
   "vehicleTypesLive": [
     {

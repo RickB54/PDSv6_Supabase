@@ -1492,7 +1492,10 @@ const ServiceChecklist = () => {
       const timerStarted = !!jobStartTime || !!masterStartTime;
       const hasDiscount = !!discountValue;
       const hasDestFee = !!destinationFee && destinationFee > 0;
-      const hasMaterials = chemRows.length > 0 || matRows.length > 0 || toolRows.length > 0;
+      const hasMaterials = 
+        chemRows.some(r => r.name || r.qty || r.cost) || 
+        matRows.some(r => r.name || r.qty || r.cost) || 
+        toolRows.some(r => r.name || r.cost);
       const hasMileage = !!milesTraveled && milesTraveled > 0;
 
       const isUntouched = !(hasCustomer || hasPackage || hasNotes || hasAddOns || hasCheckedSteps || timerStarted || hasDiscount || hasDestFee || hasMaterials || hasMileage);
