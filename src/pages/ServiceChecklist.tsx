@@ -270,6 +270,7 @@ const ServiceChecklist = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState<string>("");
   const [sessionHistory, setSessionHistory] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem('checklist_sessions') || '[]'); } catch { return []; }
   });
@@ -280,6 +281,7 @@ const ServiceChecklist = () => {
 
   const resetForm = () => {
     try { localStorage.removeItem('checklist_current_state'); } catch {}
+    setInitialSnapshot("");
     setChecklistId("");
     setSelectedCustomer("");
     setVehicleType("choose");
@@ -1473,6 +1475,19 @@ const ServiceChecklist = () => {
     toast({ title: "Progress Saved", description: "Your checklist progress has been saved to history." });
   };
 
+  // Capture the starting state once data finishes loading (from draft or URL)
+  useEffect(() => {
+    if (initialLoaded && !initialSnapshot) {
+      const currentStateObj = {
+        selectedCustomer, selectedPackage, selectedAddOns, 
+        checklistSteps: checklistSteps.map(s => s.checked), notes, destinationFee, discountValue, 
+        jobStartTime, masterStartTime, chemRows, matRows, toolRows, 
+        milesTraveled
+      };
+      setInitialSnapshot(JSON.stringify(currentStateObj));
+    }
+  }, [initialLoaded]);
+
   useEffect(() => {
     if (initialLoaded) {
       // If the job is marked as completed, it's definitely not "unsaved"
@@ -1483,22 +1498,16 @@ const ServiceChecklist = () => {
         return;
       }
 
-      // Check if any actual work or data entry has begun
-      const hasCustomer = !!selectedCustomer;
-      const hasPackage = !!selectedPackage;
-      const hasNotes = !!notes;
-      const hasAddOns = selectedAddOns.length > 0;
-      const hasCheckedSteps = checklistSteps.some(s => s.checked);
-      const timerStarted = !!jobStartTime || !!masterStartTime;
-      const hasDiscount = !!discountValue;
-      const hasDestFee = !!destinationFee && destinationFee > 0;
-      const hasMaterials = 
-        chemRows.some(r => r.name || r.qty || r.cost) || 
-        matRows.some(r => r.name || r.qty || r.cost) || 
-        toolRows.some(r => r.name || r.cost);
-      const hasMileage = !!milesTraveled && milesTraveled > 0;
-
-      const isUntouched = !(hasCustomer || hasPackage || hasNotes || hasAddOns || hasCheckedSteps || timerStarted || hasDiscount || hasDestFee || hasMaterials || hasMileage);
+      // Check if current state differs from the initial snapshot
+      const currentStateObj = {
+        selectedCustomer, selectedPackage, selectedAddOns, 
+        checklistSteps: checklistSteps.map(s => s.checked), notes, destinationFee, discountValue, 
+        jobStartTime, masterStartTime, chemRows, matRows, toolRows, 
+        milesTraveled
+      };
+      const currentStateStr = JSON.stringify(currentStateObj);
+      
+      const isUntouched = initialSnapshot ? (currentStateStr === initialSnapshot) : true;
 
       if (isUntouched) {
         setHasUnsavedChanges(false);
@@ -1511,7 +1520,7 @@ const ServiceChecklist = () => {
       }
     }
   }, [
-    initialLoaded,
+    initialLoaded, initialSnapshot,
     selectedCustomer, selectedPackage, selectedAddOns, 
     checklistSteps, notes, destinationFee, discountValue, 
     jobStartTime, masterStartTime, chemRows, matRows, toolRows, 
