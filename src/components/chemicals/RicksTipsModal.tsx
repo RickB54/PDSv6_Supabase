@@ -659,12 +659,28 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
       currentY = drawHeader("Rick's Command Center", `Service Package Advice: ${pkg?.name || 'Service'}`);
       
       currentY = drawSectionTitle("Professional Recommendations", currentY);
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setTextColor(30, 41, 59);
       doc.setFont("helvetica", "normal");
+
       const splitNotes = doc.splitTextToSize(currentTip.notes || "No custom advice set for this package.", 182);
-      doc.text(splitNotes, 14, currentY);
-      currentY += (splitNotes.length * 6) + 10;
+      const maxY = 270; // 270mm threshold leaves ~1 inch margin at bottom
+
+      splitNotes.forEach((line: string) => {
+        if (currentY > maxY) {
+          doc.addPage();
+          currentY = 25; // 25mm top margin
+        }
+        doc.text(line, 14, currentY);
+        currentY += 5.5;
+      });
+
+      currentY += 8;
+
+      if (currentY > maxY - 40) {
+        doc.addPage();
+        currentY = 25;
+      }
 
       currentY = drawSectionTitle("Designated Chemical Inventory", currentY, [56, 189, 248]); // Blue-400
       autoTable(doc, {
@@ -679,7 +695,8 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
         theme: 'grid',
         headStyles: { fillColor: [100, 150, 255], textColor: [255, 255, 255], fontStyle: 'bold' },
         styles: { fontSize: 9, cellPadding: 4 },
-        columnStyles: { 0: { fontStyle: 'bold' } }
+        columnStyles: { 0: { fontStyle: 'bold' } },
+        margin: { top: 25, bottom: 20, left: 14, right: 14 }
       });
 
     } else if (type === 'single-chemical') {
@@ -881,19 +898,38 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
 
     if (type === 'packages') {
       currentY = drawHeader("Rick's Master Matrix", "Global Service Package Advice Catalog");
+      const maxY = 270;
+      
       activePackages.forEach(pkg => {
         const tip = tips.find(t => t.packageId === pkg.id);
         const pkgChems = availableChemicals.filter(c => tip?.chemicalIds.includes(c.id));
         
+        if (currentY > maxY - 30) {
+          doc.addPage();
+          currentY = 25;
+        }
         currentY = drawSectionTitle(pkg.name, currentY);
         
         // Advice Text
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setTextColor(30, 41, 59);
         doc.setFont("helvetica", "normal");
         const splitNotes = doc.splitTextToSize(tip?.notes || "No custom advice set for this package.", 182);
-        doc.text(splitNotes, 14, currentY);
-        currentY += (splitNotes.length * 6) + 8;
+
+        splitNotes.forEach((line: string) => {
+          if (currentY > maxY) {
+            doc.addPage();
+            currentY = 25;
+          }
+          doc.text(line, 14, currentY);
+          currentY += 5.5;
+        });
+        currentY += 6;
+
+        if (currentY > maxY - 30) {
+          doc.addPage();
+          currentY = 25;
+        }
 
         // Chemicals Table
         autoTable(doc, {
@@ -903,9 +939,9 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
           theme: 'striped',
           headStyles: { fillColor: [100, 150, 255] },
           styles: { fontSize: 9 },
-          margin: { left: 20 }
+          margin: { top: 25, bottom: 20, left: 20, right: 20 }
         });
-        currentY = (doc as any).lastAutoTable.finalY + 20;
+        currentY = (doc as any).lastAutoTable.finalY + 15;
       });
     } else {
       currentY = drawHeader(type === 'batch-selected' ? "Rick's Custom Selection" : "Rick's Strategic Catalog", type === 'batch-selected' ? "Custom PDF" : "Full Chemical Asset Reference");
@@ -960,7 +996,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`transition-all duration-200 ${isFullScreen ? 'w-screen h-screen max-w-none rounded-none' : 'w-[95vw] max-w-5xl h-[90vh] md:h-[85vh] rounded-2xl'} bg-[#0c1220] border-slate-800 text-white flex flex-col p-0 overflow-hidden shadow-2xl`}>
+      <DialogContent className={`transition-all duration-200 ${isFullScreen ? 'fixed inset-0 z-50 w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 overflow-y-auto bg-[#0c1220]' : 'w-[95vw] max-w-5xl h-[90vh] md:h-[85vh] rounded-2xl'} bg-[#0c1220] border-slate-800 text-white flex flex-col p-0 overflow-hidden shadow-2xl`}>
 
         <DialogHeader className="p-4 md:p-6 border-b border-slate-800/60 bg-[#0f1629] shrink-0 no-print">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -969,7 +1005,7 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
                 <FlaskConical className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <DialogTitle className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-left flex items-center gap-2">
+                <DialogTitle className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 text-left flex items-center gap-2 flex-wrap">
                   Rick's Tips
                   <button 
                     onClick={(e) => {
@@ -984,10 +1020,20 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
                   </button>
                   <button
                     onClick={() => setIsFullScreen(!isFullScreen)}
-                    className="p-1 hover:bg-white/10 rounded-full transition-colors inline-flex items-center justify-center no-print ml-1"
-                    title={isFullScreen ? "Exit Fullscreen" : "Expand Fullscreen"}
+                    className="px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 no-print ml-1"
+                    title={isFullScreen ? "Exit Fullscreen Mode" : "Expand to Fullscreen"}
                   >
-                    {isFullScreen ? <Minimize2 className="w-4 h-4 text-purple-400/60 hover:text-purple-400" /> : <Maximize2 className="w-4 h-4 text-purple-400/60 hover:text-purple-400" />}
+                    {isFullScreen ? (
+                      <>
+                        <Minimize2 className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="hidden sm:inline">Exit Fullscreen</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 className="w-3.5 h-3.5 text-purple-400" />
+                        <span className="hidden sm:inline">Fullscreen</span>
+                      </>
+                    )}
                   </button>
                 </DialogTitle>
                 <DialogDescription className="text-slate-400 text-[10px] md:text-sm text-left">
@@ -1001,24 +1047,33 @@ export default function RicksTipsModal({ open, onOpenChange, initialTab = 'packa
               </div>
             </div>
             
-            <div className="flex p-1 bg-slate-900/80 rounded-xl border border-slate-800 self-center md:self-auto shrink-0 overflow-x-auto">
-              <button 
-                onClick={() => setActiveTab('package')}
-                className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'package' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+              <div className="flex p-1 bg-slate-900/80 rounded-xl border border-slate-800 shrink-0 overflow-x-auto">
+                <button 
+                  onClick={() => setActiveTab('package')}
+                  className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'package' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Package Advice
+                </button>
+                <button 
+                  onClick={() => setActiveTab('description')}
+                  className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'description' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Chemical Description
+                </button>
+                <button 
+                  onClick={() => setActiveTab('prep')}
+                  className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'prep' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                >
+                  Job Setup
+                </button>
+              </div>
+              <button
+                onClick={() => onOpenChange(false)}
+                className="p-2 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-xl border border-slate-800 transition-colors shrink-0 no-print flex items-center justify-center"
+                title="Close Modal"
               >
-                Package Advice
-              </button>
-              <button 
-                onClick={() => setActiveTab('description')}
-                className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'description' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                Chemical Description
-              </button>
-              <button 
-                onClick={() => setActiveTab('prep')}
-                className={`px-3 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'prep' ? 'bg-purple-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                Job Setup
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
