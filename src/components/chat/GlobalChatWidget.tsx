@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, X, Send, User, RefreshCw, Bell, Download, Trash2, LogOut, XCircle } from 'lucide-react';
+import { MessageCircle, X, Send, User, RefreshCw, Bell, Download, Trash2, LogOut, XCircle, CheckCircle2, History } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { TeamMessage, getTeamMessages, sendTeamMessage, deleteAllTeamMessages } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
 import { UserSelector } from '@/components/chat/UserSelector';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export function GlobalChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
@@ -20,6 +21,7 @@ export function GlobalChatWidget() {
     const [isLoading, setIsLoading] = useState(false);
     const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
     const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+    const [isViewCleared, setIsViewCleared] = useState(false);
     
     const [adminHidden, setAdminHidden] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
     const [forceShowPopup, setForceShowPopup] = useState(false);
@@ -95,6 +97,7 @@ export function GlobalChatWidget() {
                 }
                 
                 if (payload.eventType === 'INSERT') {
+                    setIsViewCleared(false);
                     const newMsg = payload.new as TeamMessage;
                     setMessages(prev => {
                     // 1. Check if we already have this exact ID
@@ -245,17 +248,11 @@ export function GlobalChatWidget() {
     };
 
     const handleEndConversation = () => {
-        if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts or notifications until you start a new chat.")) return;
-        localStorage.setItem('chat_ended', 'true');
-        localStorage.removeItem('guest_identity');
-        localStorage.removeItem('has_unread_chat');
-        setIsIdentified(false);
-        setGuestName('');
-        setGuestEmail('');
-        setMessages([]);
-        setIsOpen(false);
-        setHasUnread(false);
-        toast({ title: "Conversation Ended", description: "Chat has been ended and alerts have been disabled." });
+        if (!window.confirm("Clear active conversation view to keep your chat space clean? New message alerts will still notify you instantly.")) return;
+        localStorage.removeItem('chat_ended');
+        setIsViewCleared(true);
+        setSelectedRecipient(null);
+        toast({ title: "Chat View Cleared", description: "Active chat view cleared. You will still receive instant alerts for new messages." });
     };
 
     const handleSaveChat = () => {
@@ -275,6 +272,7 @@ export function GlobalChatWidget() {
         if (!inputText.trim()) return;
 
         localStorage.removeItem('chat_ended');
+        setIsViewCleared(false);
 
         // Create optimistic message
         const optimisticMessage: TeamMessage = {
@@ -510,30 +508,54 @@ export function GlobalChatWidget() {
 
                     {/* Body */}
                     <div className="flex-1 overflow-hidden flex flex-col p-4">
-                        {localStorage.getItem('chat_ended') === 'true' ? (
-                            <div className="flex flex-col gap-4 justify-center items-center h-full text-center p-2">
-                                <XCircle className="h-12 w-12 text-amber-500 mx-auto" />
+                        {isViewCleared ? (
+                            <div className="flex flex-col gap-3 justify-center items-center h-full text-center p-3">
+                                <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
                                 <div className="space-y-1">
-                                    <h4 className="font-bold text-base text-foreground">Conversation Ended</h4>
-                                    <p className="text-xs text-muted-foreground">You have ended this conversation. Notifications and sound alerts are currently turned off.</p>
+                                    <h4 className="font-bold text-base text-foreground">Chat View Cleared</h4>
+                                    <p className="text-xs text-muted-foreground">Your chat screen has been cleaned. Instant alerts for incoming messages remain active.</p>
                                 </div>
-                                <Button 
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                                    onClick={() => {
-                                        localStorage.removeItem('chat_ended');
-                                        const user = getCurrentUser();
-                                        if (user) {
-                                            setGuestName(user.name);
-                                            setGuestEmail(user.email);
-                                            setIsIdentified(true);
-                                        } else {
-                                            setIsIdentified(false);
-                                        }
-                                        loadMessages();
-                                    }}
-                                >
-                                    Start New Conversation
-                                </Button>
+
+                                <div className="w-full space-y-3 pt-2">
+                                    <Button 
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9"
+                                        onClick={() => {
+                                            setIsViewCleared(false);
+                                            loadMessages();
+                                        }}
+                                    >
+                                        Start New Chat / Show All
+                                    </Button>
+
+                                    <div className="bg-zinc-900/90 p-3 rounded-lg border border-zinc-800 space-y-2 text-left w-full">
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                                            <History className="h-3.5 w-3.5 text-emerald-400" />
+                                            <span>View Chat History by Person</span>
+                                        </div>
+                                        <Select
+                                            onValueChange={(val) => {
+                                                if (val) {
+                                                    setSelectedRecipient(val === 'all' ? null : val);
+                                                    setIsViewCleared(false);
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-9 text-xs bg-zinc-950 border-zinc-700 text-white w-full">
+                                                <SelectValue placeholder="Select Customer or Employee..." />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[100000] bg-zinc-900 border-zinc-700 text-white">
+                                                <SelectItem value="all" className="text-xs font-bold text-emerald-400">
+                                                    Show All Chat Streams
+                                                </SelectItem>
+                                                {Array.from(new Map(messages.filter(m => m.sender_email && m.sender_email.toLowerCase() !== guestEmail.toLowerCase()).map(m => [m.sender_email, m.sender_name || m.sender_email])).entries()).map(([email, name]) => (
+                                                    <SelectItem key={email} value={email} className="text-xs">
+                                                        <span className="font-bold">{name}</span> <span className="text-[10px] text-zinc-400">({email})</span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
                             </div>
                         ) : !isIdentified ? (
                             <div className="flex flex-col gap-4 justify-center h-full">

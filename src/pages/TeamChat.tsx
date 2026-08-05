@@ -114,14 +114,10 @@ export default function TeamChat() {
     };
 
     const handleEndConversation = () => {
-        if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts or notifications until you start a new chat.")) return;
-        localStorage.setItem('chat_ended', 'true');
-        localStorage.removeItem('guest_identity');
-        localStorage.removeItem('has_unread_chat');
-        setIsIdentified(false);
-        setGuestName('');
-        setGuestEmail('');
-        setMessages([]);
+        if (!window.confirm("Clear active chat view to keep your conversation space clean? New message alerts will still notify you instantly.")) return;
+        localStorage.removeItem('chat_ended');
+        setSelectedRecipient(null);
+        setInputText('');
     };
 
     const handleIdentify = () => {

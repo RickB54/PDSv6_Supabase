@@ -314,12 +314,11 @@ const EmployeeDashboard = () => {
   };
 
   const handleEndConversationInModal = () => {
-    if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts until a new chat is started.")) return;
-    localStorage.setItem('chat_ended', 'true');
-    localStorage.removeItem('has_unread_chat');
-    setChatMessages([]);
+    if (!window.confirm("Clear active chat view to keep your conversation space clean? New message alerts will still notify you instantly.")) return;
+    localStorage.removeItem('chat_ended');
+    setChatText("");
     setNotifyAdminOpen(false);
-    toast({ title: "Conversation Ended", description: "Chat has been ended and alerts disabled." });
+    toast({ title: "Chat View Cleared", description: "Active chat view cleared. Alerts will still notify you instantly for new messages." });
   };
 
   return (

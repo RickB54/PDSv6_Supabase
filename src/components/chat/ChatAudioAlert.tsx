@@ -91,11 +91,6 @@ export function ChatAudioAlert() {
         const channel = supabase
             .channel('global_chat_alerts')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'team_messages' }, (payload) => {
-                // If user ended conversation, suppress all alerts
-                if (localStorage.getItem('chat_ended') === 'true') {
-                    return;
-                }
-
                 const newMsg = payload.new as TeamMessage;
                 const currentIdentity = checkIdentity();
 
