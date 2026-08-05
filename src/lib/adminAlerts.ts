@@ -57,11 +57,12 @@ async function syncToDB(alerts: AdminAlert[]): Promise<void> {
     }
     // Keep only last 200 for DB storage to keep it lightweight
     const trimmed = alerts.slice(Math.max(0, alerts.length - 200));
+    const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     await supabase.from('bookings').upsert({
       id: DUMMY_BOOKING_ID,
       service_package: 'SYSTEM_ALERTS_STORAGE',
       status: 'system',
-      booking_vehicle: { alerts: trimmed },
+      booking_vehicle: { alerts: trimmed, dismissed_ids: dismissedIds },
       notes: `LAST_SYNC:${new Date().toISOString()}`
     });
   } catch (err) {
@@ -70,9 +71,9 @@ async function syncToDB(alerts: AdminAlert[]): Promise<void> {
 }
 
 /**
- * Fetches alerts from the global database storage
+ * Fetches alerts and dismissed IDs from the global database storage
  */
-export async function fetchAlertsFromDB(): Promise<AdminAlert[]> {
+export async function fetchAlertsFromDB(): Promise<{ alerts: AdminAlert[]; dismissed_ids: string[] }> {
   try {
     const { data, error } = await supabase
       .from('bookings')
@@ -80,11 +81,13 @@ export async function fetchAlertsFromDB(): Promise<AdminAlert[]> {
       .eq('id', DUMMY_BOOKING_ID)
       .maybeSingle();
     
-    if (error || !data?.booking_vehicle?.alerts) return [];
-    return data.booking_vehicle.alerts as AdminAlert[];
+    if (error || !data?.booking_vehicle) return { alerts: [], dismissed_ids: [] };
+    const alerts = Array.isArray(data.booking_vehicle.alerts) ? (data.booking_vehicle.alerts as AdminAlert[]) : [];
+    const dismissed_ids = Array.isArray(data.booking_vehicle.dismissed_ids) ? (data.booking_vehicle.dismissed_ids as string[]) : [];
+    return { alerts, dismissed_ids };
   } catch (err) {
     console.warn("[AdminAlerts] DB Fetch Failed:", err);
-    return [];
+    return { alerts: [], dismissed_ids: [] };
   }
 }
 
@@ -93,16 +96,21 @@ export async function fetchAlertsFromDB(): Promise<AdminAlert[]> {
  */
 export async function performGlobalSync(): Promise<AdminAlert[]> {
   const local = getAdminAlerts();
-  const remote = await fetchAlertsFromDB();
-  const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+  const remoteData = await fetchAlertsFromDB();
 
-  // Merge logic: Map by ID, Remote wins if exists, otherwise keep local
+  // Merge remote dismissed_ids with local dismissed_alert_ids
+  let localDismissed: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+  const combinedDismissedSet = new Set([...localDismissed, ...remoteData.dismissed_ids]);
+  const updatedDismissedList = Array.from(combinedDismissedSet);
+  localStorage.setItem('dismissed_alert_ids', JSON.stringify(updatedDismissedList));
+
+  // Merge logic: Map by ID, Remote wins if exists, filter out dismissed
   const mergedMap = new Map<string, AdminAlert>();
   local.forEach(a => {
-    if (!dismissedIds.includes(a.id)) mergedMap.set(a.id, a);
+    if (!combinedDismissedSet.has(a.id)) mergedMap.set(a.id, a);
   });
-  remote.forEach(a => {
-    if (!dismissedIds.includes(a.id)) mergedMap.set(a.id, a);
+  remoteData.alerts.forEach(a => {
+    if (!combinedDismissedSet.has(a.id)) mergedMap.set(a.id, a);
   });
 
   const merged = Array.from(mergedMap.values())
@@ -194,7 +202,9 @@ export function pushAdminAlert(
 
 export function getAdminAlerts(): AdminAlert[] {
   const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  return list.map(a => ({ ...a, read: !!a.read }));
+  const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+  const dismissedSet = new Set(dismissedIds);
+  return list.filter(a => !dismissedSet.has(a.id)).map(a => ({ ...a, read: !!a.read }));
 }
 
 export function markAlertRead(id: string): void {

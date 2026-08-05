@@ -170,11 +170,19 @@ const FileManager = () => {
       return;
     }
 
+    const deletedPdfIds: string[] = JSON.parse(localStorage.getItem('deleted_pdf_ids') || '[]');
+    const deletedSet = new Set(deletedPdfIds);
+
     // 1. Load from localStorage (legacy/immediate)
     const stored = localStorage.getItem('pdfArchive');
     let localRecords: PDFRecord[] = [];
     if (stored) {
-      try { localRecords = JSON.parse(stored); } catch { }
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          localRecords = parsed.filter((r: PDFRecord) => !deletedSet.has(r.id));
+        }
+      } catch { }
     }
 
     // 2. Load from Supabase
@@ -191,17 +199,19 @@ const FileManager = () => {
         }
         setRecords(localRecords);
       } else if (data) {
-        const remoteRecords: PDFRecord[] = data.map((r: any) => ({
-          id: r.id,
-          fileName: r.file_name,
-          recordType: r.record_type,
-          customerName: r.customer_name,
-          date: r.date,
-          timestamp: r.timestamp,
-          recordId: r.record_id,
-          pdfData: r.pdf_data,
-          path: r.path
-        }));
+        const remoteRecords: PDFRecord[] = data
+          .filter((r: any) => !deletedSet.has(r.id))
+          .map((r: any) => ({
+            id: r.id,
+            fileName: r.file_name,
+            recordType: r.record_type,
+            customerName: r.customer_name,
+            date: r.date,
+            timestamp: r.timestamp,
+            recordId: r.record_id,
+            pdfData: r.pdf_data,
+            path: r.path
+          }));
 
         // Merge and deduplicate by ID
         const combined = [...remoteRecords];
@@ -348,29 +358,48 @@ const FileManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // 1. Delete from localStorage
+    // 1. Add ID to permanent deleted_pdf_ids list
+    try {
+      const deletedPdfIds: string[] = JSON.parse(localStorage.getItem('deleted_pdf_ids') || '[]');
+      if (!deletedPdfIds.includes(id)) {
+        deletedPdfIds.push(id);
+        localStorage.setItem('deleted_pdf_ids', JSON.stringify(deletedPdfIds));
+      }
+    } catch { }
+
+    // 2. Automatically dismiss alerts for this record
+    const target = records.find(r => r.id === id);
+    if (target) {
+      dismissAlertsForRecord(target.recordType, target.id);
+      if (target.recordId) dismissAlertsForRecord(target.recordType, target.recordId);
+    } else {
+      dismissAlertsForRecord('', id);
+    }
+
+    // 3. Delete from localStorage
     const updated = records.filter(r => r.id !== id);
     localStorage.setItem('pdfArchive', JSON.stringify(updated));
     setRecords(updated);
     
-    // 2. Delete from Supabase
+    // 4. Delete from Supabase
     try {
-      if (localStorage.getItem("demo_mode_active") === "true") {
-        toast({ title: "Simulation Mode", description: "PDF deleted locally." });
-        return;
+      if (localStorage.getItem("demo_mode_active") !== "true") {
+        const { default: supabase } = await import('@/lib/supabase');
+        const { error } = await supabase.from('pdf_records').delete().eq('id', id);
+        if (error) console.error("Supabase PDF delete failed:", error);
+        else console.log("✅ PDF deleted from Supabase:", id);
       }
-      const { default: supabase } = await import('@/lib/supabase');
-      const { error } = await supabase.from('pdf_records').delete().eq('id', id);
-      if (error) console.error("Supabase PDF delete failed:", error);
-      else console.log("✅ PDF deleted from Supabase:", id);
     } catch (e) {
       console.warn("Supabase not available for delete sync");
     }
 
+    // 5. Refresh global alerts store
+    try { refreshAlerts(); } catch { }
+
     setDeleteId(null);
     toast({
       title: "Deleted",
-      description: "File deleted successfully"
+      description: "File deleted successfully and associated alert dismissed"
     });
   };
 
@@ -697,11 +726,42 @@ const FileManager = () => {
           <AlertDialogFooter className="button-group-responsive">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
+              onClick={async () => {
+                const allIds = records.map(r => r.id);
+                // 1. Save all IDs to deleted_pdf_ids
+                try {
+                  const deletedPdfIds: string[] = JSON.parse(localStorage.getItem('deleted_pdf_ids') || '[]');
+                  allIds.forEach(id => {
+                    if (!deletedPdfIds.includes(id)) deletedPdfIds.push(id);
+                  });
+                  localStorage.setItem('deleted_pdf_ids', JSON.stringify(deletedPdfIds));
+                } catch { }
+
+                // 2. Dismiss alerts for all records being deleted
+                records.forEach(r => {
+                  dismissAlertsForRecord(r.recordType, r.id);
+                  if (r.recordId) dismissAlertsForRecord(r.recordType, r.recordId);
+                });
+
+                // 3. Clear local storage and state
                 localStorage.removeItem('pdfArchive');
                 setRecords([]);
+
+                // 4. Delete all records from Supabase
+                try {
+                  if (localStorage.getItem("demo_mode_active") !== "true" && allIds.length > 0) {
+                    const { default: supabase } = await import('@/lib/supabase');
+                    await supabase.from('pdf_records').delete().in('id', allIds);
+                  }
+                } catch (e) {
+                  console.warn("Supabase wipe failed:", e);
+                }
+
+                // 5. Refresh alerts store
+                try { refreshAlerts(); } catch { }
+
                 setDeleteAllOpen(false);
-                toast({ title: "All Files Deleted", description: "The archive has been cleared." });
+                toast({ title: "All Files Deleted", description: "The PDF archive and all related alerts have been completely cleared." });
               }}
               className="bg-destructive hover:bg-red-700"
             >

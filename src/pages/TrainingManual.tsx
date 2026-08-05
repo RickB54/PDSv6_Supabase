@@ -855,34 +855,6 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent flex items-center gap-3">
                             Welcome, {currentUser?.name || "Guest"}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-6 text-xs border-zinc-700 bg-zinc-800 text-zinc-400"
-                                onClick={async () => {
-                                    toast({ title: "Refreshing Session...", description: "Connecting to Supabase..." });
-                                    try {
-                                        // Dynamic import to avoid circular dependencies if any, or just import at top if safe.
-                                        // Using global 'supabase' from window if checking raw, but better to use auth lib.
-                                        // We'll just trigger the same checkUser logic but harder:
-                                        const { data } = await import("@/lib/supabase").then(m => m.default.auth.getSession());
-                                        if (data.session?.user) {
-                                            const { finalizeSupabaseSession } = await import("@/lib/auth");
-                                            const u = await finalizeSupabaseSession(data.session.user);
-                                            setCurrentUser(u);
-                                            // Explicitly reload badges/progress too
-                                            loadData();
-                                            toast({ title: "Session Refreshed", description: `Logged in as: ${u?.name} (${u?.role})` });
-                                        } else {
-                                            toast({ title: "No Active Session", description: "Supabase says you are logged out.", variant: "destructive" });
-                                        }
-                                    } catch (e: any) {
-                                        toast({ title: "Refresh Error", description: e.message, variant: "destructive" });
-                                    }
-                                }}
-                            >
-                                <RefreshCw className="w-3 h-3 mr-1" /> Fix Login
-                            </Button>
                         </h1>
                         <p className="text-zinc-400 text-sm">
                             {currentUser ? "Continue your certification journey." : "Please log in to track your progress and earn badges."}
