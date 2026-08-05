@@ -1016,8 +1016,8 @@ const CustomerPortal = () => {
           </DialogHeader>
           <div className="space-y-6">
             <div>
-              <h4 className="font-bold mb-2 text-blue-900 uppercase text-sm tracking-wider">Why Choose This Package?</h4>
-              <p className="text-zinc-600 leading-relaxed whitespace-pre-wrap">{learnMorePackage?.longDescription || learnMorePackage?.description}</p>
+              <h4 className="font-bold mb-3 text-blue-900 uppercase text-sm tracking-wider">What's Included:</h4>
+              <p className="text-zinc-700 leading-relaxed whitespace-pre-line font-medium text-sm border-l-2 border-blue-600 pl-4 py-1">{learnMorePackage?.longDescription || learnMorePackage?.description}</p>
             </div>
 
             {/* Add-Ons Accordion in Modal */}

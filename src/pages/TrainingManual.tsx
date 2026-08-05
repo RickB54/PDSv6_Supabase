@@ -2,6 +2,7 @@ import { PageHeader } from "@/components/PageHeader";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -802,20 +803,280 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                         </TabsContent>
 
                         <TabsContent value="process" className="space-y-6">
-                            <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
-                                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FileText className="w-6 h-6 text-indigo-400"/> Standard Operating Procedures</h2>
-                                <p className="text-zinc-400 mb-8">This is your digital copy of the Prime Procedures Manual. Refer to this for all company operations and workflows.</p>
-                                
-                                <div className="space-y-6">
-                                    <div className="bg-zinc-950 p-6 rounded-lg border border-zinc-800">
-                                        <h3 className="text-xl font-bold text-white mb-4">Prime Procedures Manual v6.0</h3>
-                                        <p className="text-zinc-400 mb-6">Access the complete, interactive Standard Operating Procedures manual including all checklists, protocols, and safety guidelines.</p>
-                                        <Button className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto" onClick={() => window.location.href = '/app-manual'}>
-                                            <BookOpen className="w-4 h-4 mr-2" /> Open Full Procedures Manual
-                                        </Button>
+                            {isAdmin ? (
+                                <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><FileText className="w-6 h-6 text-indigo-400"/> Standard Operating Procedures</h2>
+                                    <p className="text-zinc-400 mb-8">This is your digital copy of the Prime Procedures Manual. Refer to this for all company operations and workflows.</p>
+                                    
+                                    <div className="space-y-6">
+                                        <div className="bg-zinc-950 p-6 rounded-lg border border-zinc-800">
+                                            <h3 className="text-xl font-bold text-white mb-4">Prime Procedures Manual v6.0</h3>
+                                            <p className="text-zinc-400 mb-6">Access the complete, interactive Standard Operating Procedures manual including all checklists, protocols, and safety guidelines.</p>
+                                            <Button className="bg-indigo-600 hover:bg-indigo-700 w-full md:w-auto" onClick={() => window.location.href = '/app-manual'}>
+                                                <BookOpen className="w-4 h-4 mr-2" /> Open Full Procedures Manual
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="bg-zinc-900 p-4 md:p-6 rounded-xl border border-zinc-800 space-y-8">
+                                    <div>
+                                        <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+                                            <FileText className="w-6 h-6 text-indigo-400"/> Standard Operating Procedures (SOPs)
+                                        </h2>
+                                        <p className="text-zinc-400 text-sm mt-1">
+                                            Tap any step to view complete chemical, dilution, and execution instructions.
+                                        </p>
+                                    </div>
+
+                                    {/* Section 1: Exterior Detail Process */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                            <h3 className="text-lg font-bold text-blue-400 flex items-center gap-2">
+                                                Section 1 — Exterior Detail Process
+                                            </h3>
+                                            <Badge variant="outline" className="border-blue-500/30 text-blue-300 bg-blue-950/40">
+                                                8-Step Standard Procedure
+                                            </Badge>
+                                        </div>
+
+                                        <Accordion type="single" collapsible className="w-full space-y-2">
+                                            <AccordionItem value="ext-1" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">1</span>
+                                                        Step 1 — Wheels & Tires First
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Dark Fury 4:1 (light) or 7:1 (heavy contamination). Agitate with wheel brush — barrel brush for inner barrel, detail brush for lug nuts. Rinse immediately after agitation — do not allow Dark Fury to dwell on bare metal or chrome. If Engine Bay Cleaning addon is included, perform that first before wheels. Use Dirt Buster or Muscle Magic at appropriate dilution, cover sensitive electronics before applying any water or chemical, rinse thoroughly and allow to dry before proceeding to wheels. Complete both wheels driver's side front and rear, then passenger side front and rear.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-2" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">2</span>
+                                                        Step 2 — Pre-Rinse Whole Vehicle
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Rinse top to bottom always — roof first, lower panels last. Open doors slightly while rinsing to allow water to flow through jambs without flooding interior. Skip this step if vehicle is a clean maintenance detail that does not require heavy rinsing.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-3" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">3</span>
+                                                        Step 3 — Pre-Treat Bugs / Heavy Grime
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Apply to dry surface before any rinse or foam. Road Warrior 4:1 — especially effective on front grill, hood, and front bumper. Dwell 3-5 minutes MAX — do not exceed or allow to dry on paint. Rinse thoroughly before applying foam. SP alternatives: Muscle Magic diluted for heavy grime on lower panels, Dirt Buster on concentrated areas. Pay extra attention to lower front panels, grille openings, and hood leading edge where bug accumulation is heaviest.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-4" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">4</span>
+                                                        Step 4 — Foam Bath
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Meguiar's Gold Class 5:1 or Cherry Foam 5:1 in foam cannon. Apply thick even layer top to bottom. Dwell 3-5 minutes — do not exceed 5 minutes in direct sun or on hot paint. If foam starts drying before dwell time is complete, mist with water to reactivate — dried foam causes water spots. Work in shade whenever possible.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-5" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">5</span>
+                                                        Step 5 — Hand Wash (Top to Bottom)
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Use multiple clean microfiber towels or wash mitts. Use one side of the towel at a time then flip to the clean side before moving to the next panel. Work top to bottom — roof first, lower rocker panels and bumpers last. Driver's side front to back, passenger side back to front. Straight overlapping strokes only — never circular. Never use a towel or mitt that has touched wheels or lower panels on upper paint surfaces.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-6" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">6</span>
+                                                        Step 6 — Final Rinse
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Rinse top to bottom thoroughly. If Clay Bar Decon addon is included, proceed directly to clay bar step while paint is still wet — do not dry first. Use APC as lubricant, work panel by panel, fold clay frequently when contamination is picked up. Clay is complete when paint feels glass smooth to the touch.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-7" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">7</span>
+                                                        Step 7 — Drying
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Formula 4 at 20:1 — spray onto wet paint during drying. Acts as drying aid AND adds light protection simultaneously (2-5 weeks). Open all door jambs, trunk, and hood during drying to prevent water dripping after job is complete. Dry jambs as part of this step. Use large dedicated drying towels only.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="ext-8" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">8</span>
+                                                        Step 8 — Paint Protection
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Formula 4 at 20:1 is already applied during the drying step and serves dual purpose — drying aid plus protection. This step confirms protection has been applied. No additional product needed for Essential packages unless a separate wax or sealant addon is specifically included for this job.
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    </div>
+
+                                    {/* Section Divider */}
+                                    <div className="my-8 border-t border-zinc-800" />
+
+                                    {/* Section 2: Interior Detail Process */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                            <h3 className="text-lg font-bold text-purple-400 flex items-center gap-2">
+                                                Section 2 — Interior Detail Process
+                                            </h3>
+                                            <Badge variant="outline" className="border-purple-500/30 text-purple-300 bg-purple-950/40">
+                                                10-Step Standard Procedure
+                                            </Badge>
+                                        </div>
+
+                                        <Accordion type="single" collapsible className="w-full space-y-2">
+                                            <AccordionItem value="int-1" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">1</span>
+                                                        Step 1 — Remove Personal Items & Trash
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Remove all personal items, trash, and loose belongings from the vehicle before starting any interior work. Set aside safely and visibly for the customer.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-2" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">2</span>
+                                                        Step 2 — Thorough Vacuum (Top to Bottom)
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Blow out interior with compressed air first — vents, seat tracks, under seats, around pedals, rear to front — so vacuum picks up loosened debris rather than it resettling. Use crevice tool for seat tracks and tight areas. Remove floor mats before vacuuming. Work rear to front within each section.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-3" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">3</span>
+                                                        Step 3 — Clean Floor Mats & Area Rugs
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Use drill brush set — select appropriate brush size and pressure based on mat type and dirtiness. Primary chemicals: Carpet Bomber 7:1 standard / 5:1 heavy + Terminator duo. Backup: Zap It at appropriate dilution. For organic stains including urine, blood, food spills, and pet soiling: SP Does It All Enzyme Cleaner — apply, dwell 3-5 minutes, agitate, wipe. Rubber mats: rinse thoroughly after agitation. Carpet mats: blot dry, set aside to dry completely before reinstalling.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-4" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">4</span>
+                                                        Step 4 — Clean Dashboard, Steering Wheel & Console
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Does It All Enzyme Cleaner or Pink Perfection 10:1 for general wipe-down. Use detail brush for all vent slats, button gaps, and seam areas. Steering wheel gets extra attention — oils and grime from hands build up quickly. Work driver's side front to back, passenger side back to front.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-5" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">5</span>
+                                                        Step 5 — Clean All Interior Plastics / Vinyl / Trim
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Pink Perfection 10:1 for general cleaning. Does It All Enzyme Cleaner for organic stains on vinyl and trim. Green All at appropriate dilution for general plastics. Use soft brush for crevices. Wipe with clean microfiber.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-6" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">6</span>
+                                                        Step 6 — Clean Fabric / Carpet / Seats
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Carpet Bomber 7:1 standard / 5:1 heavy soiling. For organic stains: SP Does It All Enzyme Cleaner — apply, dwell 3-5 minutes, agitate, blot. Agitate with stiff carpet brush or drill brush in straight strokes only — never circular. Blot with clean microfiber to pull out loosened soil. Pet hair removal tools (Lilly Brush or 5-pack set) must be used before any chemical application if pet hair is present. Deep Interior Detail or Stain Treatment addon: use extractor at this step.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-7" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">7</span>
+                                                        Step 7 — Interior Protectant / Plastics Finisher
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: P&S Xpress 3:1 or SP Cover All 4:1. Apply to all interior plastics, vinyl, and trim as final protectant coat. Use clean microfiber applicator. Work driver's side front to back, passenger side back to front. Complete before cleaning windows so any overspray is caught in the glass step. If done as the very last step instead — use extra care not to get any product on windshield, screens, or electronics.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-8" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">8</span>
+                                                        Step 8 — Windows & Glass (streak-free)
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Invisible Glass — spray on dedicated glass towel only, never directly on glass to avoid overspray on trim and seats. Two-pass method: first pass removes product and loosens film, second pass clears any remaining streaks. Interior windshield is most difficult — film builds from off-gassing plastics and HVAC. Wipe in overlapping straight strokes. Check from multiple angles in light to confirm no haze remains.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-9" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">9</span>
+                                                        Step 9 — Clean Door Jambs & Trunk Jambs
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Chemical: Dirt Buster or APC at appropriate dilution. Use detail brush for hinge areas and tight corners. Wipe dry thoroughly — water sitting in jambs drips out later and leaves marks on exterior paint below. Driver's side front to back, passenger side back to front. Include hood jamb and trunk jamb. Avoid saturating weather stripping — clean and wipe immediately.
+                                                </AccordionContent>
+                                            </AccordionItem>
+
+                                            <AccordionItem value="int-10" className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                        <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">10</span>
+                                                        Step 10 — Final Interior Inspection
+                                                    </span>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3">
+                                                    Sit in driver's seat and check windshield for haze from multiple angles. Open each door and confirm jambs are clean and dry. Confirm floor mats reinstalled correctly and retention clips engaged if applicable. Interior should smell clean — not chemical. If Deep Interior Detail addon was performed, confirm carpet and seats are dry or nearly dry before returning vehicle to customer.
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+                                    </div>
+                                </div>
+                            )}
                         </TabsContent>
 
                         <TabsContent value="materials" className="space-y-6">
