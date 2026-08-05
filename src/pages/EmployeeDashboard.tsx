@@ -290,6 +290,7 @@ const EmployeeDashboard = () => {
     const actorEmail = user?.email || "employee@primeautodetail.com";
 
     try {
+      localStorage.removeItem('chat_ended');
       pushAdminAlert("employee_chat", `🚨 URGENT Employee Live Chat from ${actor}: ${finalMsg}`, actor, { priority: "URGENT" });
       await sendTeamMessage(`🚨 URGENT ADMIN ALERT: ${finalMsg}`, actorEmail, actor, null);
       setChatText("");

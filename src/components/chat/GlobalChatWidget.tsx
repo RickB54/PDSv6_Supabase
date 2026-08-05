@@ -119,6 +119,9 @@ export function GlobalChatWidget() {
 
                 // If closed and msg is for me (or public), show badge
                 const myEmail = guestEmail.toLowerCase();
+                if (newMsg.sender_email?.toLowerCase() === myEmail) {
+                    localStorage.removeItem('chat_ended');
+                }
                 
                 // If I am a guest, only show badge if the message is to me or sent by me.
                 const userRole = getCurrentUser()?.role;
@@ -270,6 +273,8 @@ export function GlobalChatWidget() {
 
     const handleSend = async () => {
         if (!inputText.trim()) return;
+
+        localStorage.removeItem('chat_ended');
 
         // Create optimistic message
         const optimisticMessage: TeamMessage = {
