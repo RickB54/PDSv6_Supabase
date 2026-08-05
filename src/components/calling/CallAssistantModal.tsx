@@ -49,6 +49,7 @@ import {
     User,
     FileText,
     Info,
+    Send,
 } from "lucide-react";
 import { servicePackages, addOns, type VehicleType } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
@@ -200,7 +201,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const navigate = useNavigate();
     const user = getCurrentUser();
     const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
-    const isEmployee = user?.role === 'employee';
+    const isEmployee = user?.role === 'employee' || localStorage.getItem('view_as_mode') === 'employee';
 
     // Caller Identity State
     const [callerName, setCallerName] = useState(() => localStorage.getItem("phone_assistant_draft_name") || "");
@@ -934,6 +935,28 @@ ${firstVehicle.notes || ''}`.trim(),
         }
     };
 
+    const isEmployeeFormComplete = Boolean(
+        callerName?.trim() &&
+        callerPhone?.trim() &&
+        callerEmail?.trim() &&
+        activeVehicle?.year?.toString().trim() &&
+        activeVehicle?.make?.trim() &&
+        activeVehicle?.model?.trim() &&
+        (activeVehicle?.selectedScenarioId || activeVehicle?.selectedServiceId)
+    );
+
+    const missingEmployeeFields = useMemo(() => {
+        const missing: string[] = [];
+        if (!callerName?.trim()) missing.push("Name");
+        if (!callerPhone?.trim()) missing.push("Phone");
+        if (!callerEmail?.trim()) missing.push("Email");
+        if (!activeVehicle?.year?.toString().trim()) missing.push("Vehicle Year");
+        if (!activeVehicle?.make?.trim()) missing.push("Vehicle Make");
+        if (!activeVehicle?.model?.trim()) missing.push("Vehicle Model");
+        if (!activeVehicle?.selectedScenarioId && !activeVehicle?.selectedServiceId) missing.push("Type of Service");
+        return missing;
+    }, [callerName, callerPhone, callerEmail, activeVehicle?.year, activeVehicle?.make, activeVehicle?.model, activeVehicle?.selectedScenarioId, activeVehicle?.selectedServiceId]);
+
     return (
         <Dialog open={open} onOpenChange={handleCloseAttempt}>
             <DialogContent className="max-w-4xl w-[98vw] sm:w-full h-[98vh] sm:h-[90vh] overflow-hidden flex flex-col p-0 bg-slate-950 border-slate-800 text-slate-100 shadow-2xl rounded-2xl">
@@ -995,21 +1018,9 @@ ${firstVehicle.notes || ''}`.trim(),
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-5 pt-2">
                                 {isEmployee && (
-                                    <div className="bg-amber-950/60 border border-amber-500/40 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-200 text-xs font-semibold mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <Info className="w-4 h-4 text-amber-400 shrink-0" />
-                                            <span><strong>Employee Mode:</strong> You can view live pricing & scripts. You cannot save customer data or process payments directly.</span>
-                                        </div>
-                                        <Button 
-                                            size="sm"
-                                            type="button"
-                                            onClick={() => window.dispatchEvent(new CustomEvent('open-notify-admin', { 
-                                                detail: { subject: 'Customer Payment / New Customer Record', message: 'Hi Admin, I have a customer on the phone/on-site ready for payment or profile creation.' }
-                                            }))}
-                                            className="bg-amber-600 hover:bg-amber-500 text-black font-bold text-[11px] h-7 px-3 shrink-0"
-                                        >
-                                            Notify Admin
-                                        </Button>
+                                    <div className="bg-blue-950/60 border border-blue-500/40 rounded-lg p-3 flex items-center gap-2 text-blue-200 text-xs font-semibold mb-4">
+                                        <Info className="w-4 h-4 text-blue-400 shrink-0" />
+                                        <span><strong>Employee Mode:</strong> Fill in caller identity, vehicle info & package selection, then click <strong>"Save For Admin"</strong> at the bottom.</span>
                                     </div>
                                 )}
                                 <div className="space-y-4 pt-2">
@@ -1028,27 +1039,33 @@ ${firstVehicle.notes || ''}`.trim(),
                                     )}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Full Name</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-1">
+                                                Full Name <span className="text-red-400 font-bold">*</span>
+                                            </Label>
                                             <Input
-                                                placeholder="Enter Client Name"
+                                                placeholder="Enter Client Name *"
                                                 value={callerName}
                                                 onChange={(e) => setCallerName(e.target.value)}
                                                 className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Phone Number</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-1">
+                                                Phone Number <span className="text-red-400 font-bold">*</span>
+                                            </Label>
                                             <Input
-                                                placeholder="555-0199"
+                                                placeholder="555-0199 *"
                                                 value={callerPhone}
                                                 onChange={(e) => setCallerPhone(e.target.value)}
                                                 className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Email Address</Label>
+                                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1 flex items-center gap-1">
+                                                Email Address <span className="text-red-400 font-bold">*</span>
+                                            </Label>
                                             <Input
-                                                placeholder="customer@example.com"
+                                                placeholder="customer@example.com *"
                                                 value={callerEmail}
                                                 onChange={(e) => setCallerEmail(e.target.value)}
                                                 className="h-9 bg-zinc-950 border-zinc-700 font-bold text-zinc-100"
@@ -1172,11 +1189,13 @@ ${firstVehicle.notes || ''}`.trim(),
                                     {/* Year/Make/Model Section */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
-                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1">Year / Make / Model / Color</Label>
+                                            <Label className="text-[10px] font-black uppercase text-zinc-400 ml-1 flex items-center gap-1">
+                                                Year / Make / Model / Color <span className="text-red-400 font-bold">* (Yr/Make/Model Required)</span>
+                                            </Label>
                                             <div className="flex gap-2">
-                                                <Input placeholder="Year" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-16 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
-                                                <Input placeholder="Make" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
-                                                <Input placeholder="Model" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Year *" value={activeVehicle.year} onChange={(e) => updateVehicle(activeVehicleId, { year: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Make *" value={activeVehicle.make} onChange={(e) => updateVehicle(activeVehicleId, { make: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
+                                                <Input placeholder="Model *" value={activeVehicle.model} onChange={(e) => updateVehicle(activeVehicleId, { model: e.target.value })} className="flex-1 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
                                                 <Input placeholder="Color" value={activeVehicle.color} onChange={(e) => updateVehicle(activeVehicleId, { color: e.target.value })} className="w-20 bg-zinc-950 border-zinc-800 text-xs font-bold text-zinc-100 px-2" />
                                             </div>
                                         </div>
@@ -1628,26 +1647,42 @@ ${firstVehicle.notes || ''}`.trim(),
                 </div>
 
                 <div className="p-3 border-t border-border bg-muted/30 flex flex-col gap-3 w-full shrink-0">
-                    {/* Desktop Only Legend info */}
-                    <div className="hidden lg:flex gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${callerName ? 'text-primary' : 'text-zinc-700'}`} /> Identity</div>
-                        <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.make ? 'text-primary' : 'text-zinc-700'}`} /> Vehicle</div>
-                        <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${activeVehicle.selectedScenarioId ? 'text-primary' : 'text-zinc-700'}`} /> Selection</div>
+                    {/* Desktop Only Legend & Required Fields Status */}
+                    <div className="hidden lg:flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${callerName ? 'text-emerald-400' : 'text-zinc-700'}`} /> Identity</div>
+                            <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${(activeVehicle.year && activeVehicle.make && activeVehicle.model) ? 'text-emerald-400' : 'text-zinc-700'}`} /> Vehicle</div>
+                            <div className="flex items-center gap-1.5"><CheckCircle2 className={`w-3.5 h-3.5 ${(activeVehicle.selectedScenarioId || activeVehicle.selectedServiceId) ? 'text-emerald-400' : 'text-zinc-700'}`} /> Selection</div>
+                        </div>
+
+                        {isEmployee && (
+                            <div>
+                                {!isEmployeeFormComplete ? (
+                                    <span className="text-[10px] font-bold text-amber-400 bg-amber-950/70 border border-amber-500/40 px-2.5 py-1 rounded-lg">
+                                        Required: {missingEmployeeFields.join(', ')}
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> All Required Fields Complete
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Responsive Footer Controls */}
                     <div className="flex items-center justify-between gap-2 w-full">
                         {/* Left Side: Package Base Prices Cheat Sheet Dropdown */}
-                        <div className="flex-1 min-w-[120px] max-w-[280px]">
+                        <div className="flex-1 min-w-[120px] max-w-[240px]">
                             <Select value="none" onValueChange={() => {}}>
                                 <SelectTrigger className="w-full h-10 bg-zinc-950 font-black uppercase text-[10px] tracking-widest border-zinc-800 text-zinc-100">
                                     <span className="flex items-center gap-1.5 truncate">
-                                        💰 Package Cheat Sheet
+                                        💰 Cheat Sheet
                                     </span>
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-950 border-zinc-850 text-zinc-200">
                                     <SelectItem value="none" disabled className="text-zinc-500 font-black text-[9px] uppercase tracking-wider">
-                                        Live Package Base Prices ({activeVehicle.type.toUpperCase()})
+                                        Live Base Prices ({activeVehicle.type.toUpperCase()})
                                     </SelectItem>
                                     {livePackages.map(pkg => {
                                         const basePrice = parseFloat(savedPrices[`package:${pkg.id}:${activeVehicle.type}`]) || pkg.pricing?.[activeVehicle.type] || 0;
@@ -1661,46 +1696,82 @@ ${firstVehicle.notes || ''}`.trim(),
                             </Select>
                         </div>
 
-                        {/* Right Side: Action Buttons Row (Icon Only) */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => handleCloseAttempt(false)}
-                                className="h-10 w-10 rounded-xl"
-                                title="Cancel"
-                            >
-                                <X className="w-5 h-5" />
-                            </Button>
+                        {/* Right Side: Action Buttons */}
+                        {isEmployee ? (
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleCloseAttempt(false)}
+                                    className="h-10 px-4 rounded-xl border-rose-500/40 text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 font-bold uppercase text-xs tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" /> Cancel
+                                </Button>
 
-                            <Button
-                                type="button"
-                                onClick={handleSaveProspectOnly}
-                                disabled={!callerName}
-                                variant="outline"
-                                size="icon"
-                                className={`h-10 w-10 rounded-xl border-blue-500 text-blue-400 bg-blue-500/5 hover:bg-blue-500/15 transition-all
-                                    ${!callerName ? 'opacity-50 cursor-not-allowed border-zinc-800 text-zinc-600 bg-transparent' : ''}
-                                `}
-                                title="Save Prospect"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!isEmployeeFormComplete) {
+                                            toast({
+                                                title: "⚠️ Required Fields Missing",
+                                                description: `Please fill out: ${missingEmployeeFields.join(', ')} before saving.`,
+                                                variant: "destructive"
+                                            });
+                                            return;
+                                        }
+                                        handleHandoff();
+                                    }}
+                                    disabled={!isEmployeeFormComplete}
+                                    className={`h-10 px-5 rounded-xl font-black uppercase text-xs tracking-wider flex items-center gap-2 transition-all ${
+                                        isEmployeeFormComplete
+                                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50 cursor-pointer animate-pulse'
+                                            : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700 opacity-50'
+                                    }`}
+                                >
+                                    <Send className="w-4 h-4" /> Save For Admin
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => handleCloseAttempt(false)}
+                                    className="h-10 w-10 rounded-xl"
+                                    title="Cancel"
+                                >
+                                    <X className="w-5 h-5" />
+                                </Button>
 
-                            <Button
-                                type="button"
-                                onClick={handleHandoff}
-                                disabled={!activeVehicle.selectedScenarioId}
-                                size="icon"
-                                className={`h-10 w-10 rounded-xl transition-all
-                                    ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] text-white' : 'bg-muted opacity-50'}
-                                `}
-                                title="Confirm & Go"
-                            >
-                                <ArrowRight className="w-5 h-5" />
-                            </Button>
-                        </div>
+                                <Button
+                                    type="button"
+                                    onClick={handleSaveProspectOnly}
+                                    disabled={!callerName}
+                                    variant="outline"
+                                    size="icon"
+                                    className={`h-10 w-10 rounded-xl border-blue-500 text-blue-400 bg-blue-500/5 hover:bg-blue-500/15 transition-all
+                                        ${!callerName ? 'opacity-50 cursor-not-allowed border-zinc-800 text-zinc-600 bg-transparent' : ''}
+                                    `}
+                                    title="Save Prospect"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    onClick={handleHandoff}
+                                    disabled={!activeVehicle.selectedScenarioId}
+                                    size="icon"
+                                    className={`h-10 w-10 rounded-xl transition-all
+                                        ${activeVehicle.selectedScenarioId ? 'bg-gradient-hero hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] text-white' : 'bg-muted opacity-50'}
+                                    `}
+                                    title="Confirm & Go"
+                                >
+                                    <ArrowRight className="w-5 h-5" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </DialogContent>
