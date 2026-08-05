@@ -1731,7 +1731,7 @@ Precision. Protection. Perfection.`;
                         
                         <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">Apply Discount</span>
+                            <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Apply Discount</span>
                             {invoiceDiscountCode && (
                               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">
                                 {invoiceDiscountCode}
@@ -2526,7 +2526,7 @@ Precision. Protection. Perfection.`;
                   </div>
                   
                   <div className="space-y-4 pt-4 border-t border-zinc-800">
-                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Apply Discount</Label>
+                    <Label className="text-xs text-red-500 uppercase tracking-widest font-bold">Apply Discount</Label>
                     <div className="grid grid-cols-3 gap-2">
                       <Select 
                         value={editDiscountMethod} 
@@ -2907,32 +2907,54 @@ Precision. Protection. Perfection.`;
                 </div>
               </div>
 
-              {(selectedInvoice.paidAmount || 0) > 0 && (
-                <div className="mt-6 pt-6 border-t border-zinc-800 space-y-2">
-                  <div className="flex justify-between items-center text-sm text-zinc-400">
-                    <span>Amount Paid</span>
-                    <div className="flex items-center gap-2 group">
-                      <span>-${(selectedInvoice.paidAmount || 0).toFixed(2)}</span>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setEditTipValue(String(selectedInvoice.tipAmount || 0)); setIsEditingPaid(true); }}>
-                        <Pencil className="h-3 w-3" />
+              {(() => {
+                const currentEditedInv = buildCurrentEditedInvoice();
+                const currentBalanceDue = Math.max(0, currentEditedInv.total - (selectedInvoice.paidAmount || 0));
+                return (
+                  <>
+                    {(selectedInvoice.paidAmount || 0) > 0 && (
+                      <div className="mt-6 pt-6 border-t border-zinc-800 space-y-2">
+                        <div className="flex justify-between items-center text-sm text-zinc-400">
+                          <span>Amount Paid</span>
+                          <div className="flex items-center gap-2 group">
+                            <span>-${Math.round(selectedInvoice.paidAmount || 0)}</span>
+                            <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-white" onClick={() => { setEditPaidValue(String(selectedInvoice.paidAmount || 0)); setEditTipValue(String(selectedInvoice.tipAmount || 0)); setIsEditingPaid(true); }}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {currentBalanceDue > 0 && (
+                          <div className="flex justify-between items-center text-lg font-bold text-red-400">
+                            <span>Balance Due</span>
+                            <span>${Math.round(currentBalanceDue)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-6">
+                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 font-bold text-lg" onClick={async () => {
+                        const updatedInv = buildCurrentEditedInvoice();
+                        if (localStorage.getItem("demo_mode_active") !== "true") {
+                          try {
+                            await upsertSupabaseInvoice(updatedInv);
+                          } catch (e) {
+                            console.error("Auto-save before payment failed", e);
+                          }
+                        }
+                        setSelectedInvoice(updatedInv);
+                        await loadData();
+                        const remaining = Math.max(0, updatedInv.total - (updatedInv.paidAmount || 0));
+                        setPaymentAmount(Math.round(remaining).toString());
+                        setPaymentDialogOpen(true);
+                      }}>
+                        <CreditCard className="h-5 w-5 mr-2" /> 
+                        {(selectedInvoice.paymentStatus === 'paid' || currentBalanceDue <= 0) ? 'Record Additional Payment / Tip' : 'Record Payment'}
                       </Button>
                     </div>
-                  </div>
-                  {(selectedInvoice.total - (selectedInvoice.paidAmount || 0) > 0) && (
-                    <div className="flex justify-between items-center text-lg font-bold text-red-400">
-                      <span>Balance Due</span>
-                      <span>${(selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-6">
-                <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6" onClick={() => { setPaymentAmount(Math.max(0, selectedInvoice.total - (selectedInvoice.paidAmount || 0)).toFixed(2)); setPaymentDialogOpen(true); }}>
-                  <CreditCard className="h-4 w-4 mr-2" /> 
-                  {(selectedInvoice.paymentStatus === 'paid' || selectedInvoice.total - (selectedInvoice.paidAmount || 0) <= 0) ? 'Record Additional Payment / Tip' : 'Record Payment'}
-                </Button>
-              </div>
+                  </>
+                );
+              })()}
             </div>
           </Card>
         </div>
