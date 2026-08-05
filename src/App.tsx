@@ -404,7 +404,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/demo/bookings-analytics" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><BookingsAnalyticsPage /></ProtectedRoute>} />
           <Route path="/goals" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><Goals /></ProtectedRoute>} />
           <Route path="/demo/goals" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Goals /></ProtectedRoute>} />
-          <Route path="/search-customer" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><SearchCustomer /></ProtectedRoute>} />
+          <Route path="/search-customer" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/demo/search-customer" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><SearchCustomer /></ProtectedRoute>} />
           <Route path="/prospects" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Prospects /></ProtectedRoute>} />
           <Route path="/demo/prospects" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Prospects /></ProtectedRoute>} />

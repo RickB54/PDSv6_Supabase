@@ -41,6 +41,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
+import { MessageCircle, Send, Zap, Bell, CheckCircle2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TeamMessage, getTeamMessages, sendTeamMessage } from "@/lib/supa-data";
 
 interface ProTip {
   id: string;
@@ -127,6 +130,12 @@ const EmployeeDashboard = () => {
   const [priority, setPriority] = useState("URGENT");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [notifyTab, setNotifyTab] = useState<"standard" | "chat">("standard");
+
+  // Live Chat state in Notify Admin modal
+  const [chatMessages, setChatMessages] = useState<TeamMessage[]>([]);
+  const [chatText, setChatText] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   const [examUnlocked, setExamUnlocked] = useState(false);
   const [examStatusStr, setExamStatusStr] = useState("Not Started");
@@ -182,6 +191,15 @@ const EmployeeDashboard = () => {
          const pct = Math.round((completedCount / total) * 100) || 0;
          setTrainingProgress(pct);
       }
+      // Listen for open-notify-admin events from anywhere in the application
+      const handleOpenNotify = (e: any) => {
+        if (e.detail?.subject) setSubject(e.detail.subject);
+        if (e.detail?.message) setMessage(e.detail.message);
+        if (e.detail?.mode === 'chat') setNotifyTab('chat');
+        setNotifyAdminOpen(true);
+      };
+      window.addEventListener('open-notify-admin', handleOpenNotify);
+      return () => window.removeEventListener('open-notify-admin', handleOpenNotify);
     };
     loadUserStats();
   }, [location.search, user?.id]);
@@ -242,6 +260,43 @@ const EmployeeDashboard = () => {
       toast({ title: "Error", description: err?.message || String(err), variant: "destructive" });
     } finally {
       setSending(false);
+    }
+  };
+
+  // Live chat fetch & send inside Notify Admin
+  const loadChatMessages = async () => {
+    setChatLoading(true);
+    try {
+      const msgs = await getTeamMessages();
+      setChatMessages(msgs.slice(-20)); // Last 20 messages
+    } catch (err) {
+      console.error("Failed to load chat in notify modal", err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (notifyAdminOpen && notifyTab === 'chat') {
+      loadChatMessages();
+    }
+  }, [notifyAdminOpen, notifyTab]);
+
+  const handleSendLiveChat = async (textToSend?: string) => {
+    const finalMsg = textToSend || chatText;
+    if (!finalMsg.trim()) return;
+
+    const actor = user?.name || user?.email || "Employee";
+    const actorEmail = user?.email || "employee@primeautodetail.com";
+
+    try {
+      pushAdminAlert("employee_chat", `🚨 URGENT Employee Live Chat from ${actor}: ${finalMsg}`, actor, { priority: "URGENT" });
+      await sendTeamMessage(`🚨 URGENT ADMIN ALERT: ${finalMsg}`, actorEmail, actor, null);
+      setChatText("");
+      toast({ title: "Urgent Alert Sent!", description: "Live Chat alert broadcasted directly to Admin." });
+      loadChatMessages();
+    } catch (err: any) {
+      toast({ title: "Failed to send chat", description: err?.message || String(err), variant: "destructive" });
     }
   };
 
@@ -370,28 +425,154 @@ const EmployeeDashboard = () => {
 
       {/* Notify Admin Modal */}
       <Dialog open={notifyAdminOpen} onOpenChange={setNotifyAdminOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-red-500">NOTIFY ADMIN</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleNotifyAdmin} className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 gap-3">
-              <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-zinc-900 border-zinc-700 text-white" />
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="URGENT">URGENT</SelectItem>
-                  <SelectItem value="Normal">Normal</SelectItem>
-                </SelectContent>
-              </Select>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-2 border-b border-zinc-800">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-xl font-black text-red-500 flex items-center gap-2">
+                <Bell className="w-5 h-5 text-red-500 animate-pulse" /> NOTIFY ADMIN
+              </DialogTitle>
+              
+              {/* Tooltip & Usage Guide */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors">
+                      <HelpCircle className="w-4 h-4 text-blue-400" /> How to use
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-zinc-900 border border-zinc-700 text-zinc-200 max-w-xs p-3 text-xs leading-relaxed z-[10000]">
+                    <strong className="text-red-400 block mb-1">📢 Employee Contact Guide</strong>
+                    Employees cannot modify customer accounts or take payments directly. Use <strong>Standard Message</strong> for requests or click <strong>⚡ Urgent Live Chat</strong> for immediate admin assistance (e.g. customer waiting for payment).
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-            <Textarea placeholder="Message" value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-[140px] bg-zinc-900 border-zinc-700 text-white" />
-            <div className="flex justify-end">
-              <Button type="submit" disabled={sending} className="bg-red-600 hover:bg-red-700 text-white">
-                {sending ? "Sending..." : "Send Message"}
+
+            {/* Sub-header instruction banner */}
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-lg p-2.5 mt-2 text-xs text-zinc-300 flex items-center justify-between">
+              <span>Need to add a customer or receive payment?</span>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setNotifyTab(notifyTab === 'standard' ? 'chat' : 'standard')}
+                className="text-[11px] font-bold text-red-400 hover:text-red-300 underline p-0 h-auto"
+              >
+                {notifyTab === 'standard' ? 'Switch to ⚡ Urgent Live Chat' : 'Switch to Standard Message'}
               </Button>
             </div>
-          </form>
+
+            {/* Mode Switcher Tabs */}
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant={notifyTab === 'standard' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setNotifyTab('standard')}
+                className={`flex-1 font-bold text-xs ${notifyTab === 'standard' ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-zinc-800 text-zinc-400 hover:bg-zinc-900'}`}
+              >
+                Standard Notification
+              </Button>
+              <Button
+                variant={notifyTab === 'chat' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setNotifyTab('chat')}
+                className={`flex-1 font-bold text-xs flex items-center justify-center gap-1.5 ${notifyTab === 'chat' ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse' : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-950/40'}`}
+              >
+                <Zap className="w-3.5 h-3.5" /> Urgent Live Chat (Immediate)
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {notifyTab === 'standard' ? (
+            <form onSubmit={handleNotifyAdmin} className="space-y-4 mt-2">
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Subject</label>
+                  <Input placeholder="e.g. Schedule Change / Customer Payment Needed" value={subject} onChange={(e) => setSubject(e.target.value)} className="bg-zinc-900 border-zinc-700 text-white mt-1" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Priority</label>
+                  <Select value={priority} onValueChange={setPriority}>
+                    <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[10000]">
+                      <SelectItem value="URGENT">🔴 URGENT (Immediate Action Required)</SelectItem>
+                      <SelectItem value="Normal">🟢 Normal Request</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase text-zinc-400 ml-1">Message Details</label>
+                <Textarea placeholder="Explain what you need Admin to do..." value={message} onChange={(e) => setMessage(e.target.value)} className="min-h-[120px] bg-zinc-900 border-zinc-700 text-white mt-1" />
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button type="submit" disabled={sending} className="bg-red-600 hover:bg-red-700 text-white font-bold px-6">
+                  {sending ? "Sending..." : "Send Message"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-3 mt-2">
+              {/* Quick Urgent Action Presets */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-emerald-400 ml-1">Quick Urgent Presets (1-Click Broadcast)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSendLiveChat("💳 CUSTOMER READY TO PAY! Customer is on-site/phone ready to settle payment for completed service.")}
+                    className="bg-emerald-950/40 border-emerald-500/40 hover:bg-emerald-900/60 text-emerald-300 text-xs font-bold justify-start"
+                  >
+                    💳 Customer Ready to Pay Now!
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSendLiveChat("📞 NEW CUSTOMER INQUIRY: Customer is on the line needing account setup & quote approval.")}
+                    className="bg-blue-950/40 border-blue-500/40 hover:bg-blue-900/60 text-blue-300 text-xs font-bold justify-start"
+                  >
+                    📞 Phone Inquiry Waiting
+                  </Button>
+                </div>
+              </div>
+
+              {/* Chat Feed */}
+              <div className="bg-zinc-900/90 border border-zinc-800 rounded-lg p-3 h-48 overflow-y-auto space-y-2 text-xs">
+                {chatLoading ? (
+                  <div className="text-zinc-500 text-center py-8">Loading chat history...</div>
+                ) : chatMessages.length === 0 ? (
+                  <div className="text-zinc-500 text-center py-8">No recent messages. Type below to send live alert.</div>
+                ) : (
+                  chatMessages.map(m => (
+                    <div key={m.id} className="bg-zinc-950 p-2 rounded border border-zinc-800/80">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-emerald-400 text-[11px]">{m.sender_name}</span>
+                        <span className="text-[9px] text-zinc-500">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <p className="text-zinc-200 text-xs">{m.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Type urgent live message to Admin..."
+                  value={chatText}
+                  onChange={(e) => setChatText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendLiveChat()}
+                  className="bg-zinc-900 border-zinc-700 text-white flex-1"
+                />
+                <Button 
+                  onClick={() => handleSendLiveChat()}
+                  disabled={!chatText.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  <Send className="w-4 h-4 mr-1" /> Send Live
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -3369,13 +3369,13 @@ export const employeeMenuTopics: HelpTopic[] = [
     title: 'Phone Assistant',
     summary: 'Scripted guide for handling customer calls.',
     content: [
-      '**What this is**: The Phone Assistant provides a step-by-step script to follow when a customer calls to inquire about services.',
+      '**What this is**: The Phone Assistant provides a step-by-step script and live pricing calculator to follow when a customer calls.',
       '',
-      '**When to use it**: Whenever you answer the shop phone or are speaking to a potential customer on the floor.',
+      '**Employee Access & Rights**: As an employee, you can view live pricing, vehicle classifications, and scripts. Saving customer profiles, creating prospects, or processing payments is restricted to Admin.',
       '',
-      '**How to use it**: Click the Phone Assistant tile to open the guide. Read through the prompts to answer common questions consistently, gather the right information about their vehicle, and guide them toward the correct package.',
+      '**How to handle new customers or payments**: When a customer wants to add their profile or pay for a service, click the **"Notify Admin"** button inside the Phone Assistant or on your dashboard. Use **"⚡ Urgent Live Chat"** if the customer is on the phone or on-site ready to pay right now!',
       '',
-      '**Important notes**: Always collect the customer\'s name, phone number, and vehicle model before ending the call.'
+      '**Important notes**: Never attempt to take customer payments or bypass admin authorization.'
     ],
     section: 'menu'
   },

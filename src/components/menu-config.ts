@@ -100,7 +100,7 @@ export const getMenuGroups = (counts: {
                 { title: "Hybrid Availability System", url: "/availability-manager", role: "admin", key: "availability-manager", icon: CalendarCheck, highlight: "green", iconColor: "blue", helpTopicId: 'availability-manager' },
                 { title: "Service Checklist", url: "/service-checklist", key: "service-checklist", icon: ClipboardCheck, helpTopicId: 'service-checklist' },
                 { title: "Tasks", url: "/tasks", key: "tasks", badge: counts.todoCount > 0 ? counts.todoCount : undefined, icon: CheckSquare, helpTopicId: 'tasks' },
-                { title: "Customer Profiles", url: "/search-customer", key: "search-customer", icon: Users, helpTopicId: 'search-customer' },
+                { title: "Customer Profiles", url: "/search-customer", role: "admin", key: "search-customer", icon: Users, helpTopicId: 'search-customer' },
                 { title: "Prospects", url: "/prospects", role: "admin", key: "prospects", icon: Users, helpTopicId: 'prospects' },
                 { title: "Users & Roles", url: "/user-management", role: "admin", key: "user-mgmt", icon: Users, helpTopicId: 'user-mgmt' }
             ]

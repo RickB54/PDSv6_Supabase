@@ -200,6 +200,7 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
     const navigate = useNavigate();
     const user = getCurrentUser();
     const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
+    const isEmployee = user?.role === 'employee';
 
     // Caller Identity State
     const [callerName, setCallerName] = useState(() => localStorage.getItem("phone_assistant_draft_name") || "");
@@ -731,6 +732,20 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
     };
 
     const handleHandoff = () => {
+        if (isEmployee) {
+            toast({
+                title: "🔒 Employee Access Notice",
+                description: "Employees cannot save customer accounts or estimates. Please click 'Notify Admin' to send caller details to management.",
+                variant: "default"
+            });
+            window.dispatchEvent(new CustomEvent('open-notify-admin', { 
+                detail: { 
+                    subject: `Phone Inquiry Handoff: ${callerName || 'Caller'}`, 
+                    message: `Customer: ${callerName || 'N/A'}\nPhone: ${callerPhone || 'N/A'}\nEmail: ${callerEmail || 'N/A'}\nNotes: ${vehicles[0]?.notes || 'N/A'}`
+                } 
+            }));
+            return;
+        }
         // Prepare data for Evaluation
         const data = vehicles.map(v => {
             const scenario = v.scenarios.find(s => s.id === v.selectedScenarioId);
@@ -822,6 +837,20 @@ ${firstVehicle.notes || ''}`.trim(),
     };
 
     const handleSaveProspectOnly = async () => {
+        if (isEmployee) {
+            toast({
+                title: "🔒 Employee Access Notice",
+                description: "Employees cannot save customer accounts or prospects directly. Contact Admin via Notify Admin.",
+                variant: "default"
+            });
+            window.dispatchEvent(new CustomEvent('open-notify-admin', { 
+                detail: { 
+                    subject: `New Customer/Prospect Request: ${callerName || 'Caller'}`, 
+                    message: `Customer Name: ${callerName || 'N/A'}\nPhone: ${callerPhone || 'N/A'}\nEmail: ${callerEmail || 'N/A'}`
+                } 
+            }));
+            return;
+        }
         if (!callerName) {
             toast({
                 title: "Information Required",
@@ -963,6 +992,24 @@ ${firstVehicle.notes || ''}`.trim(),
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="px-5 pb-5 pt-2">
+                                {isEmployee && (
+                                    <div className="bg-amber-950/60 border border-amber-500/40 rounded-lg p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-200 text-xs font-semibold mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                                            <span><strong>Employee Mode:</strong> You can view live pricing & scripts. You cannot save customer data or process payments directly.</span>
+                                        </div>
+                                        <Button 
+                                            size="sm"
+                                            type="button"
+                                            onClick={() => window.dispatchEvent(new CustomEvent('open-notify-admin', { 
+                                                detail: { subject: 'Customer Payment / New Customer Record', message: 'Hi Admin, I have a customer on the phone/on-site ready for payment or profile creation.' }
+                                            }))}
+                                            className="bg-amber-600 hover:bg-amber-500 text-black font-bold text-[11px] h-7 px-3 shrink-0"
+                                        >
+                                            Notify Admin
+                                        </Button>
+                                    </div>
+                                )}
                                 <div className="space-y-4 pt-2">
                                     {isRickAdmin && (
                                         <div className="flex justify-end mb-2">
