@@ -243,15 +243,16 @@ export default function CustomerInvoicePage() {
     const isPaid = invoice.paymentStatus === 'paid';
 
     // Calculate actual total
-    let finalTotal = invoice.services.reduce((sum, s) => sum + Number(s.price), 0);
+    let subtotal = invoice.services.reduce((sum, s) => sum + Number(s.price), 0);
+    let finalTotal = subtotal;
     let discountAmount = 0;
     if (invoice.discount && invoice.discount.value > 0) {
         if (invoice.discount.type === 'percent') {
-            discountAmount = Math.ceil(finalTotal * (invoice.discount.value / 100));
+            discountAmount = Math.round(subtotal * (invoice.discount.value / 100));
         } else {
-            discountAmount = Math.ceil(invoice.discount.value);
+            discountAmount = Math.round(invoice.discount.value);
         }
-        finalTotal = Math.max(0, Math.ceil(finalTotal) - discountAmount);
+        finalTotal = Math.max(0, Math.round(subtotal) - discountAmount);
     } else {
         finalTotal = Math.round(finalTotal);
     }
@@ -357,7 +358,7 @@ export default function CustomerInvoicePage() {
                                             <div key={i} className="pt-4 pb-2 mb-2 border-b border-zinc-800/50">
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-blue-400 font-black uppercase tracking-wider text-xs">{svc.name.replace(/---/g, '').trim()}</span>
-                                                    <span className="text-blue-400/80 font-mono text-xs">Subtotal: ${sectionTotal.toFixed(2)}</span>
+                                                    <span className="text-blue-400/80 font-mono text-xs">Subtotal: ${Math.round(sectionTotal)}</span>
                                                 </div>
                                             </div>
                                         );
@@ -366,7 +367,7 @@ export default function CustomerInvoicePage() {
                                     return (
                                         <div key={i} className="flex justify-between items-center text-sm pl-2">
                                             <span className="text-zinc-200 font-medium">{svc.name}</span>
-                                            <span className="text-zinc-100 font-mono">${Number(svc.price).toFixed(2)}</span>
+                                            <span className="text-zinc-100 font-mono">${Math.round(Number(svc.price))}</span>
                                         </div>
                                     );
                                 })}
@@ -375,17 +376,17 @@ export default function CustomerInvoicePage() {
                             <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
                                 <div className="flex justify-between items-center text-sm text-zinc-400">
                                     <span>Subtotal</span>
-                                    <span className="font-mono">${invoice.services.reduce((a,b)=>a+Number(b.price),0).toFixed(2)}</span>
+                                    <span className="font-mono">${Math.round(invoice.services.reduce((a,b)=>a+Number(b.price),0))}</span>
                                 </div>
                                 {discountAmount > 0 && (
                                     <div className="flex justify-between items-center text-sm text-emerald-400">
                                         <span>Discount {invoice.discount?.type === 'percent' ? `(${invoice.discount.value}%)` : ''}</span>
-                                        <span className="font-mono">-${discountAmount.toFixed(2)}</span>
+                                        <span className="font-mono">-${Math.round(discountAmount)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-end pt-4">
                                     <span className="text-lg font-bold text-white uppercase tracking-wider">Total Due</span>
-                                    <span className="text-3xl font-black text-blue-400 font-mono">${finalTotal.toFixed(2)}</span>
+                                    <span className="text-3xl font-black text-blue-400 font-mono">${Math.round(finalTotal)}</span>
                                 </div>
                             </div>
                         </div>

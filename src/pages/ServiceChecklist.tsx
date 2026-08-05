@@ -4005,12 +4005,12 @@ const ServiceChecklist = () => {
             <div className="space-y-3 pt-2">
               <div className="flex justify-between text-zinc-400">
                 <span>Subtotal:</span>
-                <span className="font-mono text-zinc-200">${calculateSubtotal().toFixed(2)}</span>
+                <span className="font-mono text-zinc-200">${Math.round(calculateSubtotal())}</span>
               </div>
               {calculateDiscount() > 0 && (
                 <div className="flex justify-between text-red-400">
                   <span>Discount Applied:</span>
-                  <span className="font-mono">-${calculateDiscount().toFixed(2)}</span>
+                  <span className="font-mono">-${Math.round(calculateDiscount())}</span>
                 </div>
               )}
               <div className="flex justify-between text-2xl border-t border-zinc-800 pt-4 mt-2">
@@ -4019,12 +4019,12 @@ const ServiceChecklist = () => {
                   ${(() => {
                      const t = calculateTotal();
                      try { 
-                       localStorage.setItem('recent_service_amount', t.toFixed(2)); 
+                       localStorage.setItem('recent_service_amount', Math.round(t).toString()); 
                        localStorage.setItem('recent_service_job_id', checklistId || '');
                        localStorage.setItem('recent_service_time', getAdjustedTime());
                        localStorage.setItem('recent_service_timestamp', Date.now().toString());
                      } catch(e) {}
-                     return t.toFixed(2);
+                     return Math.round(t);
                   })()}
                 </span>
               </div>

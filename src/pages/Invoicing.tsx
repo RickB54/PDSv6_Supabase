@@ -1714,7 +1714,7 @@ Precision. Protection. Perfection.`;
                         <div key={i} className="flex justify-between items-center p-2 bg-zinc-900 rounded border border-zinc-800/50">
                           <span className="text-sm text-zinc-300">{s.name}</span>
                           <div className="flex items-center gap-3">
-                            <span className="font-mono text-emerald-400">${s.price.toFixed(2)}</span>
+                            <span className="font-mono text-emerald-400">${Math.round(s.price)}</span>
                             <Button size="icon" variant="ghost" className="h-6 w-6 text-zinc-500 hover:text-red-400" onClick={() => removeService(i)}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -1726,7 +1726,7 @@ Precision. Protection. Perfection.`;
                       <div className="pt-3 mt-3 border-t border-zinc-800 space-y-2">
                         <div className="flex justify-between items-center text-sm text-zinc-400">
                           <span>Subtotal</span>
-                          <span className="font-mono">${calculateSubtotal().toFixed(2)}</span>
+                          <span className="font-mono">${Math.round(calculateSubtotal())}</span>
                         </div>
                         
                         <div className="bg-zinc-950 p-3 rounded-lg border border-zinc-800 space-y-3">
@@ -1865,9 +1865,9 @@ Precision. Protection. Perfection.`;
                           <div className="flex justify-between items-center text-sm text-red-400 font-medium">
                             <span>Discount</span>
                             <span className="font-mono">
-                              -${(invoiceDiscountType === 'percent' 
+                              -${Math.round(invoiceDiscountType === 'percent' 
                                 ? calculateSubtotal() * (invoiceDiscount / 100) 
-                                : invoiceDiscount).toFixed(2)}
+                                : invoiceDiscount)}
                             </span>
                           </div>
                         )}
@@ -1895,7 +1895,7 @@ Precision. Protection. Perfection.`;
                             />
                           </div>
                         ) : (
-                          <span className="font-bold text-xl text-white">${calculateTotal().toFixed(2)}</span>
+                          <span className="font-bold text-xl text-white">${Math.round(calculateTotal())}</span>
                         )}
                       </div>
                     </div>
@@ -2522,7 +2522,7 @@ Precision. Protection. Perfection.`;
 
                                     <div className="flex justify-between items-center px-2">
                      <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Subtotal</span>
-                     <span className="text-xl font-bold text-emerald-500">${editServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
+                     <span className="text-xl font-bold text-emerald-500">${Math.round(editServices.reduce((sum, s) => sum + s.price, 0))}</span>
                   </div>
                   
                   <div className="space-y-4 pt-4 border-t border-zinc-800">
@@ -2614,9 +2614,9 @@ Precision. Protection. Perfection.`;
                     <div className="flex justify-between items-center px-2 text-sm text-red-400 font-medium">
                       <span>{editDiscountMethod === 'coupon' && editDiscountCode && editDiscountCode !== 'CUSTOM' ? `${editDiscountCode} (${editDiscountType === 'percent' ? `${editDiscountValue}%` : `$${editDiscountValue}`} Off)` : `Discount`}</span>
                       <span className="font-mono">
-                        -${(editDiscountType === 'percent' 
+                        -${Math.round(editDiscountType === 'percent' 
                           ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) 
-                          : editDiscountValue).toFixed(2)}
+                          : editDiscountValue)}
                       </span>
                     </div>
                   )}
@@ -2639,7 +2639,7 @@ Precision. Protection. Perfection.`;
                     <div className="flex justify-between items-center px-2 text-sm text-red-400 font-medium">
                       <span>Adjusted</span>
                       <span className="font-mono">
-                        -${editAdjustmentAmount.toFixed(2)}
+                        -${Math.round(editAdjustmentAmount)}
                       </span>
                     </div>
                   )}
@@ -2652,7 +2652,7 @@ Precision. Protection. Perfection.`;
                             setEditPriceLocked(v);
                             if (v) {
                                const dynTotal = editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount;
-                               setEditLockedTotal(Math.max(0, dynTotal));
+                               setEditLockedTotal(Math.round(Math.max(0, dynTotal)));
                             }
                           }} id="lock-price-edit" className="data-[state=checked]:bg-amber-500 scale-75" />
                           <Label htmlFor="lock-price-edit" className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Lock Price</Label>
@@ -2669,7 +2669,7 @@ Precision. Protection. Perfection.`;
                           />
                         </div>
                      ) : (
-                       <span className="text-2xl font-black text-emerald-400">${Math.max(0, editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount).toFixed(2)}</span>
+                       <span className="text-2xl font-black text-emerald-400">${Math.round(Math.max(0, editServices.reduce((sum, s) => sum + s.price, 0) - (editDiscountType === 'percent' ? editServices.reduce((sum, s) => sum + s.price, 0) * (editDiscountValue / 100) : editDiscountValue) - editAdjustmentAmount))}</span>
                      )}
                   </div>
                 </div>
