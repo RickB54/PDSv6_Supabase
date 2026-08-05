@@ -267,7 +267,7 @@ export default function NotificationBell() {
         // 2. Sync 'tentative' bookings and deduplicate via DB flag
         const { data, error } = await supabase
           .from('bookings')
-          .select('id, customer_id, scheduled_at, service_package, booking_vehicle')
+          .select('id, customer_id, date, status, booking_vehicle')
           .in('status', ['tentative', 'TENTATIVE'])
           .limit(20);
 
