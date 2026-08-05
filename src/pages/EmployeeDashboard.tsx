@@ -43,7 +43,7 @@ import {
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 import { MessageCircle, Send, Zap, Bell, CheckCircle2, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TeamMessage, getTeamMessages, sendTeamMessage } from "@/lib/supa-data";
+import { TeamMessage, getTeamMessages, sendTeamMessage, deleteAllTeamMessages } from "@/lib/supa-data";
 
 interface ProTip {
   id: string;
@@ -298,6 +298,27 @@ const EmployeeDashboard = () => {
     } catch (err: any) {
       toast({ title: "Failed to send chat", description: err?.message || String(err), variant: "destructive" });
     }
+  };
+
+  const handleClearChatInModal = async () => {
+    if (!window.confirm("Are you sure you want to clean out all old chats? This will permanently delete chat history.")) return;
+    try {
+      await deleteAllTeamMessages();
+      setChatMessages([]);
+      localStorage.removeItem('has_unread_chat');
+      toast({ title: "Chat Cleared", description: "All old chats have been permanently deleted." });
+    } catch (err: any) {
+      toast({ title: "Error Clearing Chat", description: err?.message || String(err), variant: "destructive" });
+    }
+  };
+
+  const handleEndConversationInModal = () => {
+    if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts until a new chat is started.")) return;
+    localStorage.setItem('chat_ended', 'true');
+    localStorage.removeItem('has_unread_chat');
+    setChatMessages([]);
+    setNotifyAdminOpen(false);
+    toast({ title: "Conversation Ended", description: "Chat has been ended and alerts disabled." });
   };
 
   return (
@@ -560,6 +581,31 @@ const EmployeeDashboard = () => {
                     className="bg-blue-950/40 border-blue-500/40 hover:bg-blue-900/60 text-blue-300 text-xs font-bold justify-start"
                   >
                     📞 Phone Inquiry Waiting
+                  </Button>
+                </div>
+              </div>
+
+              {/* Chat Header Toolbar */}
+              <div className="flex justify-between items-center px-1 pt-1">
+                <span className="text-[10px] font-bold uppercase text-zinc-400">Live Chat History</span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearChatInModal}
+                    className="h-6 px-2 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-950/40 font-bold flex items-center gap-1"
+                    title="Delete All Old Chats"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear Chat
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleEndConversationInModal}
+                    className="h-6 px-2 text-[10px] text-amber-400 hover:text-amber-300 hover:bg-amber-950/40 font-bold flex items-center gap-1"
+                    title="End Conversation & Disable Alerts"
+                  >
+                    <X className="w-3 h-3" /> End Chat
                   </Button>
                 </div>
               </div>

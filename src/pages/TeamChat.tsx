@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { MessageCircle, Send, User, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
+import { TeamMessage, getTeamMessages, sendTeamMessage, deleteAllTeamMessages } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
 import { UserSelector } from '@/components/chat/UserSelector';
+import { LogOut } from 'lucide-react';
 
 export default function TeamChat() {
     const [guestName, setGuestName] = useState('');
@@ -46,9 +47,6 @@ export default function TeamChat() {
             setGuestEmail(user.email);
             setIsIdentified(true);
         } else {
-            // Check guest storage if not logged in (e.g. strict public mode tests)
-            // But this page is likely protected? Yes, "Team Chat" implies team.
-            // But we keep guest logic for continuity if user testing as anon.
             const stored = localStorage.getItem('guest_identity');
             if (stored) {
                 const { name, email } = JSON.parse(stored);
@@ -65,11 +63,10 @@ export default function TeamChat() {
 
         loadMessages();
 
-        // Enhanced real-time subscription with logging
         const channel = supabase
             .channel('team_messages_realtime', {
                 config: {
-                    broadcast: { self: true }, // Receive own messages too
+                    broadcast: { self: true },
                     presence: { key: guestEmail }
                 }
             })
@@ -83,28 +80,17 @@ export default function TeamChat() {
                     return;
                 }
                 if (payload.eventType === 'INSERT') {
-                    console.log('📨 Real-time message received:', payload);
                     const newMsg = payload.new as TeamMessage;
-                    // Avoid duplicate if we already have it from optimistic update
                     setMessages(prev => {
                         const exists = prev.some(m => m.id === newMsg.id);
-                        if (exists) {
-                            console.log('⚠️ Message already exists, skipping duplicate');
-                            return prev;
-                        }
+                        if (exists) return prev;
                         return [...prev, newMsg];
                     });
                 }
             })
-            .subscribe((status) => {
-                console.log('🔌 Subscription status:', status);
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Successfully subscribed to team_messages');
-                }
-            });
+            .subscribe();
 
         return () => {
-            console.log('🔌 Unsubscribing from team_messages');
             supabase.removeChannel(channel);
         };
     }, [isIdentified, guestEmail]);
@@ -117,14 +103,25 @@ export default function TeamChat() {
     }, [messages]);
 
     const handleClearAll = async () => {
-        if (!isAdmin) return;
-        if (!window.confirm("WARNING: Are you sure you want to permanently delete ALL team chat history? This action cannot be undone.")) return;
+        if (!window.confirm("WARNING: Are you sure you want to permanently delete ALL chat history? This action cannot be undone.")) return;
         try {
-            await supabase.from('team_messages').delete().neq('id', 'placeholder_force_all');
+            await deleteAllTeamMessages();
             setMessages([]);
+            localStorage.removeItem('has_unread_chat');
         } catch (error) {
             console.error('Failed to clear history:', error);
         }
+    };
+
+    const handleEndConversation = () => {
+        if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts or notifications until you start a new chat.")) return;
+        localStorage.setItem('chat_ended', 'true');
+        localStorage.removeItem('guest_identity');
+        localStorage.removeItem('has_unread_chat');
+        setIsIdentified(false);
+        setGuestName('');
+        setGuestEmail('');
+        setMessages([]);
     };
 
     const handleIdentify = () => {
@@ -216,15 +213,22 @@ export default function TeamChat() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            {isAdmin && (
-                                <button
-                                    onClick={handleClearAll}
-                                    className="p-2 hover:bg-red-900/40 rounded transition-colors text-red-500 hover:text-red-400"
-                                    title="Clear All Chat History"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            )}
+                            <button
+                                onClick={handleClearAll}
+                                className="p-2 hover:bg-red-900/40 rounded transition-colors text-red-400 hover:text-red-300"
+                                title="Delete All Old Chats"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                            <Button
+                                size="sm"
+                                variant="destructive"
+                                className="h-8 px-3 text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5"
+                                onClick={handleEndConversation}
+                                title="End Conversation & Disable Alerts"
+                            >
+                                <LogOut className="h-3.5 w-3.5" /> End Chat
+                            </Button>
                             <button
                                 onClick={loadMessages}
                                 disabled={isLoading}
@@ -234,8 +238,8 @@ export default function TeamChat() {
                                 <RefreshCw className={`h-4 w-4 text-zinc-400 ${isLoading ? 'animate-spin' : ''}`} />
                             </button>
                             {isIdentified && (
-                                <div className="text-xs text-zinc-500">
-                                    Signed in as <span className="text-emerald-400">{guestName}</span>
+                                <div className="text-xs text-zinc-500 hidden sm:block">
+                                    Signed in as <span className="text-emerald-400 font-bold">{guestName}</span>
                                 </div>
                             )}
                         </div>

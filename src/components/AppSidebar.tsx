@@ -185,6 +185,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
 
     // Chat Alert Listener
     const handleChatAlert = () => {
+      if (localStorage.getItem('chat_ended') === 'true') return;
       localStorage.setItem('has_unread_chat', 'true');
       setTick(t => t + 1);
     };

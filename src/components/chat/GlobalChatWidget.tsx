@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, X, Send, User, RefreshCw, Bell, Download, Trash2 } from 'lucide-react';
+import { MessageCircle, X, Send, User, RefreshCw, Bell, Download, Trash2, LogOut, XCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { TeamMessage, getTeamMessages, sendTeamMessage } from '@/lib/supa-data';
+import { TeamMessage, getTeamMessages, sendTeamMessage, deleteAllTeamMessages } from '@/lib/supa-data';
 import { getCurrentUser } from '@/lib/auth';
 import { UserSelector } from '@/components/chat/UserSelector';
+import { useToast } from '@/hooks/use-toast';
 
 export function GlobalChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
@@ -205,20 +206,53 @@ export function GlobalChatWidget() {
         }
     }, [messages, isOpen]);
 
+    const { toast } = useToast();
+
     const handleIdentify = () => {
         if (!guestName.trim() || !guestEmail.trim()) return;
+        localStorage.removeItem('chat_ended');
         localStorage.setItem('guest_identity', JSON.stringify({ name: guestName, email: guestEmail }));
         setIsIdentified(true);
     };
 
     const handleClearChat = async () => {
-        if (!window.confirm("Are you sure you want to clear your chat history? This will permanently delete your stored conversation.")) return;
+        if (!window.confirm("Are you sure you want to clean out all old chats? This will permanently delete chat history.")) return;
         try {
-            await supabase.from('team_messages').delete().or(`sender_email.eq.${guestEmail},recipient_email.eq.${guestEmail}`);
+            await deleteAllTeamMessages();
             setMessages([]);
+            localStorage.removeItem('has_unread_chat');
+            setHasUnread(false);
+            toast({ title: "Chat Cleared", description: "All old chats have been permanently deleted." });
         } catch (e) {
-            console.error("Failed to clear chat", e);
+            console.error("Failed to clear chat via deleteAllTeamMessages", e);
+            try {
+                if (guestEmail) {
+                    await supabase.from('team_messages').delete().or(`sender_email.eq.${guestEmail},recipient_email.eq.${guestEmail}`);
+                } else {
+                    await supabase.from('team_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                }
+                setMessages([]);
+                localStorage.removeItem('has_unread_chat');
+                setHasUnread(false);
+                toast({ title: "Chat Cleared", description: "All old chats have been cleaned out." });
+            } catch (err2) {
+                toast({ title: "Error Clearing Chat", description: "Failed to delete chat messages.", variant: "destructive" });
+            }
         }
+    };
+
+    const handleEndConversation = () => {
+        if (!window.confirm("Are you sure you want to end this conversation? You will not receive any more alerts or notifications until you start a new chat.")) return;
+        localStorage.setItem('chat_ended', 'true');
+        localStorage.removeItem('guest_identity');
+        localStorage.removeItem('has_unread_chat');
+        setIsIdentified(false);
+        setGuestName('');
+        setGuestEmail('');
+        setMessages([]);
+        setIsOpen(false);
+        setHasUnread(false);
+        toast({ title: "Conversation Ended", description: "Chat has been ended and alerts have been disabled." });
     };
 
     const handleSaveChat = () => {
@@ -444,26 +478,19 @@ export function GlobalChatWidget() {
                                     </button>
                                     <button
                                         onClick={handleClearChat}
-                                        className="p-1.5 hover:bg-white/10 rounded transition-colors text-red-300 hover:text-red-400"
-                                        title="Clear Chat History"
+                                        className="p-1.5 hover:bg-red-500/20 rounded transition-colors text-red-300 hover:text-red-200"
+                                        title="Delete All Old Chats"
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
                                     <Button
                                         size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
-                                        onClick={() => {
-                                            if (window.confirm("Are you sure you want to end this chat?")) {
-                                                localStorage.removeItem('guest_identity');
-                                                setIsIdentified(false);
-                                                setGuestName('');
-                                                setGuestEmail('');
-                                                setMessages([]);
-                                            }
-                                        }}
+                                        variant="destructive"
+                                        className="h-7 px-2.5 text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1 shadow"
+                                        onClick={handleEndConversation}
+                                        title="End Conversation & Disable Alerts"
                                     >
-                                        End
+                                        <LogOut className="h-3 w-3" /> End Chat
                                     </Button>
                                 </>
                             )}
@@ -478,7 +505,32 @@ export function GlobalChatWidget() {
 
                     {/* Body */}
                     <div className="flex-1 overflow-hidden flex flex-col p-4">
-                        {!isIdentified ? (
+                        {localStorage.getItem('chat_ended') === 'true' ? (
+                            <div className="flex flex-col gap-4 justify-center items-center h-full text-center p-2">
+                                <XCircle className="h-12 w-12 text-amber-500 mx-auto" />
+                                <div className="space-y-1">
+                                    <h4 className="font-bold text-base text-foreground">Conversation Ended</h4>
+                                    <p className="text-xs text-muted-foreground">You have ended this conversation. Notifications and sound alerts are currently turned off.</p>
+                                </div>
+                                <Button 
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                                    onClick={() => {
+                                        localStorage.removeItem('chat_ended');
+                                        const user = getCurrentUser();
+                                        if (user) {
+                                            setGuestName(user.name);
+                                            setGuestEmail(user.email);
+                                            setIsIdentified(true);
+                                        } else {
+                                            setIsIdentified(false);
+                                        }
+                                        loadMessages();
+                                    }}
+                                >
+                                    Start New Conversation
+                                </Button>
+                            </div>
+                        ) : !isIdentified ? (
                             <div className="flex flex-col gap-4 justify-center h-full">
                                 <div className="text-center space-y-2">
                                     <User className="h-12 w-12 mx-auto text-muted-foreground" />
