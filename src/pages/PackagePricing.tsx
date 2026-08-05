@@ -141,7 +141,6 @@ export default function PackagePricing() {
     id: "",
     name: "",
     description: "",
-    learnMoreLink: "",
     // dynamic pricing inputs keyed by vehicle type id
     pricing: { compact: "", midsize: "", truck: "", luxury: "" } as Record<string, string>,
   });
@@ -2707,7 +2706,6 @@ export default function PackagePricing() {
       id, 
       name: newAddonForm.name || 'New Add-On', 
       description: newAddonForm.description,
-      learnMoreLink: newAddonForm.learnMoreLink,
       pricing 
     });
     // New add-ons default OFF on live site, existing preserve visibility
@@ -2731,7 +2729,7 @@ export default function PackagePricing() {
     openPackagesLiveInBrowser();
     toast.success(isEditing ? "Add-on updated and synced" : "New add-on added and synced");
     // Reset form fields
-    setNewAddonForm({ id: '', name: '', description: '', learnMoreLink: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
+    setNewAddonForm({ id: '', name: '', description: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
   };
 
   const openEditAddonModal = (addon: any) => {
@@ -2739,7 +2737,6 @@ export default function PackagePricing() {
       id: addon.id,
       name: addon.name || "",
       description: addon.description || "",
-      learnMoreLink: addon.learnMoreLink || "",
       pricing: {
         compact: currentPrices[getKey('addon', addon.id, 'compact')] || addon.pricing?.compact || "",
         midsize: currentPrices[getKey('addon', addon.id, 'midsize')] || addon.pricing?.midsize || "",
@@ -3634,7 +3631,7 @@ export default function PackagePricing() {
         {/* Add/Edit Add-On Modal */}
         <Dialog open={addAddonOpen} onOpenChange={(o) => {
           setAddAddonOpen(o);
-          if (!o) setNewAddonForm({ id: '', name: '', description: '', learnMoreLink: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
+          if (!o) setNewAddonForm({ id: '', name: '', description: '', pricing: { compact: '', midsize: '', truck: '', luxury: '' } });
         }}>
           <DialogContent className="sm:max-w-[95vw] md:max-w-2xl lg:max-w-3xl xl:max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -3646,12 +3643,20 @@ export default function PackagePricing() {
                 <Input value={newAddonForm.name} onChange={(e) => setNewAddonForm(prev => ({ ...prev, name: e.target.value }))} />
               </div>
               <div>
-                <Label>Description</Label>
-                <Input placeholder="Short description of the add-on service" value={newAddonForm.description || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, description: e.target.value }))} />
-              </div>
-              <div>
-                <Label>Learn More Details (Full Description)</Label>
-                <Textarea placeholder="Enter full multi-paragraph description here..." className="h-32 text-sm" value={newAddonForm.learnMoreLink || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, learnMoreLink: e.target.value }))} />
+                <Label className="flex items-center gap-2">
+                  Service Description
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-zinc-400" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Write your complete description here. The text will automatically be truncated on the small Add-On card on your website. When customers click "Learn More", they will see this full text.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </Label>
+                <Textarea placeholder="Enter full description here..." className="h-32 text-sm mt-1" value={newAddonForm.description || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, description: e.target.value }))} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {vehicleOptions.map(sz => (

@@ -279,6 +279,7 @@ const ServiceChecklist = () => {
 
 
   const resetForm = () => {
+    try { localStorage.removeItem('checklist_current_state'); } catch {}
     setChecklistId("");
     setSelectedCustomer("");
     setVehicleType("choose");

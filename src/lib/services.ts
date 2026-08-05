@@ -86,8 +86,6 @@ export interface AddOn {
   applicableVehicleTypes?: VehicleType[];
   /** Set to false to hide this add-on from all customer-facing forms without deleting it */
   active?: boolean;
-  /** Full description to display in the Learn More modal */
-  learnMoreLink?: string;
 }
 
 // Pricing overrides (persisted) allow admin to update package pricing globally
@@ -311,8 +309,7 @@ export const addOns: AddOn[] = [
     id: 'water-spot-removal', 
     name: 'Water Spot Removal', 
     category: 'exterior', 
-    description: 'Removes stubborn mineral/water deposits from paint, glass, chrome, and trim using specialized acid-safe cleaners and careful hand labor — an intensive process, priced accordingly. Best done before any wax, sealant, or ceramic coating for a clean, defect-free finish.', 
-    learnMoreLink: `Removes stubborn mineral/water deposits from paint, glass, chrome, and trim using specialized acid-safe cleaners and careful hand labor — an intensive process, priced accordingly. Best done before any wax, sealant, or ceramic coating for a clean, defect-free finish.
+    description: `Removes stubborn mineral/water deposits from paint, glass, chrome, and trim using specialized acid-safe cleaners and careful hand labor — an intensive process, priced accordingly. Best done before any wax, sealant, or ceramic coating for a clean, defect-free finish.
 
 Benefits:
 ✓ Restores flawless clarity to paint and exterior glass

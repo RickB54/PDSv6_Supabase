@@ -99,7 +99,6 @@ export interface CustomAddOnDef {
   id: string;
   name: string;
   description?: string;
-  learnMoreLink?: string;
   basePrice?: number;
   pricing: { compact: number; midsize: number; truck: number; luxury: number };
 }
