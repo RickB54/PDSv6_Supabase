@@ -149,7 +149,7 @@ const FileManager = () => {
     return () => {
       window.removeEventListener('pdf_archive_updated', handleUpdate);
     };
-  }, [user, isDemoMode]);
+  }, [user?.id, user?.role, isDemoMode]);
 
   // Update filter when the URL query changes (e.g., clicking another alert)
   useEffect(() => {
