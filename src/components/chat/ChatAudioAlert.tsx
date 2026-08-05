@@ -14,58 +14,101 @@ export function ChatAudioAlert() {
         return () => window.removeEventListener('auth-changed', update);
     }, []);
 
-    const playSound = () => {
-        try {
-            // Web Audio API Oscillator (replaces Base64 file which might be silent/corrupt)
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioContext) return;
-
-            const ctx = new AudioContext();
-
-            // Resume context if suspended (browser autoplay policy)
-            if (ctx.state === 'suspended') {
-                ctx.resume();
+    // Unlock audio context and request notification permission on first user interaction
+    useEffect(() => {
+        const unlock = () => {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().catch(() => {});
             }
+        };
+        window.addEventListener('click', unlock, { once: true });
+        window.addEventListener('touchstart', unlock, { once: true });
+        return () => {
+            window.removeEventListener('click', unlock);
+            window.removeEventListener('touchstart', unlock);
+        };
+    }, []);
 
+    const createBeep = (ctx: AudioContext, freq: number, startTime: number, duration: number, maxGain = 0.95) => {
+        try {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
-            // "Digital Ring" parameters
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(880, ctx.currentTime); // High pitch (A5)
-            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-            osc.frequency.setValueAtTime(0, ctx.currentTime + 0.11); // Gap
-            osc.frequency.setValueAtTime(1108, ctx.currentTime + 0.2); // Higher pitch (C#6)
+            // Sawtooth waveform has rich harmonics to cut through outdoor noise
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, startTime);
 
-            // Volume control
-            gain.gain.setValueAtTime(0.2, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(maxGain, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
             osc.connect(gain);
             gain.connect(ctx.destination);
 
-            osc.start();
-            osc.stop(ctx.currentTime + 0.5);
-
-            console.log("🔊 Audio Alert Attempted");
-
-            // Clean up context after a second
-            setTimeout(() => {
-                try { ctx.close(); } catch { }
-            }, 1000);
-
-        } catch (e) {
-            console.error("Audio generation error", e);
-        }
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        } catch { }
     };
 
+    const triggerAlertSystem = (msgContent?: string, senderName?: string) => {
+        // 1. Phone Vibration (Haptic feedback in pocket while working outside)
+        try {
+            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate([400, 150, 400, 150, 600]);
+            }
+        } catch { }
 
+        // 2. Mobile System / Phone Lockscreen Notification
+        try {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+                const title = senderName ? `🚨 Message from ${senderName}` : "🚨 URGENT Chat Alert!";
+                const body = msgContent ? msgContent.slice(0, 100) : "You have a new live message!";
+                new Notification(title, {
+                    body,
+                    icon: '/favicon.ico',
+                    tag: 'chat-alert',
+                    requireInteraction: true
+                });
+            }
+        } catch { }
+
+        // 3. Loud Outdoor Double-Siren Audio Alert (Max Gain, Sawtooth Harmonics)
+        try {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (!AudioContext) return;
+
+            const ctx = new AudioContext();
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            const now = ctx.currentTime;
+            
+            // Cycle 1 - High pitch escalation
+            createBeep(ctx, 880, now, 0.18, 0.95);         // High A5
+            createBeep(ctx, 1174.66, now + 0.2, 0.18, 0.95); // D6
+            createBeep(ctx, 1396.91, now + 0.4, 0.25, 1.0);  // F6 Peak
+
+            // Cycle 2 - Repeat double blast for extra audibility outdoors
+            createBeep(ctx, 880, now + 0.85, 0.18, 0.95);
+            createBeep(ctx, 1174.66, now + 1.05, 0.18, 0.95);
+            createBeep(ctx, 1396.91, now + 1.25, 0.35, 1.0);
+
+            console.log("🔊 Loud Outdoor Audio Siren Broadcasted");
+
+            setTimeout(() => {
+                try { ctx.close(); } catch { }
+            }, 2500);
+
+        } catch (e) {
+            console.error("Loud audio generation error", e);
+        }
+    };
 
     // Test Alert Listener
     useEffect(() => {
         const handleTest = () => {
             console.log("🔔 TEST TRIGGERED");
-            playSound();
+            triggerAlertSystem("Test alert broadcasted at maximum volume!", "Test User");
         };
         window.addEventListener('test-chat-alert', handleTest);
         return () => window.removeEventListener('test-chat-alert', handleTest);
@@ -114,8 +157,8 @@ export function ChatAudioAlert() {
                     if (shouldAlert) {
                         console.log("ðŸ”” NOTIFICATION MATCHED!", { myEmail, sender });
 
-                        // 1. Audio
-                        playSound();
+                        // 1. Audio & Phone Haptics / Lockscreen Notification
+                        triggerAlertSystem(newMsg.content, newMsg.sender_name || newMsg.sender_email);
 
                         // 3. Window Event
                         window.dispatchEvent(new CustomEvent('new-chat-alert'));
