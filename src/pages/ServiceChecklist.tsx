@@ -1474,9 +1474,20 @@ const ServiceChecklist = () => {
 
   useEffect(() => {
     if (initialLoaded) {
-      setHasUnsavedChanges(true);
-      // @ts-ignore
-      window.hasUnsavedChecklistChanges = true;
+      const isUntouched = !selectedCustomer && !selectedPackage && !notes && selectedAddOns.length === 0 && checklistSteps.every(s => !s.checked) && !jobStartTime && !discountValue && !destinationFee && chemRows.length === 0 && matRows.length === 0 && toolRows.length === 0 && !milesTraveled;
+      if (completedAt) {
+        setHasUnsavedChanges(false);
+        // @ts-ignore
+        window.hasUnsavedChecklistChanges = false;
+      } else if (isUntouched) {
+        setHasUnsavedChanges(false);
+        // @ts-ignore
+        window.hasUnsavedChecklistChanges = false;
+      } else {
+        setHasUnsavedChanges(true);
+        // @ts-ignore
+        window.hasUnsavedChecklistChanges = true;
+      }
     }
   }, [
     selectedCustomer, selectedPackage, vehicleType, selectedAddOns, 
@@ -1661,7 +1672,7 @@ const ServiceChecklist = () => {
     return elapsedTime;
   };
   const calculateTotal = () => {
-    return Math.round(Math.max(0, calculateSubtotal() - calculateDiscount()));
+    return Math.max(0, Math.ceil(calculateSubtotal()) - calculateDiscount());
   };
 
   // Build a simple list of selected items for PDF summaries

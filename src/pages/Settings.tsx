@@ -458,11 +458,11 @@ const Settings = () => {
 
       // 2. Snapshot Bookings
       if (type === 'all' || type === 'all_except_inventory' || type === 'bookings') {
-        const { data: bks } = await supabase.from('bookings').select('date, start_time, package_name, customer_id, customers(name)').limit(100);
+        const { data: bks } = await supabase.from('bookings').select('scheduled_at, service_package, customer_id, customers(name)').limit(100);
         if (bks?.length) {
           doc.setFontSize(12); doc.setTextColor(0); addLine('BOOKINGS SNAPSHOT (Last 100):');
           doc.setFontSize(8); doc.setTextColor(80);
-          bks.forEach((b: any) => addLine(`• ${b.date} ${b.start_time || ''} | ${b.package_name} | Client: ${b.customers?.name || 'Unknown'}`, 5));
+          bks.forEach((b: any) => addLine(`• ${new Date(b.scheduled_at).toLocaleString()} | ${b.service_package} | Client: ${b.customers?.name || 'Unknown'}`, 5));
           y += 5;
         }
       }

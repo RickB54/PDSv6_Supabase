@@ -1417,19 +1417,19 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       if (formData.discountType === 'custom' && formData.customDiscount) {
         const customVal = Number(formData.customDiscount);
         if (!isNaN(customVal) && customVal > 0) {
-          discountAmount = customVal;
+          discountAmount = Math.ceil(customVal);
           finalDiscountCode = "CUSTOM";
         }
       } else if (formData.discountType === 'coupon' && matchedCoupon) {
         finalDiscountCode = matchedCoupon.code;
         if (matchedCoupon.percent) {
-          discountAmount = calculatedPrice * (matchedCoupon.percent / 100);
+          discountAmount = Math.ceil(calculatedPrice * (matchedCoupon.percent / 100));
         } else if (matchedCoupon.amount) {
-          discountAmount = matchedCoupon.amount;
+          discountAmount = Math.ceil(matchedCoupon.amount);
         }
       }
       
-      const finalPriceForTotal = Math.max(0, calculatedPrice - discountAmount);
+      const finalPriceForTotal = Math.max(0, Math.ceil(calculatedPrice) - discountAmount);
  
       let resultingBooking: any;
  

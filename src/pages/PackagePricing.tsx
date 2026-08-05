@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Tooltip,
@@ -3649,8 +3650,8 @@ export default function PackagePricing() {
                 <Input placeholder="Short description of the add-on service" value={newAddonForm.description || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, description: e.target.value }))} />
               </div>
               <div>
-                <Label>Learn More Link (Optional URL)</Label>
-                <Input placeholder="e.g. /services/pet-hair-removal" value={newAddonForm.learnMoreLink || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, learnMoreLink: e.target.value }))} />
+                <Label>Learn More Details (Full Description)</Label>
+                <Textarea placeholder="Enter full multi-paragraph description here..." className="h-32 text-sm" value={newAddonForm.learnMoreLink || ''} onChange={(e) => setNewAddonForm(prev => ({ ...prev, learnMoreLink: e.target.value }))} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {vehicleOptions.map(sz => (

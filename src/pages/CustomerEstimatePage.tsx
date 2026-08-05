@@ -427,11 +427,11 @@ export default function CustomerEstimatePage() {
     let discountAmount = 0;
     if (estimate.discount && estimate.discount > 0) {
         if (estimate.discountType === 'percent') {
-            discountAmount = displayTotal * (estimate.discount / 100);
+            discountAmount = Math.ceil(displayTotal * (estimate.discount / 100));
         } else {
-            discountAmount = estimate.discount;
+            discountAmount = Math.ceil(estimate.discount);
         }
-        finalTotal = Math.round(Math.max(0, displayTotal - discountAmount));
+        finalTotal = Math.max(0, Math.ceil(displayTotal) - discountAmount);
     }
 
     return (
@@ -818,11 +818,11 @@ export default function CustomerEstimatePage() {
                                                     let dynamicDiscountAmount = 0;
                                                     if (estimate.discount && estimate.discount > 0) {
                                                         if (estimate.discountType === 'percent') {
-                                                            dynamicDiscountAmount = currentDynamicTotal * (estimate.discount / 100);
+                                                            dynamicDiscountAmount = Math.ceil(currentDynamicTotal * (estimate.discount / 100));
                                                         } else {
-                                                            dynamicDiscountAmount = estimate.discount;
+                                                            dynamicDiscountAmount = Math.ceil(estimate.discount);
                                                         }
-                                                        dynamicFinalTotal = Math.round(Math.max(0, currentDynamicTotal - dynamicDiscountAmount));
+                                                        dynamicFinalTotal = Math.max(0, Math.ceil(currentDynamicTotal) - dynamicDiscountAmount);
                                                     }
 
                                                     return (

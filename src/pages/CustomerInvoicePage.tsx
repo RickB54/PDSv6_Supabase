@@ -175,9 +175,9 @@ export default function CustomerInvoicePage() {
             let discountAmount = 0;
             if (invoice.discount && invoice.discount.value > 0) {
                 if (invoice.discount.type === 'percent') {
-                    discountAmount = (invoice.total + discountAmount) * (invoice.discount.value / 100);
+                    discountAmount = Math.ceil((invoice.total + discountAmount) * (invoice.discount.value / 100));
                 } else {
-                    discountAmount = invoice.discount.value;
+                    discountAmount = Math.ceil(invoice.discount.value);
                 }
                 if (discountAmount > 0) {
                     lineItems.push({
@@ -247,11 +247,11 @@ export default function CustomerInvoicePage() {
     let discountAmount = 0;
     if (invoice.discount && invoice.discount.value > 0) {
         if (invoice.discount.type === 'percent') {
-            discountAmount = finalTotal * (invoice.discount.value / 100);
+            discountAmount = Math.ceil(finalTotal * (invoice.discount.value / 100));
         } else {
-            discountAmount = invoice.discount.value;
+            discountAmount = Math.ceil(invoice.discount.value);
         }
-        finalTotal = Math.round(Math.max(0, finalTotal - discountAmount));
+        finalTotal = Math.max(0, Math.ceil(finalTotal) - discountAmount);
     } else {
         finalTotal = Math.round(finalTotal);
     }
