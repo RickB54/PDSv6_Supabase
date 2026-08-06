@@ -26,7 +26,8 @@ import {
     Receipt,
     Zap,
     BarChart2,
-    Bell
+    Bell,
+    Scale
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -49,16 +50,18 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
                 </Button>
 
-                <Button
-                    variant="ghost"
-                    size={collapsed ? "icon" : "default"}
-                    onClick={() => window.dispatchEvent(new Event('open-notify-admin'))}
-                    title="Notify Admin"
-                    className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-red-500/20 transition-all`}
-                >
-                    <Bell className="w-5 h-5 text-red-500" />
-                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notify Admin</span>}
-                </Button>
+                {!isAdmin && (
+                    <Button
+                        variant="ghost"
+                        size={collapsed ? "icon" : "default"}
+                        onClick={() => window.dispatchEvent(new Event('open-notify-admin'))}
+                        title="Notify Admin"
+                        className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-red-500/20 transition-all`}
+                    >
+                        <Bell className="w-5 h-5 text-red-500" />
+                        {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Notify Admin</span>}
+                    </Button>
+                )}
             </>
         )}
 
@@ -162,6 +165,11 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/invoicing')} title="Invoices" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <Receipt className="w-5 h-5 text-blue-400" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Invoices</span>}
+                </Button>
+
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/accounting')} title="Accounting" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-emerald-500/10`}>
+                    <Scale className="w-5 h-5 text-emerald-400" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Accounting</span>}
                 </Button>
                 
                 <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
