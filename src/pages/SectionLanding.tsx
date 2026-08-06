@@ -135,6 +135,9 @@ export default function SectionLanding() {
                                     key={item.url}
                                     onClick={(e) => {
                                         e.preventDefault();
+                                        if (item.url === '#quick-pay' || item.key === 'quick-pay') {
+                                            window.dispatchEvent(new Event('open-quick-pay'));
+                                        }
                                         if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
                                         if (item.url === '#help' || item.url === '#help-admin') {
                                             window.dispatchEvent(new CustomEvent('open-help', { detail: { role: item.url === '#help-admin' ? 'admin' : (isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')) } }));

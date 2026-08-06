@@ -78,48 +78,54 @@ export default function BookingsAnalyticsPage() {
             
             <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
                 {/* Tab Switcher */}
-                <div className="px-4 sm:px-6 flex gap-2 overflow-x-auto no-scrollbar">
+                <div className="px-2 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth">
                     <button
                         onClick={() => setActiveTab('crm')}
-                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                             activeTab === 'crm'
-                                ? 'border-indigo-500 text-white'
+                                ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        CRM &amp; Analytics
+                        <span className="hidden sm:inline">CRM &amp; Analytics</span>
+                        <span className="sm:hidden">CRM &amp; Analytics</span>
                     </button>
                     {!isDemoMode && (
                         <button
                             onClick={() => setActiveTab('bi')}
-                            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                            className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'bi'
-                                    ? 'border-emerald-500 text-emerald-400'
+                                    ? 'border-emerald-500 text-emerald-400 font-bold'
                                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
-                            <Target className="w-3.5 h-3.5" /> Business Intelligence
+                            <Target className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Business Intelligence</span>
+                            <span className="sm:hidden">BI</span>
                         </button>
                     )}
                     <button
                         onClick={() => setActiveTab('reviews')}
-                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'reviews'
-                                ? 'border-amber-500 text-amber-400'
+                                ? 'border-amber-500 text-amber-400 font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        <Star className="w-3.5 h-3.5" /> Review Intelligence
+                        <Star className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Review Intelligence</span>
+                        <span className="sm:hidden">Reviews</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('employees')}
-                        className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'employees'
-                                ? 'border-indigo-500 text-white'
+                                ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        <Users className="h-3.5 w-3.5" /> Employees
+                        <Users className="h-3.5 w-3.5" />
+                        <span>Employees</span>
                     </button>
                 </div>
                 
