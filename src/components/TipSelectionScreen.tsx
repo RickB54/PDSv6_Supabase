@@ -115,7 +115,6 @@ export default function TipSelectionScreen({
   const canProceed = selectedTip !== undefined && (selectedTip !== 'custom' || (!isNaN(parseFloat(customTip)) && parseFloat(customTip) >= 0));
 
   return (
-  return (
     <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
       <div className="w-full max-w-lg bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden max-h-[92vh] my-auto">
         
