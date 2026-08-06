@@ -160,76 +160,76 @@ export default function QuickPayModal() {
 
   // Phase 1: Free-form Amount Entry
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-sm bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden animate-in zoom-in-95 duration-200 max-h-[92vh] my-auto">
         
         {/* Header */}
-        <div className="bg-gray-50 px-6 py-6 text-center border-b border-gray-100 flex-shrink-0 relative">
+        <div className="bg-gray-50 px-5 py-3.5 text-center border-b border-gray-100 flex-shrink-0 relative sticky top-0 z-20">
           <button 
             onClick={() => setShowInfo(!showInfo)} 
-            className="absolute top-4 right-14 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+            className="absolute top-3 right-12 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
             title="What does this do?"
           >
             <HelpCircle size={20} />
           </button>
           <button 
             onClick={handleClose} 
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
           >
             <X size={20} />
           </button>
           
-          <div className="mx-auto w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-3">
-            <Wallet size={24} />
+          <div className="mx-auto w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-1">
+            <Wallet size={20} />
           </div>
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Quick Pay</h2>
+          <div className="flex items-center justify-center gap-2 mb-0.5">
+            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">Quick Pay</h2>
           </div>
-          <p className="text-gray-500 text-sm mt-1">Receive an in-person payment</p>
+          <p className="text-gray-500 text-xs">Receive an in-person payment</p>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-5 overflow-y-auto flex-1 styled-scrollbar">
           
           {showInfo && (
-            <div className="mb-5 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm">
-              <div className="px-4 pt-4 pb-2 border-b border-blue-200/60">
-                <div className="font-extrabold text-sm flex items-center gap-2">
-                  <Info size={15} className="text-blue-600 shrink-0" />
+            <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm max-h-56 overflow-y-auto styled-scrollbar">
+              <div className="px-4 pt-3 pb-2 border-b border-blue-200/60 sticky top-0 bg-blue-50/90 backdrop-blur-xs z-10">
+                <div className="font-extrabold text-xs flex items-center gap-2">
+                  <Info size={14} className="text-blue-600 shrink-0" />
                   Payment Process Guide
                 </div>
-                <p className="text-xs text-blue-700/80 mt-1">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
+                <p className="text-[11px] text-blue-700/80 mt-0.5">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
               </div>
-              <div className="px-4 py-3 flex flex-col gap-3">
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-green-500 text-white text-xs font-black flex items-center justify-center">1</span>
+              <div className="px-4 py-2.5 flex flex-col gap-2.5">
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Go to <b>Invoices</b> → open the customer's invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>. The amount registers in Accounting immediately.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> → open invoice → tap <b>Record Payment</b> → <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-black flex items-center justify-center">2</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📱 Pay on Device (Stripe)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand the phone/tablet to the customer to enter their card. Processes via Stripe securely.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand phone to customer to enter card.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-black flex items-center justify-center">3</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center">3</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📷 Show QR Code (Remote)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — the customer scans it with their phone camera and pays from home or on-site without touching your device.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — customer scans code to pay.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-black flex items-center justify-center">4</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">4</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Enter an amount here → Continue → choose tip → <b>Pay with Cash</b>. Creates a <b>new</b> standalone invoice — does <b>not</b> link to any existing booking.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount → Continue → tip → <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
-                <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="mt-1 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
+                <a href="#" onClick={(e) => { e.preventDefault(); handleClose(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
                   → Go to Invoices page now
                 </a>
               </div>
@@ -237,16 +237,16 @@ export default function QuickPayModal() {
           )}
           
           {suggestedAmount !== null && suggestedAmount > 0 && (
-            <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors" onClick={useSuggested}>
-              <div className="flex justify-between items-center text-sm font-semibold text-emerald-800 mb-1">
+            <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-100 cursor-pointer hover:bg-emerald-100 transition-colors" onClick={useSuggested}>
+              <div className="flex justify-between items-center text-xs font-semibold text-emerald-800 mb-1">
                 <span>Active Service Total:</span>
-                <span className="bg-emerald-200 px-2 py-0.5 rounded text-emerald-900 text-xs">Tap to use</span>
+                <span className="bg-emerald-200 px-2 py-0.5 rounded text-emerald-900 text-[10px] font-bold">Tap to use</span>
               </div>
-              <div className="text-2xl font-black text-emerald-600">${suggestedAmount.toFixed(2)}</div>
+              <div className="text-xl font-black text-emerald-600">${suggestedAmount.toFixed(2)}</div>
             </div>
           )}
 
-          <div className="mb-2 text-sm font-bold text-gray-700">Enter Payment Amount</div>
+          <div className="mb-1.5 text-xs font-bold text-gray-700 uppercase tracking-wider">Enter Payment Amount</div>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <span className="text-gray-500 text-2xl font-bold">$</span>
@@ -259,22 +259,22 @@ export default function QuickPayModal() {
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
               placeholder="0.00"
-              className="w-full pl-10 pr-4 py-4 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-2xl text-4xl font-black text-gray-900 transition-colors"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-2xl text-3xl font-black text-gray-900 transition-colors"
             />
           </div>
 
-          <div className="mt-6">
-            <div className="mb-2 text-sm font-bold text-gray-700 flex items-center justify-between">
+          <div className="mt-4">
+            <div className="mb-1.5 text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
               <span>Attach Customer (Optional)</span>
             </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <UserIcon className="h-5 w-5 text-gray-400" />
+                <UserIcon className="h-4 w-4 text-gray-400" />
               </div>
               <select
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl text-sm font-semibold text-gray-800 appearance-none cursor-pointer"
+                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border-2 border-gray-200 focus:border-emerald-500 focus:ring-emerald-500 rounded-xl text-xs font-semibold text-gray-800 appearance-none cursor-pointer"
               >
                 <option value="">No Customer Associated</option>
                 {customers.map((c: any) => (
@@ -291,14 +291,16 @@ export default function QuickPayModal() {
               if (isValidAmount) setPhase(2);
             }}
             disabled={!isValidAmount}
-            className="w-full mt-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xl hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
+            className="w-full mt-5 py-3.5 bg-gray-900 text-white rounded-2xl font-bold text-lg hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2 shadow-lg"
           >
             Continue
-            <ArrowRight size={20} />
+            <ArrowRight size={18} />
           </button>
 
         </div>
       </div>
     </div>
+  );
+}
   );
 }

@@ -145,7 +145,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                     </Button>
                 )}
 
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payroll')} title="Payroll" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-green-500/10`}>
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/payments')} title="Payments" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-green-500/10`}>
                     <div className="relative">
                         <Banknote className="w-5 h-5 text-green-500" />
                         {pendingPayrollCount > 0 && (
@@ -154,7 +154,7 @@ const renderSidebarContent = (collapsed: boolean, navigate: any, isAdmin: boolea
                             </div>
                         )}
                     </div>
-                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Payroll</span>}
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Payments</span>}
                 </Button>
 
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/estimates')} title="Estimates" className={collapsed ? "" : "w-full justify-start gap-2"}>
