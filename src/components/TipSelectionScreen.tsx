@@ -115,31 +115,32 @@ export default function TipSelectionScreen({
   const canProceed = selectedTip !== undefined && (selectedTip !== 'custom' || (!isNaN(parseFloat(customTip)) && parseFloat(customTip) >= 0));
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-900 flex flex-col items-center justify-center animate-in fade-in duration-300">
-      <div className="w-full max-w-lg bg-white h-full sm:h-auto sm:rounded-3xl flex flex-col shadow-2xl relative overflow-hidden">
+  return (
+    <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-lg bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden max-h-[92vh] my-auto">
         
         {/* Top Header - Condensed for Mobile */}
-        <div className="bg-gray-50 px-6 py-4 text-center border-b border-gray-100 flex-shrink-0 relative">
+        <div className="bg-gray-50 px-5 py-3.5 text-center border-b border-gray-100 flex-shrink-0 relative sticky top-0 z-20">
           {!loading && (
             <>
               <button 
                 onClick={() => setShowInfo(!showInfo)} 
-                className="absolute top-6 right-16 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
+                className="absolute top-3 right-12 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
                 title="What does this do?"
               >
-                <HelpCircle size={24} />
+                <HelpCircle size={20} />
               </button>
               <button 
                 onClick={onCancel} 
-                className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </>
           )}
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Final Details</h2>
+          <h2 className="text-xl font-extrabold text-gray-900 mb-0.5 tracking-tight">Final Details</h2>
           <div className="flex flex-col items-center gap-1">
-            <p className="text-gray-500 font-medium">Service Balance: ${basePriceFormatted}</p>
+            <p className="text-gray-500 text-xs font-medium">Service Balance: ${basePriceFormatted}</p>
             {finalTime && (
               <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
                 <Clock className="w-3 h-3" /> Job Time: {finalTime}
@@ -149,46 +150,46 @@ export default function TipSelectionScreen({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="p-4 sm:p-8 flex-1 overflow-y-auto w-full pb-8">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto w-full pb-6 styled-scrollbar">
           {showInfo && (
-            <div className="mb-5 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm mx-auto max-w-md">
-              <div className="px-4 pt-4 pb-2 border-b border-blue-200/60">
-                <div className="font-extrabold text-sm flex items-center gap-2">
-                  <Info size={15} className="text-blue-600 shrink-0" />
+            <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm mx-auto max-w-md max-h-56 overflow-y-auto styled-scrollbar">
+              <div className="px-4 pt-3 pb-2 border-b border-blue-200/60 sticky top-0 bg-blue-50/90 backdrop-blur-xs z-10">
+                <div className="font-extrabold text-xs flex items-center gap-2">
+                  <Info size={14} className="text-blue-600 shrink-0" />
                   Payment Process Guide
                 </div>
-                <p className="text-xs text-blue-700/80 mt-1">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
+                <p className="text-[11px] text-blue-700/80 mt-0.5">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
               </div>
-              <div className="px-4 py-3 flex flex-col gap-3">
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-green-500 text-white text-xs font-black flex items-center justify-center">1</span>
+              <div className="px-4 py-2.5 flex flex-col gap-2.5">
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Go to <b>Invoices</b> → open the customer's invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>. The amount registers in Accounting immediately.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> → open invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-purple-500 text-white text-xs font-black flex items-center justify-center">2</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📱 Pay on Device (Stripe)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand the phone/tablet to the customer to enter their card. Processes via Stripe securely.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand phone to customer to enter card.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-500 text-white text-xs font-black flex items-center justify-center">3</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center">3</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📷 Show QR Code (Remote)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — the customer scans it with their phone camera and pays from home or on-site without touching your device.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — customer scans code to pay.</p>
                   </div>
                 </div>
-                <div className="flex gap-3 items-start">
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-black flex items-center justify-center">4</span>
+                <div className="flex gap-2.5 items-start">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">4</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
-                    <p className="text-xs text-gray-600 mt-0.5">Enter amount → Continue → choose tip → <b>Pay with Cash</b>. Creates a <b>new</b> standalone invoice — does <b>not</b> link to any existing booking.</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount → Continue → choose tip → <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
-                <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-1 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
+                <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
                   → Go to Invoices page now
                 </a>
               </div>
