@@ -170,8 +170,8 @@ export default function TipSelectionScreen({
                 <div className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                   <div>
-                    <p className="font-bold text-xs text-gray-900">📱 Pay on Device (Stripe)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand phone to customer to enter card.</p>
+                    <p className="font-bold text-xs text-gray-900">📱 Pay with Stripe</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay with Stripe</b> below — hand phone to customer to enter card.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
@@ -328,7 +328,7 @@ export default function TipSelectionScreen({
                 className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-emerald-600 shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Smartphone size={18} />
-                Pay on Device
+                Pay with Stripe
               </button>
             </div>
 

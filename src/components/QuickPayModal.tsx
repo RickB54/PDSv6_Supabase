@@ -211,8 +211,8 @@ export default function QuickPayModal() {
                 <div className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
                   <div>
-                    <p className="font-bold text-xs text-gray-900">📱 Pay on Device (Stripe)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay on Device</b> below — hand phone to customer to enter card.</p>
+                    <p className="font-bold text-xs text-gray-900">📱 Pay with Stripe</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay with Stripe</b> below — hand phone to customer to enter card.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
