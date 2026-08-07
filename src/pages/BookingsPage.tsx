@@ -296,6 +296,38 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'blocked' | null>(null);
   const [sortOrder, setSortOrder] = useState<'next-booking' | 'name' | 'last-active'>('next-booking');
 
+  const getDateFilterLabel = useCallback(() => {
+    if (!dateFilter.start && !dateFilter.end) return 'ALL TIME';
+    const now = new Date();
+    if (dateFilter.start && isToday(dateFilter.start) && (!dateFilter.end || isToday(dateFilter.end))) return 'TODAY';
+    
+    const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const thisWeekEnd = endOfWeek(now, { weekStartsOn: 1 });
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, thisWeekStart) && isSameDay(dateFilter.end, thisWeekEnd)) return 'THIS WEEK';
+
+    const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+    const lastWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, lastWeekStart) && isSameDay(dateFilter.end, lastWeekEnd)) return 'LAST WEEK';
+
+    const thisMonthStart = startOfMonth(now);
+    const thisMonthEnd = endOfMonth(now);
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, thisMonthStart) && isSameDay(dateFilter.end, thisMonthEnd)) return 'THIS MONTH';
+
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, lastMonthStart) && isSameDay(dateFilter.end, lastMonthEnd)) return 'LAST MONTH';
+
+    const thisYearStart = startOfYear(now);
+    const thisYearEnd = endOfYear(now);
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, thisYearStart) && isSameDay(dateFilter.end, thisYearEnd)) return 'THIS YEAR';
+
+    const lastYearStart = startOfYear(subYears(now, 1));
+    const lastYearEnd = endOfYear(subYears(now, 1));
+    if (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, lastYearStart) && isSameDay(dateFilter.end, lastYearEnd)) return 'LAST YEAR';
+
+    return 'CUSTOM RANGE';
+  }, [dateFilter]);
+
   const [unifiedEvents, setUnifiedEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [isGoogleSynced, setIsGoogleSynced] = useState(isSignedIn());
@@ -447,14 +479,15 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         if (a.nextBookingDate && b.nextBookingDate) {
           return new Date(a.nextBookingDate).getTime() - new Date(b.nextBookingDate).getTime();
         }
-        // 2. Only past bookings last, latest first (Descending)
-        if (a.lastPastBookingDate && b.lastPastBookingDate) {
-          return new Date(b.lastPastBookingDate).getTime() - new Date(a.lastPastBookingDate).getTime();
-        }
-        return 0;
+        // 2. Fallback to sorting past/recent bookings by most-recent-booking date descending
+        const timeA = a.lastBooking ? new Date(a.lastBooking).getTime() : 0;
+        const timeB = b.lastBooking ? new Date(b.lastBooking).getTime() : 0;
+        return timeB - timeA;
       }
       if (sortOrder === 'name') return (a.name || '').localeCompare(b.name || '');
-      return new Date(b.lastBooking || 0).getTime() - new Date(a.lastBooking || 0).getTime();
+      const timeA = a.lastBooking ? new Date(a.lastBooking).getTime() : 0;
+      const timeB = b.lastBooking ? new Date(b.lastBooking).getTime() : 0;
+      return timeB - timeA;
     });
 
 
@@ -3464,58 +3497,96 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                 <div className="p-2.5 bg-red-500/10 rounded-xl border border-red-500/20">
                   <Package className="h-6 w-6 text-red-500" />
                 </div>
-                <div className="flex items-center gap-3">
+                <div>
                   <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">Booking History</h2>
+                  <p className="text-sm text-zinc-500 font-medium">
+                    Complete customer records and booking logs
+                  </p>
                 </div>
-                <p className="text-sm text-zinc-500 font-medium">
-                  Complete customer records and booking logs
-                </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 p-2 bg-zinc-900/80 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
-                <div className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mr-2 ml-3">Quick Filter:</div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDateFilter({ start: undefined, end: undefined })}
-                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (!dateFilter.start && !dateFilter.end) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
-                >
-                  ALL
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDateFilter({ start: new Date(), end: undefined })}
-                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && isToday(dateFilter.start) && !dateFilter.end) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
-                >
-                  TODAY
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
-                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfWeek(new Date()))) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : "text-zinc-400")}
-                >
-                  WEEK
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
-                  className={cn("h-8 text-[11px] px-4 font-bold rounded-lg transition-all", (dateFilter.start && isSameMonth(dateFilter.start, new Date()) && !dateFilter.end && !isToday(dateFilter.start)) ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" : (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfMonth(new Date()))) ? "bg-red-600 text-white" : "text-zinc-400")}
-                >
-                  MONTH
-                </Button>
-
-                <div className="w-px h-6 bg-zinc-800 mx-1" />
-
+              <div className="flex flex-wrap items-center gap-2.5 p-2.5 bg-zinc-900/90 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md max-w-full">
+                <div className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mr-1 ml-2">Filter Bar:</div>
+                
+                {/* 1. Consolidated Date Range Control (Blue Accent) */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className={cn("h-8 text-[11px] px-3 font-bold rounded-lg transition-all", sourceFilter ? "bg-purple-600 text-white" : "text-zinc-400")}>
-                      {sourceFilter || 'SOURCE'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn(
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border flex items-center gap-1.5 shadow-sm",
+                        (dateFilter.start || dateFilter.end) 
+                          ? "bg-blue-600/20 text-blue-400 border-blue-500/40 hover:bg-blue-600/30" 
+                          : "bg-blue-500/10 text-blue-300 border-blue-500/20 hover:bg-blue-500/20"
+                      )}
+                    >
+                      <CalendarIcon className="h-3.5 w-3.5 text-blue-400" />
+                      <span>DATE: {getDateFilterLabel()}</span>
+                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56">
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56 shadow-2xl">
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-2 py-1">Current Periods</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setDateFilter({ start: undefined, end: undefined })} className="cursor-pointer">
+                      <span className={cn(!dateFilter.start && !dateFilter.end && "font-black text-blue-400")}>All Time</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })} className="cursor-pointer">
+                      Today
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateFilter({ start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) })} className="cursor-pointer">
+                      This Week
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })} className="cursor-pointer">
+                      This Month
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) })} className="cursor-pointer">
+                      This Year
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-2 py-1">Prior Periods</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => {
+                      const prevWeek = subWeeks(new Date(), 1);
+                      setDateFilter({ start: startOfWeek(prevWeek, { weekStartsOn: 1 }), end: endOfWeek(prevWeek, { weekStartsOn: 1 }) });
+                    }} className="cursor-pointer">
+                      Last Week
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const prevMonth = subMonths(new Date(), 1);
+                      setDateFilter({ start: startOfMonth(prevMonth), end: endOfMonth(prevMonth) });
+                    }} className="cursor-pointer">
+                      Last Month
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const prevYear = subYears(new Date(), 1);
+                      setDateFilter({ start: startOfYear(prevYear), end: endOfYear(prevYear) });
+                    }} className="cursor-pointer">
+                      Last Year
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="w-px h-6 bg-zinc-800 mx-0.5" />
+
+                {/* 2. Source Control (Purple Accent) */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn(
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border flex items-center gap-1.5 shadow-sm", 
+                        sourceFilter 
+                          ? "bg-purple-600/20 text-purple-300 border-purple-500/40 hover:bg-purple-600/30" 
+                          : "bg-purple-500/10 text-purple-300 border-purple-500/20 hover:bg-purple-500/20"
+                      )}
+                    >
+                      <Tag className="h-3.5 w-3.5 text-purple-400" />
+                      <span>{sourceFilter ? sourceFilter.toUpperCase() : 'SOURCE: ALL'}</span>
+                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56 shadow-2xl">
                     <DropdownMenuItem onClick={() => setSourceFilter(null)} className="cursor-pointer">All Sources</DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuItem onClick={() => setSourceFilter('Business Launch Manager')} className="cursor-pointer">Business Launch Manager</DropdownMenuItem>
@@ -3526,15 +3597,27 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="w-px h-6 bg-zinc-800 mx-1" />
+                <div className="w-px h-6 bg-zinc-800 mx-0.5" />
 
+                {/* 3. Status Control (Emerald Accent) */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className={cn("h-8 text-[11px] px-3 font-bold rounded-lg transition-all", statusFilter ? "bg-emerald-600 text-white" : "text-zinc-400")}>
-                      {statusFilter ? statusFilter.replace('_', ' ').toUpperCase() : 'STATUS'} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn(
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border flex items-center gap-1.5 shadow-sm", 
+                        statusFilter 
+                          ? "bg-emerald-600/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-600/30" 
+                          : "bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20"
+                      )}
+                    >
+                      <Check className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>STATUS: {statusFilter ? statusFilter.replace('_', ' ').toUpperCase() : 'ALL'}</span>
+                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56">
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56 shadow-2xl">
                     <DropdownMenuItem onClick={() => setStatusFilter(null)} className="cursor-pointer">All Statuses</DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-zinc-800" />
                     <DropdownMenuItem onClick={() => setStatusFilter('confirmed')} className="cursor-pointer flex items-center gap-2">
@@ -3561,25 +3644,27 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="w-px h-6 bg-zinc-800 mx-1" />
+                <div className="w-px h-6 bg-zinc-800 mx-0.5" />
                 
+                {/* 4. Active / Archive Control (Amber Accent) */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className={cn(
-                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border", 
-                        archiveFilter === 'archived' ? "bg-amber-600/20 text-amber-500 border-amber-600/30" : 
-                        archiveFilter === 'all' ? "bg-blue-600/20 text-blue-400 border-blue-600/30" : 
-                        "text-zinc-400 border-transparent"
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border flex items-center gap-1.5 shadow-sm", 
+                        archiveFilter === 'archived' ? "bg-amber-600/20 text-amber-300 border-amber-500/40 hover:bg-amber-600/30" : 
+                        archiveFilter === 'all' ? "bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20" : 
+                        "bg-zinc-800/60 text-zinc-300 border-zinc-700/60 hover:bg-zinc-800"
                       )}
                     >
-                      <Archive className="h-3 w-3 mr-1.5" />
-                      {archiveFilter === 'all' ? 'ALL BOOKINGS' : archiveFilter.toUpperCase()} <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                      <Archive className="h-3.5 w-3.5 text-amber-400" />
+                      <span>{archiveFilter === 'all' ? 'ACTIVE & ARCHIVED' : archiveFilter.toUpperCase() + ' ONLY'}</span>
+                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-48">
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-48 shadow-2xl">
                     <DropdownMenuItem onClick={() => setArchiveFilter('active')} className="cursor-pointer flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-zinc-500" /> Active Only
                     </DropdownMenuItem>
@@ -3591,38 +3676,21 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
- 
-                 <div className="w-px h-6 bg-zinc-800 mx-1" />
- 
-                 <TooltipProvider>
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <Button 
-                         variant="outline" 
-                         size="icon" 
-                         className="h-8 w-8 border-zinc-700 bg-zinc-900/50 hover:bg-red-600 hover:text-white transition-all shadow-xl rounded-lg"
-                         onClick={() => {
-                           setSortOrder('next-booking');
-                           setDateFilter({ start: undefined, end: undefined });
-                           setSourceFilter(null);
-                           setStatusFilter(null);
-                           setArchiveFilter('active');
-                           toast.success("Sort & filters reset to default");
-                         }}
-                       >
-                         <RotateCcw className="h-3.5 w-3.5" />
-                       </Button>
-                     </TooltipTrigger>
-                     <TooltipContent className="bg-zinc-900 border-zinc-800 text-white text-[10px] font-black uppercase tracking-widest">
-                       Reset Default Sort & Filters
-                     </TooltipContent>
-                   </Tooltip>
-                 </TooltipProvider>
 
+                <div className="w-px h-6 bg-zinc-800 mx-0.5" />
+
+                {/* 5. Filter History Popover (Red Accent) */}
                 <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (dateFilter.start || dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}>
-                      <Filter className="h-3.5 w-3.5" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={cn(
+                        "gap-2 border-red-500/30 bg-red-500/10 text-red-300 font-bold h-8 text-[11px] hover:bg-red-500/20 transition-all shadow-sm", 
+                        (dateFilter.start || dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700 shadow-md shadow-red-900/30"
+                      )}
+                    >
+                      <Filter className="h-3.5 w-3.5 text-red-400" />
                       Filter History
                       {(archiveFilter !== 'active') && (
                         <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 ml-1 h-4 px-1 border-none text-[8px]">
@@ -3640,58 +3708,81 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </div>
 
                     <div className="p-4 space-y-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white">Archive Mode</span>
-                          <span className="text-[10px] text-zinc-500 uppercase font-black">{archiveFilter === 'all' ? 'Showing All' : archiveFilter === 'archived' ? 'Archived Only' : 'Active Only'}</span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 text-[10px] font-black border border-zinc-800"
-                          onClick={() => {
-                            const next: Record<string, 'active' | 'archived' | 'all'> = { active: 'archived', archived: 'all', all: 'active' };
-                            setArchiveFilter(next[archiveFilter]);
-                          }}
-                        >
-                          TOGGLE
-                        </Button>
-                      </div>
-
                       <div className="space-y-3">
                         <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Quick Presets</span>
                         <div className="grid grid-cols-2 gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (!dateFilter.start && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800", (!dateFilter.start && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
                             onClick={() => setDateFilter({ start: undefined, end: undefined })}
                           >
-                            VIEW ALL
+                            ALL TIME
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isToday(dateFilter.start) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
-                            onClick={() => setDateFilter({ start: new Date(), end: undefined })}
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isToday(dateFilter.start) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
                           >
                             TODAY
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfWeek(new Date()))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
-                            onClick={() => setDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && dateFilter.end && isSameDay(dateFilter.start, startOfWeek(new Date(), { weekStartsOn: 1 }))) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            onClick={() => setDateFilter({ start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) })}
                           >
                             THIS WEEK
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={cn("h-8 text-[11px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isSameMonth(dateFilter.start, new Date()) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800")}
+                            onClick={() => {
+                              const prevWeek = subWeeks(new Date(), 1);
+                              setDateFilter({ start: startOfWeek(prevWeek, { weekStartsOn: 1 }), end: endOfWeek(prevWeek, { weekStartsOn: 1 }) });
+                            }}
+                          >
+                            LAST WEEK
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800", (dateFilter.start && isSameMonth(dateFilter.start, new Date()) && !dateFilter.end) && "bg-red-600 text-white border-red-600 hover:bg-red-700")}
                             onClick={() => setDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
                           >
                             THIS MONTH
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800")}
+                            onClick={() => {
+                              const prevMonth = subMonths(new Date(), 1);
+                              setDateFilter({ start: startOfMonth(prevMonth), end: endOfMonth(prevMonth) });
+                            }}
+                          >
+                            LAST MONTH
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800")}
+                            onClick={() => setDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) })}
+                          >
+                            THIS YEAR
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn("h-8 text-[10px] font-bold border border-zinc-800 hover:bg-zinc-800")}
+                            onClick={() => {
+                              const prevYear = subYears(new Date(), 1);
+                              setDateFilter({ start: startOfYear(prevYear), end: endOfYear(prevYear) });
+                            }}
+                          >
+                            LAST YEAR
                           </Button>
                         </div>
                       </div>
@@ -3722,6 +3813,32 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </div>
                   </PopoverContent>
                 </Popover>
+
+                {/* 6. Reset Control (Neutral/Red Accent) */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8 border-zinc-700 bg-zinc-900/80 text-zinc-300 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-md rounded-lg"
+                        onClick={() => {
+                          setSortOrder('next-booking');
+                          setDateFilter({ start: undefined, end: undefined });
+                          setSourceFilter(null);
+                          setStatusFilter(null);
+                          setArchiveFilter('active');
+                          toast.success("Sort & filters reset to default");
+                        }}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-zinc-900 border-zinc-800 text-white text-[10px] font-black uppercase tracking-widest">
+                      Reset Default Sort & Filters
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
 
