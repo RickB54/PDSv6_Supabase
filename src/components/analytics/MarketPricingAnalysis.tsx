@@ -117,18 +117,18 @@ export default function MarketPricingAnalysis({ initialCategory = 'packages' }: 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50">
         <div>
-          <h3 className="text-xl font-bold text-white mb-1">Local Market Pricing Analysis (Methuen, MA Area)</h3>
-          <p className="text-sm text-zinc-400">Comparing your active rates vs Methuen, MA Area averages.</p>
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-1">Local Market Pricing Analysis (Methuen, MA Area)</h3>
+          <p className="text-xs sm:text-sm text-zinc-400">Comparing your active rates vs Methuen, MA Area averages.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center space-x-2 mr-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex items-center space-x-2 mr-1 sm:mr-4">
             <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
-            <Label htmlFor="show-archived" className="text-zinc-400 cursor-pointer">Show Archived</Label>
+            <Label htmlFor="show-archived" className="text-xs sm:text-sm text-zinc-400 cursor-pointer whitespace-nowrap">Show Archived</Label>
           </div>
           <Select value={category} onValueChange={(val: any) => setCategory(val)}>
-            <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-700">
+            <SelectTrigger className="w-[115px] sm:w-[150px] h-9 text-xs sm:text-sm bg-zinc-900 border-zinc-700">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent className="z-[10005]">
@@ -137,7 +137,7 @@ export default function MarketPricingAnalysis({ initialCategory = 'packages' }: 
             </SelectContent>
           </Select>
           <Select value={vehicleClass} onValueChange={setVehicleClass}>
-            <SelectTrigger className="w-[160px] bg-zinc-900 border-zinc-700">
+            <SelectTrigger className="w-[115px] sm:w-[150px] h-9 text-xs sm:text-sm bg-zinc-900 border-zinc-700">
               <SelectValue placeholder="Vehicle Class" />
             </SelectTrigger>
             <SelectContent className="z-[10005]">
@@ -146,7 +146,7 @@ export default function MarketPricingAnalysis({ initialCategory = 'packages' }: 
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={loadData} disabled={isRefreshing} className="bg-zinc-900 border-zinc-700 hover:bg-zinc-800 ml-2">
+          <Button variant="outline" size="icon" onClick={loadData} disabled={isRefreshing} className="h-9 w-9 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 shrink-0">
             <RotateCcw className={`h-4 w-4 text-zinc-400 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
