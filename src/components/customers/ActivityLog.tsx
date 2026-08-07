@@ -39,6 +39,13 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [note, setNote] = useState("");
   const [type, setType] = useState("note");
+  
+  // Custom Interaction Timestamp (defaults to current local time, but editable)
+  const [customDate, setCustomDate] = useState<string>(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
 
   useEffect(() => {
     fetchActivities();
@@ -73,13 +80,17 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
 
     setIsAdding(true);
     try {
+      const systemLoggedTime = new Date().toISOString();
+      const interactionTime = customDate ? new Date(customDate).toISOString() : systemLoggedTime;
+
       const payload = {
         customer_id: customer.id,
         customer_name: customer.name,
         customer_email: customer.email,
         note: note.trim(),
         type: type,
-        created_at: new Date().toISOString()
+        created_at: systemLoggedTime,
+        timestamp: interactionTime
       };
 
       const { data, error } = await supabase
@@ -176,14 +187,25 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
     <div className="space-y-6">
       {/* Input Section */}
       <div className="bg-zinc-900/40 p-3 sm:p-5 rounded-2xl border border-white/10 space-y-4">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-1">
           <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Log New Interaction</label>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1 rounded-lg border border-zinc-800" title="Selected Interaction Date & Time">
+              <Clock className="h-3 w-3 text-blue-400 shrink-0" />
+              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-tight whitespace-nowrap">Time:</span>
+              <input 
+                type="datetime-local" 
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="bg-transparent text-white text-[10px] font-semibold border-none focus:outline-none cursor-pointer"
+              />
+            </div>
+
             <Select value={type} onValueChange={setType}>
               <SelectTrigger className="h-8 bg-zinc-100 border-zinc-200 text-zinc-950 text-[10px] font-black uppercase rounded-lg w-[140px] hover:bg-white transition-colors">
                 <SelectValue placeholder="Type..." />
               </SelectTrigger>
-              <SelectContent className="bg-white border-zinc-200 text-zinc-950">
+              <SelectContent className="bg-white border-zinc-200 text-zinc-950 z-[250]">
                 <SelectItem value="note" className="text-[10px] font-bold hover:bg-zinc-100">General Note</SelectItem>
                 <SelectItem value="call_out" className="text-[10px] font-bold hover:bg-zinc-100">Outgoing Call</SelectItem>
                 <SelectItem value="call_in" className="text-[10px] font-bold hover:bg-zinc-100">Incoming Call</SelectItem>
@@ -237,36 +259,47 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
             </div>
           )}
 
-          {activities.map((act, idx) => (
-            <div key={act.id || idx} className="group relative flex flex-col gap-2 p-3 sm:p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] hover:border-blue-500/20 transition-all shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-zinc-900 rounded-lg border border-zinc-800">
-                    {getActivityIcon(act.type)}
-                  </div>
-                  <div>
-                    <div className="text-zinc-200 font-black uppercase tracking-tight leading-none mb-0.5">
-                      {getActivityLabel(act.type)}
+          {activities.map((act, idx) => {
+            const occurrenceTime = act.timestamp || act.created_at;
+            const systemLoggedTime = act.created_at;
+            const hasDiff = occurrenceTime && systemLoggedTime && Math.abs(new Date(occurrenceTime).getTime() - new Date(systemLoggedTime).getTime()) > 60000;
+
+            return (
+              <div key={act.id || idx} className="group relative flex flex-col gap-2 p-3 sm:p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] hover:border-blue-500/20 transition-all shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-zinc-900 rounded-lg border border-zinc-800">
+                      {getActivityIcon(act.type)}
                     </div>
-                    <div className="text-[9px] text-zinc-500 font-bold">
-                      {format(new Date(act.created_at), 'MMMM dd, yyyy · p')}
+                    <div>
+                      <div className="text-zinc-200 font-black uppercase tracking-tight leading-none mb-0.5">
+                        {getActivityLabel(act.type)}
+                      </div>
+                      <div className="text-[9px] text-zinc-400 font-bold flex flex-wrap items-center gap-x-2">
+                        <span>{format(new Date(occurrenceTime), 'MMMM dd, yyyy · p')}</span>
+                        {hasDiff && (
+                          <span className="text-zinc-500 font-normal">
+                            (Logged System Time: {format(new Date(systemLoggedTime), 'MMMM dd, yyyy · p')})
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 text-zinc-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => deleteActivity(act.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 text-zinc-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => deleteActivity(act.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1 ml-1">
+                  "{act.note}"
+                </div>
               </div>
-              <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1 ml-1">
-                "{act.note}"
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

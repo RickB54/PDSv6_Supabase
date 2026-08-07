@@ -98,7 +98,8 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
       activityLog.forEach((log: any) => {
         combinedData.push({
           id: log.id || `activity_${log.timestamp || log.created_at || Date.now()}`,
-          created_at: log.timestamp || log.created_at || new Date().toISOString(),
+          created_at: log.created_at || new Date().toISOString(),
+          timestamp: log.timestamp || log.created_at || new Date().toISOString(),
           customer_name: customer.name,
           customer_email: customer.email,
           type: log.type || 'activity',
@@ -556,9 +557,16 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
                     <Badge className="bg-zinc-800 text-[8px] font-black uppercase border-none text-zinc-400 px-1.5 py-0">
                       {eng.source || 'Engagement'}
                     </Badge>
-                    <span className="text-[9px] text-zinc-500 font-bold">
-                      {format(new Date(eng.created_at || eng.timestamp), 'MMM dd, yyyy · p')}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-x-2 text-[9px]">
+                      <span className="text-zinc-300 font-bold">
+                        {format(new Date(eng.timestamp || eng.created_at), 'MMM dd, yyyy · p')}
+                      </span>
+                      {eng.created_at && eng.timestamp && Math.abs(new Date(eng.created_at).getTime() - new Date(eng.timestamp).getTime()) > 60000 && (
+                        <span className="text-zinc-500 font-medium">
+                          (Logged: {format(new Date(eng.created_at), 'MMM dd, yyyy · p')})
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {eng.coupon_code && (
                     <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1.5 rounded border border-emerald-500/10">

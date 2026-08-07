@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { RetentionHub } from "./RetentionHub";
 import { ActivityLog } from "./ActivityLog";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface Props {
   open: boolean;
@@ -512,7 +513,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] bg-zinc-950 border-zinc-800 text-foreground p-0 overflow-hidden flex flex-col h-[85vh] top-[55%]">
+      <DialogContent className="sm:max-w-[1000px] lg:max-w-[1100px] w-[95vw] bg-zinc-950 border-zinc-800 text-foreground p-0 overflow-hidden flex flex-col h-[88vh] top-[53%]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-500" />
@@ -864,38 +865,72 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
 
              <TabsContent value="crm" className="m-0 p-0 outline-none border-0 overflow-y-auto">
                 {form.id ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-zinc-800/50 min-h-[600px]">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800/50 min-h-[600px]">
                     <div className="p-6 space-y-6">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2 pb-3 border-b border-zinc-800/60">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500">
+                          <div className="h-8 w-8 bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 shrink-0">
                             <Activity className="h-4 w-4" />
                           </div>
                           <div>
                             <h3 className="text-xs font-black uppercase tracking-widest text-white flex items-center gap-2">
                               CRM & Lead Intelligence
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-5 w-5 text-zinc-500 hover:text-blue-400 rounded-full"
-                                onClick={() => {
-                                  // This could open the Help Modal or a specific popover
-                                  // For now, let's trigger a toast or just show it's a help point
-                                  toast.info("CRM Hub Guide", { 
-                                    description: "Use the Activity Logger to track manual calls/notes, and the Retention Workflow to send automated maintenance reminders and lead follow-ups."
-                                  });
-                                }}
-                              >
-                                <Info className="h-3 w-3" />
-                              </Button>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-5 w-5 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-full transition-colors"
+                                    title="CRM Hub Help & Process Guide"
+                                  >
+                                    <Info className="h-3.5 w-3.5 text-blue-400" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent side="right" className="w-80 bg-zinc-900 border-zinc-700 text-white p-4 shadow-2xl z-[250] rounded-xl space-y-3">
+                                  <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
+                                    <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
+                                      <Activity className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-black uppercase tracking-wider text-white">CRM & Lead Intelligence Guide</h4>
+                                      <p className="text-[9px] text-zinc-400 uppercase font-semibold">Workflow & Activity Tracking</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-2.5 text-xs text-zinc-300">
+                                    <div>
+                                      <span className="font-bold text-blue-400">1. Activity Logger:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
+                                        Record manual calls, text messages, emails, and notes. Select the exact interaction date/time and the system automatically records the actual system logged timestamp.
+                                      </p>
+                                    </div>
+                                    
+                                    <div>
+                                      <span className="font-bold text-indigo-400">2. Unified Timeline:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
+                                        View all customer interactions in chronological order, including manual entries, custom letters, estimate emails, and automated retention follow-ups.
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <span className="font-bold text-emerald-400">3. Retention & Direct Outreach:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
+                                        Send personalized campaign emails, custom PDF letters, or estimate links with optional loyalty discount codes to drive repeat bookings.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </h3>
+                            <p className="text-[9px] text-zinc-500 font-bold uppercase mt-0.5">Log interactions & track customer engagement</p>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Label className="text-[10px] text-zinc-500 uppercase font-black">Date of Contact</Label>
+                        
+                        <div className="flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-zinc-800 shrink-0">
+                          <Label className="text-[10px] text-zinc-400 uppercase font-black whitespace-nowrap">Date of Contact:</Label>
                           <Input 
                             type="date" 
-                            className="h-8 text-xs bg-zinc-900 border-zinc-800 text-white w-40" 
+                            className="h-7 text-xs bg-zinc-950 border-zinc-800 text-white w-36" 
                             value={form.date_of_contact || ""} 
                             onChange={(e) => handleChange("date_of_contact", e.target.value)} 
                           />
