@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, RefreshCw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye, Tag, DollarSign } from "lucide-react"; // Added LayoutGrid
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock, User, Car, Search, X, MapPin, Users, ChevronDown, Mail, Phone, MapPinIcon, Check, ChevronsUpDown, BarChart3, Wrench, Bell, Archive, Filter, Copy, RotateCcw, RefreshCw, Trash2, Printer, Package, Shield, HelpCircle, LayoutGrid, Eye, Tag, DollarSign, ArrowUpDown } from "lucide-react"; // Added LayoutGrid
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
@@ -294,7 +294,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | 'blocked' | null>(null);
-  const [sortOrder, setSortOrder] = useState<'next-booking' | 'name' | 'last-active'>('next-booking');
+  const [sortOrder, setSortOrder] = useState<'last-active' | 'next-booking' | 'name'>('last-active');
 
   const getDateFilterLabel = useCallback(() => {
     if (!dateFilter.start && !dateFilter.end) return 'ALL TIME';
@@ -3568,6 +3568,43 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                 <div className="w-px h-6 bg-zinc-800 mx-0.5" />
 
+                {/* 2. Sort Control (Cyan Accent) */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={cn(
+                        "h-8 text-[11px] px-3 font-bold rounded-lg transition-all border flex items-center gap-1.5 shadow-sm",
+                        sortOrder !== 'last-active' 
+                          ? "bg-cyan-600/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-600/30" 
+                          : "bg-cyan-500/10 text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/20"
+                      )}
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>SORT: {sortOrder === 'last-active' ? 'LATEST FIRST' : sortOrder === 'next-booking' ? 'UPCOMING FIRST' : 'NAME (A-Z)'}</span>
+                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-900 border-zinc-800 text-white w-56 shadow-2xl">
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-widest text-zinc-500 px-2 py-1">Sort Customers By</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setSortOrder('last-active')} className="cursor-pointer flex items-center justify-between">
+                      <span className={cn(sortOrder === 'last-active' && "font-bold text-cyan-400")}>Latest Activity (Most Recent)</span>
+                      {sortOrder === 'last-active' && <Check className="h-3.5 w-3.5 text-cyan-400" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortOrder('next-booking')} className="cursor-pointer flex items-center justify-between">
+                      <span className={cn(sortOrder === 'next-booking' && "font-bold text-cyan-400")}>Upcoming Appointments</span>
+                      {sortOrder === 'next-booking' && <Check className="h-3.5 w-3.5 text-cyan-400" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortOrder('name')} className="cursor-pointer flex items-center justify-between">
+                      <span className={cn(sortOrder === 'name' && "font-bold text-cyan-400")}>Customer Name (A-Z)</span>
+                      {sortOrder === 'name' && <Check className="h-3.5 w-3.5 text-cyan-400" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="w-px h-6 bg-zinc-800 mx-0.5" />
+
                 {/* 2. Source Control (Purple Accent) */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -3823,7 +3860,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         size="icon" 
                         className="h-8 w-8 border-zinc-700 bg-zinc-900/80 text-zinc-300 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-md rounded-lg"
                         onClick={() => {
-                          setSortOrder('next-booking');
+                          setSortOrder('last-active');
                           setDateFilter({ start: undefined, end: undefined });
                           setSourceFilter(null);
                           setStatusFilter(null);
