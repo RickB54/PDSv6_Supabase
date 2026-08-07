@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { sendTeamMessage } from '@/lib/supa-data';
+import { pushAdminAlert } from '@/lib/adminAlerts';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -36,6 +38,21 @@ export default function PaymentSuccess() {
         if (data.error) throw new Error(data.error);
 
         setPaymentData(data);
+
+        // Dispatch notification ONLY when Stripe payment is confirmed successful
+        try {
+          const totalPaid = ((data.amount_total || 0) / 100).toFixed(2);
+          const alertMsg = `🎉 STRIPE PAYMENT CONFIRMED & RECEIVED 💳\n• Total Received: $${totalPaid}\n• Job/Ref ID: ${data.job_id || 'Quick Pay'}`;
+          sendTeamMessage(alertMsg, 'stripe@primeautodetail.net', 'Stripe System', null).catch(console.error);
+          pushAdminAlert(
+            'invoice_created',
+            `Stripe payment of $${totalPaid} CONFIRMED & RECEIVED.`,
+            'Stripe System',
+            { paymentMethod: 'Stripe', amount: totalPaid, jobId: data.job_id }
+          );
+        } catch (e) {
+          console.warn("Could not dispatch Stripe payment success alert:", e);
+        }
       } catch (err) {
         console.error('Payment verification failed:', err);
         setError('Failed to verify payment or session expired.');
