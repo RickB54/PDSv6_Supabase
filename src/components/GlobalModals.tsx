@@ -9,6 +9,7 @@ import { Sparkles, FileText, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
+import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 
 export const GlobalModals: React.FC = () => {
     const [noteOpen, setNoteOpen] = useState(false);
@@ -186,6 +187,8 @@ export const GlobalModals: React.FC = () => {
                 onOpenChange={setRicksTipsOpen} 
                 initialTab={ricksTipsTab}
             />
+
+            <CustomerCommunicationGuide />
         </>
     );
 };

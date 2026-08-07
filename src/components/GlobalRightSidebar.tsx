@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import {
     MessageSquare,
+    MessageSquareQuote,
     CheckSquare,
     Calendar,
     CalendarCheck,
@@ -244,6 +245,17 @@ const renderSidebarContent = (
                     >
                         <Phone className="w-5 h-5 text-primary animate-pulse" />
                         {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Phone Assistant</span>}
+                    </Button>
+
+                    <Button
+                        variant="ghost"
+                        size={collapsed ? "icon" : "default"}
+                        onClick={() => window.dispatchEvent(new Event('open-comm-guide'))}
+                        title="Customer Communication Guide"
+                        className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-500/20 hover:text-blue-400 transition-all`}
+                    >
+                        <MessageSquareQuote className="w-5 h-5 text-blue-400" />
+                        {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Comm. Guide</span>}
                     </Button>
                 </>
             )}

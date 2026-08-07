@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MessageSquareQuote, X, ChevronDown, CheckCircle2, Info, FileText, ClipboardCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -201,6 +201,12 @@ const VehicleScratchpad = () => {
 export function CustomerCommunicationGuide() {
   const [open, setOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<number | null>(0);
+
+  useEffect(() => {
+    const handleOpen = () => setOpen(true);
+    window.addEventListener('open-comm-guide', handleOpen);
+    return () => window.removeEventListener('open-comm-guide', handleOpen);
+  }, []);
 
   const toggleSection = (idx: number) => {
     if (activeSection === idx) {
