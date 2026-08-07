@@ -38,6 +38,9 @@ export default function TipSelectionScreen({
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   // Calls the Supabase Edge Function to configure and launch Stripe Checkout.
+  const currentUser = getCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' && localStorage.getItem('view_as_mode') !== 'employee';
+
   const handleProceedToPay = async (mode: 'redirect' | 'qrcode' = 'redirect') => {
     if (selectedTip === undefined) return;
     
@@ -183,40 +186,44 @@ export default function TipSelectionScreen({
                   <Info size={14} className="text-blue-600 shrink-0" />
                   Payment Process Guide
                 </div>
-                <p className="text-[11px] text-blue-700/80 mt-0.5">Quick Pay creates a <b>standalone</b> invoice only. For booking-linked payments, use the Invoices page.</p>
+                <p className="text-[11px] text-blue-700/80 mt-0.5">Quick Pay creates a <b>standalone</b> invoice only.{isAdmin ? ' For booking-linked payments, use the Invoices page.' : ''}</p>
               </div>
               <div className="px-4 py-2.5 flex flex-col gap-2.5">
-                <div className="flex gap-2.5 items-start">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
-                  <div>
-                    <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> → open invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>.</p>
+                {isAdmin && (
+                  <div className="flex gap-2.5 items-start">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
+                    <div>
+                      <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
+                      <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> → open invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>.</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex gap-2.5 items-start">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">2</span>
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '2' : '1'}</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📱 Pay with Stripe</p>
                     <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay with Stripe</b> below — hand phone to customer to enter card.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center">3</span>
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '3' : '2'}</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">📷 Show QR Code (Remote)</p>
                     <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — customer scans code to pay.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">4</span>
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '4' : '3'}</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
                     <p className="text-[11px] text-gray-600 mt-0.5">Enter amount → Continue → choose tip → <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
-                <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
-                  → Go to Invoices page now
-                </a>
+                {isAdmin && (
+                  <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
+                    → Go to Invoices page now
+                  </a>
+                )}
               </div>
             </div>
           )}
