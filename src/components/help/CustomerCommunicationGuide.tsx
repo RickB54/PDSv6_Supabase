@@ -398,7 +398,33 @@ export function CustomerCommunicationGuide() {
       )
     },
     {
-      title: "7. Closing / Wrap-Up",
+      title: "7. Voicemail / No-Answer Follow-Up Text",
+      content: (
+        <div className="space-y-4 text-sm text-slate-700">
+          <p><strong>Goal:</strong> Confirm receipt of a new online booking via text message when a live phone call goes to voicemail, without sounding like a robocall — copy-paste ready for any prospect or vehicle type.</p>
+          
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4">
+            <div>
+              <p className="font-medium text-blue-900 mb-2">Sample Greetings (New Booking / Prospect):</p>
+              <ul className="list-disc pl-5 space-y-2 text-blue-800">
+                <li>"Hello, this is Rick from Prime Auto Detail. I saw your booking come through and tried calling but it went to voicemail. No rush, just wanted to confirm we got it and answer any questions before we get started. Also, so I will be fully prepped, what's the general condition inside and out (any stains, pet hair, heavy dirt/mud, smoke odor)? And roughly when was it last detailed, if ever? That's all I need for now, feel free to call or text back anytime!"</li>
+              </ul>
+            </div>
+
+            <div className="pt-2 border-t border-blue-200/60">
+              <p className="font-medium text-blue-900 mb-2">Shorter Version (Repeat / Existing Customers):</p>
+              <ul className="list-disc pl-5 space-y-2 text-blue-800">
+                <li>"Hello, this is Rick from Prime Auto Detail! I saw your new booking come through and tried giving you a quick call, but hit voicemail. Just confirming we received it and locking things in. Feel free to text back or call anytime if you have any questions!"</li>
+              </ul>
+            </div>
+          </div>
+          
+          <p className="italic text-xs text-slate-500">Note: Copy and paste directly to text/SMS without editing — generic enough for any prospect, with no name placeholders or job location assumptions required.</p>
+        </div>
+      )
+    },
+    {
+      title: "8. Closing / Wrap-Up",
       content: (
         <div className="space-y-4 text-sm text-slate-700">
           <p><strong>Goal:</strong> End the conversation naturally, confirm next steps, and set clear expectations on timing.</p>
