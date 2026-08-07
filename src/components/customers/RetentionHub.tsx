@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, ShieldCheck, Info, Eye, AlertCircle, Sparkles, FileText, FileBarChart, Mail, RefreshCw } from "lucide-react";
+import { History, Send, Zap, Clock, ExternalLink, MessageSquare, TicketPercent, ShieldCheck, Info, Eye, AlertCircle, Sparkles, FileText, FileBarChart, Mail, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -22,9 +22,10 @@ interface Props {
   customer: Customer;
   onRefresh?: () => void;
   onOpenEstimate?: () => void;
+  refreshTrigger?: number;
 }
 
-export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
+export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigger }: Props) {
   const { items: allBookings } = useBookingsStore();
   const { items: allCoupons, refresh: refreshCoupons } = useCouponsStore();
   const { addLog } = useFollowUpStore();
@@ -57,7 +58,7 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
       refreshCoupons();
       fetchEngagements();
     }
-  }, [customer.email, customer.id, customer.notes]);
+  }, [customer.email, customer.id, customer.notes, refreshTrigger]);
 
   useEffect(() => {
     if (customer.id) {
@@ -202,6 +203,29 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
       setEngagements(log);
     } finally {
       setLoadingEngs(false);
+    }
+  };
+
+  const handleDeleteEngagement = async (eng: any) => {
+    if (!confirm("Remove this engagement entry?")) return;
+    try {
+      if (eng.id && !eng.id.startsWith("activity_") && !eng.id.startsWith("profile_note_") && !eng.id.startsWith("booking_note_")) {
+        const { error } = await supabase.from('engagements').delete().eq('id', eng.id);
+        if (error) throw error;
+      }
+
+      if ((customer as any).activity_log) {
+        (customer as any).activity_log = (customer as any).activity_log.filter((a: any) => a.id !== eng.id && a.created_at !== eng.created_at);
+      }
+      if ((customer as any).activityLog) {
+        (customer as any).activityLog = (customer as any).activityLog.filter((a: any) => a.id !== eng.id && a.created_at !== eng.created_at);
+      }
+
+      setEngagements(prev => prev.filter(item => item.id !== eng.id));
+      toast.success("Engagement log removed");
+      if (onRefresh) onRefresh();
+    } catch (e: any) {
+      toast.error("Failed to delete", { description: e.message });
     }
   };
 
@@ -568,11 +592,24 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate }: Props) {
                       )}
                     </div>
                   </div>
-                  {eng.coupon_code && (
-                    <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1.5 rounded border border-emerald-500/10">
-                      {eng.coupon_code}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {eng.coupon_code && (
+                      <span className="text-[8px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1.5 rounded border border-emerald-500/10">
+                        {eng.coupon_code}
+                      </span>
+                    )}
+                    {(!eng.id || (!eng.id.startsWith("profile_note_") && !eng.id.startsWith("booking_note_"))) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleDeleteEngagement(eng)}
+                        title="Delete engagement log"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-zinc-200 text-xs leading-relaxed whitespace-pre-wrap font-medium">
                   {eng.note || eng.text}

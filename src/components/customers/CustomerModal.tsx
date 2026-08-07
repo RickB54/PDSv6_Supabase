@@ -48,6 +48,8 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
   const [linkedVehicles, setLinkedVehicles] = useState<Vehicle[]>([]);
   const [currentVehicleIdx, setCurrentVehicleIdx] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [crmRefreshTrigger, setCrmRefreshTrigger] = useState(0);
+  const handleCrmRefresh = () => setCrmRefreshTrigger(prev => prev + 1);
   
   const { items: allBookings } = useBookingsStore();
   const { refresh: refreshCoupons } = useCouponsStore();
@@ -948,13 +950,15 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                       </div>
                       <ActivityLog 
                         customer={form} 
-                        onRefresh={() => {
-                          // Local refresh logic
-                        }} 
+                        onRefresh={handleCrmRefresh} 
                       />
                     </div>
                     <div className="p-0 bg-zinc-950/20">
-                      <RetentionHub customer={form} />
+                      <RetentionHub 
+                        customer={form} 
+                        refreshTrigger={crmRefreshTrigger}
+                        onRefresh={handleCrmRefresh}
+                      />
                     </div>
                   </div>
                 ) : (
