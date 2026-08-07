@@ -3,11 +3,20 @@ import { Customer, supabase } from "@/lib/supa-data";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
 import { 
   Phone, MessageSquare, StickyNote, Plus, 
-  Clock, Trash2, Calendar, User, History,
+  Clock, Trash2, Pencil, Calendar, User, History,
   PhoneIncoming, PhoneOutgoing, Mail,
-  CheckCircle2, AlertCircle, RefreshCw
+  CheckCircle2, AlertCircle, RefreshCw, Save
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -33,6 +42,18 @@ interface Props {
   compact?: boolean;
 }
 
+const formatForDatetimeLocal = (dateStr?: string) => {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (e) {
+    return "";
+  }
+};
+
 export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,11 +62,14 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   const [type, setType] = useState("note");
   
   // Custom Interaction Timestamp (defaults to current local time, but editable)
-  const [customDate, setCustomDate] = useState<string>(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    return now.toISOString().slice(0, 16);
-  });
+  const [customDate, setCustomDate] = useState<string>(() => formatForDatetimeLocal(new Date().toISOString()));
+
+  // Edit Modal State
+  const [editingActivity, setEditingActivity] = useState<any | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [editType, setEditType] = useState("note");
+  const [editDate, setEditDate] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchActivities();
@@ -64,7 +88,6 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
       setActivities(data || []);
     } catch (e) {
       console.error("Failed to fetch activities", e);
-      // Fallback to local activity_log if provided (demo/legacy)
       const log = (customer as any).activity_log || (customer as any).activityLog || [];
       setActivities(Array.isArray(log) ? [...log].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : []);
     } finally {
@@ -108,6 +131,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
 
       toast.success("Activity logged");
       setNote("");
+      setCustomDate(formatForDatetimeLocal(new Date().toISOString()));
       setIsAdding(false);
       if (newRecord) {
         setActivities(prev => [newRecord, ...prev].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()));
@@ -115,7 +139,6 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
       if (onRefresh) onRefresh();
     } catch (e: any) {
       console.error("Failed to log activity to Supabase", e);
-      // Fallback: Store locally on customer profile if table schema or network fails
       const interactionTime = customDate ? new Date(customDate).toISOString() : new Date().toISOString();
       const localEntry = {
         id: 'local-' + Date.now(),
@@ -131,8 +154,53 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
       setActivities(prev => [localEntry, ...prev].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()));
       toast.success("Activity logged");
       setNote("");
+      setCustomDate(formatForDatetimeLocal(new Date().toISOString()));
       setIsAdding(false);
       if (onRefresh) onRefresh();
+    }
+  };
+
+  const handleStartEdit = (act: any) => {
+    setEditingActivity(act);
+    setEditNote(act.note || "");
+    setEditType(act.type || "note");
+    const timeStr = act.created_at || act.timestamp || act.date || new Date().toISOString();
+    setEditDate(formatForDatetimeLocal(timeStr));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingActivity) return;
+    setIsSavingEdit(true);
+    try {
+      const newTimestamp = editDate ? new Date(editDate).toISOString() : new Date().toISOString();
+      const updatedFields = {
+        note: editNote.trim(),
+        type: editType,
+        created_at: newTimestamp
+      };
+
+      if (editingActivity.id && !editingActivity.id.startsWith("demo-") && !editingActivity.id.startsWith("local-")) {
+        const { error } = await supabase
+          .from('engagements')
+          .update(updatedFields)
+          .eq('id', editingActivity.id);
+        if (error) throw error;
+      }
+
+      setActivities(prev => prev.map(a => a.id === editingActivity.id ? { ...a, ...updatedFields } : a).sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()));
+      
+      if ((customer as any).activity_log) {
+        (customer as any).activity_log = (customer as any).activity_log.map((a: any) => a.id === editingActivity.id ? { ...a, ...updatedFields } : a);
+      }
+
+      toast.success("Interaction entry updated");
+      setEditingActivity(null);
+      if (onRefresh) onRefresh();
+    } catch (e: any) {
+      console.error("Failed to update activity:", e);
+      toast.error("Failed to update activity", { description: e.message });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -214,14 +282,14 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-1">
           <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest ml-1">Log New Interaction</label>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1 rounded-lg border border-zinc-800" title="Selected Interaction Date & Time">
-              <Clock className="h-3 w-3 text-blue-400 shrink-0" />
-              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-tight whitespace-nowrap">Time:</span>
+            <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1 rounded-xl border border-zinc-800 shadow-inner" title="Selected Interaction Date & Time">
+              <Clock className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+              <span className="text-[10px] font-black text-zinc-400 uppercase tracking-tight whitespace-nowrap">Time:</span>
               <input 
                 type="datetime-local" 
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="bg-transparent text-white text-[10px] font-semibold border-none focus:outline-none cursor-pointer"
+                className="bg-zinc-900 text-zinc-100 text-xs font-bold border border-zinc-700/80 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 [color-scheme:dark] cursor-pointer"
               />
             </div>
 
@@ -302,16 +370,28 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
                       </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 text-zinc-700 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => deleteActivity(act.id)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                      onClick={() => handleStartEdit(act)}
+                      title="Edit Entry & Timestamp"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      onClick={() => deleteActivity(act.id)}
+                      title="Remove Entry"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1 ml-1">
+                <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1 ml-1 whitespace-pre-wrap">
                   "{act.note}"
                 </div>
               </div>
@@ -319,6 +399,78 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
           })}
         </div>
       </div>
+
+      {/* Edit Entry Dialog */}
+      <Dialog open={!!editingActivity} onOpenChange={(open) => !open && setEditingActivity(null)}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md p-6 rounded-2xl shadow-2xl z-[300]">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-black uppercase tracking-wider text-blue-400 flex items-center gap-2">
+              <Pencil className="h-4 w-4" /> Edit Interaction Entry
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-zinc-400">Interaction Type</Label>
+                <Select value={editType} onValueChange={setEditType}>
+                  <SelectTrigger className="h-9 bg-zinc-900 border-zinc-700 text-white text-xs font-bold rounded-xl">
+                    <SelectValue placeholder="Type..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[350]">
+                    <SelectItem value="note" className="text-xs font-semibold">General Note</SelectItem>
+                    <SelectItem value="call_out" className="text-xs font-semibold">Outgoing Call</SelectItem>
+                    <SelectItem value="call_in" className="text-xs font-semibold">Incoming Call</SelectItem>
+                    <SelectItem value="text" className="text-xs font-semibold">Text Message</SelectItem>
+                    <SelectItem value="email" className="text-xs font-semibold">Email</SelectItem>
+                    <SelectItem value="attempt" className="text-xs font-semibold">Contact Attempt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-zinc-400 flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-blue-400" /> Date & Time
+                </Label>
+                <input 
+                  type="datetime-local" 
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full h-9 bg-zinc-900 text-zinc-100 text-xs font-bold border border-zinc-700 rounded-xl px-2 focus:outline-none focus:border-blue-500 [color-scheme:dark] cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase text-zinc-400">Interaction Note</Label>
+              <Textarea 
+                value={editNote}
+                onChange={(e) => setEditNote(e.target.value)}
+                className="bg-zinc-900 border-zinc-700 text-white text-xs font-medium rounded-xl min-h-[100px] resize-none focus:ring-blue-500/20"
+                placeholder="Enter notes..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setEditingActivity(null)}
+              className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white h-9 text-xs font-bold rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit}
+              disabled={isSavingEdit || !editNote.trim()}
+              className="bg-blue-600 hover:bg-blue-500 text-white h-9 text-xs font-black uppercase tracking-wider rounded-xl flex items-center gap-1.5"
+            >
+              {isSavingEdit ? "Saving..." : "Save Changes"}
+              <Save className="h-3.5 w-3.5" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

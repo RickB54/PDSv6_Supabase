@@ -133,11 +133,30 @@ export const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEm
 
   const handleEditEngagement = async (eng: any) => {
     const newNote = prompt("Edit engagement note:", eng.note);
-    if (newNote === null || newNote === eng.note) return;
+    if (newNote === null) return;
+
+    const currentDateStr = eng.created_at ? new Date(eng.created_at).toLocaleString() : "";
+    const newDateInput = prompt("Edit engagement timestamp (Date & Time, e.g. '08/07/2026 11:45 AM'):", currentDateStr);
+
     try {
-      const { error } = await supabase.from('engagements').update({ note: newNote }).eq('id', eng.id);
+      let updatedCreatedAt = eng.created_at;
+      if (newDateInput && newDateInput !== currentDateStr) {
+        const parsedDate = new Date(newDateInput);
+        if (!isNaN(parsedDate.getTime())) {
+          updatedCreatedAt = parsedDate.toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('engagements')
+        .update({ 
+          note: newNote,
+          created_at: updatedCreatedAt
+        })
+        .eq('id', eng.id);
+
       if (error) throw error;
-      toast({ title: "Updated", description: "Engagement note updated." });
+      toast({ title: "Updated", description: "Engagement updated successfully." });
       loadTimeline();
     } catch (err) {
       console.error(err);
