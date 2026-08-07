@@ -93,10 +93,22 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
           }
       }
       
-      const customerToUpdate = customers.find(c => c.name === selectedBookingForReview.customer);
-      if (customerToUpdate && customerToUpdate.has_google_review !== reviewForm.googleReview) {
+      const customerToUpdate = customers.find(c => 
+          (selectedBookingForReview.customerId && c.id === selectedBookingForReview.customerId) ||
+          (c.name && selectedBookingForReview.customer && c.name.trim().toLowerCase() === selectedBookingForReview.customer.trim().toLowerCase())
+      );
+      if (customerToUpdate) {
           try {
               await upsertCustomer({ ...customerToUpdate, has_google_review: reviewForm.googleReview });
+              if (!isDemoActive() && customerToUpdate.id && customerToUpdate.id.length > 20) {
+                  const newNotes = reviewForm.googleReview 
+                      ? ((customerToUpdate.notes || '').includes('[HAS_GOOGLE_REVIEW]') ? customerToUpdate.notes : `${customerToUpdate.notes || ''}\n[HAS_GOOGLE_REVIEW]`.trim())
+                      : (customerToUpdate.notes || '').replace('[HAS_GOOGLE_REVIEW]', '').trim();
+                  await supabase.from('customers').update({ 
+                      has_google_review: reviewForm.googleReview,
+                      notes: newNotes
+                  }).eq('id', customerToUpdate.id);
+              }
           } catch (err) { console.error(err); }
       }
 
@@ -122,10 +134,20 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
           }
       }
       
-      const customerToUpdate = customers.find(c => c.name === booking.customer);
-      if (customerToUpdate && customerToUpdate.has_google_review) {
+      const customerToUpdate = customers.find(c => 
+          (booking.customerId && c.id === booking.customerId) ||
+          (c.name && booking.customer && c.name.trim().toLowerCase() === booking.customer.trim().toLowerCase())
+      );
+      if (customerToUpdate) {
           try {
               await upsertCustomer({ ...customerToUpdate, has_google_review: false });
+              if (!isDemoActive() && customerToUpdate.id && customerToUpdate.id.length > 20) {
+                  const newNotes = (customerToUpdate.notes || '').replace('[HAS_GOOGLE_REVIEW]', '').trim();
+                  await supabase.from('customers').update({ 
+                      has_google_review: false,
+                      notes: newNotes
+                  }).eq('id', customerToUpdate.id);
+              }
           } catch (err) { console.error(err); }
       }
       
@@ -149,13 +171,28 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
   // Customers who have had at least one completed booking
   const customersWithCompletedJobs = customers.filter(c => {
     return bookings.some(b => 
-      b.customerId === c.id && 
+      ((b.customerId && b.customerId === c.id) || 
+       (b.customer && c.name && b.customer.trim().toLowerCase() === c.name.trim().toLowerCase())) && 
       (b.status === 'done' || b.status === 'completed')
     );
   });
 
-  const reviewed = customers.filter(c => c.has_google_review);
-  const unreviewed = customersWithCompletedJobs.filter(c => !c.has_google_review);
+  const isCustomerReviewed = (c: Customer) => {
+    if (c.has_google_review) return true;
+    
+    const custBookings = bookings.filter(b => 
+      (b.customerId && b.customerId === c.id) || 
+      (b.customer && c.name && b.customer.trim().toLowerCase() === c.name.trim().toLowerCase())
+    );
+    
+    return custBookings.some(b => {
+      const rev = bookingReviews[b.id];
+      return rev && (rev.googleReview || rev.sentiment === 'loved' || rev.sentiment === 'satisfied' || (rev.googleStars && rev.googleStars > 0));
+    });
+  };
+
+  const reviewed = customers.filter(c => isCustomerReviewed(c));
+  const unreviewed = customersWithCompletedJobs.filter(c => !isCustomerReviewed(c));
 
   const reviewRate = customersWithCompletedJobs.length > 0 
     ? Math.round((reviewed.length / customersWithCompletedJobs.length) * 100) 
@@ -165,8 +202,8 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
     (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   ).sort((a, b) => {
-    const aBookings = bookings.filter(bk => bk.customerId === a.id).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
-    const bBookings = bookings.filter(bk => bk.customerId === b.id).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
+    const aBookings = bookings.filter(bk => bk.customerId === a.id || (bk.customer && a.name && bk.customer.trim().toLowerCase() === a.name.trim().toLowerCase())).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
+    const bBookings = bookings.filter(bk => bk.customerId === b.id || (bk.customer && b.name && bk.customer.trim().toLowerCase() === b.name.trim().toLowerCase())).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
     const aDate = aBookings.length > 0 ? new Date(aBookings[0].date).getTime() : 0;
     const bDate = bBookings.length > 0 ? new Date(bBookings[0].date).getTime() : 0;
     return bDate - aDate;
@@ -176,8 +213,8 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
     (c.name || '').toLowerCase().includes(vipSearchTerm.toLowerCase()) ||
     (c.email || '').toLowerCase().includes(vipSearchTerm.toLowerCase())
   ).sort((a, b) => {
-    const aBookings = bookings.filter(bk => bk.customerId === a.id).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
-    const bBookings = bookings.filter(bk => bk.customerId === b.id).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
+    const aBookings = bookings.filter(bk => bk.customerId === a.id || (bk.customer && a.name && bk.customer.trim().toLowerCase() === a.name.trim().toLowerCase())).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
+    const bBookings = bookings.filter(bk => bk.customerId === b.id || (bk.customer && b.name && bk.customer.trim().toLowerCase() === b.name.trim().toLowerCase())).sort((x, y) => new Date(y.date).getTime() - new Date(x.date).getTime());
     const aDate = aBookings.length > 0 ? new Date(aBookings[0].date).getTime() : 0;
     const bDate = bBookings.length > 0 ? new Date(bBookings[0].date).getTime() : 0;
     return bDate - aDate;

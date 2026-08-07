@@ -758,11 +758,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
         }
         
-        const customerToUpdate = customers.find(c => c.name === selectedBookingForReview.customer);
-        if (customerToUpdate && customerToUpdate.has_google_review !== reviewForm.googleReview) {
+        const customerToUpdate = customers.find(c => 
+            (selectedBookingForReview.customerId && c.id === selectedBookingForReview.customerId) ||
+            (c.name && selectedBookingForReview.customer && c.name.trim().toLowerCase() === selectedBookingForReview.customer.trim().toLowerCase())
+        );
+        if (customerToUpdate) {
             try {
                 const { upsertCustomer } = await import('@/lib/db');
                 await upsertCustomer({ ...customerToUpdate, has_google_review: reviewForm.googleReview });
+                if (!isDemoActive() && customerToUpdate.id && customerToUpdate.id.length > 20) {
+                    const { supabase } = await import('@/lib/supa-data');
+                    const newNotes = reviewForm.googleReview 
+                        ? ((customerToUpdate.notes || '').includes('[HAS_GOOGLE_REVIEW]') ? customerToUpdate.notes : `${customerToUpdate.notes || ''}\n[HAS_GOOGLE_REVIEW]`.trim())
+                        : (customerToUpdate.notes || '').replace('[HAS_GOOGLE_REVIEW]', '').trim();
+                    await supabase.from('customers').update({ 
+                        has_google_review: reviewForm.googleReview,
+                        notes: newNotes
+                    }).eq('id', customerToUpdate.id);
+                }
                 if (onRefresh) onRefresh();
             } catch (err) { console.error(err); }
         }
@@ -789,11 +802,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
         }
         
-        const customerToUpdate = customers.find(c => c.name === booking.customer);
-        if (customerToUpdate && customerToUpdate.has_google_review) {
+        const customerToUpdate = customers.find(c => 
+            (booking.customerId && c.id === booking.customerId) ||
+            (c.name && booking.customer && c.name.trim().toLowerCase() === booking.customer.trim().toLowerCase())
+        );
+        if (customerToUpdate) {
             try {
                 const { upsertCustomer } = await import('@/lib/db');
                 await upsertCustomer({ ...customerToUpdate, has_google_review: false });
+                if (!isDemoActive() && customerToUpdate.id && customerToUpdate.id.length > 20) {
+                    const { supabase } = await import('@/lib/supa-data');
+                    const newNotes = (customerToUpdate.notes || '').replace('[HAS_GOOGLE_REVIEW]', '').trim();
+                    await supabase.from('customers').update({ 
+                        has_google_review: false,
+                        notes: newNotes
+                    }).eq('id', customerToUpdate.id);
+                }
                 if (onRefresh) onRefresh();
             } catch (err) { console.error(err); }
         }
@@ -1323,7 +1347,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             };
 
             existing.count += 1;
-            existing.totalSpent += (Number(b.price) || 0);
+            if (b.status === 'done' || b.status === 'completed') {
+                existing.totalSpent += (Number(b.price) || 0);
+            }
             if (!existing.lastService || new Date(b.date) > new Date(existing.lastService)) {
                 existing.lastService = b.date;
                 existing.service = b.title;
@@ -1367,7 +1393,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             truck: { revenue: 0, count: 0, jobs: [] as any[] }, 
             luxury: { revenue: 0, count: 0, jobs: [] as any[] } 
         };
-        filteredPerfBookings.forEach(b => {
+        filteredPerfBookings.filter(b => b.status === 'done' || b.status === 'completed').forEach(b => {
             if (!b.vehicle) return;
             const v = b.vehicle.toLowerCase();
             const makeModel = `${b.vehicleMake || ''} ${b.vehicleModel || ''}`.toLowerCase();
@@ -1711,7 +1737,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         let mobileCost = 0;
         let hasMileageData = false;
 
-        const tableData = serviceDetailsData.map(s => {
+        // Filter: Only completed/done jobs with valid paid revenue (exclude prospects/estimates)
+        const completedServices = serviceDetailsData.filter(s => {
+            const isCompleted = s.status === 'done' || s.status === 'completed';
+            if (!isCompleted) return false;
+            if (s.invoiceId) {
+                const inv = invoices.find((i: any) => i.id === s.invoiceId);
+                if (inv && inv.paymentStatus === 'unpaid' && (inv.paidAmount || 0) <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        const tableData = completedServices.map(s => {
             const booking = filteredPerfBookings.find(b => b.id === s.id);
             const matches = consumptionData.filter(c => c.jobId === s.id);
             const cost = matches.reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
@@ -1749,7 +1788,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const avgMobileCost = mobileJobs > 0 ? mobileCost / mobileJobs : 0;
 
         return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs, hasMileageData };
-    }, [serviceDetailsData, consumptionData, filteredPerfBookings]);
+    }, [serviceDetailsData, consumptionData, filteredPerfBookings, invoices]);
 
     if (showEmployeeAnalytics) {
         return (

@@ -457,7 +457,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 conditionInside: c.condition_inside || vi.conditionInside || '',
                 conditionOutside: c.condition_outside || vi.conditionOutside || '',
                 activity_log: c.activity_log || [],
-                has_google_review: (c.notes || '').includes('[HAS_GOOGLE_REVIEW]')
+                has_google_review: !!c.has_google_review || (c.notes || '').includes('[HAS_GOOGLE_REVIEW]')
             } as Customer;
         };
 

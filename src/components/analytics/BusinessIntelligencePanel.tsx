@@ -26,8 +26,8 @@ export function BusinessIntelligencePanel({ bookings, customers, invoices = [], 
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const weekBookings = bookings.filter(b => b.date && isWithinInterval(parseISO(b.date), { start: weekStart, end: weekEnd }));
-    const monthBookings = bookings.filter(b => b.date && isWithinInterval(parseISO(b.date), { start: monthStart, end: monthEnd }));
+    const weekBookings = bookings.filter(b => (b.status === 'done' || b.status === 'completed') && b.date && isWithinInterval(parseISO(b.date), { start: weekStart, end: weekEnd }));
+    const monthBookings = bookings.filter(b => (b.status === 'done' || b.status === 'completed') && b.date && isWithinInterval(parseISO(b.date), { start: monthStart, end: monthEnd }));
 
     const weekRev = weekBookings.reduce((sum, b) => sum + (b.price || 0), 0);
     const monthRev = monthBookings.reduce((sum, b) => sum + (b.price || 0), 0);
