@@ -952,6 +952,83 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_qual_dateFilter', JSON.stringify(qualDateFilter));
     }, [qualShowArchived, qualDateFilter]);
 
+    // --- Scroll-Spy active section state for Analytics bookmark bar ---
+    const [activeSection, setActiveSection] = useState<string>('revenue-performance');
+
+    useEffect(() => {
+        if (showProfitability || showEmployeeAnalytics) return;
+
+        const sectionIds = [
+            'revenue-performance',
+            'service-detail',
+            'invoices-tracker',
+            'estimates-tracker',
+            'probono-tracker',
+            'customer-insights',
+            'operational-quality'
+        ];
+
+        const handleScrollSpy = () => {
+            const headerOffset = 120;
+            const scrollPosition = window.scrollY + headerOffset;
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+
+            // Check if user is scrolled to very bottom of document
+            if (window.scrollY + windowHeight >= documentHeight - 60) {
+                setActiveSection('operational-quality');
+                return;
+            }
+
+            let currentActive = 'revenue-performance';
+            let minDistance = Infinity;
+
+            sectionIds.forEach((id) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const rect = el.getBoundingClientRect();
+                const elementTop = rect.top + window.scrollY;
+
+                const dist = Math.abs(scrollPosition - elementTop);
+
+                if (rect.top <= headerOffset + 160 && rect.bottom >= headerOffset - 40) {
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        currentActive = id;
+                    }
+                }
+            });
+
+            setActiveSection(currentActive);
+        };
+
+        const observerOptions: IntersectionObserverInit = {
+            root: null,
+            rootMargin: '-90px 0px -40% 0px',
+            threshold: [0, 0.15, 0.3, 0.5, 0.75, 1.0]
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            handleScrollSpy();
+        }, observerOptions);
+
+        const timeoutId = setTimeout(() => {
+            sectionIds.forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) observer.observe(el);
+            });
+            handleScrollSpy();
+        }, 150);
+
+        window.addEventListener('scroll', handleScrollSpy, { passive: true });
+
+        return () => {
+            clearTimeout(timeoutId);
+            observer.disconnect();
+            window.removeEventListener('scroll', handleScrollSpy);
+        };
+    }, [showProfitability, showEmployeeAnalytics]);
+
     const [showTestData, setShowTestData] = useState(true);
 
     const handleArchiveToggle = (bookingId: string, currentStatus: boolean) => {
@@ -2001,16 +2078,165 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1">
                     <BookOpen className="w-3 h-3"/> Jump To:
                 </span>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>Revenue & Pipeline</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' })}>Service Logs</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Invoices</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Estimates & Quotes</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' })}>Probono Jobs</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' })}>Customer Insights</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' })}>Quality Review</Button>
-                <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:text-white" onClick={() => setShowProfitability(true)}>Profitability</Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'revenue-performance' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('revenue-performance');
+                        document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Revenue & Pipeline
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'service-detail' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('service-detail');
+                        document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Service Logs
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'invoices-tracker' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-sm shadow-indigo-950/50 ring-1 ring-indigo-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('invoices-tracker');
+                        document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Invoices
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'estimates-tracker' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('estimates-tracker');
+                        document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Estimates & Quotes
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'probono-tracker' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-pink-500/20 border-pink-500/60 text-pink-300 font-bold shadow-sm shadow-pink-950/50 ring-1 ring-pink-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('probono-tracker');
+                        document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Probono Jobs
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'customer-insights' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-blue-500/20 border-blue-500/60 text-blue-300 font-bold shadow-sm shadow-blue-950/50 ring-1 ring-blue-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('customer-insights');
+                        document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Customer Insights
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'operational-quality' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('operational-quality');
+                        document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Quality Review
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        showProfitability
+                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowEmployeeAnalytics(false);
+                        setShowProfitability(true);
+                    }}
+                >
+                    Profitability
+                </Button>
                 {!isDemoMode && (
-                    <Button variant="outline" size="sm" className="h-6 px-2 text-[10px] bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300" onClick={() => setShowEmployeeAnalytics(true)}>Compensation Calculator</Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200",
+                            showEmployeeAnalytics
+                                ? "bg-purple-500/20 border-purple-500/60 text-purple-300 font-bold shadow-sm shadow-purple-950/50 ring-1 ring-purple-500/30"
+                                : "bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(true);
+                        }}
+                    >
+                        Compensation Calculator
+                    </Button>
                 )}
 
                 <div className="flex-1 min-w-[20px]"></div>
