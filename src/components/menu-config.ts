@@ -167,6 +167,7 @@ export const getMenuGroups = (counts: {
         {
             title: "Prime Learning Center", icon: GraduationCap, iconColor: "text-indigo-400",
             items: [
+                { title: "Standard Operating Procedures (SOPs)", url: "/training-manual?tab=process", key: "sops-process", icon: FileText, helpTopicId: 'sops-process' },
                 { title: "Employee Certification", url: "/training-manual?tab=videos", key: "cert-prog", icon: Shield, helpTopicId: 'employee-certification' },
                 { title: "Learning Library", url: "/learning-library", key: "learn-lib", icon: BookOpen, helpTopicId: 'learn-lib' },
                 { title: "Orientation", url: "/orientation", key: "orientation", icon: UserPlus, helpTopicId: 'orientation' },

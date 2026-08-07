@@ -167,6 +167,15 @@ const renderSidebarContent = (
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Checklist</span>}
                 </Button>
 
+                <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/training-manual?tab=process')} title="Standard Operating Procedures (SOPs)" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <FileText className="w-5 h-5 text-amber-400" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">SOPs</span>}
+                </Button>
+
+                <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/tasks')} title="Tasks" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <CheckSquare className="w-5 h-5 text-blue-500" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Tasks</span>}

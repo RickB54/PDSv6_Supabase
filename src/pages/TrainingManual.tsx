@@ -184,6 +184,16 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
 
     // Tips State
     const [tipsOpen, setTipsOpen] = useState(false);
+    const sopsRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (activeTab === "process") {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            setTimeout(() => {
+                sopsRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+            }, 50);
+        }
+    }, [activeTab]);
 
     useEffect(() => { loadData(); }, [userId]);
 
@@ -851,41 +861,46 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                     </div>
                 </div>
 
-                <div className="mb-6 flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50">
-                    <div>
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent flex items-center gap-3">
-                            Welcome, {currentUser?.name || "Guest"}
-                        </h1>
-                        <p className="text-zinc-400 text-sm">
-                            {currentUser ? "Continue your certification journey." : "Please log in to track your progress and earn badges."}
-                        </p>
-                    </div>
-                </div>
-
-                {/* User Badges Display */}
-                {userId !== 'guest' && (
-                    <div className="mb-8">
-                        <h3 className="text-sm uppercase text-zinc-500 font-bold mb-3 tracking-wider">Your Certifications</h3>
-                        <div className="flex flex-wrap gap-3">
-                            {modules.filter(m => {
-                                const p = progress.find(pr => pr.module_id === m.id);
-                                return p?.status === 'completed' && m.badge_reward_id;
-                            }).map(m => {
-                                const badge = m.badge; // joined
-                                if (!badge) return null;
-                                return (
-                                    <div key={m.id} className={`flex items-center gap-2 px-3 py-2 rounded-full border bg-${badge.color}-500/10 border-${badge.color}-500/30 text-${badge.color}-400`}>
-                                        <ShieldCheck className="w-4 h-4" />
-                                        <span className="text-sm font-bold">{badge.title}</span>
-                                    </div>
-                                );
-                            })}
-                            {/* Fallback for no badges */}
-                            {!modules.some(m => progress.some(p => p.module_id === m.id && p.status === 'completed') && m.badge_reward_id) &&
-                                <p className="text-zinc-600 text-sm italic">Complete training modules to earn badges.</p>
-                            }
+                {/* Hide Welcome & Badges on SOPs tab so SOPs header is visible at the top without scrolling */}
+                {activeTab !== "process" && (
+                  <>
+                    <div className="mb-6 flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800/50">
+                        <div>
+                            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent flex items-center gap-3">
+                                Welcome, {currentUser?.name || "Guest"}
+                            </h1>
+                            <p className="text-zinc-400 text-sm">
+                                {currentUser ? "Continue your certification journey." : "Please log in to track your progress and earn badges."}
+                            </p>
                         </div>
                     </div>
+
+                    {/* User Badges Display */}
+                    {userId !== 'guest' && (
+                        <div className="mb-8">
+                            <h3 className="text-sm uppercase text-zinc-500 font-bold mb-3 tracking-wider">Your Certifications</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {modules.filter(m => {
+                                    const p = progress.find(pr => pr.module_id === m.id);
+                                    return p?.status === 'completed' && m.badge_reward_id;
+                                }).map(m => {
+                                    const badge = m.badge; // joined
+                                    if (!badge) return null;
+                                    return (
+                                        <div key={m.id} className={`flex items-center gap-2 px-3 py-2 rounded-full border bg-${badge.color}-500/10 border-${badge.color}-500/30 text-${badge.color}-400`}>
+                                            <ShieldCheck className="w-4 h-4" />
+                                            <span className="text-sm font-bold">{badge.title}</span>
+                                        </div>
+                                    );
+                                })}
+                                {/* Fallback for no badges */}
+                                {!modules.some(m => progress.some(p => p.module_id === m.id && p.status === 'completed') && m.badge_reward_id) &&
+                                    <p className="text-zinc-600 text-sm italic">Complete training modules to earn badges.</p>
+                                }
+                            </div>
+                        </div>
+                    )}
+                  </>
                 )}
 
                 {mode === "library" ? (
@@ -993,7 +1008,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="process" className="space-y-6">
+                        <TabsContent value="process" ref={sopsRef} className="space-y-6">
                             <div className="bg-zinc-900 p-4 md:p-6 rounded-xl border border-zinc-800 space-y-8">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                                     <div>
