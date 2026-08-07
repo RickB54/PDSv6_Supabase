@@ -188,7 +188,7 @@ export const GlobalModals: React.FC = () => {
                 initialTab={ricksTipsTab}
             />
 
-            <CustomerCommunicationGuide />
+            <CustomerCommunicationGuide showTrigger={false} />
         </>
     );
 };

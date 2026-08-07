@@ -198,7 +198,7 @@ const VehicleScratchpad = () => {
   );
 };
 
-export function CustomerCommunicationGuide() {
+export function CustomerCommunicationGuide({ showTrigger = true }: { showTrigger?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<number | null>(0);
 
@@ -456,17 +456,19 @@ export function CustomerCommunicationGuide() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 shadow-sm flex items-center gap-2 whitespace-nowrap"
-          title="Open Customer Communication Guide"
-        >
-          <MessageSquareQuote className="w-4 h-4" />
-          <span className="hidden sm:inline font-semibold">Comm. Guide</span>
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 shadow-sm flex items-center gap-2 whitespace-nowrap"
+            title="Open Customer Communication Guide"
+          >
+            <MessageSquareQuote className="w-4 h-4" />
+            <span className="hidden sm:inline font-semibold">Comm. Guide</span>
+          </Button>
+        </DialogTrigger>
+      )}
       
       <DialogContent id="comm-guide-scroll-container" className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white border-slate-200 shadow-2xl">
         {/* Sticky Header */}
