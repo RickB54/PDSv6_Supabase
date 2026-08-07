@@ -47,7 +47,7 @@ export const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEm
         .forEach(b => items.push({
           ...b,
           timelineType: 'booking',
-          sortDate: new Date(b.date || b.created_at)
+          sortDate: new Date(b.created_at || b.createdAt || b.date)
         }));
 
       // 2. Activity Logs

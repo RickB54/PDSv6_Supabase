@@ -127,7 +127,8 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
         if (b.notes && b.notes.trim()) {
           combinedData.push({
             id: `booking_note_${b.id}`,
-            created_at: b.date || b.created_at || new Date().toISOString(),
+            created_at: b.created_at || b.createdAt || b.date || new Date().toISOString(),
+            timestamp: b.date || b.created_at || new Date().toISOString(),
             customer_name: customer.name,
             customer_email: customer.email,
             type: 'booking_note',
