@@ -26,7 +26,7 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown, FileText,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, MessagesSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
   Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft, PenTool
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
@@ -1101,8 +1101,8 @@ export default function Prospects() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer, 'notes'); }} className="h-8 w-8 p-0 text-yellow-500 hover:text-yellow-400" title="Quick Notes">
-                          <FileText className="h-4 w-4" />
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(customer, 'crm'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="CRM Hub">
+                          <MessagesSquare className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"

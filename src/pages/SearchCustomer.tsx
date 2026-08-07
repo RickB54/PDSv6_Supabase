@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft, PenTool } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, MessagesSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft, PenTool } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -1141,8 +1141,8 @@ const SearchCustomer = () => {
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
                         </Button>
-                         <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer, 'notes'); }} className="h-8 w-8 p-0 text-yellow-500 hover:text-yellow-400" title="Quick Notes">
-                           <FileText className="h-4 w-4" />
+                         <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer, 'crm'); }} className="h-8 w-8 p-0 text-cyan-400 hover:text-cyan-300" title="CRM Hub">
+                           <MessagesSquare className="h-4 w-4" />
                          </Button>
                          <Button
                            variant="ghost"
