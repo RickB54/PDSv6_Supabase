@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, DollarSign, ArrowRight, Wallet, User as UserIcon, HelpCircle, Info } from 'lucide-react';
 import TipSelectionScreen from './TipSelectionScreen';
 import { getUnifiedCustomers } from '@/lib/customers';
-import { upsertSupabaseCustomer, upsertSupabaseInvoice } from '@/lib/supa-data';
+import { upsertSupabaseCustomer, upsertSupabaseInvoice, sendTeamMessage } from '@/lib/supa-data';
+import { getCurrentUser } from '@/lib/auth';
+import { pushAdminAlert } from '@/lib/adminAlerts';
 import { upsertReceivable } from '@/lib/receivables';
 import { generateInvoiceNumber } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -114,11 +116,16 @@ export default function QuickPayModal() {
         onCashPayment={async (tip) => {
           const baseAmount = parseFloat(amountStr) || 0;
           const totalPaid = baseAmount + tip;
-          const customerName = customers.find(c => c.id === selectedCustomerId)?.name || "Walk-In Customer";
+          const targetCustomer = customers.find(c => c.id === selectedCustomerId);
+          const customerName = targetCustomer?.name || "Walk-In Customer";
+          const customerEmail = targetCustomer?.email || "No Email Provided";
+          const customerPhone = targetCustomer?.phone || "No Phone Provided";
+
+          const invNum = generateInvoiceNumber();
 
           // Generate Invoice
           const invoiceData = {
-            invoiceNumber: generateInvoiceNumber(),
+            invoiceNumber: invNum,
             customerId: selectedCustomerId || null,
             customerName: customerName,
             vehicle: "Various/Quick Pay",
@@ -131,8 +138,10 @@ export default function QuickPayModal() {
             paidAmount: totalPaid
           };
 
+          let invoiceCreated = false;
           try {
             await upsertSupabaseInvoice(invoiceData);
+            invoiceCreated = true;
             toast({ 
               title: 'Standalone Invoice Generated', 
               description: 'A Quick Pay invoice was created. NOTE: To pay an existing Checklist/Booking, please visit the Invoices page directly.',
@@ -141,6 +150,48 @@ export default function QuickPayModal() {
           } catch (e) {
             console.error("Failed to record cash payment:", e);
             toast({ title: 'Error', description: 'Failed to record payment in accounting.', variant: 'destructive' });
+          }
+
+          // IMMEDIATELY NOTIFY ADMIN OF QUICK PAY TRANSACTION
+          try {
+            const currentUser = getCurrentUser();
+            const actorName = currentUser?.name || currentUser?.email || 'Employee';
+            const actorEmail = currentUser?.email || 'employee@primeautodetail.net';
+
+            const alertContent = `🚨 QUICK PAY CASH PAYMENT RECEIVED 💵
+• Processed By: ${actorName} (${actorEmail})
+• Total Amount Collected: $${totalPaid.toFixed(2)} (Base: $${baseAmount.toFixed(2)} + Tip: $${tip.toFixed(2)})
+• Customer Name: ${customerName}
+• Customer Email: ${customerEmail}
+• Customer Phone: ${customerPhone}
+• Invoice Status: ${invoiceCreated ? `Invoice #${invNum} Created & Paid` : '⚠️ Invoice Creation Failed'}`;
+
+            // 1. Send Team Chat message (triggers audio & live alerts for Admin)
+            await sendTeamMessage(alertContent, actorEmail, actorName, null);
+
+            // 2. Push System Admin Alert (bell icon notification drawer)
+            pushAdminAlert(
+              'invoice_created',
+              `Quick Pay CASH payment of $${totalPaid.toFixed(2)} received by ${actorName} for ${customerName}. Invoice #${invNum} ${invoiceCreated ? 'Created' : 'FAILED'}.`,
+              actorName,
+              {
+                recordType: 'Invoice',
+                invoiceNumber: invNum,
+                amount: totalPaid,
+                customerName: customerName,
+                customerEmail: customerEmail,
+                customerPhone: customerPhone,
+                invoiceCreated,
+                paymentMethod: 'Cash'
+              }
+            );
+
+            // 3. Trigger global notification event
+            window.dispatchEvent(new CustomEvent('quick-pay-completed', {
+              detail: { invoiceNumber: invNum, totalPaid, customerName, paymentMethod: 'Cash' }
+            }));
+          } catch (notifyErr) {
+            console.error("Failed to send Quick Pay admin notification:", notifyErr);
           }
 
           handleClose();

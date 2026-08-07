@@ -129,6 +129,17 @@ const renderSidebarContent = (
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Dashboard</span>}
                 </Button>
 
+                <Button
+                    variant="ghost"
+                    size={collapsed ? "icon" : "default"}
+                    onClick={() => window.dispatchEvent(new Event('open-quick-pay'))}
+                    title="Collect Payment (Quick Pay)"
+                    className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-emerald-500/20 transition-all`}
+                >
+                    <DollarSign className="w-5 h-5 text-emerald-500" />
+                    {!collapsed && <span className="font-bold uppercase tracking-tight text-white group-hover:text-emerald-400 truncate">Quick Pay</span>}
+                </Button>
+
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <Video className="w-5 h-5 text-pink-500" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Gallery</span>}

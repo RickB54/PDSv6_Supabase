@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone, HelpCircle, Info } from 'lucide-react';
+import { getCurrentUser } from '@/lib/auth';
+import { sendTeamMessage } from '@/lib/supa-data';
+import { pushAdminAlert } from '@/lib/adminAlerts';
 
 interface TipSelectionScreenProps {
   jobId: string;
@@ -64,6 +67,29 @@ export default function TipSelectionScreen({
 
       // Successfully returned a session URL
       if (data.url) {
+        try {
+          const currentUser = getCurrentUser();
+          const actorName = currentUser?.name || currentUser?.email || 'Employee';
+          const actorEmail = currentUser?.email || 'employee@primeautodetail.net';
+          const totalAmtStr = getTotalAmountDisplay();
+
+          const stripeAlertMsg = `🚨 QUICK PAY STRIPE PAYMENT INITIALIZED 💳
+• Processed By: ${actorName} (${actorEmail})
+• Total Amount: $${totalAmtStr} (Base: $${basePriceFormatted} + Tip: ${getTipAmountDisplay()})
+• Method: ${mode === 'qrcode' ? 'Customer QR Code Scan' : 'Stripe Checkout'}
+• Reference ID: ${jobId}`;
+
+          sendTeamMessage(stripeAlertMsg, actorEmail, actorName, null).catch(console.error);
+          pushAdminAlert(
+            'invoice_created',
+            `Quick Pay STRIPE payment ($${totalAmtStr}) initiated by ${actorName}.`,
+            actorName,
+            { paymentMethod: 'Stripe', amount: totalAmtStr, jobId }
+          );
+        } catch (e) {
+          console.error("Failed to dispatch Stripe admin alert:", e);
+        }
+
         if (mode === 'qrcode') {
           setQrCodeUrl(data.url);
           setLoading(false);
