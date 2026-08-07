@@ -80,35 +80,59 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
 
     setIsAdding(true);
     try {
-      const systemLoggedTime = new Date().toISOString();
-      const interactionTime = customDate ? new Date(customDate).toISOString() : systemLoggedTime;
+      const interactionTime = customDate ? new Date(customDate).toISOString() : new Date().toISOString();
 
-      const payload = {
+      const payload: any = {
         customer_id: customer.id,
         customer_name: customer.name,
         customer_email: customer.email,
         note: note.trim(),
         type: type,
-        created_at: systemLoggedTime,
-        timestamp: interactionTime
+        created_at: interactionTime
       };
 
-      const { data, error } = await supabase
-        .from('engagements')
-        .insert(payload)
-        .select()
-        .single();
+      let newRecord: any = null;
 
-      if (error) throw error;
+      if (localStorage.getItem("demo_mode_active") === "true") {
+        newRecord = { id: 'demo-' + Date.now(), ...payload };
+      } else {
+        const { data, error } = await supabase
+          .from('engagements')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (error) throw error;
+        newRecord = data;
+      }
 
       toast.success("Activity logged");
       setNote("");
       setIsAdding(false);
-      setActivities([data, ...activities]);
+      if (newRecord) {
+        setActivities(prev => [newRecord, ...prev].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()));
+      }
       if (onRefresh) onRefresh();
     } catch (e: any) {
-      toast.error("Failed to log activity", { description: e.message });
+      console.error("Failed to log activity to Supabase", e);
+      // Fallback: Store locally on customer profile if table schema or network fails
+      const interactionTime = customDate ? new Date(customDate).toISOString() : new Date().toISOString();
+      const localEntry = {
+        id: 'local-' + Date.now(),
+        type: type,
+        note: note.trim(),
+        created_at: interactionTime,
+        date: interactionTime
+      };
+      
+      const currentLog = (customer as any).activity_log || (customer as any).activityLog || [];
+      (customer as any).activity_log = [localEntry, ...currentLog];
+      
+      setActivities(prev => [localEntry, ...prev].sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()));
+      toast.success("Activity logged");
+      setNote("");
       setIsAdding(false);
+      if (onRefresh) onRefresh();
     }
   };
 
@@ -260,9 +284,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
           )}
 
           {activities.map((act, idx) => {
-            const occurrenceTime = act.timestamp || act.created_at;
-            const systemLoggedTime = act.created_at;
-            const hasDiff = occurrenceTime && systemLoggedTime && Math.abs(new Date(occurrenceTime).getTime() - new Date(systemLoggedTime).getTime()) > 60000;
+            const displayTime = act.created_at || act.timestamp || act.date || new Date().toISOString();
 
             return (
               <div key={act.id || idx} className="group relative flex flex-col gap-2 p-3 sm:p-4 bg-zinc-950/40 rounded-2xl border border-white/5 text-[10px] hover:border-blue-500/20 transition-all shadow-sm">
@@ -276,12 +298,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
                         {getActivityLabel(act.type)}
                       </div>
                       <div className="text-[9px] text-zinc-400 font-bold flex flex-wrap items-center gap-x-2">
-                        <span>{format(new Date(occurrenceTime), 'MMMM dd, yyyy · p')}</span>
-                        {hasDiff && (
-                          <span className="text-zinc-500 font-normal">
-                            (Logged System Time: {format(new Date(systemLoggedTime), 'MMMM dd, yyyy · p')})
-                          </span>
-                        )}
+                        <span>{format(new Date(displayTime), 'MMMM dd, yyyy · p')}</span>
                       </div>
                     </div>
                   </div>

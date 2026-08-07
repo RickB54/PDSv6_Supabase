@@ -897,25 +897,35 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                                     </div>
                                   </div>
                                   
-                                  <div className="space-y-2.5 text-xs text-zinc-300">
+                                  <div className="space-y-3 text-xs text-zinc-300">
                                     <div>
-                                      <span className="font-bold text-blue-400">1. Activity Logger:</span>
-                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
-                                        Record manual calls, text messages, emails, and notes. Select the exact interaction date/time and the system automatically records the actual system logged timestamp.
-                                      </p>
-                                    </div>
-                                    
-                                    <div>
-                                      <span className="font-bold text-indigo-400">2. Unified Timeline:</span>
-                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
-                                        View all customer interactions in chronological order, including manual entries, custom letters, estimate emails, and automated retention follow-ups.
+                                      <span className="font-bold text-blue-400">1. Historical Timestamp Editing:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-relaxed mt-0.5">
+                                        When logging a past call or text, click the <strong className="text-zinc-200">Time</strong> field next to the dropdown. Select the exact date and time it occurred, and the CRM will place it in chronological order.
                                       </p>
                                     </div>
 
                                     <div>
-                                      <span className="font-bold text-emerald-400">3. Retention & Direct Outreach:</span>
-                                      <p className="text-[11px] text-zinc-400 leading-tight mt-0.5">
-                                        Send personalized campaign emails, custom PDF letters, or estimate links with optional loyalty discount codes to drive repeat bookings.
+                                      <span className="font-bold text-amber-400">2. Google Voice & Phone Workflow:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-relaxed mt-0.5">
+                                        <strong className="text-zinc-200">Is copy/pasting standard? YES.</strong> Standard Google Voice numbers do not allow direct live third-party app access without carrier API migrations (e.g. Twilio/Telnyx).
+                                      </p>
+                                      <p className="text-[11px] text-zinc-400 leading-relaxed mt-1 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 text-amber-200">
+                                        <strong className="text-amber-400">Recommended Method:</strong> Send your live text message via Google Voice first, then copy & paste the text into this logger. Set the <strong className="text-white">Time</strong> field to match Google Voice's timestamp. This keeps your CRM history 100% accurate with zero risk of duplicate texts or delivery issues!
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <span className="font-bold text-indigo-400">3. Unified Timeline:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-relaxed mt-0.5">
+                                        View all calls, texts, letters, estimates, and bookings in one chronological feed.
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <span className="font-bold text-emerald-400">4. Retention & Direct Outreach:</span>
+                                      <p className="text-[11px] text-zinc-400 leading-relaxed mt-0.5">
+                                        Send campaign emails, custom PDF letters, or estimate links with loyalty codes to drive repeat business.
                                       </p>
                                     </div>
                                   </div>
