@@ -31,7 +31,14 @@ import {
   Sparkles,
   BarChart3,
   Database,
-  ArrowRight
+  ArrowRight,
+  ListChecks,
+  MessageSquare,
+  PhoneCall,
+  Sliders,
+  Calendar,
+  Lock,
+  Grid
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,519 +79,834 @@ const procedures: ProcedurePage[] = [
     title: "01: The Administrative Core",
     icon: LayoutDashboard,
     color: "from-blue-600 to-indigo-700",
-    summary: "Managing the nerve center of Prime Auto Detail. From the Central Hub to Website Administration and global settings.",
+    summary: "Managing the nerve center of Prime Auto Detail. From the Central Hub and Website Administration to dynamic role-based sidebars and security settings.",
     sections: [
       {
-        title: "Prime Central Hub & Alerts",
-        content: "The Central Hub is the first screen every administrator should review upon start-of-day. It aggregates real-time metrics from active jobs, pending bookings, and financial performance. Administrators use this view to monitor the 'Shop Pulse' and respond to system-wide alerts. Every morning should begin here to assess resource allocation and identify urgent follow-ups.",
+        title: "Prime Central Hub & Real-Time Sync",
+        content: "The Central Hub is the primary operational dashboard for shop leadership. It provides instant visibility into active workload metrics, pending bookings, chemical stock alerts, and daily revenue pulse. The system utilizes a bidirectional real-time bridge so that a technician marking a checklist item complete on a mobile device instantly updates the desktop view in the office.",
         subsections: [
           {
             title: "Real-time Sync",
-            content: "The Hub utilizes a bidirectional bridge to ensure that a checkmark on a mobile technician's phone reflects instantly on the Admin's desktop.",
+            content: "Bidirectional state bridge ensures mobile field detailer actions reflect instantly on admin desktop monitors.",
             icon: Zap
+          },
+          {
+            title: "Shop Pulse Monitoring",
+            content: "Aggregates active jobs, unassigned bookings, low inventory thresholds, and unread team messages into one screen.",
+            icon: LayoutDashboard
           }
         ]
       },
       {
-        title: "Website Administration",
-        content: "This portal manages the 'Public Face' of your business. It allows you to toggle service availability, update pricing packages, manage operational modes, and control home-page testimonials. Ensuring your Website Admin settings match your shop's actual capacity is critical to prevent over-booking and maintaining customer trust.",
+        title: "Website Administration & Operational Modes",
+        content: "Controls the public-facing storefront at primeautodetail.net. Administrators manage service availability, package rates, facility disclaimers, and 5 distinct Operational Status Modes: Live Mode (full public bookings), Pre-Launch Mode (coming soon state), Winter Pause (seasonal off-season mode), Marketing Specials (sales campaigns with growing dropdown catalog & custom presets), and Custom Mode (full custom outage banner text). Testimonials can be toggled on or off on the home page and have been streamlined out of the About page to avoid redundancy. The Methuen facility notice displays 'We are serving customers exclusively at our state-of-the-art Methuen facility. Come visit us (By Appointment Only) for a premium experience!' without exposing private street addresses.",
         subsections: [
           {
-            title: "Live Booking Control",
-            content: "Enable or disable specific slots and set SUV/Truck premiums that apply instantly to the online booking portal.",
-            icon: Settings
-          },
-          {
             title: "Operational Status Modes",
-            content: "Toggle between 5 modes: Live, Pre-Launch, Winter Pause, Marketing (Sales Specials via growing dropdown catalog & custom presets), and Custom (a completely blank canvas for typing custom outage/alert messages).",
+            content: "Select from 5 presets (Live, Pre-Launch, Winter Pause, Marketing Specials catalog, Custom) to control booking access and public banners.",
             icon: Sparkles
           },
           {
             title: "Facility Banner & Privacy",
-            content: "Default banner displays 'We are serving customers exclusively at our state-of-the-art Methuen facility. Come visit us (By Appointment Only) for a premium experience!' without revealing the street address to protect operational privacy.",
+            content: "Default Methuen facility banner promotes appointment-only service without revealing private residential address details.",
             icon: ShieldCheck
           },
           {
             title: "Testimonials Control",
-            content: "Toggle a home-page testimonials block to hide it clean when no reviews are on hand. Removed completely from the About Page to eliminate redundancy.",
+            content: "Toggle public home-page testimonials on/off. Streamlined out of About page to maintain clean visual presentation.",
             icon: Star
           }
         ]
       },
       {
-        title: "Personal Notes & System Settings",
-        content: "Operational efficiency relies on tracking the small details. Personal Notes are tied to your admin profile and persist across devices—perfect for internal 'To-Dos'. System Settings control your shop identity: tax rates, labor costs, and currency. Accuracy here ensures every invoice and report is legally compliant.",
+        title: "Role-Based Navigation & Dynamic Sidebar",
+        content: "The right-side icon bar dynamically mirrors the active user role (Admin, Employee, or Customer). Admin mode exposes instant shortcuts to Financials, Quick Pay, SOPs, Customers, Bookings, Inventory, and Settings. Employee mode presents Employee Dashboard, Active Jobs, Checklist, SOPs, Sticky Notes, Tasks, and Gallery. Customer mode displays Customer Dashboard, Vehicle Garage, Service History, Invoices, and Booking portal.",
         subsections: [
           {
-            title: "Internal Audits",
-            content: "Use the 'Private' toggle on notes to document employee performance or strategy ideas.",
-            icon: Clock
+            title: "Dynamic Icon Sidebar",
+            content: "Right-side icon navigation bar automatically adapts to Admin, Employee, or Customer access rights.",
+            icon: Sliders
+          },
+          {
+            title: "SOPs Icon Placement",
+            content: "Positioned directly under Checklist in Employee sidebar and under Quick Pay in Admin sidebar using the cyan ListChecks icon.",
+            icon: ListChecks
+          }
+        ]
+      },
+      {
+        title: "Application Settings & Security Kill-Switch",
+        content: "Application Master Settings controls tax rates, labor targets, currency, and public URL security. Administrators can toggle the public /demo URL Security Kill-Switch to instantly block external public access, select custom outage reasons (Maintenance, Security Audit, Private Training), while retaining internal Admin Preview Mode for safe staff onboarding.",
+        subsections: [
+          {
+            title: "Demo URL Security Kill-Switch",
+            content: "Instantly disable public /demo URL access with custom outage status messages while preserving internal Admin Preview Mode.",
+            icon: Lock
           }
         ]
       }
     ],
     proTips: [
-      "Check the 'Alerts' panel in the Hub every 2 hours to stay ahead of new lead inquiries.",
-      "Use 'Website Admin' to push seasonal specials (e.g. 'Winter Salt Neutralizer') to the front page."
+      "Check the Central Hub alerts every morning to address unassigned appointments and low-inventory warnings.",
+      "Use Marketing Specials mode during slow mid-week periods to push targeted seasonal package discounts to primeautodetail.net."
     ],
     warnings: [
-      "Public-facing website changes take effect immediately; always verify in a 'Customer View' tab.",
-      "Incorrect Tax rates in Settings can lead to significant accounting errors; verify these with your CPA."
+      "Public website admin updates take effect immediately on primeautodetail.net; always verify changes in an incognito Customer View tab.",
+      "Flipping the Demo Security Kill-Switch to OFF revokes public demo access immediately; keep Admin Preview Mode enabled for internal training."
     ]
   },
   {
-    id: "financial-intelligence",
-    title: "02: Financial Intelligence",
-    icon: BarChart3,
-    color: "from-indigo-600 to-violet-800",
-    summary: "Transforming revenue into strategy. Mastering Finance, Sales Reports, and Business Goals.",
+    id: "customer-intake",
+    title: "02: Customer Intake & Sales",
+    icon: Users,
+    color: "from-sky-600 to-cyan-800",
+    summary: "Master customer relationships, multi-vehicle bookings, interactive quotes, and sales tools.",
     sections: [
       {
-        title: "Finance & Sales Ledger",
-        content: "Professionalism is measured in numbers. The Finance module provides a complete ledger of Income vs. Expenses. We use a 'Net Valuation' model: your profit accounts for both cash on hand and the value of your shelf inventory. This provides a true 'Break-Even' point for your initial capital investment.",
+        title: "Customer Intelligence 360",
+        content: "Customer Intelligence 360 is the centralized CRM research hub. It aggregates total customer lifetime value, full vehicle garage history, transaction ledgers, photo archives, and engagement audit logs. The system maintains strict separation between customer CRM records and employee accounts: employee credentials (e.g. Paul Dickerson) sign into the Employee Dashboard, while their vehicle service records as a customer can be managed in Customer Intelligence 360.",
         subsections: [
           {
-            title: "Invoicing & Payments",
-            content: "Manage the complete billing lifecycle. Mark jobs as 'Paid' to instantly move revenue into your accounting ledger.",
-            icon: DollarSign
-          }
-        ]
-      },
-      {
-        title: "Analytics & Reports Center",
-        content: "The Reports Center is your business intelligence hub. It aggregates live data from every corner of the shop. Use 'Temporal Scanning' (Date Filters) to analyze performance by day, week, month, or custom range. This allows you to identify seasonal trends and high-margin services.",
-        subsections: [
+            title: "360-Degree Profile",
+            content: "Review lifetime spend, past invoices, vehicle specs, and preferred chemical scents in one place.",
+            icon: Users
+          },
           {
-            title: "Sales Tax Audits",
-            content: "Generate PDF reports for Sales Tax and Deductible Expenses with one click to simplify your quarterly filings.",
-            icon: FileText
-          }
-        ]
-      },
-      {
-        title: "Business Goals & Milestones",
-        content: "Turning targets into reality. Use the Goals module to set monthly revenue quotas or job-count milestones. The system provides a visual progress gauge that motivates the entire team. Goals are automatically updated as jobs are marked 'Paid', ensuring 100% accuracy.",
-        subsections: [
-          {
-            title: "Progress Tracking",
-            content: "Set revenue targets, booking counts, or CSAT scores to gamify shop performance.",
-            icon: Target
-          }
-        ]
-      }
-    ],
-    proTips: [
-      "Aim for a 20% Net Profit margin after factoring in all chemical and labor costs.",
-      "Compare this month's analytics to the same month last year to identify seasonal growth trends."
-    ],
-    warnings: [
-      "Incomplete expense logging will result in 'False Positive' profit reports; be meticulous.",
-      "Never mix Personal and Business expenses in the ledger to maintain IRS compliance."
-    ]
-  },
-  {
-    id: "asset-management",
-    title: "03: Asset & Media Management",
-    icon: Database,
-    color: "from-emerald-600 to-teal-800",
-    summary: "Organizing the physical and digital artifacts of the business. Vehicle Gallery, File Manager, and Inventory (2).",
-    sections: [
-      {
-        title: "The Vehicle Gallery",
-        content: "Your work is your best advertisement. The Vehicle Gallery stores every 'Before' and 'After' transformation. Images are automatically tagged by vehicle type and customer name. This gallery feeds into the 'Elite Stories' blog and provides a legal condition archive for every vehicle that enters the shop.",
-        subsections: [
-          {
-            title: "High-Res Evidence",
-            content: "Photos uploaded here serve as a legal record of the vehicle's condition upon entry and exit.",
+            title: "Account Isolation",
+            content: "Employees logging into the app access their Employee Dashboard; vehicle service customer records are accessed via CI 360.",
             icon: ShieldCheck
           }
         ]
       },
       {
-        title: "File Manager & Asset Pool",
-        content: "Hardware and Documentation are the foundation of your shop. The **File Manager** stores insurance, leases, and SDS sheets. The **Asset Pool** (Inventory & Assets 2) tracks physical hardware: buffers, pressure washers, and extractors. Every asset has a 'Maintenance Schedule' alert.",
+        title: "Prospect vs. Customer Smart Logic",
+        content: "When entering new leads, the system enforces a 4-step smart deduplication check: 1. Email Lookup $\rightarrow$ 2. Name Match $\rightarrow$ 3. Phone Verification $\rightarrow$ 4. New Prospect Creation. Leads who have not booked are stored as Prospects to keep customer metrics clean. One-click conversion moves a prospect to Customer status as soon as their first booking or estimate is approved.",
         subsections: [
           {
-            title: "Asset Depletion",
-            content: "The system calculates the depreciation of your hardware to provide accurate tax deductions.",
-            icon: BarChart3
+            title: "4-Step Smart Dedup",
+            content: "Checks email, name, and phone before creating records to prevent duplicate profiles and lost history.",
+            icon: Search
           },
           {
-            title: "Visual Folder Indicators",
-            content: "Any folder in the Business Drive of the File Manager that contains at least one active file or image lights up in green to quickly direct detailers to active content.",
+            title: "1-Click Conversion",
+            content: "Convert leads to full Customer status with a single click upon appointment confirmation.",
             icon: CheckCircle2
           }
         ]
       },
       {
-        title: "Inventory Control (Consumables)",
-        content: "Never run out of product during a job. Inventory Control tracks your 'consumables' (Chemicals, Towels, Pads). Set 'Low Threshold' alerts to trigger restock notifications. The system integrates directly with the 'Prep Summary' to ensure your mobile rigs are always fully loaded.",
+        title: "Multi-Vehicle Bookings & Interactive Estimates",
+        content: "The booking engine supports appending multiple vehicles to a single appointment slot, applying vehicle-specific package multipliers and add-ons per car. The Estimates module generates professional PDF quotes with flat-rate or percentage-based discounts. Toggling an estimate to 'Sent' automatically injects an engagement log into the client's CRM history.",
         subsections: [
           {
-            title: "Smart Sync Engine",
-            content: "Audits your entire shop for unlinked items and links them to the Chemical Knowledge Base.",
-            icon: Zap
+            title: "Multi-Vehicle Support",
+            content: "Attach multiple cars to one client booking with size-based pricing for each vehicle.",
+            icon: Truck
           },
           {
-            title: "Unified Chemical Modal",
-            content: "Centralized interface for managing a chemical's basic information alongside its varying bottle sizes, custom costs, and stock levels. Use this to prevent redundant entries and harness AI generated templates.",
-            icon: Layers
+            title: "CRM Engagement Sync",
+            content: "Marking an estimate as 'Sent' automatically logs an audit entry in the client's Customer 360 timeline.",
+            icon: History
+          }
+        ]
+      },
+      {
+        title: "Phone Assistant Utility & Promo Codes",
+        content: "The floating Phone Assistant utility provides quick-access call scripts, pricing packages, and direct lead capture tools for handling incoming sales calls without leaving the active screen. The Promo Code manager enables setting flat or percentage discounts with vehicle-type and expiration date restrictions.",
+        subsections: [
+          {
+            title: "Floating Call Assistant",
+            content: "Inquiry scripts and direct lead capture modal accessible from any page via the phone icon.",
+            icon: PhoneCall
+          },
+          {
+            title: "Promo Code Rules",
+            content: "Configure discount codes with start/end dates, usage limits, and vehicle classification rules.",
+            icon: Sparkles
           }
         ]
       }
     ],
     proTips: [
-      "Tag photos in the gallery with keywords like 'Ceramic' or 'Pet Hair' for faster marketing searches.",
-      "Set your 'Low Stock' alert to trigger when you have 1 gallon of chemical left."
+      "Always search by phone number or email before creating a new customer to maintain flawless service history.",
+      "Use the Phone Assistant's objection-handling scripts when clients compare professional detailing to standard car washes."
     ],
     warnings: [
-      "Large video files can slow down the sync; use the 'Optimize for Web' button when uploading.",
-      "Missing asset maintenance (e.g. polisher brushes) can lead to equipment failure during a job."
+      "Creating duplicate customer records fragments vehicle inspection archives and revenue reports.",
+      "Estimates must be converted to Active Bookings before technician checklists can be initiated."
     ]
   },
   {
-    id: "operational-logistics",
-    title: "04: Operational Logistics",
+    id: "operations-scheduling",
+    title: "03: Operations & Scheduling",
     icon: Cpu,
     color: "from-rose-600 to-red-800",
-    summary: "The master workflow of Prime Auto Detail. Mastering the Bookings lifecycle and the high-precision Service Checklist.",
+    summary: "The operational heartbeat. Bookings lifecycle, active job timer, SOPs navigation, and the Master Service Checklist.",
     sections: [
       {
         title: "Bookings & Appointment Lifecycle",
-        content: "The Booking system is the engine of our revenue. The lifecycle begins when a customer submits a request via the 'Book Now' portal. 1. **Initial Lead**: The request appears in the Central Hub for review. 2. **Verification**: Admins check for vehicle size accuracy and service availability. 3. **Confirmation**: Once approved, an automated confirmation email is sent with a calendar invite. 4. **Pre-Arrival**: The system sends a reminder 24 hours prior. This end-to-end automation ensures a zero-friction experience for the client while protecting the shop's schedule.",
+        content: "The Booking Manager coordinates daily shop capacity. Appointments progress through 6 stages: Lead Inquiry $\rightarrow$ Vehicle Assessment $\rightarrow$ Confirmed Schedule $\rightarrow$ Service Execution $\rightarrow$ Completed Invoice $\rightarrow$ Retention Cycle. The calendar offers Day, Week, and Month views, while the sidebar displays a live blue badge indicating active pending workload.",
         subsections: [
           {
-            title: "Lead Management",
-            content: "Leads must be converted to 'Confirmed' within 4 hours to maintain a high customer acquisition rate.",
-            icon: Search
+            title: "Workload Count Badge",
+            content: "Sidebar badge displays active jobs (Tentative, Confirmed, In Progress) and decrements when jobs reach Done.",
+            icon: Calendar
           },
           {
-            title: "Calendar Sync",
-            content: "The system bi-directionally syncs with the shop's Google Calendar to prevent double-booking mobile rigs.",
+            title: "Hybrid Availability Sync",
+            content: "Google Calendar sync prevents double-booking mobile units while allowing manual shop overrides.",
             icon: History
           }
         ]
       },
       {
-        title: "The Master Service Checklist (Detailed)",
-        content: "The Service Checklist is our technical 'Source of Truth'. It dictates exactly how a vehicle is transformed. **Step 1: Arrival & Intake**: The tech performs a walk-around, noting pre-existing damage. **Step 2: Execution**: The tech follows the categorical steps (Exterior, Interior, Protection). Each step is timestamped for efficiency tracking. **Step 3: Verification**: High-resolution 'After' photos are mandatory for every package. **Step 4: Final Sign-off**: The tech presents the results to the client, who provides a digital signature directly on the mobile device. This process guarantees 100% consistency and eliminates liability.",
+        title: "The Master Service Checklist (Local-First Architecture)",
+        content: "Engineered with a 'Local-First' architecture using browser localStorage. Technicians can check off steps in low-cell service areas without losing data. 'Save Progress' saves the current active state locally on that specific device. 'FINISH & COMPLETE JOB' stops the master timer, archives the work to a PDF, creates the official invoice, and clears the queue. 'Discard & Leave' completely wipes local state, while the orange 'Reset' button clears the current form back to template defaults without deleting history logs.",
         subsections: [
           {
-            title: "Step-by-Step Precision",
-            content: "Every item in the checklist must be green-lit or skipped with a valid technical reason.",
+            title: "Save Progress vs Finish",
+            content: "Save Progress retains active local state; Finish & Complete Job finalizes timer, generates invoice, and archives session.",
             icon: CheckCircle2
           },
           {
-            title: "Digital Sign-Off",
-            content: "The client's signature is automatically embedded into the final PDF invoice as a permanent record.",
-            icon: ShieldCheck
-          }
-        ]
-      },
-      {
-        title: "Active Jobs & Job History",
-        content: "The **Active Jobs** view is the live dashboard for technicians in the field. It shows their current timer, assigned rig, and client contact info. Once a job is finished and the signature is captured, it moves to **Job History**. The History module is a permanent archive used for returning customer research and revenue audits. Never delete a history record; use it to identify 'Legacy Add-ons' the client previously purchased.",
-        subsections: [
-          {
-            title: "Timer Accuracy",
-            content: "Technicians must start the timer the moment they arrive to ensure accurate 'Labor per Hour' reporting.",
-            icon: Clock
-          },
-          {
-            title: "Historical Audits",
-            content: "Access previous condition reports to ensure we are not held liable for old damages.",
-            icon: History
-          }
-        ]
-      },
-      {
-        title: "View As (Role Simulation)",
-        content: "The 'View As' tool is a powerful administrative feature that allows you to see the app exactly as an Employee or a Customer would. This is essential for: 1. **Staff Training**: Verifying that a new technician only sees their assigned checklists. 2. **UI Testing**: Ensuring that a new service package displays correctly in the customer's booking portal. 3. **Troubleshooting**: Diagnosing what a user is seeing in real-time without needing their credentials. It is the ultimate tool for verifying the 'User Experience' at every level.",
-        subsections: [
-          {
-            title: "Safe Simulation",
-            content: "Simulating a role does not affect your administrative permissions; it simply filters the UI view.",
-            icon: Users
-          }
-        ]
-      }
-    ],
-    proTips: [
-      "Use the 'Active Job' timer to compare real-world performance against estimated labor hours.",
-      "Review the 'Job History' before arriving at a repeat client's house to wow them with your memory."
-    ],
-    warnings: [
-      "Skipping checklist steps without a note is a violation of shop protocol and voids service warranties.",
-      "A job cannot be moved to 'Paid' until a digital signature has been captured and verified."
-    ]
-  },
-  {
-    id: "chemical-science",
-    title: "05: Chemical Science",
-    icon: Beaker,
-    color: "from-cyan-500 to-blue-700",
-    summary: "The technical advantage. Chemicals Library, Label System, and Ph Diagnostics.",
-    sections: [
-      {
-        title: "Chemicals Library & AI Assistant",
-        content: "Professional detailing is chemistry. The Chemicals Library stores the 'Ph-Profile' and SDS sheets for every product. Use the AI Assistant to cross-reference your inventory with specific contaminants (like Tree Sap or Concrete Dust) for the safest and most effective chemical response.",
-        subsections: [
-          {
-            title: "Master Ratio Sync",
-            content: "Updating a ratio on a chemical card instantly propagates that change to every checklist.",
-            icon: Zap
-          },
-          {
-            title: "Rick's Tips & Descriptions",
-            content: "Access the 75/25 split view directly via the 'Chem Desc' icon in the right sidebar. This provides highly readable, taller text areas for chemical descriptions and dilution notes.",
-            icon: Book
-          },
-          {
-            title: "Searchable Chemical Index",
-            content: "A fast, real-time searchable text input is located directly inside the chemical selection dropdown to help you find specific assets without scrolling.",
-            icon: Search
-          }
-        ]
-      },
-      {
-        title: "OSHA Label System (QR Codes)",
-        content: "Safety and compliance are non-negotiable. The app generates OSHA-compliant labels for every secondary bottle. Each label includes a QR code that, when scanned by a technician's phone, opens the exact dilution instructions and safety warnings for that chemical.",
-        subsections: [
-          {
-            title: "Visual Standardization",
-            content: "Color-coded labels ensure that 'Acidic' chemicals are never confused with 'Alkaline' ones.",
+            title: "Discard vs Reset Logic",
+            content: "Discard & Leave wipes localStorage state; Reset resets active checklist items without deleting log entries.",
             icon: AlertTriangle
           }
         ]
       },
       {
-        title: "Dilution Engine & Diagnostics",
-        content: "We never 'eyeball' our mixes. The Dilution Calculator provides precise measurements based on target ratios (e.g. 10:1). The Ph Diagnostic tool helps you choose the right chemical for the substrate—Acidic for mineral spots, Alkaline for organic grime, and Ph-Neutral for preservation.",
+        title: "Active Jobs & Admin Duration Editing",
+        content: "Active Jobs displays live technician timers and client info. If a technician forgets to check off a step on time, Administrators can click directly on the yellow duration badge to manually edit recorded time in mm:ss format without disrupting the master job clock.",
         subsections: [
           {
-            title: "Cost per Ounce",
-            content: "The engine calculates the 'Ready-to-Use' cost to help you refine your package pricing.",
-            icon: DollarSign
+            title: "Yellow Badge Time Edit",
+            content: "Admins can click the yellow duration badge on any checklist item to enter manual mm:ss time adjustments.",
+            icon: Clock
+          }
+        ]
+      },
+      {
+        title: "SOPs Navigation & Precision Scroll Clearance",
+        content: "Standard Operating Procedures (SOPs) are accessible via the cyan ListChecks icon in the right-side menu (located under Checklist in Employee mode and under Quick Pay in Admin mode). Navigating to /training-manual?tab=process includes an automated 100px top scroll clearance so the SOPs title lands cleanly below the sticky app bar without being obscured.",
+        subsections: [
+          {
+            title: "Cyan ListChecks Icon",
+            content: "Standardized SOPs icon across Global Sidebar, Training Center, and SOPs page headers.",
+            icon: ListChecks
           },
           {
-            title: "Batch PDF Exports",
-            content: "Use the Batch Print Modal to selectively batch print/PDF specific chemicals rather than the entire library. The export engine automatically handles page breaks for clean, professional documents.",
-            icon: FileText
+            title: "100px Top Clearance",
+            content: "Scroll landing offset guarantees the SOPs header title remains fully visible below top sticky navigation.",
+            icon: ArrowRight
           }
         ]
       }
     ],
     proTips: [
-      "Print fresh labels every quarter to ensure all safety QR codes remain scannable.",
-      "Use Ph-Neutral chemicals for 90% of maintenance washes to preserve existing coatings."
+      "Use 'Save Progress' when taking lunch breaks to keep active timer states intact on your mobile device.",
+      "Admins should review yellow badge time edits weekly to audit technician efficiency calculations."
     ],
     warnings: [
-      "Never mix incompatible chemicals; use the AI compatibility checker before experimenting.",
-      "Unlabeled secondary bottles are a safety violation and can lead to expensive surface damage."
+      "Hitting 'FINISH & COMPLETE JOB' permanently closes the active checklist session and creates an invoice.",
+      "Local-first checklist data is browser-specific; complete active jobs on the same device used to start them."
     ]
   },
   {
-    id: "staff-education",
-    title: "06: Staff & Education",
-    icon: Book,
-    color: "from-purple-600 to-fuchsia-800",
-    summary: "Managing the team. Staff Management, Learning Center, and Commission Logic.",
+    id: "financial-intelligence",
+    title: "04: Financial Intelligence",
+    icon: BarChart3,
+    color: "from-indigo-600 to-violet-800",
+    summary: "Master billing, Quick Pay logic, net valuation accounting, break-even analysis, and company budgeting.",
     sections: [
       {
-        title: "Staff Management & Schedules",
-        content: "Control who sees what. The system utilizes Role-Based Access Control (RBAC). **Admins** see the financials; **Employees** see the checklists. Use the Management page to set these roles and track technician performance through 'Checklist Audit Scores' and schedule assignments.",
+        title: "Quick Pay Modal & Verified Payment Notifications",
+        content: "Quick Pay enables instant payment collection on desktop or mobile. Users select between Cash (Local) or Pay with Stripe / QR Code. Critical Rule: PC notifications and alerts fire ONLY when payment is ACTUALLY RECEIVED and confirmed by Stripe/cash entry—NOT when the QR code or payment link is generated. The 'Go To Invoices' link is strictly Admin-only and is REMOVED from the Employee Quick Pay modal. A 4-step process guide tooltip is integrated directly into the modal header.",
         subsections: [
           {
-            title: "Technician Tracking",
-            content: "Monitor job completion times and quality scores to identify top-performing staff.",
-            icon: Users
+            title: "Verified Payment Alerts",
+            content: "Notifications fire only upon confirmed payment receipt, preventing premature revenue alerts during link generation.",
+            icon: Zap
+          },
+          {
+            title: "Role-Specific Quick Pay",
+            content: "Go To Invoices link is retained for Admins but hidden for Employees who lack Invoicing page access.",
+            icon: ShieldCheck
+          },
+          {
+            title: "4-Step Guidance Tooltip",
+            content: "Header tooltip outlines exact payment selection, QR presentation, payment confirmation, and receipt issuing.",
+            icon: Info
           }
         ]
       },
       {
-        title: "Prime Learning Center",
-        content: "Continuous education is our secret weapon. The Learning Center contains video tutorials, safety quizzes, and these very procedures. Every new hire must complete the 'Prime Foundation' course and pass the exam before they are assigned their first client vehicle.",
+        title: "Invoicing & Payment Lifecycle",
+        content: "Completed jobs generate pending invoices automatically. Marking an invoice as 'Sent' injects a permanent CRM audit trail record into the client's history. Multiple payment methods (Cash, Card, Check) can be split, and digital receipts with embedded client signatures can be exported to PDF or emailed.",
         subsections: [
           {
-            title: "Digital Handbooks",
-            content: "Access this Procedures Manual directly from the Learning Center for on-the-job reference.",
-            icon: Book
+            title: "CRM Invoicing Log",
+            content: "Sending or marking invoices paid writes automated timeline events to Customer 360 audit history.",
+            icon: FileText
           }
         ]
       },
       {
-        title: "Commissions & Payroll",
-        content: "Pay your team accurately. The Payroll module automatically calculates technician commissions based on their Tier (Level 1-5) and the jobs they have marked as 'Paid'. This eliminates manual accounting errors and provides technicians with a clear view of their earnings.",
+        title: "Net Valuation Accounting Model",
+        content: "Accounting operates on a Net Valuation Model: Net Profit = Total Revenue - (Operating Expenses + Shelf Inventory Value). Capital spent on chemicals and equipment is categorized as Inventory Assets rather than immediate loss, balancing initial net worth to $0.00 until revenue surplus is achieved. Revenue streams are strictly deduplicated to prevent invoice double-counting.",
         subsections: [
           {
-            title: "Tiered Growth",
-            content: "Technicians earn higher commissions as their 'Quality Score' increases in the system.",
-            icon: Trophy
+            title: "Net Valuation Formula",
+            content: "Factors tied-up chemical and tool assets into net worth calculations for true fiscal reporting.",
+            icon: DollarSign
+          },
+          {
+            title: "Ledger Deduplication",
+            content: "Revenue aggregation logic prevents double-counting between paid invoices and direct cash entries.",
+            icon: ShieldCheck
+          }
+        ]
+      },
+      {
+        title: "Break-Even Analysis & Company Budget",
+        content: "Break-Even Analysis calculates remaining capital payback: Remaining to Break-Even = (Inventory Assets + Operating Expenses) - Total Service Revenue. Company Budget allows setting monthly spending limits for Supplies, Marketing, and Equipment with visual Income vs Expense category breakdown charts.",
+        subsections: [
+          {
+            title: "Break-Even Tracker",
+            content: "Tracks exact dollar threshold remaining before business initial capital investment is fully paid off.",
+            icon: Target
+          },
+          {
+            title: "Departmental Budgets",
+            content: "Set spending targets per category and monitor actual vs planned expenditure in real time.",
+            icon: BarChart3
           }
         ]
       }
     ],
     proTips: [
-      "Review the 'Staff Leaderboard' during weekly meetings to reward the highest quality scores.",
-      "Assign 'Self-Study' modules in the Learning Center during rain delays or shop downtime."
+      "Use Quick Pay with Cash (Local) for immediate in-person checkouts to generate instant digital receipts.",
+      "Check Break-Even Analysis monthly to track how high-margin ceramic add-ons accelerate capital payback."
     ],
     warnings: [
-      "Unauthorized access to Payroll can lead to data privacy breaches; restrict Admin roles strictly.",
-      "Never allow a technician to perform a service they haven't completed the Learning module for."
+      "Initiating a QR code generates a payment link but does NOT constitute payment; wait for the confirmed payment alert.",
+      "Erasing an invoice removes it from active views; void or cancel invoices to preserve tax audit trails."
+    ]
+  },
+  {
+    id: "reporting-analytics",
+    title: "05: Reporting & Analytics",
+    icon: FileText,
+    color: "from-purple-600 to-indigo-900",
+    summary: "Data-driven business intelligence. Temporal scanning, sales tax audits, Time & Profitability analytics, and labor split compensation.",
+    sections: [
+      {
+        title: "Reports Center & Temporal Scanning",
+        content: "The Reports Center provides 360-degree analytics across accounting, inventory, estimates, invoices, and service packages. Temporal Scanning enables filtering all reports by Today, This Week, Monthly, All-Time, or Custom Range. One-click PDF exports generate tax-ready summaries for Sales Tax collectables and Deductible Business Expenses.",
+        subsections: [
+          {
+            title: "Temporal Date Filters",
+            content: "Filter every report across daily, weekly, monthly, all-time, or custom date ranges.",
+            icon: Clock
+          },
+          {
+            title: "Tax-Ready PDF Exports",
+            content: "Export categorized expense and sales tax reports formatted specifically for quarterly CPA filings.",
+            icon: FileText
+          }
+        ]
+      },
+      {
+        title: "Time & Profitability Dashboard",
+        content: "Analyzes shop efficiency by calculating Revenue per Hour, Net Payout per Hour, and Net Profit per Hour for every completed job. Includes Stripe fee deduction badges, a 'Backfill Historical Data' bulk editor for updating older records, and a Drag List identifying lowest $/Hr performing jobs for SOP optimization.",
+        subsections: [
+          {
+            title: "Backfill Bulk Editor",
+            content: "Recalculate historical time and profitability metrics across previous job records with one click.",
+            icon: History
+          },
+          {
+            title: "Lowest $/Hr Drag List",
+            content: "Highlights underperforming services to target package price adjustments or procedural retraining.",
+            icon: AlertTriangle
+          }
+        ]
+      },
+      {
+        title: "Compensation Calculator & Labor Split",
+        content: "Calculates technician pay based strictly on remaining Labor Revenue (Gross Price minus Chemical Costs, Shop Overhead, and Stripe Fee Split) across technician Tiers (Level 1-5). Protects shop profitability by enforcing that employee commissions are never paid from gross customer pricing.",
+        subsections: [
+          {
+            title: "Labor Split Protection",
+            content: "Deducts chemical and shop expenses before calculating employee commission percentages.",
+            icon: DollarSign
+          },
+          {
+            title: "Stripe Fee Share",
+            content: "Configurable percentage split for absorbing credit card processing fees prior to commission payout.",
+            icon: Sliders
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Run the Time & Profitability report monthly to identify which add-on services yield over $100/hour.",
+      "Use Custom Range date filtering when preparing end-of-year tax documentation."
+    ],
+    warnings: [
+      "Calculating technician commissions on gross pricing without deducting chemical overhead erodes net profit margins.",
+      "Unpaid pending invoices are excluded from revenue reports until marked Paid."
+    ]
+  },
+  {
+    id: "chemical-science",
+    title: "06: Chemical Science & Lab",
+    icon: Beaker,
+    color: "from-cyan-500 to-blue-700",
+    summary: "The chemical advantage. Ph diagnostics, Master Ratio sync, OSHA label system, Dilution Engine math, and batch PDF exports.",
+    sections: [
+      {
+        title: "Chemicals Library & AI Consultant",
+        content: "Stores safety profiles, Ph-levels, and SDS sheets for all shop chemicals. The Chemical AI Consultant uses specific technical prompts (e.g. 'Can I use Product A on Substrate B?') to provide chemistry-based surface safety and contamination removal guidance. Includes a searchable chemical dropdown index for fast product selection.",
+        subsections: [
+          {
+            title: "AI Chemical Consultant",
+            content: "Inputs substrate condition and contaminant type to recommend Ph-matched chemical solutions.",
+            icon: Sparkles
+          },
+          {
+            title: "Searchable Index",
+            content: "Searchable text input built into chemical selection dropdowns for instant product lookup.",
+            icon: Search
+          }
+        ]
+      },
+      {
+        title: "Master Ratio Universal Sync",
+        content: "Updating a chemical ratio anywhere—in the Dilution Reference Chart, Chemical Card, or Inventory Table—instantly propagates across the entire application via Universal Bidirectional Sync. Knowledge Base cards auto-link to matching physical shelf stock upon creation.",
+        subsections: [
+          {
+            title: "Universal Sync",
+            content: "Ratio edits in any view automatically update cards, charts, and inventory tables globally.",
+            icon: Zap
+          }
+        ]
+      },
+      {
+        title: "OSHA Label Maker & Multi-Chemical Sticker Sheet",
+        content: "Creates OSHA-compliant bottle labels with GHS hazard symbols, AI FIX description condensing, and task ratios. The Multi-Chemical Sticker Sheet features a 10-label (2x5 grid) free-form layout where users can assign DIFFERENT chemicals to each slot, with 'FILL ENTIRE SHEET' and 'CLEAR SHEET' bulk controls.",
+        subsections: [
+          {
+            title: "10-Label Free-Form Sheet",
+            content: "Assign individual chemical designs to each slot on a 2x5 sticker sheet for multi-bottle printing.",
+            icon: Grid
+          },
+          {
+            title: "AI FIX Description Condenser",
+            content: "Condenses detailed chemical instructions into high-contrast text optimized for bottle labels.",
+            icon: Sparkles
+          }
+        ]
+      },
+      {
+        title: "Dilution Calculator (DRC) & Selective Batch PDF",
+        content: "The Prime Dilution Ratio Calculator (DRC) features Ratio Mode (X:1), Percent Mode (%), Swap (⇄) tool for product-first math, Reverse (®) logic, and Oz/Ml conversion. Rick's Tips provides a 75/25 split screen layout (75% description, 25% dilution notes). The Selective Batch PDF Print Modal enables printing custom chemical subsets with stable page-break formatting.",
+        subsections: [
+          {
+            title: "DRC Swap & Reverse Tools",
+            content: "Swap tool calculates required water for remaining chemical volume; Reverse tool audits pre-mixed bottles.",
+            icon: Sliders
+          },
+          {
+            title: "Selective Batch PDF Export",
+            content: "Print custom chemical card selections with automated page-break alignment for physical shop binders.",
+            icon: Printer
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Use the DRC Swap tool when you have 4oz of chemical left and need to mix an exact 10:1 ratio.",
+      "Always add water to secondary spray bottles before adding chemical concentrate to prevent excessive foaming."
+    ],
+    warnings: [
+      "Never mix acidic iron removers with bleach or alkaline degreasers; verify compatibility with the AI Consultant.",
+      "Unlabeled secondary spray bottles violate OSHA standards and create hazardous chemical mix-ups."
+    ]
+  },
+  {
+    id: "inventory-asset",
+    title: "07: Inventory & Asset Management",
+    icon: Database,
+    color: "from-emerald-600 to-teal-800",
+    summary: "Physical and digital asset control. Consumables inventory, Smart Sync, Unified Chemical Modal, Asset Pool, File Manager, and Mobile Units.",
+    sections: [
+      {
+        title: "Master Inventory Control & Stock Thresholds",
+        content: "Tracks consumable items (Chemicals, Towels, Pads) with current stock counts, unit costs, and low-threshold alerts. Calculates real-time total liquid inventory value for net business valuation.",
+        subsections: [
+          {
+            title: "Low Stock Alerts",
+            content: "Triggers visual notifications when inventory falls below minimum threshold quantities.",
+            icon: AlertTriangle
+          }
+        ]
+      },
+      {
+        title: "Smart Sync Engine & Unified Chemical Modal",
+        content: "Smart Sync audits inventory for duplicates (matching Name + Brand while preserving master records) and auto-links unlinked items to Knowledge Base cards with 'Last Updated' timestamps. The Unified Chemical Modal consolidates basic info, bottle sizes, custom costs, and stock thresholds into one screen.",
+        subsections: [
+          {
+            title: "Smart Sync Deduplication",
+            content: "Merges duplicate product entries and auto-links inventory to master chemical cards.",
+            icon: Zap
+          },
+          {
+            title: "Unified Bottle Manager",
+            content: "Manage 16oz, 24oz, 32oz, and gallon costs and stock counts inside a single modal.",
+            icon: Layers
+          }
+        ]
+      },
+      {
+        title: "Asset Pool, File Manager & Mobile Setup",
+        content: "The Asset Pool tracks hardware (buffers, extractors) with depreciation schedules and maintenance alerts. The File Manager Business Drive features visual green folder indicators for folders containing active files. Mobile Unit Setup configures mobile rigs (e.g. F150 Command Center) with direct mobile camera photo capture and Supabase live sync indicators.",
+        subsections: [
+          {
+            title: "Green Visual Folder Indicators",
+            content: "Folders in the File Manager Business Drive light up green when containing active documents.",
+            icon: CheckCircle2
+          },
+          {
+            title: "Mobile Direct Camera Capture",
+            content: "Take photos directly inside mobile rig setup galleries for instant cloud inventory sync.",
+            icon: Camera
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Run Smart Sync monthly to ensure new chemical purchases are correctly linked to SDS safety cards.",
+      "Check green folder indicators in the File Manager to verify all mobile unit insurance documents are uploaded."
+    ],
+    warnings: [
+      "Deleting a master chemical product removes all associated bottle size variants; archive unused items instead.",
+      "Failing to log asset maintenance (e.g., extractor pump flushes) leads to equipment failure during mobile jobs."
+    ]
+  },
+  {
+    id: "staff-learning",
+    title: "08: Staff & Learning Center",
+    icon: Trophy,
+    color: "from-fuchsia-600 to-purple-900",
+    summary: "Team development and communication. Employee onboarding pre-authorization, RBAC security, Prime Learning Center, and Team Chat lifecycle.",
+    sections: [
+      {
+        title: "Role-Based Access Control & Employee Pre-Authorization",
+        content: "Enforces strict RBAC boundaries (Admin, Employee, Customer). Official Employee Onboarding Workflow: Admin opens Users & Roles $\rightarrow$ clicks 'Add Employee' $\rightarrow$ enters employee details $\rightarrow$ clicks 'Authorize Access'. This pre-authorizes the email address so when the employee registers, they automatically inherit correct Employee permissions and access to their dashboard.",
+        subsections: [
+          {
+            title: "Pre-Authorization Onboarding",
+            content: "Pre-authorize employee email addresses in Users & Roles to ensure automatic role assignment upon sign-up.",
+            icon: ShieldCheck
+          },
+          {
+            title: "Role Boundaries",
+            content: "Employees access active checklists, SOPs, and learning modules; financial ledgers remain Admin-restricted.",
+            icon: Lock
+          }
+        ]
+      },
+      {
+        title: "Prime Learning Center & SOPs Integration",
+        content: "Houses video masterclasses, safety quizzes, exam administration, digital certification badges, and SOP guides. SOPs are directly accessible via cyan ListChecks icons positioned in both left app navigation and right-side icon menus.",
+        subsections: [
+          {
+            title: "Certification Badges",
+            content: "Award technicians digital badges upon passing paint correction and ceramic coating exams.",
+            icon: Trophy
+          }
+        ]
+      },
+      {
+        title: "Team Chat Lifecycle & Session Termination",
+        content: "Provides internal messaging between shop and field detailers. Features 'End Conversation' session termination: clicking End Conversation sets a chat_ended flag, clears local chat state, and completely silences all audio alerts, visual banners, and unread badges until a new conversation starts. 'Clear Chat' invokes deleteAllTeamMessages to purge historical records.",
+        subsections: [
+          {
+            title: "End Conversation Alert Silencing",
+            content: "Terminating a chat session silences audio alerts and unread badges until a new session is initiated.",
+            icon: MessageSquare
+          },
+          {
+            title: "Clear Chat Purge",
+            content: "Purges chat history from local and database storage for clean session restarts.",
+            icon: Zap
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Use Pre-Authorization before inviting new technicians to register so they immediately land on the Employee Dashboard.",
+      "Click 'End Conversation' at the end of the shift to silence after-hours chat alerts on shop tablets."
+    ],
+    warnings: [
+      "Never share Admin credentials; assign individual Employee accounts via Pre-Authorization for full audit logging.",
+      "Clearing chat history purges team messages permanently; confirm before executing."
     ]
   },
   {
     id: "marketing-retention",
-    title: "07: Marketing & Retention",
+    title: "09: Marketing & Retention",
     icon: Mail,
     color: "from-amber-600 to-orange-800",
-    summary: "Closing the loop. Retention Engine, Follow-up Center, and AI Blog.",
+    summary: "Closing the retention loop. Retention Hub outreach, email campaigns with domain setup, Elite Story Master blog reordering, and QR stickers.",
     sections: [
       {
-        title: "Marketing & Retention Engine",
-        content: "Acquisition is expensive; retention is profitable. The Retention Engine monitors every client's 'Maintenance Cycle'. It identifies who is due for a wash or ceramic refresh (Monthly, Quarterly, etc.) and provides personalized outreach templates and SMS/Email reminders.",
+        title: "Retention Hub & Customer Outreach Engine",
+        content: "Tracks client service recency with a customizable inactivity threshold (default 90 days). Organized into 3 collapsible sections: Overdue (paying clients past threshold), Due Soon (approaching threshold), and Prospects (unbooked leads). Actions include 1-click email outreach, Apply Coupon & Send, Send Estimate, AI Letter Maker (10 templates with AI Professional Refine), Snooze (7/14/30 days), and Mark as Contacted. Includes a BCC toggle to copy Rick.PrimeAutoDetail@gmail.com on outreach emails.",
         subsections: [
           {
-            title: "Personalized Outreach",
-            content: "Embed loyalty coupons directly into retention emails to reward repeat business.",
+            title: "Snooze & Mark Contacted",
+            content: "Snooze temporarily hides clients for 7/14/30 days; Mark as Contacted logs offline calls and resets inactivity clocks.",
+            icon: Clock
+          },
+          {
+            title: "AI Letter Maker",
+            content: "Select from 10 professional letter templates and polish copy with AI Professional Refine.",
             icon: Sparkles
+          },
+          {
+            title: "Admin BCC Backup",
+            content: "BCC toggle sends backup copies of all outreach emails directly to Rick.PrimeAutoDetail@gmail.com.",
+            icon: Mail
           }
         ]
       },
       {
-        title: "Email Campaigns & Sender Domain Setup",
-        content: "Operationalizing outreach campaigns and configuring the delivery infrastructure. To prevent marketing emails from being marked as spam or blocked by email sandboxes, a verified business domain is required. Administrators utilize Supabase Secrets to control sender emails dynamically, while utilizing the BCC toggle to verify delivery.",
+        title: "Email Campaigns & Resend Custom Domain Setup",
+        content: "Features 6 customer and 4 prospect email campaigns. To send emails from custom domain addresses (e.g. Rick.PrimeAutoDetail@gmail.com or primeautodetail.net), administrators verify the domain on Resend and configure the SENDER_EMAIL secret via Supabase CLI (`supabase secrets set SENDER_EMAIL`).",
         subsections: [
           {
-            title: "Outreach Campaigns",
-            content: "Choose from 6 customer and 4 prospect campaigns (e.g., Seasonal Refresh, Ceramic Coating Booster, VIP Invites) to instantly load targeted drafts.",
-            icon: Sparkles
-          },
-          {
-            title: "Resend Custom Domains",
-            content: "Verify your domain on Resend and run 'supabase secrets set SENDER_EMAIL' to send from your custom email to all clients.",
+            title: "Resend Domain Verification",
+            content: "Configure SENDER_EMAIL secrets in Supabase CLI to enable custom business domain email delivery.",
             icon: Settings
           }
         ]
       },
       {
-        title: "The AI Blog (Elite Stories)",
-        content: "Turn your gallery photos into marketing content. The AI Blog assistant analyzes your 'Before & After' shots to write professional, SEO-optimized blog posts about the transformations. These stories are published to your website, driving organic search traffic to your booking portal.",
+        title: "Elite Story Master (Blog Reordering) & QR Generator",
+        content: "The Elite Story Master features accordion-style collapsible post rows, drag-and-drop reordering with grip handles, position badges, and a 'SAVE SEQUENCE' cloud commit button. Includes AI Strategist, Social Media Blast, and public/private toggles. The Sticker & QR Generator produces business cards and custom QR codes linking to Google reviews or booking portals.",
         subsections: [
           {
-            title: "Social Blast",
-            content: "Push your best 'Transformations' directly to social media from the marketing hub.",
+            title: "Drag & Drop Sequence Saving",
+            content: "Reorder blog post accordions using grip handles and click SAVE SEQUENCE to commit live website order.",
+            icon: Sliders
+          },
+          {
+            title: "QR Code Generator",
+            content: "Generate printable QR codes directing customers to review pages or the online booking portal.",
             icon: Share2
           }
         ]
       }
     ],
     proTips: [
-      "Set a 'Quarterly' maintenance cycle for every Ceramic Coating client for warranty compliance.",
-      "Use the 'Engagement History' tab to see exactly when and how you last contacted a client.",
-      "Use outreach campaigns like 'Ceramic Coating Booster Care' to drive high-margin repeat booking volume."
+      "Review the Retention Hub every Monday, sorting Overdue clients by 'Highest Value' to contact top clients first.",
+      "Use the BCC toggle during marketing campaigns to keep a copy of all outgoing client offers in your Gmail."
     ],
     warnings: [
-      "Over-marketing to the retention list can lead to high unsubscribe rates; limit automated emails.",
-      "Ensure all AI-generated blog content is reviewed for technical accuracy before publishing.",
-      "When in testing mode, Resend restricts sending to the verified developer account owner only. Update the SENDER_EMAIL secret once your domain is live."
+      "Dragging blog posts changes screen order only; you MUST click 'SAVE SEQUENCE' to update primeautodetail.net.",
+      "Ensure Resend custom domain records are verified before setting SENDER_EMAIL to prevent email delivery failure."
     ]
   },
   {
-    id: "data-security",
-    title: "08: Data & Security",
+    id: "system-security",
+    title: "10: System Settings & Security",
     icon: ShieldCheck,
     color: "from-slate-600 to-zinc-900",
-    summary: "The bedrock of the app. Privacy, Database Integrity, and System Backups.",
+    summary: "Application security, data privacy, database integrity, audit trails, and role simulation safeguards.",
     sections: [
       {
         title: "Privacy & Data Protection",
-        content: "Customer trust is built on privacy. The system follows strict 'Privacy First' protocols. This means personal calendar details are never exposed, and customer contact info is only visible to authorized personnel. All data is encrypted during transit to the Supabase cloud.",
+        content: "Enforces strict data privacy. Personal calendar event titles are masked during Google Calendar sync, and customer contact info is restricted to authorized roles. Communication with the Supabase backend is encrypted via HTTPS/TLS with OAuth 2.0 session handling.",
         subsections: [
           {
-            title: "Secure Access",
-            content: "Uses industry-standard OAuth 2.0 and session management to prevent unauthorized access.",
+            title: "Calendar Privacy Masking",
+            content: "Google Calendar sync blocks off busy time slots without exposing private event details on public sites.",
             icon: ShieldCheck
           }
         ]
       },
       {
-        title: "Database Integrity & Backups",
-        content: "Your business data is your most valuable asset. The system performs automated 'Point-in-Time' backups to the cloud. Deleting a record is a 3-step process to prevent accidental loss. Always 'Archive' inactive records instead of deleting to maintain your service history for tax purposes.",
+        title: "Database Integrity & Deletion Protocols",
+        content: "Database actions maintain full audit trails with timestamped user IDs. Deleting customer or invoice records requires 3-step confirmation. The 1-click Wipeout protocol surgically deletes test data while leaving live customer records untouched.",
         subsections: [
           {
-            title: "Audit Trail",
-            content: "Every modification to a job or financial record is timestamped and tied to a specific user.",
+            title: "Cascading Audit Logs",
+            content: "Modification events write timestamped user audit entries to prevent unrecorded data edits.",
             icon: History
           }
         ]
+      },
+      {
+        title: "Role Simulation ('View As') Safeguards",
+        content: "The 'View As' tool allows Administrators to safely preview the application from an Employee or Customer perspective. Role simulation filters UI navigation without altering underlying administrative credentials or permissions.",
+        subsections: [
+          {
+            title: "Safe Role Simulation",
+            content: "Preview Employee or Customer user interfaces safely without elevating or revoking actual admin rights.",
+            icon: Users
+          }
+        ]
       }
     ],
     proTips: [
-      "Perform a monthly 'Data Audit' to ensure all customer records have valid phone numbers and emails.",
-      "Set your 'Session Timeout' to 1 hour on shared shop tablets."
+      "Use 'View As Customer' after updating pricing packages to verify how rates render in public booking flows.",
+      "Perform a quarterly audit of user roles in Users & Roles to remove access for inactive staff."
     ],
     warnings: [
-      "A deletion is permanent and cannot be undone; use 'Archive' as your first course of action.",
-      "Sharing Admin credentials is a violation of shop security policy and voids technical support."
+      "Permanent record deletion cannot be reversed; use status archiving whenever possible.",
+      "Sharing admin login credentials violates security policy and compromises user audit logging."
     ]
   },
   {
-    id: "test-sandbox",
-    title: "09: Test Customer & Sandbox Workflow",
-    icon: Beaker,
-    color: "from-amber-500 to-yellow-700",
-    summary: "Simulating the complete customer lifecycle. Auto-fill tools, live testing in Accounting, and the 1-click Wipeout protocol.",
+    id: "technical-sops",
+    title: "11: Technical Reference SOPs",
+    icon: Workflow,
+    color: "from-teal-600 to-emerald-800",
+    summary: "Master shop-floor reference protocols. Printable Dilution Reference Chart, Chemical Decision Matrix, and Emergency Safety Standards.",
     sections: [
       {
-        title: "Creating the Test Data",
-        content: "To accurately verify the customer portal and your shop's communication logic, you must generate realistic data. The system provides an 'Auto-Fill Rick Berube Test' button on all public-facing forms (Contact, Book Now). Clicking this generates a standardized test lead/booking linked to your developer email.",
+        title: "Printable Dilution Reference Chart",
+        content: "High-visibility shop reference chart optimized for mobile portrait view. Features pinned sticky headers/sidebars, color-coded 16oz (emerald), 24oz (blue), and 32oz (purple) bottle size columns, 4px vertical scenario separator lines between Standard, Heavy Duty, and Maintenance ratios, brand-first sorting, and accidental edit confirmation dialogs.",
         subsections: [
           {
-            title: "The Test Banner",
-            content: "Once a Rick Berube test profile is created, a persistent red 'Test Data Active' banner will appear at the bottom of the screen to warn you that your numbers are currently skewed.",
-            icon: AlertTriangle
-          }
-        ]
-      },
-      {
-        title: "Live Analytics & Accounting Impact",
-        content: "We do NOT hide test data from your financial dashboards. When you convert a Rick Berube Estimate to an Invoice and mark it 'Paid', your Accounting and Analytics totals will immediately increase. This is intentional: it allows you to verify with 100% certainty that your revenue formulas, tax calculations, and conversion metrics are functioning correctly under load.",
-        subsections: [
-          {
-            title: "True Simulation",
-            content: "Test invoices behave exactly like real invoices, providing a perfect sandbox for verifying new pricing models or discount logic.",
-            icon: DollarSign
-          }
-        ]
-      },
-      {
-        title: "The 1-Click Wipeout Protocol",
-        content: "Once you have finished your testing and verified your numbers, you must clean the database to restore your true business metrics. Click the 'Wipe Test Data Now' button located inside the red warning banner.",
-        subsections: [
-          {
-            title: "Cascading Deletion",
-            content: "The wipeout protocol is surgical. It cascades through the entire database, deleting all Rick Berube Invoices, Estimates, Bookings, Vehicles, and Customer Records—leaving your real data untouched.",
-            icon: Zap
+            title: "Sticky Navigation & Mobile Fit",
+            content: "Product names and oz columns stay pinned while scrolling for effortless shop-floor mixing.",
+            icon: Grid
           },
           {
-            title: "Instant Recalculation",
-            content: "Immediately after wiping, your Accounting and Analytics pages will automatically recalculate and revert to their true, live business totals.",
-            icon: BarChart3
+            title: "Vertical Scenario Separators",
+            content: "4px vertical lines visually separate Standard, Heavy Duty, and Maintenance dilution columns.",
+            icon: Sliders
+          }
+        ]
+      },
+      {
+        title: "Chemical Decision Matrix & Substrate Diagnostics",
+        content: "Guides technicians through vehicle assessment: 1. Grade condition severity (Light, Moderate, Heavy, Severe) $\rightarrow$ 2. Identify contamination type (Bugs, Tar, Water Spots, Tree Sap, Iron Fallout) $\rightarrow$ 3. Match required chemistry (Alkaline, Acidic, Solvent, Ph-Neutral) $\rightarrow$ 4. Select matching shelf inventory with task dilution ratios.",
+        subsections: [
+          {
+            title: "Contamination ID Engine",
+            content: "Matches surface contaminants to specific chemical profiles to emulsify grime without clear-coat damage.",
+            icon: Beaker
+          },
+          {
+            title: "Severity Grading",
+            content: "Adjusts recommended Ph-strength and dilution ratios based on Light-to-Severe vehicle scoring.",
+            icon: Target
+          }
+        ]
+      },
+      {
+        title: "Emergency Safety & SDS Protocols",
+        content: "Safety standards for chemical handling. Access digital Safety Data Sheets (SDS) from Chemical Cards. Secondary spray bottles must display OSHA GHS safety warnings and scannable QR codes. Personal Protective Equipment (PPE)—eye protection and chemical-resistant gloves—is mandatory during chemical dilution.",
+        subsections: [
+          {
+            title: "OSHA Secondary Bottle Safety",
+            content: "Secondary bottles must display GHS hazard warnings and scannable SDS QR codes.",
+            icon: AlertTriangle
           }
         ]
       }
     ],
     proTips: [
-      "Use an Incognito window to log into the Customer Portal as the test customer, while keeping your Admin session open in your main window.",
-      "Send a test Estimate to verify the PDF layout and email delivery before quoting a real client."
+      "Keep a printed high-contrast copy of the Dilution Reference Chart posted in the chemical mixing room.",
+      "Consult the Chemical Decision Matrix before attempting aggressive solvent spot cleaning on delicate clear coats."
     ],
     warnings: [
-      "Do NOT leave test data active overnight; always hit the Wipe Test Data button when your testing session is complete.",
-      "Because Gmail ignores the '+test' modifier, test emails will arrive safely in your main inbox."
+      "Never mix acidic chemical solutions in sprayers previously containing bleach or strong oxidizers.",
+      "Failure to wear required PPE during bulk chemical concentrate transfers is a violation of shop safety SOPs."
+    ]
+  },
+  {
+    id: "intake-workflows",
+    title: "12: Intake & Interaction Workflows",
+    icon: Layers,
+    color: "from-amber-500 to-orange-700",
+    summary: "End-to-end operational workflows. The 6-phase booking lifecycle, direct phone intake, digital vehicle inspection, garage vehicle multipliers, and the Sandbox workflow.",
+    sections: [
+      {
+        title: "The 6-Phase End-to-End Booking Lifecycle",
+        content: "The standardized workflow for client interactions: Phase 1: Lead Capture (Prospect) $\rightarrow$ Phase 2: Booking Commitment $\rightarrow$ Phase 3: Prep & Rig Loading $\rightarrow$ Phase 4: Execution & Checklist $\rightarrow$ Phase 5: Billing & Sign-Off $\rightarrow$ Phase 6: Retention Outreach. Customer logins land on the Customer Dashboard with right-side customer navigation; Employee logins route to the Employee Dashboard.",
+        subsections: [
+          {
+            title: "6-Phase Lifecycle",
+            content: "Standardized workflow guiding customer progression from initial lead inquiry to long-term retention.",
+            icon: Workflow
+          },
+          {
+            title: "Role Routing",
+            content: "Customer credentials land on Customer Dashboard; employee credentials route to Employee Dashboard.",
+            icon: Users
+          }
+        ]
+      },
+      {
+        title: "Direct Phone Intake & Garage Vehicle Multipliers",
+        content: "When clients call to book directly: 1. Open Bookings $\rightarrow$ 2. Search CRM $\rightarrow$ 3. Add Customer if new (capturing Phone/Email) $\rightarrow$ 4. Add Vehicle Year/Make/Model and select Vehicle Classification (Sedan, Compact, Midsize, SUV, Truck, Luxury) $\rightarrow$ 5. Select Package (pricing auto-calculates based on vehicle multiplier) $\rightarrow$ 6. Save & Sync.",
+        subsections: [
+          {
+            title: "Vehicle Class Pricing",
+            content: "Vehicle classification (Compact, Midsize, Truck, Luxury) automatically calculates starting package prices.",
+            icon: Truck
+          }
+        ]
+      },
+      {
+        title: "Digital Vehicle Inspection & Damage Photo Capture",
+        content: "Prior to starting service, technicians perform a digital inspection inside the active checklist. Capture high-resolution photos of pre-existing scratches, dents, or wheel rash. The customer signs the digital inspection on the mobile screen, embedding the signature into the final invoice PDF to protect the shop from liability.",
+        subsections: [
+          {
+            title: "Pre-Service Condition Proof",
+            content: "Document pre-existing vehicle damage with timestamped photos before starting cleaning or polishing.",
+            icon: Camera
+          },
+          {
+            title: "Embedded Digital Signature",
+            content: "Customer digital signature is embedded permanently into the final PDF receipt and audit trail.",
+            icon: CheckCircle2
+          }
+        ]
+      },
+      {
+        title: "Test Customer Sandbox & 1-Click Wipeout Protocol",
+        content: "The Sandbox environment allows testing pricing, booking flows, and invoices using the Rick Berube Test profile (rberube54+test@gmail.com). Test entries display a red 'Test Data Active' banner and temporarily reflect in live accounting to verify formula accuracy. Hitting 'Wipe Test Data Now' executes a cascading deletion that removes all test invoices, estimates, bookings, vehicles, and test customer profiles, instantly restoring true live financial figures.",
+        subsections: [
+          {
+            title: "Red Test Warning Banner",
+            content: "Displays persistent warning banner when test data is active in local database state.",
+            icon: AlertTriangle
+          },
+          {
+            title: "1-Click Cascading Wipeout",
+            content: "Surgically deletes test invoices, bookings, and customer records to restore true accounting totals.",
+            icon: Zap
+          }
+        ]
+      }
+    ],
+    proTips: [
+      "Perform digital walkaround photo capture on every vehicle before water or chemicals touch the paint.",
+      "Use the 1-Click Wipeout button immediately after finishing live test sessions to clean accounting ledgers."
+    ],
+    warnings: [
+      "Skipping pre-service damage documentation leaves the shop liable for pre-existing scratches or curb rash.",
+      "Test data temporarily increases accounting totals until the Wipe Test Data protocol is executed."
     ]
   }
 ];
+
 
 export default function ProceduresBooklet() {
   const [activeTab, setActiveTab] = useState(procedures[0].id);
