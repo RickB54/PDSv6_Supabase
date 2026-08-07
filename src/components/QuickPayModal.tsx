@@ -18,6 +18,9 @@ import { useToast } from '@/hooks/use-toast';
 export default function QuickPayModal() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
+  const currentUser = getCurrentUser();
+  const isAdmin = currentUser?.role === 'admin' && localStorage.getItem('view_as_mode') !== 'employee';
   
   // Phase 1: Enter Amount, Phase 2: Tip Selection
   const [phase, setPhase] = useState<1 | 2>(1);
