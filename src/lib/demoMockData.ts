@@ -1114,7 +1114,7 @@ export const MOCK_GALLERY = [
     "resource_url": "https://images.unsplash.com/photo-1610647752706-3bb12232b3ab?auto=format&fit=crop&q=80&w=1200",
     "is_published": true,
     "is_verified": true,
-    "created_by": "demo@primeautodetail.com",
+    "created_by": "demo@primeautodetail.net",
     "created_at": "2026-07-20T10:00:00.000Z"
   },
   {
@@ -1127,7 +1127,7 @@ export const MOCK_GALLERY = [
     "resource_url": "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?auto=format&fit=crop&q=80&w=1200",
     "is_published": true,
     "is_verified": true,
-    "created_by": "demo@primeautodetail.com",
+    "created_by": "demo@primeautodetail.net",
     "created_at": "2026-07-25T14:30:00.000Z"
   }
 ];

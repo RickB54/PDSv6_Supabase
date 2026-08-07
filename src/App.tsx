@@ -331,7 +331,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
             </Routes>
             <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role="customer" initialTopicId={helpId} />
           </div>
-          {effectiveUser && (effectiveUser.role === 'admin' || effectiveUser.role === 'employee') && (
+          {effectiveUser && (
             <div className="dark-theme min-h-screen">
               <GlobalRightSidebar />
             </div>
@@ -495,7 +495,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
         )}
       </div>
-      {effectiveUser?.role !== 'customer' && (
+      {effectiveUser && (
         <div className="dark-theme min-h-screen">
           <GlobalRightSidebar />
         </div>

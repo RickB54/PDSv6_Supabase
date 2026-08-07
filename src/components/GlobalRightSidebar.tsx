@@ -112,7 +112,7 @@ const renderSidebarContent = (
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Settings</span>}
                 </Button>
 
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.open('https://primeautodetail.com', '_blank')} title="Prime Website" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.open('https://primeautodetail.net', '_blank')} title="Prime Website" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <Globe className="w-5 h-5 text-cyan-400" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Website</span>}
                 </Button>
@@ -127,11 +127,6 @@ const renderSidebarContent = (
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dashboard/employee')} title="Employee Dashboard" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <LayoutDashboard className="w-5 h-5 text-blue-500" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Dashboard</span>}
-                </Button>
-
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.dispatchEvent(new Event('open-notify-admin'))} title="Notify Admin" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-red-500/20 transition-all`}>
-                    <Bell className="w-5 h-5 text-red-500" />
-                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Notify Admin</span>}
                 </Button>
 
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/vehicle-gallery')} title="Vehicle Gallery" className={collapsed ? "" : "w-full justify-start gap-2"}>

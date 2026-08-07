@@ -287,7 +287,7 @@ const EmployeeDashboard = () => {
     if (!finalMsg.trim()) return;
 
     const actor = user?.name || user?.email || "Employee";
-    const actorEmail = user?.email || "employee@primeautodetail.com";
+    const actorEmail = user?.email || "employee@primeautodetail.net";
 
     try {
       localStorage.removeItem('chat_ended');

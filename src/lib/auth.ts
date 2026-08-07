@@ -67,7 +67,7 @@ export function getCurrentUser(): User | null {
       return {
         id: "demo-admin-sim",
         name: "Demo Admin",
-        email: "demo@primeautodetail.com",
+        email: "demo@primeautodetail.net",
         role: "admin"
       };
     }

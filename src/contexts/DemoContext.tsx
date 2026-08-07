@@ -226,7 +226,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const mockUser = {
     id: "demo-admin",
     name: "Demo Admin",
-    email: "demo@primeautodetail.com",
+    email: "demo@primeautodetail.net",
     role: "admin",
     isDemo: true
   };

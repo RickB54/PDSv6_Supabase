@@ -57,8 +57,8 @@ export default function AdminUsers() {
       setLoading(true);
       // Construct a few mock users from MOCK_EMPLOYEES and others
       const mockUsers: AppUser[] = [
-        { id: 'demo1', role: 'admin', name: 'Demo Admin', email: 'admin@primeautodetail.com', updated_at: new Date().toISOString() },
-        { id: 'demo2', role: 'employee', name: 'John Tech', email: 'john@primeautodetail.com', updated_at: new Date().toISOString() },
+        { id: 'demo1', role: 'admin', name: 'Demo Admin', email: 'admin@primeautodetail.net', updated_at: new Date().toISOString() },
+        { id: 'demo2', role: 'employee', name: 'John Tech', email: 'john@primeautodetail.net', updated_at: new Date().toISOString() },
         { id: 'demo3', role: 'customer', name: 'Mary Customer', email: 'mary@gmail.com', updated_at: new Date().toISOString() }
       ];
       setUsers(mockUsers);
