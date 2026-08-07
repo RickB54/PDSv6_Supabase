@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download } from "lucide-react";
+import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, ListChecks, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download } from "lucide-react";
 import jsPDF from 'jspdf';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -188,10 +188,13 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
 
     useEffect(() => {
         if (activeTab === "process") {
-            window.scrollTo({ top: 0, behavior: 'instant' });
             setTimeout(() => {
-                sopsRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
-            }, 50);
+                if (sopsRef.current) {
+                    const rect = sopsRef.current.getBoundingClientRect();
+                    const targetY = window.pageYOffset + rect.top - 100;
+                    window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+                }
+            }, 100);
         }
     }, [activeTab]);
 
@@ -1008,12 +1011,12 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="process" ref={sopsRef} className="space-y-6">
+                        <TabsContent value="process" ref={sopsRef} className="space-y-6 scroll-mt-28">
                             <div className="bg-zinc-900 p-4 md:p-6 rounded-xl border border-zinc-800 space-y-8">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                                     <div>
                                         <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
-                                            <FileText className="w-6 h-6 text-indigo-400"/> Standard Operating Procedures (SOPs)
+                                            <ListChecks className="w-6 h-6 text-cyan-400"/> Standard Operating Procedures (SOPs)
                                         </h2>
                                         <p className="text-zinc-400 text-sm mt-1">
                                             Tap any step to view complete chemical, dilution, and execution instructions.
