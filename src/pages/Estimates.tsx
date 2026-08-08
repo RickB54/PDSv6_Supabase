@@ -656,10 +656,21 @@ const Estimates = () => {
         const contentStartY = 45;
         doc.setFontSize(10);
         const targetDateStr = estimate.estimateDate || estimate.date;
-        doc.text(`Estimate Date: ${formatDisplayDate(targetDateStr)}`, 20, contentStartY);
-        doc.text(`Quote Valid Until: ${getValidUntilDate(targetDateStr)}`, 20, contentStartY + 6);
         
-        // Right side header: Customer, Vehicle, Place of Service
+        // Left side header: Estimate Date & Quote Valid Until (bold labels, normal values)
+        doc.setFont("helvetica", "bold");
+        doc.text("Estimate Date:", 20, contentStartY);
+        const estDateLabelWidth = doc.getTextWidth("Estimate Date:");
+        doc.setFont("helvetica", "normal");
+        doc.text(` ${formatDisplayDate(targetDateStr)}`, 20 + estDateLabelWidth, contentStartY);
+
+        doc.setFont("helvetica", "bold");
+        doc.text("Quote Valid Until:", 20, contentStartY + 6);
+        const validUntilLabelWidth = doc.getTextWidth("Quote Valid Until:");
+        doc.setFont("helvetica", "normal");
+        doc.text(` ${getValidUntilDate(targetDateStr)}`, 20 + validUntilLabelWidth, contentStartY + 6);
+        
+        // Right side header: Customer, Vehicle, Place of Service (bold labels, normal values, wrapped at 75mm)
         const posText = resolvePlaceOfService(
             estimate.placeOfService,
             customers.find(c => c.id === estimate.customerId)?.address,
@@ -667,35 +678,43 @@ const Estimates = () => {
             estimate.notes
         );
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9.5);
-
-        const custLines = doc.splitTextToSize(`Customer: ${estimate.customerName}`, 75);
         let currentRightY = contentStartY;
-        custLines.forEach((line: string) => {
-            doc.text(line, 115, currentRightY);
-            currentRightY += 5;
-        });
 
+        const renderRightHeaderField = (label: string, value: string) => {
+            const fullText = `${label} ${value}`;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9.5);
+            const lines: string[] = doc.splitTextToSize(fullText, 75);
+
+            lines.forEach((line, idx) => {
+                if (idx === 0 && line.startsWith(label)) {
+                    doc.setFont("helvetica", "bold");
+                    doc.text(label, 115, currentRightY);
+                    const labelWidth = doc.getTextWidth(label);
+                    
+                    const rest = line.slice(label.length);
+                    doc.setFont("helvetica", "normal");
+                    doc.text(rest, 115 + labelWidth, currentRightY);
+                } else {
+                    doc.setFont("helvetica", "normal");
+                    doc.text(line, 115, currentRightY);
+                }
+                currentRightY += 5;
+            });
+        };
+
+        renderRightHeaderField("Customer:", estimate.customerName || "");
+        
         const vehicleStr = (estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim();
-        const vehLines = doc.splitTextToSize(`Vehicle: ${vehicleStr}`, 75);
-        vehLines.forEach((line: string) => {
-            doc.text(line, 115, currentRightY);
-            currentRightY += 5;
-        });
+        renderRightHeaderField("Vehicle:", vehicleStr);
 
-        const posFull = `Place of Service: ${posText}`;
-        const posLines = doc.splitTextToSize(posFull, 75);
-        posLines.forEach((line: string) => {
-            doc.text(line, 115, currentRightY);
-            currentRightY += 5;
-        });
-
-        doc.setFont("helvetica", "normal");
+        renderRightHeaderField("Place of Service:", posText);
 
         let y = Math.max(contentStartY + 18, currentRightY + 2);
+        doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.text("Proposed Services:", 20, y);
+        doc.setFont("helvetica", "normal");
         y += 6;
 
         const isEstimateMenuMode = (estimate.notes || '').includes('[MENU_MODE]');
