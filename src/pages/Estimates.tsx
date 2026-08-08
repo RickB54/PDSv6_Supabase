@@ -18,7 +18,7 @@ import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
-import { cn } from "@/lib/utils";
+import { cn, formatDisplayDate, getValidUntilDate } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
@@ -198,34 +198,7 @@ const Estimates = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
     const formatPart = (val: any) => (val && val !== 'null' && val !== 'undefined') ? val : '';
-    const formatDisplayDate = (dStr: string) => {
-        if (!dStr) return '';
-        if (dStr.includes('-')) {
-            const parts = dStr.split('-');
-            if (parts.length === 3 && parts[0].length === 4) {
-                return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}/${parts[0]}`;
-            }
-        }
-        return dStr;
-    };
     
-    const getValidUntilDate = (dStr: string) => {
-        if (!dStr) return '';
-        let d = new Date();
-        if (dStr.includes('-')) {
-            const parts = dStr.split('-');
-            if (parts.length === 3 && parts[0].length === 4) {
-                d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-            } else {
-                d = new Date(dStr);
-            }
-        } else {
-            d = new Date(dStr);
-        }
-        d.setMonth(d.getMonth() + 1);
-        return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-    };
-
     const getLocalDateString = () => {
         const d = new Date();
         const year = d.getFullYear();

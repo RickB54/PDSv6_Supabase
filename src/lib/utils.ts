@@ -59,3 +59,60 @@ export const generateInvoiceNumber = () => {
   // Max value will be around 912312359 (Dec 31, 2029)
   return parseInt(`${yearLastDigit}${month}${day}${hour}${minute}`);
 };
+
+/**
+ * Safely parses a date string (YYYY-MM-DD, ISO timestamp, or MM/DD/YYYY) or Date object
+ * into a local Date object without UTC timezone conversion rollbacks.
+ */
+export function parseLocalDate(dStr: string | Date | undefined | null): Date {
+  if (!dStr) return new Date();
+  if (dStr instanceof Date) return new Date(dStr.getTime());
+  
+  if (typeof dStr === 'string') {
+    const cleanStr = dStr.trim();
+    // YYYY-MM-DD format (e.g. 2026-08-07)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) {
+      const [year, month, day] = cleanStr.split('-').map(num => parseInt(num, 10));
+      return new Date(year, month - 1, day);
+    }
+    // MM/DD/YYYY format (e.g. 8/7/2026 or 08/07/2026)
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanStr)) {
+      const [month, day, year] = cleanStr.split('/').map(num => parseInt(num, 10));
+      return new Date(year, month - 1, day);
+    }
+    // ISO string with T (e.g. 2026-08-07T14:30:00Z) or fallback: parse and extract local Y/M/D
+    const d = new Date(cleanStr);
+    if (!isNaN(d.getTime())) {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+  }
+  return new Date();
+}
+
+/**
+ * Formats a date string or Date object into "M/D/YYYY" string in local time.
+ */
+export function formatDisplayDate(dStr: string | Date | undefined | null): string {
+  if (!dStr) return '';
+  const d = parseLocalDate(dStr);
+  if (isNaN(d.getTime())) return '';
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
+/**
+ * Calculates the "Quote Valid Until" date: exactly one calendar month after the Estimate Date
+ * (same day number, next month), with clamping for shorter months (e.g. Jan 31 -> Feb 28).
+ */
+export function getValidUntilDate(dStr: string | Date | undefined | null): string {
+  if (!dStr) return '';
+  const d = parseLocalDate(dStr);
+  if (isNaN(d.getTime())) return '';
+  
+  const currentDay = d.getDate();
+  d.setMonth(d.getMonth() + 1);
+  // Clamp to last day of month if target month has fewer days (e.g. Jan 31 -> Feb 28)
+  if (d.getDate() !== currentDay) {
+    d.setDate(0);
+  }
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+}

@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { addOns as builtInAddOns } from '@/lib/services';
 import { getAddOnMeta, getCustomAddOns } from '@/lib/servicesMeta';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { formatDisplayDate, getValidUntilDate } from '@/lib/utils';
 import servicesQrCode from "@/assets/services-qr.png";
 
 export default function CustomerEstimatePage() {
@@ -493,9 +494,9 @@ export default function CustomerEstimatePage() {
                             <p className="text-3xl font-black text-white">#{estimate.estimateNumber || 'N/A'}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-xs text-zinc-400 mb-1">Date: {estimate.estimateDate ? new Date(estimate.estimateDate).toLocaleDateString() : 'N/A'}</p>
+                            <p className="text-xs text-zinc-400 mb-1">Date: {formatDisplayDate(estimate.estimateDate || estimate.date)}</p>
                             <p className="text-xs text-zinc-500 font-medium bg-zinc-900 px-2 py-1 rounded border border-zinc-800 inline-block">
-                                Valid until: {estimate.estimateDate ? new Date(new Date(estimate.estimateDate).getTime() + 30*24*60*60*1000).toLocaleDateString() : '30 days'}
+                                Valid until: {getValidUntilDate(estimate.estimateDate || estimate.date)}
                             </p>
                         </div>
                     </div>

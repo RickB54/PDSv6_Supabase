@@ -7,6 +7,7 @@ import { CheckCircle2, ShieldAlert, Loader2, Car, DollarSign, CreditCard } from 
 import { useToast } from '@/hooks/use-toast';
 import { getCurrentUser } from '@/lib/auth';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { formatDisplayDate } from '@/lib/utils';
 import qrCode from "@/assets/review-qr.png";
 
 interface Invoice {
@@ -316,7 +317,7 @@ export default function CustomerInvoicePage() {
                             <p className="text-3xl font-black text-white">#{invoice.invoiceNumber || 'N/A'}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-xs text-zinc-400 mb-1">Issued: {invoice.date ? new Date(invoice.date).toLocaleDateString() : 'N/A'}</p>
+                            <p className="text-xs text-zinc-400 mb-1">Issued: {formatDisplayDate(invoice.date)}</p>
                             {isPaid ? (
                                 <p className="text-xs text-emerald-400 font-bold bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 inline-block uppercase tracking-wider">
                                     Paid in Full
