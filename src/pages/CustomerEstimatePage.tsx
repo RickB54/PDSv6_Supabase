@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Estimate, resolvePlaceOfService } from '@/lib/supa-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CheckCircle2, XCircle, ShieldAlert, Loader2, ChevronRight, Car, Calendar, DollarSign, FileText, MapPin } from 'lucide-react';
+import { CheckCircle2, XCircle, ShieldAlert, Loader2, ChevronRight, Car, Calendar, DollarSign, FileText, MapPin, Navigation, ExternalLink, Compass } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +18,7 @@ import { getAddOnMeta, getCustomAddOns } from '@/lib/servicesMeta';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { formatDisplayDate, getValidUntilDate } from '@/lib/utils';
 import servicesQrCode from "@/assets/services-qr.png";
+import { DistanceMapWidget } from '@/components/distance/DistanceMapWidget';
 
 export default function CustomerEstimatePage() {
     const { id } = useParams<{ id: string }>();
@@ -517,7 +518,7 @@ export default function CustomerEstimatePage() {
                                 <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0">
                                     <MapPin className="w-5 h-5 text-emerald-400" />
                                 </div>
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">Place of Service</p>
                                     <p className="font-medium text-emerald-400 text-sm mt-0.5">
                                         {resolvePlaceOfService(
@@ -527,6 +528,10 @@ export default function CustomerEstimatePage() {
                                             estimate.notes
                                         )}
                                     </p>
+                                    <DistanceMapWidget 
+                                        initialAddress={(estimate as any)?.customerAddress || (estimate as any)?.address || ''}
+                                        theme="dark"
+                                    />
                                 </div>
                             </div>
                         </div>

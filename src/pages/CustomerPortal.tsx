@@ -28,6 +28,7 @@ import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 // const libraries: ("places")[] = ["places"];
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { CompareServicesModal } from "@/components/CompareServicesModal";
+import { DistanceMapWidget } from "@/components/distance/DistanceMapWidget";
 import { formatTimeAMPM } from "@/lib/availability";
 import { useBookingsStore } from "@/store/bookings";
 import packageBasic from "@/assets/package-basic.jpg";
@@ -715,19 +716,25 @@ const CustomerPortal = () => {
           <Label className="text-lg font-semibold text-foreground mb-3 block">
             Distance to Your Location (miles)
           </Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.1"
-            value={distance || ''}
-            onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
-            placeholder="Enter distance in miles"
-            className="w-full max-w-xs bg-background border-border"
-          />
-          <p className="text-sm text-muted-foreground mt-2">
-            {distance <= 1 && "Free within 1 mile"}
-            {distance > 1 && `$${destinationFee} destination fee`}
-          </p>
+          <div className="space-y-2">
+            <Input
+              type="number"
+              min="0"
+              step="0.1"
+              value={distance || ''}
+              onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
+              placeholder="Enter distance in miles"
+              className="w-full max-w-xs bg-background border-border"
+            />
+            <p className="text-sm text-muted-foreground mt-1">
+              {distance <= 1 && "Free within 1 mile"}
+              {distance > 1 && `$${destinationFee} destination fee`}
+            </p>
+            <DistanceMapWidget 
+              theme="light"
+              onDistanceCalculated={(miles) => setDistance(miles)}
+            />
+          </div>
 
           {/* 
             FUTURE USE: Google Maps Auto-Address UI
