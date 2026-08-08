@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Estimate } from '@/lib/supa-data';
+import { Estimate, resolvePlaceOfService } from '@/lib/supa-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CheckCircle2, XCircle, ShieldAlert, Loader2, ChevronRight, Car, Calendar, DollarSign, FileText } from 'lucide-react';
+import { CheckCircle2, XCircle, ShieldAlert, Loader2, ChevronRight, Car, Calendar, DollarSign, FileText, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,7 +104,7 @@ export default function CustomerEstimatePage() {
             // First try to fetch the estimate
             const { data, error: fetchError } = await supabase
                 .from('estimates')
-                .select('*, customers(full_name, email, phone)')
+                .select('*, customers(full_name, email, phone, address)')
                 .eq('id', estimateId)
                 .maybeSingle();
 
@@ -126,6 +126,7 @@ export default function CustomerEstimatePage() {
 
             let virtualVehicle = null;
             let virtualCustomer = null;
+            let virtualPlaceOfService = null;
             
             const finalServices = parsedServices.filter((s: any) => {
                 if (s.name?.startsWith("VIRTUAL_SENT:")) return false;
@@ -136,6 +137,10 @@ export default function CustomerEstimatePage() {
                 }
                 if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
                     virtualCustomer = s.name.replace("VIRTUAL_CUSTOMER:", "").trim();
+                    return false;
+                }
+                if (s.name?.startsWith("VIRTUAL_PLACE_OF_SERVICE:")) {
+                    virtualPlaceOfService = s.name.replace("VIRTUAL_PLACE_OF_SERVICE:", "").trim();
                     return false;
                 }
                 return true;
@@ -157,8 +162,10 @@ export default function CustomerEstimatePage() {
                 notes: data.notes || '',
                 discount: data.discount || 0,
                 discountType: data.discount_type,
-                vehicleType: data.vehicle_type
+                vehicleType: data.vehicle_type,
+                placeOfService: virtualPlaceOfService || data.place_of_service || undefined
             };
+            (est as any).customerAddress = data.customers?.address;
 
             setEstimate(est);
             
@@ -494,7 +501,7 @@ export default function CustomerEstimatePage() {
                     </div>
 
                     <CardContent className="p-0">
-                        <div className="p-6 grid gap-6 border-b border-zinc-800">
+                        <div className="p-6 grid sm:grid-cols-2 gap-6 border-b border-zinc-800">
                             <div className="flex items-start gap-3">
                                 <div className="p-2 bg-blue-500/10 rounded-lg shrink-0">
                                     <Car className="w-5 h-5 text-blue-400" />
@@ -503,6 +510,22 @@ export default function CustomerEstimatePage() {
                                     <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">Customer & Vehicle</p>
                                     <p className="font-medium text-white">{estimate.customerName}</p>
                                     <p className="text-zinc-400 text-sm mt-0.5">{estimate.vehicle}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0">
+                                    <MapPin className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-1">Place of Service</p>
+                                    <p className="font-medium text-emerald-400 text-sm mt-0.5">
+                                        {resolvePlaceOfService(
+                                            estimate.placeOfService,
+                                            (estimate as any).customerAddress || (estimate as any).address,
+                                            undefined,
+                                            estimate.notes
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         </div>

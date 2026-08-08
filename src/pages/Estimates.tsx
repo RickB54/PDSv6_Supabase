@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone } from "lucide-react";
-import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer } from "@/lib/supa-data";
+import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer, resolvePlaceOfService } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
@@ -235,6 +235,7 @@ const Estimates = () => {
     };
 
     const [estimateDate, setEstimateDate] = useState(getLocalDateString());
+    const [selectedPlaceOfService, setSelectedPlaceOfService] = useState<string>("To Be Confirmed");
     const [notes, setNotes] = useState("");
     const [isRefiningNotes, setIsRefiningNotes] = useState(false);
     
@@ -433,6 +434,7 @@ const Estimates = () => {
                 vehicleType: selectedVehicleType,
                 discount,
                 discountType,
+                placeOfService: selectedPlaceOfService,
                 notes: finalNotes,
                 isSent: editIsSent,
                 sentDate: editIsSent ? (isEditing ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
@@ -487,6 +489,7 @@ const Estimates = () => {
             setNotes("");
             setEditIsSent(false);
             setEstimateDate(getLocalDateString());
+            setSelectedPlaceOfService("To Be Confirmed");
             setIsMenuMode(false);
             setCustomVehicleName("");
 
@@ -530,6 +533,8 @@ const Estimates = () => {
         setNotes(cleanNotes);
         setEditIsSent(est.isSent || false);
         setEstimateDate(est.estimateDate || getLocalDateString());
+        const resolvedPos = resolvePlaceOfService(est.placeOfService, customers.find(c => c.id === est.customerId)?.address, undefined, est.notes);
+        setSelectedPlaceOfService(resolvedPos);
         setShowCreateForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -655,12 +660,20 @@ const Estimates = () => {
         doc.text(`Quote Valid Until: ${getValidUntilDate(targetDateStr)}`, 20, contentStartY + 6);
         
         // Move Customer and Vehicle to the right side
+        const posText = resolvePlaceOfService(
+            estimate.placeOfService,
+            customers.find(c => c.id === estimate.customerId)?.address,
+            undefined,
+            estimate.notes
+        );
+
         doc.setFont("helvetica", "bold");
-                doc.text(`Customer: ${estimate.customerName}`, 130, contentStartY);
+        doc.text(`Customer: ${estimate.customerName}`, 130, contentStartY);
         doc.text(`Vehicle: ${(estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}`, 130, contentStartY + 6);
+        doc.text(`Place of Service: ${posText}`, 130, contentStartY + 12);
         doc.setFont("helvetica", "normal");
 
-        let y = contentStartY + 16;
+        let y = contentStartY + 22;
         doc.setFontSize(11);
         doc.text("Proposed Services:", 20, y);
         y += 6;
@@ -1425,6 +1438,32 @@ Precision. Protection. Perfection.`;
                                      )}
                                  </div>
                              )}
+
+                            <div className="mt-4">
+                                <Label className="text-zinc-400">Place of Service</Label>
+                                <Select value={selectedPlaceOfService} onValueChange={(val) => setSelectedPlaceOfService(val)}>
+                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1 text-white">
+                                        <SelectValue placeholder="Select Place of Service" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="To Be Confirmed">To Be Confirmed</SelectItem>
+                                        <SelectItem value="At Shop – 54 Boston Street, Methuen MA 01844">At Shop – 54 Boston Street, Methuen MA 01844</SelectItem>
+                                        {(() => {
+                                            const cust = customers.find(c => c.id === selectedCustomer);
+                                            if (cust?.address && cust.address.trim()) {
+                                                return (
+                                                    <SelectItem value={cust.address.trim()}>
+                                                        On-Site ({cust.address.trim()})
+                                                    </SelectItem>
+                                                );
+                                            }
+                                            return (
+                                                <SelectItem value="On-Site (Customer Address)">On-Site (Customer Address)</SelectItem>
+                                            );
+                                        })()}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             {/* Packages / Vehicle / Addons Logic - Simplified for this bulk update but keeping functional structure */}
                             <div className="border-t border-zinc-800 pt-4">

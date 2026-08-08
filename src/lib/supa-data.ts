@@ -1397,7 +1397,63 @@ export interface Estimate {
     vehicleType?: string;
     isSent?: boolean;
     sentDate?: string;
+    placeOfService?: string;
 }
+
+export const resolvePlaceOfService = (
+    estimatePos?: string,
+    customerAddress?: string,
+    bookingPos?: string,
+    rawNotes?: string
+): string => {
+    if (estimatePos && estimatePos.trim()) {
+        const val = estimatePos.trim();
+        if (val.toLowerCase().includes('shop') || val.includes('54 Boston')) {
+            return "At Shop – 54 Boston Street, Methuen MA 01844";
+        }
+        if (val === 'To Be Confirmed' || val === 'unconfirmed' || val.toLowerCase().includes('pending')) {
+            return "To Be Confirmed";
+        }
+        if (val.toLowerCase().includes("customer") || val.toLowerCase().includes("onsite") || val.toLowerCase().includes("on-site")) {
+            if (customerAddress && customerAddress.trim()) {
+                return customerAddress.trim();
+            }
+            return "On-Site (Customer Address)";
+        }
+        return val;
+    }
+
+    if (rawNotes) {
+        const tagMatch = rawNotes.match(/\[PLACE_OF_SERVICE:\s*([^\]]+)\]/i);
+        if (tagMatch && tagMatch[1]) {
+            return resolvePlaceOfService(tagMatch[1], customerAddress, bookingPos);
+        }
+        const textMatch = rawNotes.match(/Place of Service:\s*([^\n\r]+)/i);
+        if (textMatch && textMatch[1]) {
+            return resolvePlaceOfService(textMatch[1], customerAddress, bookingPos);
+        }
+    }
+
+    if (bookingPos && bookingPos.trim()) {
+        const val = bookingPos.trim();
+        if (val.toLowerCase().includes('shop') || val.includes('54 Boston')) {
+            return "At Shop – 54 Boston Street, Methuen MA 01844";
+        }
+        if (val.toLowerCase().includes("customer") || val.toLowerCase().includes("onsite") || val.toLowerCase().includes("on-site")) {
+            if (customerAddress && customerAddress.trim()) {
+                return customerAddress.trim();
+            }
+            return "On-Site (Customer Address)";
+        }
+        return val;
+    }
+
+    if (customerAddress && customerAddress.trim()) {
+        return customerAddress.trim();
+    }
+
+    return "To Be Confirmed";
+};
 
 export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
     try {
@@ -1466,6 +1522,10 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                 if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
                     return false;
                 }
+                if (s.name?.startsWith("VIRTUAL_PLACE_OF_SERVICE:")) {
+                    (e as any).placeOfService = s.name.replace("VIRTUAL_PLACE_OF_SERVICE:", "").trim();
+                    return false;
+                }
                 return true;
             });
 
@@ -1490,6 +1550,7 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                 addonIds: e.addon_ids || [],
                 discount: e.discount,
                 discountType: e.discount_type as ('percent' | 'amount' | undefined),
+                placeOfService: (e as any).placeOfService || e.place_of_service || undefined,
                 estimateDate: e.estimate_date
             };
         });
@@ -1560,6 +1621,7 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
             ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : []),
             ...(p.vehicle ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : []),
+            ...(p.placeOfService ? [{ name: `VIRTUAL_PLACE_OF_SERVICE:${p.placeOfService}`, price: 0 }] : []),
             ...((p.customerName || (p.customer as any)?.full_name) ? [{ name: `VIRTUAL_CUSTOMER:${p.customerName || (p.customer as any)?.full_name}`, price: 0 }] : [])
         ],
         total: p.total,
