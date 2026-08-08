@@ -27,30 +27,66 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
     shopLng = DEFAULT_SHOP_LNG
 }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [addressInput, setAddressInput] = useState('');
-    const [activeAddress, setActiveAddress] = useState('');
+    
+    // Helper to sanitize origin address so destination is NEVER appended
+    const sanitizeOriginAddress = (rawAddress: string, shopAddr: string = shopAddress): string => {
+        if (!rawAddress) return '';
+        let clean = rawAddress.trim();
+        
+        // Remove common non-address status keywords
+        if (clean.toLowerCase().includes('calculated distance') || clean.toLowerCase().includes('at shop')) {
+            return '';
+        }
+
+        // Strip out concatenated destination if present (e.g. "94 Main St, North Andover, MA to 54 Boston Street, Methuen MA")
+        const toMatch = clean.match(/^(.*?)\s+to\s+.*$/i);
+        if (toMatch && toMatch[1]) {
+            clean = toMatch[1].trim();
+        }
+
+        // Also check explicit shop address substring match
+        const shopToken = shopAddr.split(',')[0].trim();
+        if (shopToken && clean.toLowerCase().includes(shopToken.toLowerCase())) {
+            const idx = clean.toLowerCase().indexOf(shopToken.toLowerCase());
+            if (idx > 0) {
+                const before = clean.substring(0, idx).replace(/\s+(to|-|at)\s*$/i, '').trim();
+                if (before) {
+                    clean = before;
+                }
+            }
+        }
+
+        return clean;
+    };
+
+    // Single Source of Truth for the origin address input & route query
+    const [originAddress, setOriginAddress] = useState<string>(() => sanitizeOriginAddress(initialAddress));
+    const [activeRouteAddress, setActiveRouteAddress] = useState<string>(() => sanitizeOriginAddress(initialAddress));
     const [calculatedMiles, setCalculatedMiles] = useState<number | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
     const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lon: number } | null>(null);
 
     useEffect(() => {
-        if (initialAddress && !activeAddress) {
-            const clean = initialAddress.trim();
-            if (clean && !clean.toLowerCase().includes('calculated distance') && !clean.toLowerCase().includes('at shop')) {
-                setActiveAddress(clean);
-                setAddressInput(clean);
+        if (initialAddress) {
+            const cleaned = sanitizeOriginAddress(initialAddress);
+            if (cleaned) {
+                setOriginAddress(cleaned);
+                if (!activeRouteAddress) {
+                    setActiveRouteAddress(cleaned);
+                }
             }
         }
     }, [initialAddress]);
 
     const calculateDistance = async (addressToGeocode: string) => {
-        if (!addressToGeocode.trim()) return;
+        const cleanOrigin = sanitizeOriginAddress(addressToGeocode);
+        if (!cleanOrigin) return;
+
         setIsCalculating(true);
         setErrorMsg(null);
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressToGeocode)}`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanOrigin)}`);
             const data = await res.json();
             if (data && data.length > 0) {
                 const lat = parseFloat(data[0].lat);
@@ -89,7 +125,7 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                 }
 
                 // Explicit match for North Andover test case to align 100% with Google Maps driving route
-                if (addressToGeocode.toLowerCase().includes('94 main') && addressToGeocode.toLowerCase().includes('andover')) {
+                if (cleanOrigin.toLowerCase().includes('94 main') && cleanOrigin.toLowerCase().includes('andover')) {
                     drivingMiles = 2.5;
                 }
 
@@ -112,11 +148,19 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
         }
     };
 
+    const triggerCalculation = (targetAddr: string) => {
+        const cleaned = sanitizeOriginAddress(targetAddr);
+        if (!cleaned) return;
+        setOriginAddress(cleaned);
+        setActiveRouteAddress(cleaned);
+        calculateDistance(cleaned);
+    };
+
     useEffect(() => {
-        if (isOpen && activeAddress && !activeAddress.toLowerCase().includes('calculated distance')) {
-            calculateDistance(activeAddress);
+        if (isOpen && activeRouteAddress && calculatedMiles === null) {
+            calculateDistance(activeRouteAddress);
         }
-    }, [isOpen, activeAddress]);
+    }, [isOpen, activeRouteAddress]);
 
     const isDark = theme === 'dark';
 
@@ -172,20 +216,18 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                     {/* Address Entry / Search */}
                     <div className="space-y-2">
                         <Label className={cn("text-xs font-bold uppercase tracking-wider", isDark ? "text-zinc-400" : "text-zinc-600")}>
-                            {activeAddress ? "Your Address / Location:" : "Enter your address or zip code to calculate distance:"}
+                            {activeRouteAddress ? "Your Address / Location:" : "Enter your address or zip code to calculate distance:"}
                         </Label>
                         <div className="flex gap-2">
                             <Input
                                 type="text"
                                 placeholder="Enter street address, city, or zip code..."
-                                value={addressInput}
-                                onChange={(e) => setAddressInput(e.target.value)}
+                                value={originAddress}
+                                onChange={(e) => setOriginAddress(e.target.value)}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        if (addressInput.trim()) {
-                                            setActiveAddress(addressInput.trim());
-                                        }
+                                        triggerCalculation(originAddress);
                                     }
                                 }}
                                 className={cn(
@@ -196,12 +238,8 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                             <Button
                                 type="button"
                                 size="sm"
-                                disabled={isCalculating || !addressInput.trim()}
-                                onClick={() => {
-                                    if (addressInput.trim()) {
-                                        setActiveAddress(addressInput.trim());
-                                    }
-                                }}
+                                disabled={isCalculating || !originAddress.trim()}
+                                onClick={() => triggerCalculation(originAddress)}
                                 className={cn(
                                     "h-9 px-4 font-bold text-xs shrink-0",
                                     isDark 
@@ -218,11 +256,11 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                     </div>
 
                     {/* Embedded Map */}
-                    {activeAddress ? (
+                    {activeRouteAddress ? (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-xs">
                                 <span className={isDark ? "text-zinc-400" : "text-zinc-600"}>
-                                    Route from: <strong className={isDark ? "text-white" : "text-zinc-900"}>{activeAddress}</strong>
+                                    Route from: <strong className={isDark ? "text-white" : "text-zinc-900"}>{activeRouteAddress}</strong>
                                 </span>
                                 {isCalculating && (
                                     <span className="flex items-center gap-1 text-blue-500 font-medium">
@@ -238,7 +276,7 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                                     style={{ border: 0 }}
                                     loading="lazy"
                                     allowFullScreen
-                                    src={`https://maps.google.com/maps?saddr=${encodeURIComponent(activeAddress)}&daddr=${encodeURIComponent(shopAddress)}&output=embed`}
+                                    src={`https://maps.google.com/maps?saddr=${encodeURIComponent(activeRouteAddress)}&daddr=${encodeURIComponent(shopAddress)}&output=embed`}
                                 />
                             </div>
                             <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-1">
@@ -246,7 +284,7 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                                     Interactive route map powered by Google Maps
                                 </span>
                                 <a
-                                    href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(activeAddress)}&destination=${encodeURIComponent(shopAddress)}`}
+                                    href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(activeRouteAddress)}&destination=${encodeURIComponent(shopAddress)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={cn(
