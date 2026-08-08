@@ -728,7 +728,7 @@ const CustomerPortal = () => {
             />
             <p className="text-sm text-muted-foreground mt-1">
               {distance <= 1 && "Free within 1 mile"}
-              {distance > 1 && `$${destinationFee} destination fee`}
+              {distance > 1 && `$${Math.round(destinationFee)} destination fee`}
             </p>
             <DistanceMapWidget 
               theme="light"

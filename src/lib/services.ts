@@ -358,7 +358,7 @@ export function getAddOnPrice(addOnId: string, vehicleType: VehicleType): number
 
 export function calculateDestinationFee(miles: number): number {
   if (miles <= 1) return 0;
-  return miles * 4;
+  return Math.round(miles * 4);
 }
 
 // Admin API: update pricing overrides and refresh consumers without reloading

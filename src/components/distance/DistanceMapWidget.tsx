@@ -51,7 +51,25 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                 const lat = parseFloat(data[0].lat);
                 const lon = parseFloat(data[0].lon);
                 
-                // Haversine formula in miles
+                // Fetch real driving route distance via OSRM API (road distance)
+                try {
+                    const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon},${lat};${shopLng},${shopLat}?overview=false`);
+                    const routeData = await routeRes.json();
+                    if (routeData && routeData.routes && routeData.routes.length > 0) {
+                        const meters = routeData.routes[0].distance;
+                        const drivingMiles = Math.max(0.1, Math.round((meters / 1609.344) * 10) / 10);
+                        setCalculatedMiles(drivingMiles);
+                        if (onDistanceCalculated) {
+                            onDistanceCalculated(drivingMiles);
+                        }
+                        setIsCalculating(false);
+                        return;
+                    }
+                } catch (routeErr) {
+                    console.warn("OSRM routing API call failed, falling back to Haversine", routeErr);
+                }
+
+                // Fallback: Haversine straight-line distance in miles
                 const R = 3958.8; 
                 const dLat = (lat - shopLat) * (Math.PI / 180);
                 const dLon = (lon - shopLng) * (Math.PI / 180);
@@ -61,8 +79,7 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                     Math.sin(dLon / 2) * Math.sin(dLon / 2);
                 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                 
-                // 1.22 multiplier estimates driving distance vs straight-line distance
-                const miles = Math.max(0.1, Math.round(R * c * 1.22 * 10) / 10);
+                const miles = Math.max(0.1, Math.round(R * c * 10) / 10);
                 setCalculatedMiles(miles);
                 if (onDistanceCalculated) {
                     onDistanceCalculated(miles);
