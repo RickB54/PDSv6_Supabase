@@ -35,8 +35,11 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
 
     useEffect(() => {
         if (initialAddress && !activeAddress) {
-            setActiveAddress(initialAddress);
-            setAddressInput(initialAddress);
+            const clean = initialAddress.trim();
+            if (clean && !clean.toLowerCase().includes('calculated distance') && !clean.toLowerCase().includes('at shop')) {
+                setActiveAddress(clean);
+                setAddressInput(clean);
+            }
         }
     }, [initialAddress]);
 
@@ -98,7 +101,7 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
     };
 
     useEffect(() => {
-        if (isOpen && activeAddress) {
+        if (isOpen && activeAddress && !activeAddress.toLowerCase().includes('calculated distance')) {
             calculateDistance(activeAddress);
         }
     }, [isOpen, activeAddress]);
