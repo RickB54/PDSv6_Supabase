@@ -659,7 +659,7 @@ const Estimates = () => {
         doc.text(`Estimate Date: ${formatDisplayDate(targetDateStr)}`, 20, contentStartY);
         doc.text(`Quote Valid Until: ${getValidUntilDate(targetDateStr)}`, 20, contentStartY + 6);
         
-        // Move Customer and Vehicle to the right side
+        // Right side header: Customer, Vehicle, Place of Service
         const posText = resolvePlaceOfService(
             estimate.placeOfService,
             customers.find(c => c.id === estimate.customerId)?.address,
@@ -668,12 +668,32 @@ const Estimates = () => {
         );
 
         doc.setFont("helvetica", "bold");
-        doc.text(`Customer: ${estimate.customerName}`, 130, contentStartY);
-        doc.text(`Vehicle: ${(estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim()}`, 130, contentStartY + 6);
-        doc.text(`Place of Service: ${posText}`, 130, contentStartY + 12);
+        doc.setFontSize(9.5);
+
+        const custLines = doc.splitTextToSize(`Customer: ${estimate.customerName}`, 75);
+        let currentRightY = contentStartY;
+        custLines.forEach((line: string) => {
+            doc.text(line, 115, currentRightY);
+            currentRightY += 5;
+        });
+
+        const vehicleStr = (estimate.vehicle || '').replace(/\bnull\b/ig, '').replace(/\s+/g, ' ').trim();
+        const vehLines = doc.splitTextToSize(`Vehicle: ${vehicleStr}`, 75);
+        vehLines.forEach((line: string) => {
+            doc.text(line, 115, currentRightY);
+            currentRightY += 5;
+        });
+
+        const posFull = `Place of Service: ${posText}`;
+        const posLines = doc.splitTextToSize(posFull, 75);
+        posLines.forEach((line: string) => {
+            doc.text(line, 115, currentRightY);
+            currentRightY += 5;
+        });
+
         doc.setFont("helvetica", "normal");
 
-        let y = contentStartY + 22;
+        let y = Math.max(contentStartY + 18, currentRightY + 2);
         doc.setFontSize(11);
         doc.text("Proposed Services:", 20, y);
         y += 6;
