@@ -18,7 +18,7 @@ import { servicePackages, addOns } from "@/lib/services";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
-import { cn, formatDisplayDate, getValidUntilDate } from "@/lib/utils";
+import { cn, formatDisplayDate, getValidUntilDate, toInputDateFormat } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
@@ -398,7 +398,7 @@ const Estimates = () => {
                 vehicle: vehicleStr,
                 services,
                 total: calculateTotal(),
-                date: new Date().toLocaleDateString(),
+                date: estimateDate,
                 estimateDate: estimateDate,
                 status: selectedStatus,
                 packageId: selectedPackage,
@@ -505,7 +505,7 @@ const Estimates = () => {
             .replace('[SHOW_CATEGORY_SUBTOTALS]\n', '').replace('[SHOW_CATEGORY_SUBTOTALS]', '');
         setNotes(cleanNotes);
         setEditIsSent(est.isSent || false);
-        setEstimateDate(est.estimateDate || getLocalDateString());
+        setEstimateDate(toInputDateFormat(est.estimateDate || est.date));
         const resolvedPos = resolvePlaceOfService(est.placeOfService, customers.find(c => c.id === est.customerId)?.address, undefined, est.notes);
         setSelectedPlaceOfService(resolvedPos);
         setShowCreateForm(true);
@@ -1451,30 +1451,41 @@ Precision. Protection. Perfection.`;
                                  </div>
                              )}
 
-                            <div className="mt-4">
-                                <Label className="text-zinc-400">Place of Service</Label>
-                                <Select value={selectedPlaceOfService} onValueChange={(val) => setSelectedPlaceOfService(val)}>
-                                    <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1 text-white">
-                                        <SelectValue placeholder="Select Place of Service" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="To Be Confirmed">To Be Confirmed</SelectItem>
-                                        <SelectItem value="At Shop – 54 Boston Street, Methuen MA 01844">At Shop – 54 Boston Street, Methuen MA 01844</SelectItem>
-                                        {(() => {
-                                            const cust = customers.find(c => c.id === selectedCustomer);
-                                            if (cust?.address && cust.address.trim()) {
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <Label className="text-zinc-400">Estimate Date</Label>
+                                    <Input 
+                                        type="date"
+                                        value={estimateDate}
+                                        onChange={(e) => setEstimateDate(e.target.value)}
+                                        className="bg-zinc-950 border-zinc-800 mt-1 text-white"
+                                    />
+                                </div>
+                                <div>
+                                    <Label className="text-zinc-400">Place of Service</Label>
+                                    <Select value={selectedPlaceOfService} onValueChange={(val) => setSelectedPlaceOfService(val)}>
+                                        <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1 text-white">
+                                            <SelectValue placeholder="Select Place of Service" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="To Be Confirmed">To Be Confirmed</SelectItem>
+                                            <SelectItem value="At Shop – 54 Boston Street, Methuen MA 01844">At Shop – 54 Boston Street, Methuen MA 01844</SelectItem>
+                                            {(() => {
+                                                const cust = customers.find(c => c.id === selectedCustomer);
+                                                if (cust?.address && cust.address.trim()) {
+                                                    return (
+                                                        <SelectItem value={cust.address.trim()}>
+                                                            On-Site ({cust.address.trim()})
+                                                        </SelectItem>
+                                                    );
+                                                }
                                                 return (
-                                                    <SelectItem value={cust.address.trim()}>
-                                                        On-Site ({cust.address.trim()})
-                                                    </SelectItem>
+                                                    <SelectItem value="On-Site (Customer Address)">On-Site (Customer Address)</SelectItem>
                                                 );
-                                            }
-                                            return (
-                                                <SelectItem value="On-Site (Customer Address)">On-Site (Customer Address)</SelectItem>
-                                            );
-                                        })()}
-                                    </SelectContent>
-                                </Select>
+                                            })()}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             {/* Packages / Vehicle / Addons Logic - Simplified for this bulk update but keeping functional structure */}
