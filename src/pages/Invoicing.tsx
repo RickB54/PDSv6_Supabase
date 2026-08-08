@@ -56,7 +56,7 @@ import {
 
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { generateInvoiceNumber, cn } from "@/lib/utils";
+import { generateInvoiceNumber, cn, toInputDateFormat } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import logo from "@/assets/pds-final-logo.png";
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as LibVehicleType } from "@/lib/services";
@@ -2674,20 +2674,14 @@ Precision. Protection. Perfection.`;
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mt-4">
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => {
                         const newIsSent = !editIsSent;
-                        if (newIsSent) {
-                            if (editSentDate) {
-                                if (window.confirm(`This invoice already has a sent date of ${new Date(editSentDate).toLocaleDateString()}.\n\nDo you want to update the sent date to today? (Click 'Cancel' to keep original date)`)) {
-                                    setEditSentDate(new Date().toISOString());
-                                }
-                            } else {
-                                setEditSentDate(new Date().toISOString());
-                            }
+                        if (newIsSent && !editSentDate) {
+                            setEditSentDate(new Date().toISOString());
                         }
                         setEditIsSent(newIsSent);
                     }}
@@ -2706,10 +2700,21 @@ Precision. Protection. Perfection.`;
                     </div>
                     I have sent this invoice to the customer
                   </Button>
-                  {editIsSent && editSentDate && (
-                    <span className="text-[10px] text-zinc-500 italic ml-auto">
-                      Marked sent on {new Date(editSentDate).toLocaleDateString()}
-                    </span>
+                  {editIsSent && (
+                    <div className="flex items-center gap-2">
+                      <Label className="text-[10px] text-zinc-400 uppercase font-bold whitespace-nowrap">Sent Date:</Label>
+                      <Input 
+                        type="date"
+                        value={toInputDateFormat(editSentDate || serviceDate || new Date())}
+                        onChange={(e) => {
+                          const chosenDate = e.target.value;
+                          if (chosenDate) {
+                            setEditSentDate(new Date(chosenDate + "T12:00:00").toISOString());
+                          }
+                        }}
+                        className="h-8 w-36 bg-zinc-950 border-zinc-700 text-xs text-white px-2 py-0 focus-visible:ring-blue-500"
+                      />
+                    </div>
                   )}
                 </div>
 

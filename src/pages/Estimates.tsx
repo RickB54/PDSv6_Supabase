@@ -2384,7 +2384,7 @@ Precision. Protection. Perfection.`;
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mb-6">
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-zinc-900/50 rounded-lg border border-zinc-800/50 mb-6">
                                 <Button 
                                     variant="ghost" 
                                     size="sm" 
@@ -2397,14 +2397,8 @@ Precision. Protection. Perfection.`;
                                             : (!newIsSent && selectedEstimate.status === 'sent' ? 'open' : selectedEstimate.status);
 
                                         let newSentDate = selectedEstimate.sentDate;
-                                        if (newIsSent) {
-                                            if (selectedEstimate.sentDate) {
-                                                if (window.confirm(`This estimate already has a sent date of ${new Date(selectedEstimate.sentDate).toLocaleDateString()}.\n\nDo you want to update the sent date to today? (Click 'Cancel' to keep original date)`)) {
-                                                    newSentDate = new Date().toISOString();
-                                                }
-                                            } else {
-                                                newSentDate = new Date().toISOString();
-                                            }
+                                        if (newIsSent && !newSentDate) {
+                                            newSentDate = new Date().toISOString();
                                         }
 
                                         const updated = {
@@ -2457,10 +2451,38 @@ Precision. Protection. Perfection.`;
                                     </div>
                                     I have sent this estimate to the customer
                                 </Button>
-                                {selectedEstimate.isSent && selectedEstimate.sentDate && (
-                                    <span className="text-[10px] text-zinc-500 italic ml-auto">
-                                        Marked sent on {new Date(selectedEstimate.sentDate).toLocaleDateString()}
-                                    </span>
+                                {selectedEstimate.isSent && (
+                                    <div className="flex items-center gap-2">
+                                        <Label className="text-[10px] text-zinc-400 uppercase font-bold whitespace-nowrap">Sent Date:</Label>
+                                        <Input 
+                                            type="date"
+                                            value={toInputDateFormat(selectedEstimate.sentDate || selectedEstimate.estimateDate || selectedEstimate.date || new Date())}
+                                            onChange={async (e) => {
+                                                const chosenDate = e.target.value;
+                                                if (!chosenDate || !selectedEstimate) return;
+                                                const updatedDateStr = new Date(chosenDate + "T12:00:00").toISOString();
+                                                const updated = {
+                                                    ...selectedEstimate,
+                                                    sentDate: updatedDateStr,
+                                                    estimateDate: chosenDate,
+                                                    date: chosenDate
+                                                };
+                                                setSelectedEstimate(updated);
+                                                if (localStorage.getItem("demo_mode_active") === "true") {
+                                                    toast({ title: "Simulation Mode", description: "Sent date updated locally." });
+                                                    return;
+                                                }
+                                                try {
+                                                    await upsertSupabaseEstimate(updated as any);
+                                                    toast({ title: "Date Updated", description: `Sent date set to ${formatDisplayDate(chosenDate)}` });
+                                                    loadData();
+                                                } catch (err) {
+                                                    toast({ title: "Error", description: "Failed to update date", variant: "destructive" });
+                                                }
+                                            }}
+                                            className="h-8 w-36 bg-zinc-950 border-zinc-700 text-xs text-white px-2 py-0 focus-visible:ring-blue-500"
+                                        />
+                                    </div>
                                 )}
                             </div>
 
