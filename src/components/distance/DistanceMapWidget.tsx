@@ -15,8 +15,8 @@ export interface DistanceMapWidgetProps {
 }
 
 const DEFAULT_SHOP_ADDRESS = "54 Boston Street, Methuen MA 01844";
-const DEFAULT_SHOP_LAT = 42.7262;
-const DEFAULT_SHOP_LNG = -71.1712;
+const DEFAULT_SHOP_LAT = 42.7224;
+const DEFAULT_SHOP_LNG = -71.1529;
 
 export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
     initialAddress = '',
@@ -99,13 +99,9 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                     const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon},${lat};${shopLng},${shopLat}?overview=false&alternatives=true`);
                     const routeData = await routeRes.json();
                     if (routeData && routeData.routes && routeData.routes.length > 0) {
-                        let minMeters = routeData.routes[0].distance;
-                        for (const r of routeData.routes) {
-                            if (r.distance < minMeters) {
-                                minMeters = r.distance;
-                            }
-                        }
-                        drivingMiles = Math.max(0.1, Math.round((minMeters / 1609.344) * 10) / 10);
+                        // Use OSRM primary recommended driving route (routes[0])
+                        const primaryRouteMeters = routeData.routes[0].distance;
+                        drivingMiles = Math.max(0.1, Math.round((primaryRouteMeters / 1609.344) * 10) / 10);
                     }
                 } catch (routeErr) {
                     console.warn("OSRM routing API call failed, falling back to straight line formula", routeErr);
@@ -122,11 +118,6 @@ export const DistanceMapWidget: React.FC<DistanceMapWidgetProps> = ({
                     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                     
                     drivingMiles = Math.max(0.1, Math.round(R * c * 0.83 * 10) / 10);
-                }
-
-                // Explicit match for North Andover test case to align 100% with Google Maps driving route
-                if (cleanOrigin.toLowerCase().includes('94 main') && cleanOrigin.toLowerCase().includes('andover')) {
-                    drivingMiles = 2.5;
                 }
 
                 setCalculatedMiles(drivingMiles);
