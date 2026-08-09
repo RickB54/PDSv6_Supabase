@@ -2661,6 +2661,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                               <DropdownMenuItem
                                 key={st.val}
                                 className={cn("text-xs cursor-pointer focus:bg-zinc-800", formData.status === st.val && "font-bold text-blue-400")}
+                                onSelect={() => setFormData(prev => ({ ...prev, status: st.val as any }))}
                                 onClick={() => setFormData(prev => ({ ...prev, status: st.val as any }))}
                               >
                                 {st.label}
