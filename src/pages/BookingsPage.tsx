@@ -557,6 +557,26 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     return Math.round(total);
   }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon]);
 
+  const activeBlinkSection = useMemo(() => {
+    if (!formData.time) return 1; // 1. Time (Start/End)
+    if (!formData.customer || !formData.customer.trim()) return 2; // 2. Customer Info
+    if (!formData.placeOfService) return 3; // 3. Place of Service
+    if (!formData.service) return 4; // 4. Service + Discount
+    if (!formData.status) return 5; // 5. Status
+    if (!formData.vehicle && !formData.vehicleMake) return 6; // 6. Vehicle
+    if (!formData.assignedEmployee || formData.assignedEmployee === 'Unassigned') return 7; // 7. Assign To + Booked By
+    return null; // All required sections satisfied -> Zero Blink!
+  }, [
+    formData.time,
+    formData.customer,
+    formData.placeOfService,
+    formData.service,
+    formData.status,
+    formData.vehicle,
+    formData.vehicleMake,
+    formData.assignedEmployee
+  ]);
+
   const getEventPrice = useCallback((event: any) => {
     if (event.type !== 'booking') return 0;
     const booking = items.find(i => i.id === event.id) || event;
@@ -592,6 +612,12 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   // Handlers
   const handleStartJob = (bookingArg?: Booking) => {
     const targetEmployeeId = bookingArg?.assignedEmployee || formData.assignedEmployee;
+
+    if (!targetEmployeeId || targetEmployeeId === 'Unassigned') {
+      toast.error("Assign To is required. Please assign an employee before starting this job.");
+      return;
+    }
+
     const user = getCurrentUser();
     const isUserAdmin = user?.role === 'admin' || user?.role === 'owner';
     
@@ -1372,8 +1398,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       return;
     }
 
-    if (!formData.customer || !formData.service) {
-      toast.error("Customer and Service are required");
+    if (!formData.customer || !formData.customer.trim()) {
+      toast.error("Customer name is required before saving.");
+      return;
+    }
+
+    if (!formData.service) {
+      toast.error("Service selection is required before saving.");
+      return;
+    }
+
+    if (!formData.assignedEmployee || formData.assignedEmployee === 'Unassigned') {
+      toast.error("Assign To is required. Please assign an employee before saving this booking.");
       return;
     }
 
@@ -2589,773 +2625,1015 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             </DialogHeader>
 
             <div className="overflow-y-auto flex-1 px-4 sm:px-6 relative pt-4">
-              {/* SUMMARY HEADER (READ ONLY) */}
-              <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-2 shadow-2xl">
+              {/* SUMMARY HEADER (READ ONLY + CLICKABLE STATUS QUICK-EDIT) */}
+              <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-4 shadow-2xl">
                 <div className="flex justify-between items-start">
-                    <div>
-                      <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
-                        Service Summary
-                        {formData.status && (
-                          <Badge variant="outline" className={cn(
-                            "text-[9px] font-black uppercase py-0 h-4 border",
-                            getStatusColor(formData.status as any)
-                          )}>
-                            {formData.status.replace(/_/g, ' ')}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-blue-400 font-bold text-xs md:text-sm mb-1 truncate flex items-center gap-2">
-                        {(() => {
-                           const cName = formData.customer || "";
-                           const vString = [formData.vehicleYear, formData.vehicleMake, formData.vehicleModel].filter(Boolean).join(" ");
-                           const vClass = formData.vehicle || "";
-                           const fullVehicle = vString ? `${vString} (${vClass})` : vClass ? `(${vClass})` : '';
-                           return [cName, fullVehicle].filter(Boolean).join(" • ");
-                        })()}
-                      </div>
-                      <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
-                      {formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned' && (
-                        <div className="text-xs text-zinc-400 mt-1 font-bold">
-                          👤 Assigned to: {getEmployeeName(formData.assignedEmployee)}
-                        </div>
-                      )}
-                      {formData.addons && formData.addons.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {formData.addons.map((a, i) => (
-                            <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-0 px-2 h-5">
-                              {a}
+                  <div>
+                    <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+                      Service Summary
+                      {formData.status && (
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[9px] font-black uppercase py-0.5 px-2 h-5 border cursor-pointer hover:opacity-80 transition-all flex items-center gap-1.5 shadow-sm",
+                                getStatusColor(formData.status as any)
+                              )}
+                              title="Click to quick-change status"
+                            >
+                              <span>{getStatusIcon(formData.status as any)}</span>
+                              <span>{formData.status.replace(/_/g, ' ')}</span>
+                              <ChevronDown className="w-2.5 h-2.5 opacity-60" />
                             </Badge>
-                          ))}
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent side="bottom" align="start" className="bg-zinc-950 border-zinc-800 text-white w-48 z-[99999]">
+                            <DropdownMenuLabel className="text-[9px] uppercase font-black tracking-wider text-zinc-500">Quick Change Status</DropdownMenuLabel>
+                            {[
+                              { val: 'confirmed', label: '✓ Confirmed Booking' },
+                              { val: 'tentative', label: '⏱ Tentative (Hold)' },
+                              { val: 'blocked', label: '🚫 Blocked' },
+                              { val: 'pending', label: '⏳ Pending' },
+                              { val: 'in_progress', label: '🔄 In Progress' },
+                              { val: 'done', label: '✅ Done' },
+                              { val: 'rescheduled', label: '🔄 Rescheduled' }
+                            ].map(st => (
+                              <DropdownMenuItem
+                                key={st.val}
+                                className={cn("text-xs cursor-pointer focus:bg-zinc-800", formData.status === st.val && "font-bold text-blue-400")}
+                                onClick={() => setFormData(prev => ({ ...prev, status: st.val as any }))}
+                              >
+                                {st.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </div>
-                    <div className="text-right">
-                      {liveSubtotal !== liveTotal && (
-                        <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
-                          ${liveSubtotal.toFixed(2)}
-                        </div>
+                    <div className="text-blue-400 font-bold text-xs md:text-sm mb-1 truncate flex items-center gap-2">
+                      {(() => {
+                        const cName = formData.customer || "";
+                        const vString = [formData.vehicleYear, formData.vehicleMake, formData.vehicleModel].filter(Boolean).join(" ");
+                        const vClass = formData.vehicle || "";
+                        const fullVehicle = vString ? `${vString} (${vClass})` : vClass ? `(${vClass})` : '';
+                        return [cName, fullVehicle].filter(Boolean).join(" • ");
+                      })()}
+                    </div>
+                    <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
+                    {formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned' && (
+                      <div className="text-xs text-zinc-400 mt-1 font-bold">
+                        👤 Assigned to: {getEmployeeName(formData.assignedEmployee)}
+                      </div>
+                    )}
+                    {formData.addons && formData.addons.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {formData.addons.map((a, i) => (
+                          <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-0 px-2 h-5">
+                            {a}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {liveSubtotal !== liveTotal && (
+                      <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
+                        ${liveSubtotal.toFixed(2)}
+                      </div>
+                    )}
+                    <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
+                      ${liveTotal.toFixed(2)}
+                    </div>
+                    {formData.discountType === 'custom' && formData.customDiscount ? (
+                      <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                        -${Number(formData.customDiscount).toFixed(2)} Manual Disc.
+                      </div>
+                    ) : matchedCoupon ? (
+                      <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                        -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
+                      </div>
+                    ) : null}
+                    <div className="text-zinc-500 text-[10px] mt-1">
+                      {selectedDate ? formatETDate(selectedDate) : "No Date"}
+                      {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 8 GUIDED STEP BOXED SECTIONS */}
+              <div className="space-y-4 pb-6">
+
+                {/* BOX 1: TIME (START/END) */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 1 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 1 ? "text-amber-400 animate-pulse" : formData.time ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 1 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
                       )}
-                      <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
-                        ${liveTotal.toFixed(2)}
-                      </div>
-                      {formData.discountType === 'custom' && formData.customDiscount ? (
-                        <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
-                          -${Number(formData.customDiscount).toFixed(2)} Manual Disc.
+                      1. Time (Start/End)
+                    </span>
+                    {formData.time ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 1 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Time Window</label>
+                    <div className="col-span-3 grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                          <Input
+                            type="time"
+                            value={formData.time}
+                            onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 h-9 text-xs"
+                          />
                         </div>
-                      ) : matchedCoupon ? (
-                        <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
-                          -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
+                        <div className="text-[10px] text-gray-500 mt-1 text-center">Start Time (Req.)</div>
+                      </div>
+                      <div>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                          <Input
+                            type="time"
+                            value={formData.endTime}
+                            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 h-9 text-xs"
+                          />
                         </div>
-                      ) : null}
-                      <div className="text-zinc-500 text-[10px] mt-1">
-                        {selectedDate ? formatETDate(selectedDate) : "No Date"}
-                        {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
+                        <div className="text-[10px] text-gray-500 mt-1 text-center">End Time (Opt.)</div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-              <div className="grid gap-4 pb-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Time</label>
-                  <div className="col-span-3 grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
-                        <Input
-                          type="time"
-                          value={formData.time}
-                          onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
-                        />
-                      </div>
-                      <div className="text-[10px] text-gray-500 mt-1 text-center">Start</div>
-                    </div>
-                    <div>
-                      <div className="relative">
-                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
-                        <Input
-                          type="time"
-                          value={formData.endTime}
-                          onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300"
-                        />
-                      </div>
-                      <div className="text-[10px] text-gray-500 mt-1 text-center">End</div>
-                    </div>
+                {/* BOX 2: CUSTOMER INFO */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 2 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 2 ? "text-amber-400 animate-pulse" : (formData.customer && formData.customer.trim()) ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 2 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                      )}
+                      2. Customer Info
+                    </span>
+                    {(formData.customer && formData.customer.trim()) ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 2 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
                   </div>
-                </div>
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Customer</label>
-                  <div className="col-span-3 relative">
-                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-gray-400 text-sm">Select Customer</label>
-                      <button
-                        type="button"
-                        onClick={fetchCustomers}
-                        className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
-                      >
-                        {loadingCustomers ? 'Loading...' : `Refresh List (${customers.length})`}
-                      </button>
-                    </div>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={formData.customer}
-                      disabled={loadingCustomers}
-                      onChange={(e) => {
-                        const custName = e.target.value;
-                        setFormData({ ...formData, customer: custName });
-
-                        // Find and set customer data
-                        const cust = customers.find(c => c.name === custName);
-                        // console.log('Selected customer:', cust); // Debug log
-                        if (cust) {
-                          setSelectedCustomer(cust);
-                          const primaryVeh = cust.vehicles && cust.vehicles.length > 0 ? cust.vehicles[0] : null;
-                          setFormData(prev => ({
-                            ...prev,
-                            customer: cust.name,
-                            email: cust.email || prev.email || "",
-                            phone: cust.phone || prev.phone || "",
-                            address: cust.address || prev.address,
-                            vehicleYear: primaryVeh?.year || cust.year || prev.vehicleYear,
-                            vehicleMake: primaryVeh?.make || cust.vehicle || prev.vehicleMake,
-                            vehicleModel: primaryVeh?.model || cust.model || prev.vehicleModel,
-                            vehicleId: primaryVeh?.id,
-                            vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle,
-                            notes: cust.notes || prev.notes,
-                          }));
-                          // console.log('Auto-filled data:', { address: cust.address, year: cust.year, make: cust.vehicle, model: cust.model }); // Debug
-                        }
-                      }}
-                    >
-                      <option value="" className="text-gray-400">
-                        {loadingCustomers ? "Loading..." : "Select a Customer OR a Prospect"}
-                      </option>
-                      {customers.map((cust) => (
-                        <option key={cust.id || cust.email || cust.name} value={cust.name} className="text-gray-300">
-                          {cust.name} {cust.type === 'prospect' ? '(Prospect)' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="mt-2">
-                      <Input
-                        placeholder="Or type new customer name..."
-                        className="pl-9 bg-zinc-900 border-zinc-800 text-gray-300 placeholder:text-gray-500"
-                        value={formData.customer}
-                        onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {selectedCustomer && (selectedCustomer.vehicles?.length || 0) > 0 && (
-                  <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
-                    <label className="text-right text-sm font-medium text-purple-400">Select Vehicle</label>
-                    <div className="col-span-3">
+                  {/* Customer Select */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400 mt-2">Customer</label>
+                    <div className="col-span-3 relative">
+                      <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-gray-400 text-xs font-medium">Select Customer</label>
+                        <button
+                          type="button"
+                          onClick={fetchCustomers}
+                          className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                        >
+                          {loadingCustomers ? 'Loading...' : `Refresh List (${customers.length})`}
+                        </button>
+                      </div>
                       <select
-                        className="flex h-10 w-full rounded-md border border-purple-900/40 bg-zinc-900 px-3 py-2 text-sm text-white focus:ring-purple-500/20"
-                        value={formData.vehicleId}
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-xs text-gray-300 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={formData.customer}
+                        disabled={loadingCustomers}
                         onChange={(e) => {
-                          const vehId = e.target.value;
-                          const veh = selectedCustomer.vehicles.find((v: any) => v.id === vehId);
-                          if (veh) {
+                          const custName = e.target.value;
+                          setFormData({ ...formData, customer: custName });
+
+                          const cust = customers.find(c => c.name === custName);
+                          if (cust) {
+                            setSelectedCustomer(cust);
+                            const primaryVeh = cust.vehicles && cust.vehicles.length > 0 ? cust.vehicles[0] : null;
                             setFormData(prev => ({
                               ...prev,
-                              vehicleId: vehId,
-                              vehicleYear: veh.year || prev.vehicleYear,
-                              vehicleMake: veh.make || prev.vehicleMake,
-                              vehicleModel: veh.model || prev.vehicleModel,
-                              vehicleColor: veh.color || "",
-                              vehicle: veh.type || prev.vehicle
+                              customer: cust.name,
+                              email: cust.email || prev.email || "",
+                              phone: cust.phone || prev.phone || "",
+                              address: cust.address || prev.address,
+                              vehicleYear: primaryVeh?.year || cust.year || prev.vehicleYear,
+                              vehicleMake: primaryVeh?.make || cust.vehicle || prev.vehicleMake,
+                              vehicleModel: primaryVeh?.model || cust.model || prev.vehicleModel,
+                              vehicleId: primaryVeh?.id,
+                              vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle,
+                              notes: cust.notes || prev.notes,
                             }));
                           }
                         }}
                       >
-                        <option value="">-- Choose from Linked Vehicles --</option>
-                        {selectedCustomer.vehicles.map((v: any) => (
-                          <option key={v.id} value={v.id}>
-                            {v.year} {v.make} {v.model} {v.color ? `[Color: ${v.color}]` : ""} ({v.type || 'No Type'})
+                        <option value="" className="text-gray-400">
+                          {loadingCustomers ? "Loading..." : "Select a Customer OR a Prospect"}
+                        </option>
+                        {customers.map((cust) => (
+                          <option key={cust.id || cust.email || cust.name} value={cust.name} className="text-gray-300">
+                            {cust.name} {cust.type === 'prospect' ? '(Prospect)' : ''}
                           </option>
                         ))}
                       </select>
+                      <div className="mt-2">
+                        <Input
+                          placeholder="Or type new customer name..."
+                          className="pl-9 bg-zinc-900 border-zinc-800 text-xs text-gray-300 placeholder:text-gray-500 h-9"
+                          value={formData.customer}
+                          onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
 
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Contact</label>
-                  <div className="col-span-3 space-y-3">
-                    <div className="relative">
-                      <ContactInput
-                        type="email"
-                        value={formData.email}
-                        onChange={(val) => setFormData({ ...formData, email: val })}
-                      />
-                    </div>
-                    <div className="relative flex gap-2">
-                      <div className="flex-1">
+                  {/* Contact Info */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400 mt-2">Contact</label>
+                    <div className="col-span-3 space-y-2">
+                      <div className="relative">
                         <ContactInput
-                          type="phone"
-                          value={formData.phone}
-                          onChange={(val) => setFormData({ ...formData, phone: val })}
+                          type="email"
+                          value={formData.email}
+                          onChange={(val) => setFormData({ ...formData, email: val })}
                         />
                       </div>
-                      {selectedCustomer && formData.email && (
-                        <Button
-                          variant="outline"
-                          type="button"
-                          className="shrink-0 bg-blue-900/20 border-blue-500/30 text-blue-400 hover:text-blue-300 hover:bg-blue-900/40"
-                          onClick={() => {
-                            const vehicleStr = formData.vehicle 
-                              ? `${formData.vehicleYear || ''} ${formData.vehicleMake || ''} ${formData.vehicleModel || ''}`.trim()
-                              : '';
-                            const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
-                            openLetterMaker(selectedCustomer.id!, bodyStr);
-                          }}
-                          title="Write Letter"
-                        >
-                          <Mail className="w-4 h-4 mr-2" />
-                          Write Letter
-                        </Button>
-                      )}
+                      <div className="relative flex gap-2">
+                        <div className="flex-1">
+                          <ContactInput
+                            type="phone"
+                            value={formData.phone}
+                            onChange={(val) => setFormData({ ...formData, phone: val })}
+                          />
+                        </div>
+                        {selectedCustomer && formData.email && (
+                          <Button
+                            variant="outline"
+                            type="button"
+                            className="shrink-0 bg-blue-900/20 border-blue-500/30 text-blue-400 hover:text-blue-300 hover:bg-blue-900/40 h-9 text-xs"
+                            onClick={() => {
+                              const vehicleStr = formData.vehicle 
+                                ? `${formData.vehicleYear || ''} ${formData.vehicleMake || ''} ${formData.vehicleModel || ''}`.trim()
+                                : '';
+                              const bodyStr = vehicleStr ? `\n\nVehicle Information:\n${vehicleStr}` : '';
+                              openLetterMaker(selectedCustomer.id!, bodyStr);
+                            }}
+                            title="Write Letter"
+                          >
+                            <Mail className="w-3.5 h-3.5 mr-1.5" />
+                            Write Letter
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400 mt-2">Address</label>
+                    <div className="col-span-3">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                          <Input
+                            placeholder="123 Main St, City, State"
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-xs text-white placeholder:text-gray-500 h-9"
+                            value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          />
+                        </div>
+                        {formData.address && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowMap(true)}
+                            className="shrink-0 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white h-9 w-9"
+                            title="View on Map"
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Address</label>
-                  <div className="col-span-3">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                        <Input
-                          placeholder="123 Main St, City, State"
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                          value={formData.address}
-                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        />
-                      </div>
-                      {formData.address && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => setShowMap(true)}
-                          className="shrink-0 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-white"
-                          title="View on Map"
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </Button>
+                {/* BOX 3: PLACE OF SERVICE */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 3 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 3 ? "text-amber-400 animate-pulse" : formData.placeOfService ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 3 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
                       )}
-                    </div>
+                      3. Place of Service
+                    </span>
+                    {formData.placeOfService ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 3 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
                   </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-orange-400">Place of Service</label>
-                  <div className="col-span-3">
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:ring-purple-500/20"
-                      value={formData.placeOfService}
-                      onChange={(e) => setFormData({ ...formData, placeOfService: e.target.value })}
-                    >
-                      <option value="Customer's address">Mobile Detailing (Customer's address)</option>
-                      <option value="Shop in Methuen">Shop in Methuen</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-emerald-400">Service</label>
-                  <div className="col-span-3 flex gap-2">
-                    <div className="relative flex-1">
-                      <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-orange-400">Location</label>
+                    <div className="col-span-3">
                       <select
-                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        value={formData.service}
-                        onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus:ring-purple-500/20"
+                        value={formData.placeOfService}
+                        onChange={(e) => setFormData({ ...formData, placeOfService: e.target.value })}
                       >
-                        <option value="" className="text-gray-500">Select Service...</option>
-                        {allServices.map((pkg) => (
-                          <option key={pkg.id} value={pkg.name}>
-                            {pkg.name}
-                          </option>
-                        ))}
+                        <option value="Customer's address">Mobile Detailing (Customer's address)</option>
+                        <option value="Shop in Methuen">Shop in Methuen</option>
                       </select>
                     </div>
-
-                    <div className="flex-1">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 font-normal">
-                            <span className="truncate">
-                              {formData.addons.length > 0
-                                ? formData.addons.join(", ")
-                                : "Addons..."}
-                            </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrinking-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[280px] p-0 bg-zinc-900 border-zinc-800 shadow-2xl">
-                          <Command className="bg-zinc-900">
-                            <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
-                            <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
-                            <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
-                              {allAddons
-                                .filter((addon: any) => {
-                                  if (addon.active === false) return false;
-                                  if (!addon.applicableVehicleTypes) return true;
-                                  const mappedVType = mapToServiceVehicleType(formData.vehicle || "", formData.vehicleMake || "", formData.vehicleModel || "");
-                                  return addon.applicableVehicleTypes.includes(mappedVType);
-                                })
-                                .map((addon) => (
-                                <CommandItem
-                                  key={addon.id}
-                                  value={addon.name}
-                                  onSelect={() => {
-                                    const name = addon.name;
-                                    console.log(`[AddonSelector] Toggling addon: ${name}`);
-                                    setFormData(prev => {
-                                      const current = Array.isArray(prev.addons) ? prev.addons : [];
-                                      const exists = current.includes(name);
-                                      const next = exists 
-                                        ? current.filter(a => a !== name)
-                                        : [...current, name];
-                                      console.log(`[AddonSelector] New state:`, next);
-                                      return { ...prev, addons: next };
-                                    });
-                                  }}
-                                  className="text-zinc-300 cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 hover:text-white transition-colors rounded-lg mb-1 pointer-events-auto"
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4 text-blue-500",
-                                      formData.addons.includes(addon.name) ? "opacity-100 scale-100" : "opacity-0 scale-50"
-                                    )}
-                                  />
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold">{addon.name}</span>
-                                    {(() => {
-                                      const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
-                                      const price = getAddOnPrice(addon.id, vType);
-                                      return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
-                                    })()}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
                   </div>
                 </div>
 
-                {/* Booking Status */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className={cn("text-right text-sm font-medium", getStatusColor(formData.status as any).match(/text-[a-z]+-\d{3,4}/)?.[0] || "text-gray-400")}>Status</label>
-                  <div className="col-span-3">
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={formData.status || 'confirmed'}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    >
-                      <option value="confirmed">✓ Confirmed Booking</option>
-                      <option value="tentative">⏱ Tentative (Hold)</option>
-                      <option value="blocked">🚫 Blocked</option>
-                      <option value="pending">⏳ Pending</option>
-                      <option value="in_progress">🔄 In Progress</option>
-                      <option value="done">✅ Done</option>
-                      <option value="rescheduled">🔄 Rescheduled</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Discount Option */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-red-400">Discount</label>
-                  <div className="col-span-3 grid grid-cols-3 gap-2">
-                    <select
-                      className="flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
-                      value={formData.discountType || 'coupon'}
-                      onChange={(e) => setFormData({ ...formData, discountType: e.target.value as any })}
-                    >
-                      <option value="coupon">Coupon Code</option>
-                      <option value="custom">Manual Amount ($)</option>
-                    </select>
-                    
-                    {formData.discountType === 'custom' ? (
-                      <div className="col-span-2 relative">
-                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
-                        <Input
-                          type="number"
-                          placeholder="Amount e.g. 25"
-                          className="pl-9 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-amber-500/30"
-                          value={formData.customDiscount || ''}
-                          onChange={(e) => setFormData({ ...formData, customDiscount: e.target.value })}
-                        />
-                      </div>
-                    ) : (
-                      <div className="col-span-2 flex flex-col gap-2">
-                        <div className="relative">
-                          <Tag className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
-                          <select
-                            className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-amber-500 appearance-none cursor-pointer"
-                            value={(formData.discountCode && coupons.some(c => c.code === formData.discountCode)) ? formData.discountCode : (formData.discountCode ? 'CUSTOM_CODE' : '')}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === 'CUSTOM_CODE') {
-                                setFormData({ ...formData, discountCode: 'CUSTOM' });
-                              } else {
-                                setFormData({ ...formData, discountCode: val });
-                              }
-                            }}
-                          >
-                            <option value="">Select Coupon...</option>
-                            {coupons.filter(c => c.active).map(c => (
-                              <option key={c.code} value={c.code} className="bg-zinc-900 text-white">
-                                {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
-                              </option>
-                            ))}
-                            <option value="CUSTOM_CODE" className="bg-zinc-900 text-yellow-500 font-bold">-- Enter Custom Code --</option>
-                          </select>
-                          <div className="absolute right-3 top-3 pointer-events-none text-zinc-500 text-xs font-mono">▼</div>
-                        </div>
-                        {((formData.discountCode && !coupons.some(c => c.code === formData.discountCode)) || formData.discountCode === 'CUSTOM') && (
-                          <div className="relative animate-in slide-in-from-top-1 duration-150">
-                            <Input
-                              placeholder="ENTER CODE"
-                              className="bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 font-mono uppercase focus:border-amber-500/30"
-                              value={formData.discountCode === 'CUSTOM' ? '' : formData.discountCode}
-                              onChange={(e) => setFormData({ ...formData, discountCode: e.target.value.toUpperCase() })}
-                            />
-                            {formData.discountCode && !matchedCoupon && (
-                              <span className="absolute right-3 top-3 text-[10px] text-red-500 font-bold uppercase">Not Found</span>
-                            )}
-                            {formData.discountCode && matchedCoupon && (
-                              <span className="absolute right-3 top-3 text-[10px] text-green-500 font-bold uppercase">Applied!</span>
-                            )}
-                          </div>
-                        )}
-                        {formData.discountCode && coupons.some(c => c.code === formData.discountCode) && matchedCoupon && (
-                          <div className="text-[10px] text-green-500 font-bold uppercase tracking-wider pl-1">
-                            ✓ {matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} discount applied from coupon: {matchedCoupon.code}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Probono Reason (Conditional) */}
-                {typeof liveTotal !== 'undefined' && liveTotal === 0 && (formData.discountCode === 'PROBONO' || matchedCoupon || Number(formData.customDiscount) > 0) && (
-                  <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
-                    <label className="text-right text-sm font-medium text-pink-400">Probono Reason</label>
-                    <div className="col-span-3 space-y-3">
-                      <div className="flex flex-wrap gap-2">
-                        {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Charity", "Other"].map(reason => {
-                          const isChecked = (formData.probonoReasons && formData.probonoReasons.includes(reason)) || formData.probonoReason === reason;
-                          return (
-                            <label key={reason} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${isChecked ? 'bg-pink-500/20 border-pink-500/50 text-pink-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}>
-                              <input 
-                                type="checkbox" 
-                                className="hidden"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  const checked = e.target.checked;
-                                  let newReasons = [...(formData.probonoReasons || [])];
-                                  if (formData.probonoReason && !newReasons.includes(formData.probonoReason)) {
-                                    newReasons.push(formData.probonoReason);
-                                  }
-                                  
-                                  if (checked) {
-                                    if (!newReasons.includes(reason)) newReasons.push(reason);
-                                  } else {
-                                    newReasons = newReasons.filter(r => r !== reason);
-                                  }
-                                  
-                                  let primary = formData.probonoPrimaryReason || formData.probonoReason;
-                                  if (newReasons.length === 1) {
-                                    primary = newReasons[0];
-                                  } else if (!newReasons.includes(primary || '')) {
-                                    primary = newReasons.length > 0 ? newReasons[0] : "";
-                                  }
-                                  
-                                  setFormData({ ...formData, probonoReasons: newReasons, probonoPrimaryReason: primary, probonoReason: primary });
-                                }}
-                              />
-                              <div className={`w-3 h-3 rounded-sm flex items-center justify-center border ${isChecked ? 'bg-pink-500 border-pink-500 text-white font-bold text-[10px]' : 'border-zinc-600 bg-zinc-950'}`}>
-                                {isChecked && "✓"}
-                              </div>
-                              {reason}
-                            </label>
-                          );
-                        })}
-                      </div>
-                      
-                      {((formData.probonoReasons && formData.probonoReasons.length > 1) || (!formData.probonoReasons?.length && formData.probonoReason)) && (
-                        <div className="flex items-center gap-3 bg-zinc-950/50 p-2.5 rounded-md border border-zinc-800/50">
-                          <span className="text-xs text-zinc-400 font-medium whitespace-nowrap">Primary Reason:</span>
-                          <select
-                            className="flex h-8 w-full rounded-md border border-pink-500/30 bg-zinc-900 px-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500/50"
-                            value={formData.probonoPrimaryReason || formData.probonoReason || ""}
-                            onChange={(e) => setFormData({ ...formData, probonoPrimaryReason: e.target.value, probonoReason: e.target.value })}
-                          >
-                            <option value="">Select Primary...</option>
-                            {(formData.probonoReasons?.length ? formData.probonoReasons : [formData.probonoReason]).filter(Boolean).map(r => (
-                              <option key={r} value={r}>{r}</option>
-                            ))}
-                          </select>
-                        </div>
+                {/* BOX 4: SERVICE + DISCOUNT */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 4 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 4 ? "text-amber-400 animate-pulse" : formData.service ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 4 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
                       )}
-                    </div>
+                      4. Service + Discount
+                    </span>
+                    {formData.service ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 4 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
                   </div>
-                )}
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Vehicle Type</label>
-                  <div className="col-span-3 space-y-2">
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
-                        <Select 
-                          value={formData.vehicle || ""}
-                          onValueChange={(val) => setFormData({ ...formData, vehicle: val })}
-                        >
-                          <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white">
-                            <SelectValue placeholder="Select Vehicle Class" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
-                            <SelectItem value="Compact/Sedan">Compact/Sedan</SelectItem>
-                            <SelectItem value="Mid-Size/SUV">Mid-Size/SUV</SelectItem>
-                            <SelectItem value="Truck/Van/Large SUV">Truck/Van/Large SUV</SelectItem>
-                            <SelectItem value="Luxury/High-End">Luxury/High-End</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="border-blue-600 text-blue-600 hover:bg-blue-600/10"
-                        onClick={() => setShowClassificationModal(true)}
-                      >
-                        Quick Select
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Vehicle Details</label>
-                  <div className="col-span-3 grid grid-cols-4 gap-2">
-                    <Input
-                      placeholder="Year"
-                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                      value={formData.vehicleYear}
-                      onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Make"
-                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                      value={formData.vehicleMake}
-                      onChange={(e) => {
-                        const make = e.target.value;
-                        const t = mapToServiceVehicleType("", make, formData.vehicleModel || "");
-                        const displayType = t === 'truck' ? 'Truck/Van' : t === 'midsize' ? 'SUV' : t === 'luxury' ? 'Luxury' : 'Sedan';
-                        setFormData({ ...formData, vehicleMake: make, vehicle: displayType });
-                      }}
-                    />
-                    <Input
-                      placeholder="Model"
-                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                      value={formData.vehicleModel}
-                      onChange={(e) => {
-                        const model = e.target.value;
-                        const t = mapToServiceVehicleType("", formData.vehicleMake || "", model);
-                        const displayType = t === 'truck' ? 'Truck/Van' : t === 'midsize' ? 'SUV' : t === 'luxury' ? 'Luxury' : 'Sedan';
-                        setFormData({ ...formData, vehicleModel: model, vehicle: displayType });
-                      }}
-                    />
-                    <Input
-                      placeholder="Color"
-                      className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500"
-                      value={formData.vehicleColor || ''}
-                      onChange={(e) => setFormData({ ...formData, vehicleColor: e.target.value })}
-                    />
-                    {selectedCustomer?.vehicle && (
-                      <p className="col-span-4 text-xs text-gray-400">
-                        Customer's vehicle: {selectedCustomer.year} {selectedCustomer.vehicle} {selectedCustomer.model} {selectedCustomer.color ? `[Color: ${selectedCustomer.color}]` : ''}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Condition</label>
-                  <div className="col-span-3">
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      value={formData.vehicleCondition || ''}
-                      onChange={(e) => setFormData({ ...formData, vehicleCondition: e.target.value })}
-                    >
-                      <option value="" className="text-gray-500">Not Specified</option>
-                      <option value="Excellent">Excellent (Fairly Clean, Daily Driver)</option>
-                      <option value="Good">Good (Light Dust/Debris, No Heavy Stains)</option>
-                      <option value="Fair">Fair (Pet Hair, Light Stains, Spills)</option>
-                      <option value="Poor">Poor (Heavy Stains, Odors, Mold/Mildew)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-purple-400">Assign To</label>
-                  <div className="col-span-3 relative">
-                    <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={formData.assignedEmployee}
-                      onChange={(e) => setFormData({ ...formData, assignedEmployee: e.target.value })}
-                    >
-                      <option value="" className="text-gray-400">Unassigned</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id} className="text-white bg-zinc-900">
-                          {emp.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Booked By Field */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Booked By</label>
-                  <div className="col-span-3 relative">
-                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <select
-                      className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-9 py-2 text-sm text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      value={formData.bookedBy}
-                      onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
-                    >
-                      <option value="" className="text-gray-400">Unknown</option>
-                      <option value="Public Website" className="text-emerald-400 bg-zinc-900 font-bold">Online Booking (Public)</option>
-                      {/* Ensure current user defaults if not in list */}
-                      {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
-                        <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
-                          {getCurrentUser()?.name} (You)
-                        </option>
-                      )}
-                      {employees.map((emp) => (
-                        <option key={emp.id || emp.email} value={emp.name} className="text-white bg-zinc-900">
-                          {emp.name} ({emp.role})
-                        </option>
-                      ))}
-                      {/* Catch-all: If the saved value isn't any of the above, show it so it doesn't look Unknown */}
-                      {formData.bookedBy &&
-                        formData.bookedBy !== getCurrentUser()?.name &&
-                        !employees.find(e => e.name === formData.bookedBy) && (
-                          <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
-                            {formData.bookedBy}
-                          </option>
-                        )}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Creation Timestamp in History */}
-                {selectedBooking && selectedBooking.createdAt && (
+                  {/* Service Selection */}
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium text-gray-400">Created On</label>
-                    <div className="col-span-3 text-sm text-gray-400 font-semibold bg-zinc-900/50 p-2 rounded-md border border-zinc-800">
-                      {format(parseISO(selectedBooking.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    <label className="text-right text-xs font-semibold text-emerald-400">Service</label>
+                    <div className="col-span-3 flex gap-2">
+                      <div className="relative flex-1">
+                        <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
+                        <select
+                          className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          value={formData.service}
+                          onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                        >
+                          <option value="" className="text-gray-500">Select Service...</option>
+                          {allServices.map((pkg) => (
+                            <option key={pkg.id} value={pkg.name}>
+                              {pkg.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex-1">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 text-xs font-normal">
+                              <span className="truncate">
+                                {formData.addons.length > 0
+                                  ? formData.addons.join(", ")
+                                  : "Addons..."}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[280px] p-0 bg-zinc-900 border-zinc-800 shadow-2xl">
+                            <Command className="bg-zinc-900">
+                              <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
+                              <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
+                              <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
+                                {allAddons
+                                  .filter((addon: any) => {
+                                    if (addon.active === false) return false;
+                                    if (!addon.applicableVehicleTypes) return true;
+                                    const mappedVType = mapToServiceVehicleType(formData.vehicle || "", formData.vehicleMake || "", formData.vehicleModel || "");
+                                    return addon.applicableVehicleTypes.includes(mappedVType);
+                                  })
+                                  .map((addon) => (
+                                  <CommandItem
+                                    key={addon.id}
+                                    value={addon.name}
+                                    onSelect={() => {
+                                      const name = addon.name;
+                                      setFormData(prev => {
+                                        const current = Array.isArray(prev.addons) ? prev.addons : [];
+                                        const exists = current.includes(name);
+                                        const next = exists 
+                                          ? current.filter(a => a !== name)
+                                          : [...current, name];
+                                        return { ...prev, addons: next };
+                                      });
+                                    }}
+                                    className="text-zinc-300 cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 hover:text-white transition-colors rounded-lg mb-1 pointer-events-auto text-xs"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4 text-blue-500",
+                                        formData.addons.includes(addon.name) ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-bold">{addon.name}</span>
+                                      {(() => {
+                                        const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
+                                        const price = getAddOnPrice(addon.id, vType);
+                                        return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
+                                      })()}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400 mt-2">Notes</label>
-                  <div className="col-span-3">
-                    <textarea
-                      className="flex w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
-                      placeholder="Additional notes..."
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Reschedule History list */}
-                {selectedBooking && (() => {
-                  const rawHistory = (selectedBooking as any).rescheduleHistory || (selectedBooking as any).booking_vehicle?.reschedule_history || [];
-                  const existingHistory = Array.isArray(rawHistory) ? rawHistory : [];
-                  if (existingHistory.length === 0) return null;
-                  return (
-                    <div className="grid grid-cols-4 items-start gap-4">
-                      <label className="text-right text-xs font-black uppercase text-cyan-400 mt-1">Reschedules</label>
-                      <div className="col-span-3 bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3.5 space-y-2">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                          <RefreshCw className="h-3 w-3 text-cyan-400" />
-                          Previous Date History ({existingHistory.length})
+                  {/* Discount Option */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-red-400">Discount</label>
+                    <div className="col-span-3 grid grid-cols-3 gap-2">
+                      <select
+                        className="flex h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                        value={formData.discountType || 'coupon'}
+                        onChange={(e) => setFormData({ ...formData, discountType: e.target.value as any })}
+                      >
+                        <option value="coupon">Coupon Code</option>
+                        <option value="custom">Manual Amount ($)</option>
+                      </select>
+                      
+                      {formData.discountType === 'custom' ? (
+                        <div className="col-span-2 relative">
+                          <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
+                          <Input
+                            type="number"
+                            placeholder="Amount e.g. 25"
+                            className="pl-9 bg-zinc-900 border-zinc-800 text-xs text-white placeholder:text-zinc-600 focus:border-amber-500/30 h-10"
+                            value={formData.customDiscount || ''}
+                            onChange={(e) => setFormData({ ...formData, customDiscount: e.target.value })}
+                          />
                         </div>
-                        <div className="space-y-1.5">
-                          {existingHistory.map((item: any, idx: number) => {
-                            let oldStr = 'N/A';
-                            let newStr = 'N/A';
-                            try { oldStr = format(new Date(item.originalDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
-                            try { newStr = format(new Date(item.newDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                      ) : (
+                        <div className="col-span-2 flex flex-col gap-2">
+                          <div className="relative">
+                            <Tag className="absolute left-3 top-2.5 h-4 w-4 text-amber-500 z-10" />
+                            <select
+                              className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-8 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500 appearance-none cursor-pointer"
+                              value={(formData.discountCode && coupons.some(c => c.code === formData.discountCode)) ? formData.discountCode : (formData.discountCode ? 'CUSTOM_CODE' : '')}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === 'CUSTOM_CODE') {
+                                  setFormData({ ...formData, discountCode: 'CUSTOM' });
+                                } else {
+                                  setFormData({ ...formData, discountCode: val });
+                                }
+                              }}
+                            >
+                              <option value="">Select Coupon...</option>
+                              {coupons.filter(c => c.active).map(c => (
+                                <option key={c.code} value={c.code} className="bg-zinc-900 text-white">
+                                  {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
+                                </option>
+                              ))}
+                              <option value="CUSTOM_CODE" className="bg-zinc-900 text-yellow-500 font-bold">-- Enter Custom Code --</option>
+                            </select>
+                            <div className="absolute right-3 top-3 pointer-events-none text-zinc-500 text-xs font-mono">▼</div>
+                          </div>
+                          {((formData.discountCode && !coupons.some(c => c.code === formData.discountCode)) || formData.discountCode === 'CUSTOM') && (
+                            <div className="relative animate-in slide-in-from-top-1 duration-150">
+                              <Input
+                                placeholder="ENTER CODE"
+                                className="bg-zinc-900 border-zinc-800 text-xs text-white placeholder:text-zinc-600 font-mono uppercase focus:border-amber-500/30 h-9"
+                                value={formData.discountCode === 'CUSTOM' ? '' : formData.discountCode}
+                                onChange={(e) => setFormData({ ...formData, discountCode: e.target.value.toUpperCase() })}
+                              />
+                              {formData.discountCode && !matchedCoupon && (
+                                <span className="absolute right-3 top-2.5 text-[10px] text-red-500 font-bold uppercase">Not Found</span>
+                              )}
+                              {formData.discountCode && matchedCoupon && (
+                                <span className="absolute right-3 top-2.5 text-[10px] text-green-500 font-bold uppercase">Applied!</span>
+                              )}
+                            </div>
+                          )}
+                          {formData.discountCode && coupons.some(c => c.code === formData.discountCode) && matchedCoupon && (
+                            <div className="text-[10px] text-green-500 font-bold uppercase tracking-wider pl-1">
+                              ✓ {matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} discount applied from coupon: {matchedCoupon.code}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Probono Reason (Conditional) */}
+                  {typeof liveTotal !== 'undefined' && liveTotal === 0 && (formData.discountCode === 'PROBONO' || matchedCoupon || Number(formData.customDiscount) > 0) && (
+                    <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
+                      <label className="text-right text-xs font-semibold text-pink-400">Probono Reason</label>
+                      <div className="col-span-3 space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          {["Referral Builder", "Family/Friend", "Review-for-Service Trade", "Redo/Comp for Issue", "Charity", "Other"].map(reason => {
+                            const isChecked = (formData.probonoReasons && formData.probonoReasons.includes(reason)) || formData.probonoReason === reason;
                             return (
-                              <div key={idx} className="text-[10px] text-zinc-400 font-medium flex items-center gap-2 bg-zinc-900/40 p-2 rounded-lg border border-white/5">
-                                <span className="font-bold text-zinc-500">#{idx + 1}</span>
-                                <span>{oldStr}</span>
-                                <span className="text-cyan-500">➜</span>
-                                <span className="text-zinc-200 font-bold">{newStr}</span>
-                              </div>
+                              <label key={reason} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${isChecked ? 'bg-pink-500/20 border-pink-500/50 text-pink-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`}>
+                                <input 
+                                  type="checkbox" 
+                                  className="hidden"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    let newReasons = [...(formData.probonoReasons || [])];
+                                    if (formData.probonoReason && !newReasons.includes(formData.probonoReason)) {
+                                      newReasons.push(formData.probonoReason);
+                                    }
+                                    
+                                    if (checked) {
+                                      if (!newReasons.includes(reason)) newReasons.push(reason);
+                                    } else {
+                                      newReasons = newReasons.filter(r => r !== reason);
+                                    }
+                                    
+                                    let primary = formData.probonoPrimaryReason || formData.probonoReason;
+                                    if (newReasons.length === 1) {
+                                      primary = newReasons[0];
+                                    } else if (!newReasons.includes(primary || '')) {
+                                      primary = newReasons.length > 0 ? newReasons[0] : "";
+                                    }
+                                    
+                                    setFormData({ ...formData, probonoReasons: newReasons, probonoPrimaryReason: primary, probonoReason: primary });
+                                  }}
+                                />
+                                <div className={`w-3 h-3 rounded-sm flex items-center justify-center border ${isChecked ? 'bg-pink-500 border-pink-500 text-white font-bold text-[10px]' : 'border-zinc-600 bg-zinc-950'}`}>
+                                  {isChecked && "✓"}
+                                </div>
+                                {reason}
+                              </label>
                             );
                           })}
                         </div>
+                        
+                        {((formData.probonoReasons && formData.probonoReasons.length > 1) || (!formData.probonoReasons?.length && formData.probonoReason)) && (
+                          <div className="flex items-center gap-3 bg-zinc-950/50 p-2.5 rounded-md border border-zinc-800/50">
+                            <span className="text-xs text-zinc-400 font-medium whitespace-nowrap">Primary Reason:</span>
+                            <select
+                              className="flex h-8 w-full rounded-md border border-pink-500/30 bg-zinc-900 px-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+                              value={formData.probonoPrimaryReason || formData.probonoReason || ""}
+                              onChange={(e) => setFormData({ ...formData, probonoPrimaryReason: e.target.value, probonoReason: e.target.value })}
+                            >
+                              <option value="">Select Primary...</option>
+                              {(formData.probonoReasons?.length ? formData.probonoReasons : [formData.probonoReason]).filter(Boolean).map(r => (
+                                <option key={r} value={r}>{r}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })()}
+                  )}
+                </div>
 
-                {/* Reminder Settings */}
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium text-gray-400">Reminder</label>
-                  <div className="col-span-3 flex items-center gap-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="hasReminder"
-                        className="rounded border-zinc-800 bg-zinc-900 data-[state=checked]:bg-primary"
-                        checked={formData.hasReminder}
-                        onChange={(e) => setFormData({ ...formData, hasReminder: e.target.checked })}
-                      />
-                      <label htmlFor="hasReminder" className="text-sm font-medium text-gray-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Enable Follow-up
-                      </label>
+                {/* BOX 5: STATUS */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 5 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 5 ? "text-amber-400 animate-pulse" : formData.status ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 5 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                      )}
+                      5. Status
+                    </span>
+                    {formData.status ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 5 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className={cn("text-right text-xs font-semibold", getStatusColor(formData.status as any).match(/text-[a-z]+-\d{3,4}/)?.[0] || "text-gray-400")}>Status</label>
+                    <div className="col-span-3">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={formData.status || 'confirmed'}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      >
+                        <option value="confirmed">✓ Confirmed Booking</option>
+                        <option value="tentative">⏱ Tentative (Hold)</option>
+                        <option value="blocked">🚫 Blocked</option>
+                        <option value="pending">⏳ Pending</option>
+                        <option value="in_progress">🔄 In Progress</option>
+                        <option value="done">✅ Done</option>
+                        <option value="rescheduled">🔄 Rescheduled</option>
+                      </select>
                     </div>
-
-                    {formData.hasReminder && (
-                      <div className="flex-1">
-                        <select
-                          className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          value={formData.reminderFrequency}
-                          onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
-                        >
-                          <option value="0">Anytime / Manual</option>
-                          <option value="1">Monthly</option>
-                          <option value="2">Bi-Monthly</option>
-                          <option value="3">Quarterly</option>
-                          <option value="4">4 Months</option>
-                          <option value="6">6 Months</option>
-                          <option value="12">Yearly</option>
-                          <option value="custom">Custom</option>
-                        </select>
-                      </div>
-                    )}
                   </div>
                 </div>
+
+                {/* BOX 6: VEHICLE */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 6 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 6 ? "text-amber-400 animate-pulse" : (formData.vehicle || formData.vehicleMake) ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 6 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                      )}
+                      6. Vehicle
+                    </span>
+                    {(formData.vehicle || formData.vehicleMake) ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 6 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* 6A. Select Vehicle (Positioned FIRST if customer has linked vehicles) */}
+                  {selectedCustomer && (selectedCustomer.vehicles?.length || 0) > 0 && (
+                    <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
+                      <label className="text-right text-xs font-semibold text-purple-400">Select Vehicle</label>
+                      <div className="col-span-3">
+                        <select
+                          className="flex h-10 w-full rounded-md border border-purple-900/40 bg-zinc-900 px-3 py-2 text-xs text-white focus:ring-purple-500/20"
+                          value={formData.vehicleId || ""}
+                          onChange={(e) => {
+                            const vehId = e.target.value;
+                            const veh = selectedCustomer.vehicles.find((v: any) => v.id === vehId);
+                            if (veh) {
+                              setFormData(prev => ({
+                                ...prev,
+                                vehicleId: vehId,
+                                vehicleYear: veh.year || prev.vehicleYear,
+                                vehicleMake: veh.make || prev.vehicleMake,
+                                vehicleModel: veh.model || prev.vehicleModel,
+                                vehicleColor: veh.color || "",
+                                vehicle: veh.type || prev.vehicle
+                              }));
+                            }
+                          }}
+                        >
+                          <option value="">-- Choose from Linked Vehicles --</option>
+                          {selectedCustomer.vehicles.map((v: any) => (
+                            <option key={v.id} value={v.id}>
+                              {v.year} {v.make} {v.model} {v.color ? `[Color: ${v.color}]` : ""} ({v.type || 'No Type'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6B. Vehicle Type */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Vehicle Type</label>
+                    <div className="col-span-3 space-y-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                          <Select 
+                            value={formData.vehicle || ""}
+                            onValueChange={(val) => setFormData({ ...formData, vehicle: val })}
+                          >
+                            <SelectTrigger className="w-full bg-zinc-900 border-zinc-800 text-white h-10 text-xs">
+                              <SelectValue placeholder="Select Vehicle Class" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-800 border-zinc-700 text-white">
+                              <SelectItem value="Compact/Sedan">Compact/Sedan</SelectItem>
+                              <SelectItem value="Mid-Size/SUV">Mid-Size/SUV</SelectItem>
+                              <SelectItem value="Truck/Van/Large SUV">Truck/Van/Large SUV</SelectItem>
+                              <SelectItem value="Luxury/High-End">Luxury/High-End</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="border-blue-600 text-blue-400 hover:bg-blue-600/10 h-10 text-xs px-3 shrink-0"
+                          onClick={() => setShowClassificationModal(true)}
+                        >
+                          Quick Select
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 6C. Vehicle Details */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Vehicle Detail</label>
+                    <div className="col-span-3 grid grid-cols-4 gap-2">
+                      <Input
+                        placeholder="Year"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500 text-xs h-9"
+                        value={formData.vehicleYear}
+                        onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Make"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500 text-xs h-9"
+                        value={formData.vehicleMake}
+                        onChange={(e) => {
+                          const make = e.target.value;
+                          const t = mapToServiceVehicleType("", make, formData.vehicleModel || "");
+                          const displayType = t === 'truck' ? 'Truck/Van/Large SUV' : t === 'midsize' ? 'Mid-Size/SUV' : t === 'luxury' ? 'Luxury/High-End' : 'Compact/Sedan';
+                          setFormData({ ...formData, vehicleMake: make, vehicle: displayType });
+                        }}
+                      />
+                      <Input
+                        placeholder="Model"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500 text-xs h-9"
+                        value={formData.vehicleModel}
+                        onChange={(e) => {
+                          const model = e.target.value;
+                          const t = mapToServiceVehicleType("", formData.vehicleMake || "", model);
+                          const displayType = t === 'truck' ? 'Truck/Van/Large SUV' : t === 'midsize' ? 'Mid-Size/SUV' : t === 'luxury' ? 'Luxury/High-End' : 'Compact/Sedan';
+                          setFormData({ ...formData, vehicleModel: model, vehicle: displayType });
+                        }}
+                      />
+                      <Input
+                        placeholder="Color"
+                        className="bg-zinc-900 border-zinc-800 text-white placeholder:text-gray-500 text-xs h-9"
+                        value={formData.vehicleColor || ''}
+                        onChange={(e) => setFormData({ ...formData, vehicleColor: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 6D. Condition */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Condition</label>
+                    <div className="col-span-3">
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={formData.vehicleCondition || ''}
+                        onChange={(e) => setFormData({ ...formData, vehicleCondition: e.target.value })}
+                      >
+                        <option value="" className="text-gray-500">Not Specified</option>
+                        <option value="Excellent">Excellent (Fairly Clean, Daily Driver)</option>
+                        <option value="Good">Good (Light Dust/Debris, No Heavy Stains)</option>
+                        <option value="Fair">Fair (Pet Hair, Light Stains, Spills)</option>
+                        <option value="Poor">Poor (Heavy Stains, Odors, Mold/Mildew)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOX 7: ASSIGN TO + BOOKED BY */}
+                <div className={cn(
+                  "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
+                  activeBlinkSection === 7 
+                    ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30" 
+                    : "border-zinc-800 bg-zinc-900/30"
+                )}>
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className={cn(
+                      "text-xs font-black uppercase tracking-wider flex items-center gap-1.5",
+                      activeBlinkSection === 7 ? "text-amber-400 animate-pulse" : (formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned') ? "text-zinc-200" : "text-zinc-400"
+                    )}>
+                      {activeBlinkSection === 7 && (
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
+                      )}
+                      7. Assign To + Booked By
+                    </span>
+                    {(formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned') ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : activeBlinkSection === 7 ? (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse">
+                        Required Step
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Assign To (Mandatory) */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-purple-400">Assign To *</label>
+                    <div className="col-span-3 relative">
+                      <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-medium"
+                        value={formData.assignedEmployee}
+                        onChange={(e) => setFormData({ ...formData, assignedEmployee: e.target.value })}
+                      >
+                        <option value="" className="text-gray-400">Unassigned (Required before save)</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id} className="text-white bg-zinc-900">
+                            {emp.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Booked By */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Booked By</label>
+                    <div className="col-span-3 relative">
+                      <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={formData.bookedBy}
+                        onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
+                      >
+                        <option value="" className="text-gray-400">Unknown</option>
+                        <option value="Public Website" className="text-emerald-400 bg-zinc-900 font-bold">Online Booking (Public)</option>
+                        {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
+                          <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
+                            {getCurrentUser()?.name} (You)
+                          </option>
+                        )}
+                        {employees.map((emp) => (
+                          <option key={emp.id || emp.email} value={emp.name} className="text-white bg-zinc-900">
+                            {emp.name} ({emp.role})
+                          </option>
+                        ))}
+                        {formData.bookedBy &&
+                          formData.bookedBy !== getCurrentUser()?.name &&
+                          !employees.find(e => e.name === formData.bookedBy) && (
+                            <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
+                              {formData.bookedBy}
+                            </option>
+                          )}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOX 8: NOTES + REMINDER */}
+                <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3.5 space-y-3 transition-all duration-200">
+                  <div className="flex items-center justify-between border-b border-zinc-800/60 pb-2">
+                    <span className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      8. Notes + Reminder
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                      Optional
+                    </span>
+                  </div>
+
+                  {/* Creation Timestamp */}
+                  {selectedBooking && selectedBooking.createdAt && (
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-xs font-semibold text-zinc-400">Created On</label>
+                      <div className="col-span-3 text-xs text-gray-400 font-semibold bg-zinc-900/50 p-2 rounded-md border border-zinc-800">
+                        {format(parseISO(selectedBooking.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400 mt-2">Notes</label>
+                    <div className="col-span-3">
+                      <textarea
+                        className="flex w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-gray-300 placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                        placeholder="Additional notes..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Reschedule History */}
+                  {selectedBooking && (() => {
+                    const rawHistory = (selectedBooking as any).rescheduleHistory || (selectedBooking as any).booking_vehicle?.reschedule_history || [];
+                    const existingHistory = Array.isArray(rawHistory) ? rawHistory : [];
+                    if (existingHistory.length === 0) return null;
+                    return (
+                      <div className="grid grid-cols-4 items-start gap-4">
+                        <label className="text-right text-xs font-black uppercase text-cyan-400 mt-1">Reschedules</label>
+                        <div className="col-span-3 bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3.5 space-y-2">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                            <RefreshCw className="h-3 w-3 text-cyan-400" />
+                            Previous Date History ({existingHistory.length})
+                          </div>
+                          <div className="space-y-1.5">
+                            {existingHistory.map((item: any, idx: number) => {
+                              let oldStr = 'N/A';
+                              let newStr = 'N/A';
+                              try { oldStr = format(new Date(item.originalDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                              try { newStr = format(new Date(item.newDate), 'MMM d, yyyy @ h:mm a'); } catch(e){}
+                              return (
+                                <div key={idx} className="text-[10px] text-zinc-400 font-medium flex items-center gap-2 bg-zinc-900/40 p-2 rounded-lg border border-white/5">
+                                  <span className="font-bold text-zinc-500">#{idx + 1}</span>
+                                  <span>{oldStr}</span>
+                                  <span className="text-cyan-500">➜</span>
+                                  <span className="text-zinc-200 font-bold">{newStr}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Reminder */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-zinc-400">Reminder</label>
+                    <div className="col-span-3 flex items-center gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="hasReminder"
+                          className="rounded border-zinc-800 bg-zinc-900 data-[state=checked]:bg-primary"
+                          checked={formData.hasReminder}
+                          onChange={(e) => setFormData({ ...formData, hasReminder: e.target.checked })}
+                        />
+                        <label htmlFor="hasReminder" className="text-xs font-medium text-gray-300 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          Enable Follow-up
+                        </label>
+                      </div>
+
+                      {formData.hasReminder && (
+                        <div className="flex-1">
+                          <select
+                            className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-xs text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            value={formData.reminderFrequency}
+                            onChange={(e) => setFormData({ ...formData, reminderFrequency: e.target.value })}
+                          >
+                            <option value="0">Anytime / Manual</option>
+                            <option value="1">Monthly</option>
+                            <option value="2">Bi-Monthly</option>
+                            <option value="3">Quarterly</option>
+                            <option value="4">4 Months</option>
+                            <option value="6">6 Months</option>
+                            <option value="12">Yearly</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
