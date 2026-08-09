@@ -2626,9 +2626,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
             <div className="overflow-y-auto flex-1 px-4 sm:px-6 relative pt-4">
               {/* SUMMARY HEADER (READ ONLY + CLICKABLE STATUS QUICK-EDIT) */}
-              <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-4 shadow-2xl">
-                <div className="flex justify-between items-start">
-                  <div>
+              <div className="sticky top-0 z-20 p-3 bg-zinc-950/95 backdrop-blur-md rounded-lg border border-purple-500/30 mb-4 shadow-2xl space-y-2">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="text-zinc-500 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
                       Service Summary
                       {formData.status && (
@@ -2686,17 +2686,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         👤 Assigned to: {getEmployeeName(formData.assignedEmployee)}
                       </div>
                     )}
-                    {formData.addons && formData.addons.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {formData.addons.map((a, i) => (
-                          <Badge key={i} variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-0 px-2 h-5">
-                            {a}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     {liveSubtotal !== liveTotal && (
                       <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
                         ${liveSubtotal.toFixed(2)}
@@ -2720,6 +2711,20 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </div>
                   </div>
                 </div>
+
+                {formData.addons && formData.addons.length > 0 && (
+                  <div className="pt-2 border-t border-zinc-800/60 flex flex-wrap gap-1.5 w-full">
+                    {formData.addons.map((a, i) => (
+                      <Badge
+                        key={i}
+                        variant="outline"
+                        className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-1 px-2.5 h-auto min-h-[22px] whitespace-normal text-left max-w-full leading-tight shadow-sm"
+                      >
+                        {a}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 8 GUIDED STEP BOXED SECTIONS */}
