@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -234,6 +234,7 @@ const ServiceChecklist = () => {
   // Tip Checkout Flow
   const [showTipScreen, setShowTipScreen] = useState(false);
   const [finishedJobId, setFinishedJobId] = useState<string | null>(null);
+  const [showPostPaymentPopup, setShowPostPaymentPopup] = useState(false);
 
   // New generic job flow state
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -1581,6 +1582,18 @@ const ServiceChecklist = () => {
       window.hasUnsavedChecklistChanges = false;
     };
   }, [hasUnsavedChanges]);
+
+  // Listen for Quick Pay completion to open Post-Payment Popup after Finish Job
+  useEffect(() => {
+    const handleQuickPayCompleted = () => {
+      if (isJobCompleted || finishedJobId || completedAt) {
+        setShowTipScreen(false);
+        setShowPostPaymentPopup(true);
+      }
+    };
+    window.addEventListener('quick-pay-completed', handleQuickPayCompleted);
+    return () => window.removeEventListener('quick-pay-completed', handleQuickPayCompleted);
+  }, [isJobCompleted, finishedJobId, completedAt]);
 
   // --- PERSISTENCE LOGIC END ---
 
@@ -4600,9 +4613,99 @@ const ServiceChecklist = () => {
               }));
             }
             window.dispatchEvent(new Event('bookings-updated'));
+            window.dispatchEvent(new CustomEvent('quick-pay-completed', {
+              detail: { totalPaid: calculateTotal() + tip, paymentMethod: 'Cash' }
+            }));
+            setShowPostPaymentPopup(true);
           }}
         />
       )}
+
+      {/* Post-Payment Next Steps Reminder Modal */}
+      <Dialog open={showPostPaymentPopup} onOpenChange={setShowPostPaymentPopup}>
+        <DialogContent className="bg-zinc-950 border border-zinc-800 shadow-2xl max-w-lg p-6 sm:p-8 rounded-3xl">
+          <DialogHeader className="space-y-3 text-left">
+            <div className="flex items-center gap-3.5">
+              <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner">
+                <CheckCircle className="h-6 w-6 text-emerald-400" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                  Job & Payment Complete!
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400 text-xs sm:text-sm mt-0.5">
+                  Payment recorded via Quick Pay. Follow these next steps on the Invoices page to finalize customer records:
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-3 my-4">
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-start gap-3">
+              <div className="h-7 w-7 rounded-xl bg-blue-500/20 text-blue-400 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 border border-blue-500/30">
+                1
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-white">Review & Verify Invoice Details</h4>
+                <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                  Open the auto-generated invoice on the <b>Invoices</b> page to double-check vehicle info, line items, labor timer hours, and discounts.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-start gap-3">
+              <div className="h-7 w-7 rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/30">
+                2
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-white">Confirm Paid Status & Receipt</h4>
+                <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                  Verify the invoice payment status is marked as <b>Paid</b> and download or print the official PDF receipt.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-start gap-3">
+              <div className="h-7 w-7 rounded-xl bg-purple-500/20 text-purple-400 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 border border-purple-500/30">
+                3
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-white">Send Invoice to Customer</h4>
+                <p className="text-[11px] sm:text-xs text-zinc-400 mt-0.5 leading-relaxed">
+                  Send the finalized PDF invoice to the customer via Email or shareable link to complete job documentation.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 mt-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPostPaymentPopup(false)}
+              className="w-full sm:w-auto border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-xl h-11 text-xs font-bold"
+            >
+              Stay on Checklist
+            </Button>
+            <Button
+              onClick={() => {
+                setHasUnsavedChanges(false);
+                // @ts-ignore
+                window.hasUnsavedChecklistChanges = false;
+                // @ts-ignore
+                window.currentChecklistSessionId = null;
+                setPendingNavDest(null);
+                setShowPostPaymentPopup(false);
+                navigate('/invoicing');
+              }}
+              className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-11 text-xs sm:text-sm font-extrabold shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Go to Invoices Page
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-zinc-950 border border-zinc-800">
