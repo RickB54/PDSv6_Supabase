@@ -952,6 +952,105 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_qual_dateFilter', JSON.stringify(qualDateFilter));
     }, [qualShowArchived, qualDateFilter]);
 
+    // Acquisition & Intake Filter
+    const [acqShowArchived, setAcqShowArchived] = useState(() => localStorage.getItem('analytics_acq_showArchived') === 'true');
+    const [acqDateFilter, setAcqDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_acq_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    useEffect(() => {
+        localStorage.setItem('analytics_acq_showArchived', String(acqShowArchived));
+        localStorage.setItem('analytics_acq_dateFilter', JSON.stringify(acqDateFilter));
+    }, [acqShowArchived, acqDateFilter]);
+
+    const filteredAcquisitionBookings = useMemo(() => {
+        return bookings.filter(b => {
+            const isArchived = Boolean(b.isArchived || (b as any).is_archived);
+            if (!acqShowArchived && isArchived) return false;
+
+            if (acqDateFilter.start) {
+                const bDate = parseISO(b.date);
+                const start = startOfDay(acqDateFilter.start);
+                const end = endOfDay(acqDateFilter.end || acqDateFilter.start);
+                if (!isWithinInterval(bDate, { start, end })) return false;
+            }
+            return true;
+        });
+    }, [bookings, acqShowArchived, acqDateFilter]);
+
+    const acquisitionData = useMemo(() => {
+        const totalCount = filteredAcquisitionBookings.length;
+
+        // 1. Intake Methods ("How Booked")
+        const howBookedMap: Record<string, { name: string; count: number; completedCount: number; revenue: number }> = {};
+        
+        // 2. Acquisition Sources ("How Found Us")
+        const howFoundMap: Record<string, { name: string; count: number; completedCount: number; revenue: number; customers: Set<string> }> = {};
+
+        filteredAcquisitionBookings.forEach(b => {
+            const price = Number(b.price || (b as any).service_price || 0);
+            const isDone = b.status === 'done' || b.status === 'completed';
+            const custName = (b.customer || 'Unknown').trim();
+
+            // How Booked mapping
+            let bookedByVal = (b.bookedBy || (b as any).source || (b as any).source_origin || '').trim();
+            if (!bookedByVal) bookedByVal = 'Unknown';
+            else if (bookedByVal.toLowerCase().includes('public') || bookedByVal.toLowerCase().includes('website') || bookedByVal.toLowerCase().includes('online')) bookedByVal = 'Public Website';
+            else if (bookedByVal.toLowerCase().includes('phone')) bookedByVal = 'Phone Call';
+            else if (bookedByVal.toLowerCase().includes('text')) bookedByVal = 'Text Message';
+            else if (bookedByVal.toLowerCase().includes('manual')) bookedByVal = 'Manual Entry';
+
+            if (!howBookedMap[bookedByVal]) {
+                howBookedMap[bookedByVal] = { name: bookedByVal, count: 0, completedCount: 0, revenue: 0 };
+            }
+            howBookedMap[bookedByVal].count += 1;
+            if (isDone) {
+                howBookedMap[bookedByVal].completedCount += 1;
+                howBookedMap[bookedByVal].revenue += price;
+            }
+
+            // How Found Us mapping
+            let foundVal = ((b as any).howFound || (b as any).booking_vehicle?.howFound || customers.find(c => c.name.toLowerCase() === custName.toLowerCase())?.howFound || '').trim();
+            if (!foundVal) foundVal = 'Unknown';
+
+            if (!howFoundMap[foundVal]) {
+                howFoundMap[foundVal] = { name: foundVal, count: 0, completedCount: 0, revenue: 0, customers: new Set() };
+            }
+            howFoundMap[foundVal].count += 1;
+            if (custName && custName !== 'Unknown') {
+                howFoundMap[foundVal].customers.add(custName);
+            }
+            if (isDone) {
+                howFoundMap[foundVal].completedCount += 1;
+                howFoundMap[foundVal].revenue += price;
+            }
+        });
+
+        const howBookedList = Object.values(howBookedMap).map(item => ({
+            ...item,
+            percentage: totalCount > 0 ? ((item.count / totalCount) * 100).toFixed(1) : '0'
+        })).sort((a, b) => b.count - a.count);
+
+        const howFoundList = Object.values(howFoundMap).map(item => ({
+            ...item,
+            customerCount: item.customers.size,
+            percentage: totalCount > 0 ? ((item.count / totalCount) * 100).toFixed(1) : '0'
+        })).sort((a, b) => b.count - a.count);
+
+        return {
+            totalCount,
+            howBookedList,
+            howFoundList
+        };
+    }, [filteredAcquisitionBookings, customers]);
+
     // --- Scroll-Spy active section state for Analytics bookmark bar ---
     const [activeSection, setActiveSection] = useState<string>('revenue-performance');
 
@@ -965,6 +1064,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             'estimates-tracker',
             'probono-tracker',
             'customer-insights',
+            'acquisition-intake',
             'operational-quality'
         ];
 
@@ -2185,6 +2285,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     }}
                 >
                     Customer Insights
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'acquisition-intake' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-cyan-500/20 border-cyan-500/60 text-cyan-300 font-bold shadow-sm shadow-cyan-950/50 ring-1 ring-cyan-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('acquisition-intake');
+                        document.getElementById('acquisition-intake')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                >
+                    Acquisition & Intake
                 </Button>
                 <Button 
                     variant="outline" 
@@ -3977,7 +4095,221 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardContent>
             </Card>
 
+            {/* Customer Acquisition & Intake Analytics Section */}
+            <Card id="acquisition-intake" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-cyan-500/30 mt-8 relative group scroll-mt-24">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                <CardHeader className="bg-zinc-950/20 relative flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
+                            <Target className="w-5 h-5 text-cyan-400" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-lg font-bold text-white flex items-center gap-2">
+                                Customer Acquisition & Intake Analytics
+                                <Badge variant="outline" className="text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-semibold">
+                                    Lead Channel Tracking
+                                </Badge>
+                            </CardTitle>
+                            <CardDescription className="text-xs text-zinc-400">
+                                Detailed breakdown of how bookings are created and how customers discovered your business
+                            </CardDescription>
+                        </div>
+                    </div>
 
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50 text-xs">
+                                <Filter className="h-4 w-4 text-cyan-400" />
+                                Filter
+                                {acqDateFilter.start && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-zinc-200">Show Archived</span>
+                                    <Switch checked={acqShowArchived} onCheckedChange={setAcqShowArchived} className="border border-zinc-700 data-[state=checked]:bg-cyan-500" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Date Filters</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                                            onClick={() => setAcqDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                                            onClick={() => setAcqDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setAcqDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) });
+                                            }}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                setAcqDateFilter({ start: startOfMonth(d), end: endOfMonth(d) });
+                                            }}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </CardHeader>
+
+                <CardContent className="p-6 space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Box 1: Intake Methods ("How Booked") */}
+                        <div className="space-y-4 bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/80">
+                            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                        <BookOpen className="w-4 h-4 text-emerald-400" />
+                                        Intake Methods ("How Booked")
+                                    </h4>
+                                    <p className="text-[11px] text-zinc-400">Distribution by booking channel / creation method</p>
+                                </div>
+                                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
+                                    {acquisitionData.totalCount} Total Bookings
+                                </Badge>
+                            </div>
+
+                            {/* Chart */}
+                            {acquisitionData.howBookedList.length > 0 ? (
+                                <div className="h-56 w-full pt-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={acquisitionData.howBookedList} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis dataKey="name" stroke="#a1a1aa" fontSize={10} tickLine={false} interval={0} angle={-15} textAnchor="end" />
+                                            <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
+                                                formatter={(value: any, name: any) => [name === 'revenue' ? `$${Number(value).toLocaleString()}` : value, name === 'count' ? 'Bookings' : name === 'revenue' ? 'Revenue' : name]}
+                                            />
+                                            <Bar dataKey="count" name="Bookings" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-40 flex items-center justify-center text-xs text-zinc-500">
+                                    No intake data available for selected filter
+                                </div>
+                            )}
+
+                            {/* Table */}
+                            <div className="overflow-x-auto rounded-lg border border-zinc-800">
+                                <Table>
+                                    <TableHeader className="bg-zinc-900/60">
+                                        <TableRow className="border-zinc-800">
+                                            <TableHead className="text-zinc-400 text-xs">Intake Channel</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Bookings</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Share</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Completed</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Revenue</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {acquisitionData.howBookedList.map((item, idx) => (
+                                            <TableRow key={idx} className="border-zinc-800/50 hover:bg-zinc-800/30">
+                                                <TableCell className="font-medium text-xs text-white">{item.name}</TableCell>
+                                                <TableCell className="text-right text-xs text-zinc-300 font-bold">{item.count}</TableCell>
+                                                <TableCell className="text-right text-xs text-emerald-400 font-medium">{item.percentage}%</TableCell>
+                                                <TableCell className="text-right text-xs text-zinc-400">{item.completedCount}</TableCell>
+                                                <TableCell className="text-right text-xs text-white font-semibold">${item.revenue.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+
+                        {/* Box 2: Acquisition Sources ("How They Found Us") */}
+                        <div className="space-y-4 bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/80">
+                            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                <div>
+                                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                        <Target className="w-4 h-4 text-cyan-400" />
+                                        Acquisition Sources ("How Found Us")
+                                    </h4>
+                                    <p className="text-[11px] text-zinc-400">Marketing lead channels driving new & repeat business</p>
+                                </div>
+                                <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-xs">
+                                    {acquisitionData.howFoundList.length} Channels Recorded
+                                </Badge>
+                            </div>
+
+                            {/* Chart */}
+                            {acquisitionData.howFoundList.length > 0 ? (
+                                <div className="h-56 w-full pt-2">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={acquisitionData.howFoundList} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                                            <XAxis dataKey="name" stroke="#a1a1aa" fontSize={10} tickLine={false} interval={0} angle={-15} textAnchor="end" />
+                                            <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
+                                                formatter={(value: any, name: any) => [name === 'revenue' ? `$${Number(value).toLocaleString()}` : value, name === 'count' ? 'Bookings' : name]}
+                                            />
+                                            <Bar dataKey="count" name="Bookings" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-40 flex items-center justify-center text-xs text-zinc-500">
+                                    No acquisition source data available for selected filter
+                                </div>
+                            )}
+
+                            {/* Table */}
+                            <div className="overflow-x-auto rounded-lg border border-zinc-800">
+                                <Table>
+                                    <TableHeader className="bg-zinc-900/60">
+                                        <TableRow className="border-zinc-800">
+                                            <TableHead className="text-zinc-400 text-xs">Lead Channel</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Bookings</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Customers</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Share</TableHead>
+                                            <TableHead className="text-right text-zinc-400 text-xs">Revenue</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {acquisitionData.howFoundList.map((item, idx) => (
+                                            <TableRow key={idx} className="border-zinc-800/50 hover:bg-zinc-800/30">
+                                                <TableCell className="font-medium text-xs text-white">{item.name}</TableCell>
+                                                <TableCell className="text-right text-xs text-zinc-300 font-bold">{item.count}</TableCell>
+                                                <TableCell className="text-right text-xs text-cyan-300 font-medium">{item.customerCount}</TableCell>
+                                                <TableCell className="text-right text-xs text-cyan-400 font-medium">{item.percentage}%</TableCell>
+                                                <TableCell className="text-right text-xs text-white font-semibold">${item.revenue.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Post-Service Performance Review Section - NEW AT BOTTOM */}
             <Card id="operational-quality" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group scroll-mt-24">

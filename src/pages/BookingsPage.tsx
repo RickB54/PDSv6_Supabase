@@ -157,6 +157,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     endTime: "17:00",
     assignedEmployee: "",
     bookedBy: getCurrentUser()?.name || '',
+    howFound: "",
     notes: "",
     addons: [] as string[],
     hasReminder: false,
@@ -410,19 +411,28 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           return s === f;
         });
       }
-      if (statusFilter) customerEvents = customerEvents.filter(e => ((e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending')) === statusFilter);
-        if (dateFilter.start) {
-          const start = startOfDay(dateFilter.start!);
-          const end = endOfDay(dateFilter.end || dateFilter.start!);
-          customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { start, end }));
-          
-          // Only show the customer if they have an actual booking or block in this timeframe,
-          // ignoring customers who only have an engagement/activity log in this timeframe.
-          const hasBookingOrBlock = customerEvents.some(e => e.type !== 'activity');
-          if (!hasBookingOrBlock) return null;
-        }
+      if (statusFilter) {
+        customerEvents = customerEvents.filter(e => {
+          const st = (e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending');
+          if (statusFilter === 'cancelled' || statusFilter === 'canceled') {
+            return st === 'cancelled' || st === 'canceled';
+          }
+          return st === statusFilter;
+        });
+      }
 
-        if (customerEvents.length === 0) return null;
+      if (dateFilter.start) {
+        const start = startOfDay(dateFilter.start!);
+        const end = endOfDay(dateFilter.end || dateFilter.start!);
+        customerEvents = customerEvents.filter(e => isWithinInterval(parseISO(e.date), { start, end }));
+      }
+
+      // Only show the customer if they have an actual booking or block,
+      // ignoring customers who only have an engagement/activity log.
+      const hasBookingOrBlock = customerEvents.some(e => e.type !== 'activity');
+      if (!hasBookingOrBlock) return null;
+
+      if (customerEvents.length === 0) return null;
 
       // Analysis for sorting
       const sortedEvents = customerEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1080,6 +1090,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const getBookingsForDay = (day: Date) => {
     // Get unified events for this day
     return unifiedEvents.filter(event => {
+      const isArchived = Boolean((event as any).isArchived || (event as any).is_archived);
+      const isArchiveVisible = 
+        archiveFilter === 'all' ? true : 
+        archiveFilter === 'archived' ? isArchived : !isArchived;
+      if (!isArchiveVisible) return false;
       return isSameDay(parseISO(event.date), day);
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
@@ -1172,6 +1187,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       endTime: "17:00",
       assignedEmployee: "",
       bookedBy: getCurrentUser()?.name || '',
+      howFound: "",
       notes: "",
       addons: [],
       hasReminder: false,
@@ -1235,7 +1251,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
       endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
-      bookedBy: booking.bookedBy || "",
+      bookedBy: booking.bookedBy || (booking as any).source || (booking as any).source_origin || "",
+      howFound: (booking as any).howFound || matchingCust?.howFound || "",
       notes: booking.notes || matchingCust?.notes || "",
       addons: (Array.isArray(booking.addons) ? booking.addons : []).map(a => getCanonicalAddonName(a)),
       hasReminder: booking.hasReminder || false,
@@ -1519,6 +1536,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy,
+          howFound: formData.howFound,
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -1619,6 +1637,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy || getCurrentUser()?.name || 'Staff',
+          howFound: formData.howFound,
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -2855,6 +2874,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                               vehicleId: primaryVeh?.id,
                               vehicle: primaryVeh?.type || cust.vehicleType || prev.vehicle,
                               notes: cust.notes || prev.notes,
+                              howFound: cust.howFound || prev.howFound || "",
                             }));
                           }
                         }}
@@ -3516,9 +3536,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </div>
                   </div>
 
-                  {/* Booked By */}
+                  {/* Booked By / How Booked */}
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-xs font-semibold text-zinc-400">Booked By</label>
+                    <label className="text-right text-xs font-semibold text-zinc-400">How Booked</label>
                     <div className="col-span-3 relative">
                       <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                       <select
@@ -3526,11 +3546,14 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         value={formData.bookedBy}
                         onChange={(e) => setFormData({ ...formData, bookedBy: e.target.value })}
                       >
-                        <option value="" className="text-gray-400">Unknown</option>
-                        <option value="Public Website" className="text-emerald-400 bg-zinc-900 font-bold">Online Booking (Public)</option>
+                        <option value="" className="text-gray-400">Not Specified</option>
+                        <option value="Public Website" className="text-emerald-400 bg-zinc-900 font-bold">Public Website (Online)</option>
+                        <option value="Phone Call" className="text-blue-400 bg-zinc-900">Phone Call</option>
+                        <option value="Text Message" className="text-cyan-400 bg-zinc-900">Text Message</option>
+                        <option value="Manual Entry" className="text-amber-400 bg-zinc-900">Manual Entry</option>
                         {getCurrentUser()?.name && !employees.find(e => e.name === getCurrentUser()?.name) && (
                           <option key="current-user" value={getCurrentUser()?.name} className="text-white bg-zinc-900">
-                            {getCurrentUser()?.name} (You)
+                            {getCurrentUser()?.name} (Staff)
                           </option>
                         )}
                         {employees.map((emp) => (
@@ -3539,12 +3562,45 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                           </option>
                         ))}
                         {formData.bookedBy &&
+                          formData.bookedBy !== 'Public Website' &&
+                          formData.bookedBy !== 'Phone Call' &&
+                          formData.bookedBy !== 'Text Message' &&
+                          formData.bookedBy !== 'Manual Entry' &&
                           formData.bookedBy !== getCurrentUser()?.name &&
                           !employees.find(e => e.name === formData.bookedBy) && (
                             <option key="saved-value" value={formData.bookedBy} className="text-gray-300">
                               {formData.bookedBy}
                             </option>
                           )}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* How They Found Us */}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <label className="text-right text-xs font-semibold text-cyan-400">How Found Us</label>
+                    <div className="col-span-3 relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                      <select
+                        className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-medium"
+                        value={formData.howFound}
+                        onChange={(e) => setFormData({ ...formData, howFound: e.target.value })}
+                      >
+                        <option value="" className="text-gray-400">Not Specified / Unknown</option>
+                        <option value="Google Search" className="text-white bg-zinc-900">Google Search</option>
+                        <option value="Google Reviews" className="text-white bg-zinc-900">Google Reviews</option>
+                        <option value="Truck Sign" className="text-white bg-zinc-900">Truck Signage / Rig</option>
+                        <option value="Shop Sign" className="text-white bg-zinc-900">Shop Signage / Drive-by</option>
+                        <option value="Referral / Word of Mouth" className="text-white bg-zinc-900">Referral / Word of Mouth</option>
+                        <option value="Social Media" className="text-white bg-zinc-900">Social Media (Facebook / IG)</option>
+                        <option value="Other" className="text-white bg-zinc-900">Other</option>
+                        {formData.howFound && 
+                          !['Google Search', 'Google Reviews', 'Truck Sign', 'Shop Sign', 'Referral / Word of Mouth', 'Social Media', 'Other'].includes(formData.howFound) && (
+                            <option key="custom-found" value={formData.howFound} className="text-gray-300">
+                              {formData.howFound}
+                            </option>
+                          )
+                        }
                       </select>
                     </div>
                   </div>
@@ -3978,6 +4034,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setStatusFilter('rescheduled')} className="cursor-pointer flex items-center gap-2">
                       <RefreshCw className="h-3 w-3 text-cyan-500" /> Rescheduled
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('cancelled')} className="cursor-pointer flex items-center gap-2">
+                      <X className="h-3 w-3 text-red-500" /> Canceled
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
