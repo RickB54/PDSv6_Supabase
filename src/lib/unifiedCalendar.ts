@@ -23,6 +23,7 @@ export interface CalendarEvent {
     source: 'booking' | 'manual' | 'google';
     source_origin?: string; // e.g. 'Hybrid Availability System'
     isDeletable: boolean;
+    isArchived?: boolean;
     color?: string;
     icon?: string;
     assignedEmployee?: string;
@@ -77,6 +78,7 @@ export async function getUnifiedCalendarEvents(
                 source: 'booking',
                 source_origin: booking.source || 'Manual Entry',
                 isDeletable: true,
+                isArchived: booking.isArchived || (booking as any).is_archived || false,
                 assignedEmployee: booking.assignedEmployee,
                 vehicle: booking.vehicle,
                 vehicleYear: booking.vehicleYear,

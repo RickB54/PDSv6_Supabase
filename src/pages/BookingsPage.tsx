@@ -359,7 +359,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       let customerEvents = [
         ...items.filter(b => {
           const isCustMatch = b.customer?.trim().toLowerCase() === customerName.trim().toLowerCase();
-          const isArchived = (b as any).isArchived === true || (b as any).is_archived === true;
+          const isArchived = Boolean(
+            (b as any).isArchived === true || 
+            (b as any).is_archived === true || 
+            (b as any).booking_vehicle?.is_archived === true || 
+            (b as any).booking_vehicle?.isArchived === true || 
+            isCustArchived
+          );
           const isArchiveVisible = 
             archiveFilter === 'all' ? true : 
             archiveFilter === 'archived' ? isArchived : !isArchived;
@@ -372,7 +378,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         ...unifiedEvents.filter(e => {
           const eCust = (e.customer || 'INTERNAL: System Blocks').trim().toLowerCase();
           const isCustMatch = eCust === customerName.trim().toLowerCase();
-          const isArchived = (e as any).isArchived === true || (e as any).is_archived === true;
+          const isArchived = Boolean(
+            (e as any).isArchived === true || 
+            (e as any).is_archived === true || 
+            (e as any).booking_vehicle?.is_archived === true || 
+            (e as any).booking_vehicle?.isArchived === true || 
+            isCustArchived
+          );
           const isArchiveVisible = 
             archiveFilter === 'all' ? true : 
             archiveFilter === 'archived' ? isArchived : !isArchived;
@@ -385,7 +397,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         ...engagements.filter(eng => {
           const isNameMatch = eng.customer_name?.trim().toLowerCase() === customerName.trim().toLowerCase();
           const isEmailMatch = eng.customer_email && customerData?.email && eng.customer_email.trim().toLowerCase() === customerData.email.trim().toLowerCase();
-          return isNameMatch || isEmailMatch;
+          const isArchived = isCustArchived;
+          const isArchiveVisible = archiveFilter === 'all' ? true : archiveFilter === 'archived' ? isArchived : !isArchived;
+          return (isNameMatch || isEmailMatch) && isArchiveVisible;
         }).map(eng => ({
           ...eng,
           id: eng.id,
@@ -503,6 +517,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
     return result;
   }, [items, unifiedEvents, customers, archiveFilter, sourceFilter, statusFilter, dateFilter, sortOrder]);
+
+  const totalFilteredBookingsCount = useMemo(() => {
+    return uniqueCustomers.reduce((acc, customer) => {
+      const bookingsCount = customer.events.filter((e: any) => e.type === 'booking').length;
+      return acc + bookingsCount;
+    }, 0);
+  }, [uniqueCustomers]);
 
 
   const allServices = useMemo(() => [...servicePackages, ...getCustomPackages()], []);
@@ -1077,7 +1098,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   // Filter bookings for the current view
   const monthBookings = useMemo(() => {
     return items.filter(b => {
-      const isArchived = b.isArchived;
+      const isArchived = Boolean(b.isArchived || (b as any).is_archived || (b as any).booking_vehicle?.is_archived);
       const isArchiveVisible = 
         archiveFilter === 'all' ? true : 
         archiveFilter === 'archived' ? isArchived : !isArchived;
@@ -1090,7 +1111,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const getBookingsForDay = (day: Date) => {
     // Get unified events for this day
     return unifiedEvents.filter(event => {
-      const isArchived = Boolean((event as any).isArchived || (event as any).is_archived);
+      const isArchived = Boolean((event as any).isArchived || (event as any).is_archived || (event as any).booking_vehicle?.is_archived);
       const isArchiveVisible = 
         archiveFilter === 'all' ? true : 
         archiveFilter === 'archived' ? isArchived : !isArchived;
@@ -1102,7 +1123,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   // Get real bookings only (for legacy compatibility)
   const getRealBookingsForDay = (day: Date) => {
     return items.filter(b => {
-      const isArchived = b.isArchived;
+      const isArchived = Boolean(b.isArchived || (b as any).is_archived || (b as any).booking_vehicle?.is_archived);
       const isArchiveVisible = 
         archiveFilter === 'all' ? true : 
         archiveFilter === 'archived' ? isArchived : !isArchived;
@@ -3855,15 +3876,24 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Package className="h-6 w-6 text-red-500" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">Booking History</h2>
-                  <p className="text-sm text-zinc-500 font-medium">
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Booking History</h2>
+                    <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 text-xs font-bold px-2.5 py-0.5">
+                      Showing {totalFilteredBookingsCount} {totalFilteredBookingsCount === 1 ? 'Booking' : 'Bookings'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-zinc-500 font-medium mt-1">
                     Complete customer records and booking logs
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 p-2.5 bg-zinc-900/90 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md max-w-full">
-                <div className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mr-1 ml-2">Filter Bar:</div>
+                <div className="px-2.5 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-inner">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  Showing {totalFilteredBookingsCount} {totalFilteredBookingsCount === 1 ? 'Booking' : 'Bookings'}
+                </div>
+                <div className="text-[10px] uppercase font-black tracking-[0.2em] text-zinc-500 mr-1 ml-1">Filter Bar:</div>
                 
                 {/* 1. Consolidated Date Range Control (Blue Accent) */}
                 <DropdownMenu>

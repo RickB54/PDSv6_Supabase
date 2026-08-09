@@ -2750,7 +2750,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                 address: b.address || b.customers?.address || meta.address || '',
                 notes: b.notes || b.customers?.notes || meta.notes || '',
                 customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
-                isArchived: b.is_archived || meta.is_archived || false,
+                isArchived: Boolean(b.is_archived || meta.is_archived || meta.isArchived || b.isArchived || false),
                 source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
                 bookedBy: b.booked_by || meta.bookedBy || meta.booked_by || b.bookedBy || b.source_origin || b.source || 'Manual Entry',
                 howFound: b.how_found || meta.howFound || meta.how_found || b.howFound || '',
@@ -2809,10 +2809,12 @@ export const upsertSupabaseBooking = async (booking: any) => {
               probonoReasons: booking.probonoReasons || [],
               probonoPrimaryReason: booking.probonoPrimaryReason || '',
               bookedBy: booking.bookedBy || booking.source || 'Manual Entry',
-              howFound: booking.howFound || ''
+              howFound: booking.howFound || '',
+              is_archived: Boolean(booking.isArchived || (booking as any).is_archived || false),
+              isArchived: Boolean(booking.isArchived || (booking as any).is_archived || false)
             },
             end_time: booking.endTime || booking.end_time || null,
-            is_archived: booking.isArchived || false,
+            is_archived: Boolean(booking.isArchived || (booking as any).is_archived || false),
             source_origin: booking.bookedBy || booking.source || booking.source_origin || 'Manual Entry',
             created_at: booking.createdAt || new Date().toISOString()
         };
