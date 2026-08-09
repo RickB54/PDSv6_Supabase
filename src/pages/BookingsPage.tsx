@@ -3024,8 +3024,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   {/* Service Selection */}
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-xs font-semibold text-emerald-400">Service</label>
-                    <div className="col-span-3 flex gap-2">
-                      <div className="relative flex-1">
+                    <div className="col-span-3">
+                      <div className="relative">
                         <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 z-10" />
                         <select
                           className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 pl-9 pr-3 py-2 text-xs text-white ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -3040,69 +3040,86 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                           ))}
                         </select>
                       </div>
+                    </div>
+                  </div>
 
-                      <div className="flex-1">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" className="w-full justify-between bg-zinc-900 border-zinc-800 text-white h-10 px-3 text-xs font-normal">
-                              <span className="truncate">
-                                {formData.addons.length > 0
-                                  ? formData.addons.join(", ")
-                                  : "Addons..."}
-                              </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[280px] p-0 bg-zinc-900 border-zinc-800 shadow-2xl">
-                            <Command className="bg-zinc-900">
-                              <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
-                              <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
-                              <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
-                                {allAddons
-                                  .filter((addon: any) => {
-                                    if (addon.active === false) return false;
-                                    if (!addon.applicableVehicleTypes) return true;
-                                    const mappedVType = mapToServiceVehicleType(formData.vehicle || "", formData.vehicleMake || "", formData.vehicleModel || "");
-                                    return addon.applicableVehicleTypes.includes(mappedVType);
-                                  })
-                                  .map((addon) => (
-                                  <CommandItem
-                                    key={addon.id}
-                                    value={addon.name}
-                                    onSelect={() => {
-                                      const name = addon.name;
-                                      setFormData(prev => {
-                                        const current = Array.isArray(prev.addons) ? prev.addons : [];
-                                        const exists = current.includes(name);
-                                        const next = exists 
-                                          ? current.filter(a => a !== name)
-                                          : [...current, name];
-                                        return { ...prev, addons: next };
-                                      });
-                                    }}
-                                    className="text-zinc-300 cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 hover:text-white transition-colors rounded-lg mb-1 pointer-events-auto text-xs"
+                  {/* Addons Selection */}
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <label className="text-right text-xs font-semibold text-blue-400 mt-2.5">Addons</label>
+                    <div className="col-span-3">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full min-h-[40px] h-auto justify-between bg-zinc-900 border-zinc-800 text-white p-2.5 text-xs font-normal hover:bg-zinc-800/80 transition-all text-left"
+                          >
+                            {formData.addons && formData.addons.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5 flex-1 min-w-0 pr-2">
+                                {formData.addons.map((addonName, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center gap-1 bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[11px] font-bold py-0.5 px-2 rounded-md leading-normal text-left whitespace-normal max-w-full"
                                   >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4 text-blue-500",
-                                        formData.addons.includes(addon.name) ? "opacity-100 scale-100" : "opacity-0 scale-50"
-                                      )}
-                                    />
-                                    <div className="flex flex-col">
-                                      <span className="text-xs font-bold">{addon.name}</span>
-                                      {(() => {
-                                        const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
-                                        const price = getAddOnPrice(addon.id, vType);
-                                        return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
-                                      })()}
-                                    </div>
-                                  </CommandItem>
+                                    {addonName}
+                                  </span>
                                 ))}
-                              </CommandGroup>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+                              </div>
+                            ) : (
+                              <span className="text-zinc-500">Select Addons...</span>
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-zinc-400 self-center" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[340px] p-0 bg-zinc-900 border-zinc-800 shadow-2xl">
+                          <Command className="bg-zinc-900">
+                            <CommandInput placeholder="Search addons..." className="h-10 text-white border-zinc-800" />
+                            <CommandEmpty className="text-zinc-500 py-6 text-center text-xs uppercase font-black tracking-widest">No addon found.</CommandEmpty>
+                            <CommandGroup className="max-h-80 overflow-auto p-1 custom-scrollbar">
+                              {allAddons
+                                .filter((addon: any) => {
+                                  if (addon.active === false) return false;
+                                  if (!addon.applicableVehicleTypes) return true;
+                                  const mappedVType = mapToServiceVehicleType(formData.vehicle || "", formData.vehicleMake || "", formData.vehicleModel || "");
+                                  return addon.applicableVehicleTypes.includes(mappedVType);
+                                })
+                                .map((addon) => (
+                                <CommandItem
+                                  key={addon.id}
+                                  value={addon.name}
+                                  onSelect={() => {
+                                    const name = addon.name;
+                                    setFormData(prev => {
+                                      const current = Array.isArray(prev.addons) ? prev.addons : [];
+                                      const exists = current.includes(name);
+                                      const next = exists 
+                                        ? current.filter(a => a !== name)
+                                        : [...current, name];
+                                      return { ...prev, addons: next };
+                                    });
+                                  }}
+                                  className="text-zinc-300 cursor-pointer hover:bg-white/10 aria-selected:bg-white/10 hover:text-white transition-colors rounded-lg mb-1 pointer-events-auto text-xs"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4 text-blue-500",
+                                      formData.addons.includes(addon.name) ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold">{addon.name}</span>
+                                    {(() => {
+                                      const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
+                                      const price = getAddOnPrice(addon.id, vType);
+                                      return price > 0 ? <span className="text-[9px] text-zinc-400 font-black">+{vType === 'compact' ? '' : `(${vType}) `}${price}</span> : null;
+                                    })()}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
