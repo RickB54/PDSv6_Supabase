@@ -73,7 +73,9 @@ export default function TipSelectionScreen({
         if (mode === 'qrcode') {
           setQrCodeUrl(data.url);
           setLoading(false);
+          window.dispatchEvent(new CustomEvent('quick-pay-completed', { detail: { paymentMethod: 'QR Code' } }));
         } else {
+          try { sessionStorage.setItem('post_payment_popup_pending', 'true'); } catch {}
           window.location.href = data.url;
         }
       } else {

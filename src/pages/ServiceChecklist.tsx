@@ -1585,15 +1585,22 @@ const ServiceChecklist = () => {
 
   // Listen for Quick Pay completion to open Post-Payment Popup after Finish Job
   useEffect(() => {
-    const handleQuickPayCompleted = () => {
-      if (isJobCompleted || finishedJobId || completedAt) {
+    // Check if returning from Stripe or external checkout with pending popup flag
+    try {
+      if (sessionStorage.getItem('post_payment_popup_pending') === 'true') {
+        sessionStorage.removeItem('post_payment_popup_pending');
         setShowTipScreen(false);
         setShowPostPaymentPopup(true);
       }
+    } catch {}
+
+    const handleQuickPayCompleted = () => {
+      setShowTipScreen(false);
+      setShowPostPaymentPopup(true);
     };
     window.addEventListener('quick-pay-completed', handleQuickPayCompleted);
     return () => window.removeEventListener('quick-pay-completed', handleQuickPayCompleted);
-  }, [isJobCompleted, finishedJobId, completedAt]);
+  }, []);
 
   // --- PERSISTENCE LOGIC END ---
 
@@ -4604,19 +4611,31 @@ const ServiceChecklist = () => {
           onCancel={() => setShowTipScreen(false)}
           finalTime={getAdjustedTime()}
           onCashPayment={async (tip) => {
-            toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Job Complete!` });
-            setShowTipScreen(false);
-            if (selectedCustomer) {
-              await import('@/lib/supa-data').then(m => m.upsertSupabaseCustomer({
-                id: selectedCustomer,
-                updated_at: new Date().toISOString()
+            try {
+              toast({ title: 'Cash Payment Recorded', description: `Recorded cash payment including $${tip.toFixed(2)} tip. Job Complete!` });
+              if (selectedCustomer) {
+                const cust = customers.find(c => c.id === selectedCustomer);
+                if (cust) {
+                  import('@/lib/supa-data').then(m => m.upsertSupabaseCustomer({
+                    id: cust.id,
+                    name: cust.name,
+                    email: cust.email,
+                    phone: cust.phone,
+                    address: cust.address,
+                    updated_at: new Date().toISOString()
+                  })).catch(e => console.warn("Customer timestamp update failed:", e));
+                }
+              }
+              window.dispatchEvent(new Event('bookings-updated'));
+              window.dispatchEvent(new CustomEvent('quick-pay-completed', {
+                detail: { totalPaid: calculateTotal() + tip, paymentMethod: 'Cash' }
               }));
+            } catch (err) {
+              console.error("Error processing cash payment:", err);
+            } finally {
+              setShowTipScreen(false);
+              setShowPostPaymentPopup(true);
             }
-            window.dispatchEvent(new Event('bookings-updated'));
-            window.dispatchEvent(new CustomEvent('quick-pay-completed', {
-              detail: { totalPaid: calculateTotal() + tip, paymentMethod: 'Cash' }
-            }));
-            setShowPostPaymentPopup(true);
           }}
         />
       )}
