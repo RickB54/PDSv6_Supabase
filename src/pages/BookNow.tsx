@@ -34,6 +34,7 @@ import supabase from "@/lib/supabase";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // Calendar component import removed (replaced by AvailabilityPicker)
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
+import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 import { format } from "date-fns";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 const getServiceDuration = (id: string = '') => {
@@ -82,6 +83,10 @@ const BookNow = () => {
       }
     }
   }, [formData.make, formData.model]);
+
+  // Destination fee state — seeded from URL if customer came through Services page
+  const [bookingDistance, setBookingDistance] = useState<number>(urlDistance);
+  const [bookingDestFee, setBookingDestFee] = useState<number>(urlDestFee);
 
   const [addOns, setAddOns] = useState<string[]>(preselectedAddons);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -532,7 +537,7 @@ const BookNow = () => {
     const price = found ? (found.pricing[vehicleType] ?? found.pricing['compact'] ?? 0) : 0;
     return sum + price;
   }, 0);
-  const total = packagePrice + addOnsTotal + urlDestFee;
+  const total = packagePrice + addOnsTotal + bookingDestFee;
   const appliedDiscount = matchedCoupon
     ? calculateDiscount(total, matchedCoupon.percent || matchedCoupon.amount || 0, matchedCoupon.percent ? 'percent' : 'amount')
     : 0;
@@ -1138,6 +1143,17 @@ const BookNow = () => {
                 </div>
               )}
 
+              {/* Destination Fee row in summary */}
+              {bookingDestFee > 0 && (
+                <div className="pt-4 border-t border-blue-200 flex justify-between items-center">
+                  <div>
+                    <div className="text-xs font-bold text-blue-800/60 uppercase tracking-widest mb-0.5">Destination Fee</div>
+                    <div className="text-[11px] text-blue-700/60">{bookingDistance > 0 ? `${bookingDistance} mi from shop` : 'Mobile service travel'}</div>
+                  </div>
+                  <div className="text-lg font-black text-amber-700">+${bookingDestFee}</div>
+                </div>
+              )}
+
               <div className="pt-4 text-center">
                 <p className="text-xs text-blue-700/70 italic">
                   * To change your package or add-ons, please <Link to="/services" className="text-blue-900 font-bold hover:underline">return to the services page</Link>.
@@ -1260,6 +1276,18 @@ const BookNow = () => {
                     />
                     {errors.address && formData.placeOfService !== 'Shop in Methuen' && (
                       <p className="text-[13px] text-red-600 font-bold animate-pulse-grow uppercase tracking-tight ml-1 mt-1 block decoration-red-600 underline underline-offset-2">⚠️ {errors.address}</p>
+                    )}
+                    {/* Destination Fee inline calculator — only shown for mobile service */}
+                    {formData.placeOfService !== 'Shop in Methuen' && (
+                      <DestinationFeeInline
+                        address={formData.address}
+                        onFeeCalculated={(m, f) => { setBookingDistance(m); setBookingDestFee(f); }}
+                        mode="booking"
+                        theme="light"
+                        alreadyApplied={urlDestFee > 0}
+                        alreadyAppliedMiles={urlDistance}
+                        alreadyAppliedFee={urlDestFee}
+                      />
                     )}
                   </div>
 

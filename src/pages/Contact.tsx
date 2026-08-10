@@ -26,6 +26,7 @@ import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/ser
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import VehicleSelectorModal from "@/components/vehicles/VehicleSelectorModal";
 import logo from "@/assets/logo-primary.png";
+import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 
 export const sanitizeShopOnlyText = (text: string, isShopOnly: boolean) => {
   if (!text || !isShopOnly) return text;
@@ -76,6 +77,9 @@ const Contact = () => {
   const [showBookNow, setShowBookNow] = useState(false);
   const [businessStatus, setBusinessStatus] = useState<any>(null);
   const [lastMailto, setLastMailto] = useState("");
+  // Destination fee informational state
+  const [contactDistance, setContactDistance] = useState(0);
+  const [contactDestFee, setContactDestFee] = useState(0);
 
   // Automatically classify the vehicle class based on selected Make & Model
   useEffect(() => {
@@ -737,6 +741,16 @@ const Contact = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Destination Fee — informational, shown when mobile detailing selected */}
+                {formData.placeOfService !== 'Shop in Methuen' && (
+                  <DestinationFeeInline
+                    address={[formData.address, formData.city].filter(Boolean).join(', ')}
+                    onFeeCalculated={(m, f) => { setContactDistance(m); setContactDestFee(f); }}
+                    mode="informational"
+                    theme="light"
+                  />
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">

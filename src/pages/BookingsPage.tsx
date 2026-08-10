@@ -50,6 +50,7 @@ import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } fro
 import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig, signInToGoogle } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
+import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 
 import { ContactInput } from "@/components/ui/ContactInput";
 
@@ -2992,7 +2993,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   </div>
                 </div>
 
-                {/* BOX 3: PLACE OF SERVICE */}
+                {/* BOX 3: PLACE OF SERVICE + DESTINATION FEE */}
                 <div className={cn(
                   "rounded-lg border p-3.5 space-y-3 transition-all duration-200",
                   activeBlinkSection === 3 
@@ -3007,7 +3008,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                       {activeBlinkSection === 3 && (
                         <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" />
                       )}
-                      3. Place of Service
+                      3. Place of Service + Destination Fee
                     </span>
                     {formData.placeOfService ? (
                       <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
@@ -3032,6 +3033,22 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                       </select>
                     </div>
                   </div>
+                  {/* Customer address + destination fee — only for mobile service */}
+                  {formData.placeOfService !== 'Shop in Methuen' && (
+                    <div className="col-span-4 pt-1 space-y-1">
+                      {formData.address && (
+                        <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3 text-zinc-500 shrink-0" />
+                          <span className="font-semibold text-zinc-300">{formData.address}</span>
+                        </p>
+                      )}
+                      <DestinationFeeInline
+                        address={formData.address}
+                        mode="booking"
+                        theme="dark"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* BOX 4: SERVICE + DISCOUNT */}
