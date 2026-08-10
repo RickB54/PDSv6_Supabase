@@ -2621,8 +2621,20 @@ const ServiceChecklist = () => {
                   <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Complete BEFORE starting any service</p>
                 </div>
               </div>
-              <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
-                {preVehicleExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+              <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+                <a
+                  href="/Pre-Vehicle-Inspection-Checklist.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all text-[10px] font-black uppercase tracking-widest shrink-0"
+                  title="Open original PDF form for printing"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Print PDF Form</span>
+                </a>
+                <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                  {preVehicleExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+                </div>
               </div>
             </div>
 
