@@ -2886,6 +2886,73 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
             </div>
 
+            {/* Services To Be Done - UPCOMING/IN PROGRESS */}
+            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
+                    <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-400" />
+                        <div>
+                            <CardTitle>Services To Be Done</CardTitle>
+                            <CardDescription>Upcoming and in-progress appointments</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-zinc-950/50">
+                                <TableRow className="hover:bg-transparent border-zinc-800">
+                                    <TableHead className="w-[120px]">Scheduled</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Est. Revenue</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {toDoServices.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-10 italic">
+                                            No upcoming services scheduled.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    toDoServices.map((svc) => (
+                                        <TableRow key={svc.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
+                                            <TableCell className="text-zinc-400 text-xs font-mono">
+                                                {format(parseISO(svc.date), "MMM d, yyyy")}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-zinc-300">{svc.customer}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
+                                                    svc.locationType === 'Shop' 
+                                                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
+                                                        : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                                )}>
+                                                    {svc.locationType}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-zinc-400 text-sm">{svc.service}</TableCell>
+                                            <TableCell>
+                                                <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">
+                                                    {svc.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right text-zinc-500 font-mono">
+                                                ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+
             {/* Service Performance Detail Log - COMPLETED ONLY */}
             <Card id="service-detail" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl scroll-mt-24">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
@@ -3033,73 +3100,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Services To Be Done - UPCOMING/IN PROGRESS */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl">
-                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-amber-400" />
-                        <div>
-                            <CardTitle>Services To Be Done</CardTitle>
-                            <CardDescription>Upcoming and in-progress appointments</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <Table>
-                            <TableHeader className="bg-zinc-950/50">
-                                <TableRow className="hover:bg-transparent border-zinc-800">
-                                    <TableHead className="w-[120px]">Scheduled</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Est. Revenue</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {toDoServices.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-10 italic">
-                                            No upcoming services scheduled.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    toDoServices.map((svc) => (
-                                        <TableRow key={svc.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors">
-                                            <TableCell className="text-zinc-400 text-xs font-mono">
-                                                {format(parseISO(svc.date), "MMM d, yyyy")}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-zinc-300">{svc.customer}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[10px] h-5 px-1.5 font-bold uppercase",
-                                                    svc.locationType === 'Shop' 
-                                                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20" 
-                                                        : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                                )}>
-                                                    {svc.locationType}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-zinc-400 text-sm">{svc.service}</TableCell>
-                                            <TableCell>
-                                                <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">
-                                                    {svc.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right text-zinc-500 font-mono">
-                                                ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
             {/* Invoices Tracker */}
             <Card id="invoices-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30 mt-6 scroll-mt-24">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">

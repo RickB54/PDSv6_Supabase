@@ -278,6 +278,29 @@ const ServiceChecklist = () => {
   const [pendingNavDest, setPendingNavDest] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<any>(null);
 
+  // Pre-Vehicle Inspection Checklist State
+  const [preVehicleExpanded, setPreVehicleExpanded] = useState(true);
+  const initialPreVehicleChecks = {
+    // Exterior (11)
+    paint: false, frontBumper: false, headlightsFoglights: false, windshield: false,
+    doorPanelsMirrors: false, wheels: false, tires: false, wheelWells: false,
+    rearBumper: false, taillights: false, trunkTailgate: false,
+    // Interior (7)
+    frontSeats: false, frontCarpetMats: false, dashboardConsole: false, odorCheck: false,
+    rearSeats: false, rearCarpetFloor: false, trunkCargoArea: false,
+    // Cost-Impact Flags (6)
+    excessivePetHair: false, heavyMudDirt: false, smokeOdor: false,
+    stainsExtraction: false, biohazard: false, excessiveTrash: false,
+  };
+  type PreVehicleChecks = typeof initialPreVehicleChecks;
+  const [preVehicleChecks, setPreVehicleChecks] = useState<PreVehicleChecks>(initialPreVehicleChecks);
+  const [preVehicleNotes, setPreVehicleNotes] = useState('');
+  const [preVehicleCustomerSig, setPreVehicleCustomerSig] = useState('');
+  const [preVehicleDetailerSig, setPreVehicleDetailerSig] = useState('');
+  const [preVehicleSigDate, setPreVehicleSigDate] = useState('');
+
+  const togglePreVehicleCheck = (key: keyof PreVehicleChecks) =>
+    setPreVehicleChecks(prev => ({ ...prev, [key]: !prev[key] }));
 
 
   const resetForm = () => {
@@ -293,6 +316,11 @@ const ServiceChecklist = () => {
     setSelectedPackage("");
     setSelectedAddOns([]);
     setEstimatedTime("");
+    setPreVehicleChecks(initialPreVehicleChecks);
+    setPreVehicleNotes('');
+    setPreVehicleCustomerSig('');
+    setPreVehicleDetailerSig('');
+    setPreVehicleSigDate('');
     setVYear("");
     setVMake("");
     setVModel("");
@@ -2572,6 +2600,269 @@ const ServiceChecklist = () => {
               </Button>
             </div>
           )}
+
+          {/* ============================================================ */}
+          {/* PRE-VEHICLE INSPECTION CHECKLIST */}
+          {/* ============================================================ */}
+          <Card className="bg-zinc-900 border-zinc-800 overflow-hidden shadow-2xl border-t-4 border-t-amber-500/60 mb-4">
+            <div
+              className="px-4 md:px-6 py-4 flex items-center justify-between gap-4 cursor-pointer group bg-black/60 transition-all rounded-t-xl"
+              onClick={() => setPreVehicleExpanded(!preVehicleExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="rounded-full h-9 w-9 bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <ClipboardList className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    Pre-Vehicle Inspection Checklist
+                    <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Prime Standard</span>
+                  </h2>
+                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Complete BEFORE starting any service</p>
+                </div>
+              </div>
+              <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+                {preVehicleExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+              </div>
+            </div>
+
+            {preVehicleExpanded && (
+              <div className="p-4 md:p-6 space-y-5 animate-in slide-in-from-top-2 duration-300">
+
+                {/* Business Header */}
+                <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-zinc-800">
+                  <div className="flex items-center gap-4">
+                    <img src={logo} alt="Prime Auto Detail" className="h-12 w-12 object-contain" />
+                    <div>
+                      <div className="text-white font-black text-base tracking-tight uppercase">PRIME AUTO DETAIL</div>
+                      <div className="text-zinc-400 text-[10px]">Methuen, MA • primeautodetail.net • (978) 555-0100</div>
+                    </div>
+                  </div>
+                  <div className="border-2 border-zinc-600 rounded-lg px-4 py-2 text-right">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">PRE-VEHICLE</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-amber-400">CHECKLIST</div>
+                  </div>
+                </div>
+
+                {/* Info Row */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { label: 'Customer', value: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || '—' },
+                    { label: 'Date', value: format(new Date(), 'MMM d, yyyy') },
+                    { label: 'Service', value: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || '—' },
+                    { label: 'Year', value: vYear || '—' },
+                    { label: 'Make', value: vMake || '—' },
+                    { label: 'Model', value: vModel || '—' },
+                  ].map(f => (
+                    <div key={f.label} className="bg-zinc-950/50 border border-zinc-800 rounded-lg px-3 py-2">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{f.label}</div>
+                      <div className="text-zinc-200 text-xs font-semibold truncate">{f.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Exterior + Interior side-by-side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* EXTERIOR */}
+                  <div className="border-2 border-zinc-700 rounded-xl overflow-hidden">
+                    <div className="bg-zinc-800 px-4 py-2 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white">Exterior</span>
+                      <span className="ml-auto text-[10px] text-zinc-400">11 Points</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {([
+                        ['paint', 'Paint / Clear Coat'],
+                        ['frontBumper', 'Front Bumper'],
+                        ['headlightsFoglights', 'Headlights / Foglights'],
+                        ['windshield', 'Windshield'],
+                        ['doorPanelsMirrors', 'Door Panels / Mirrors'],
+                        ['wheels', 'Wheels'],
+                        ['tires', 'Tires'],
+                        ['wheelWells', 'Wheel Wells'],
+                        ['rearBumper', 'Rear Bumper'],
+                        ['taillights', 'Taillights'],
+                        ['trunkTailgate', 'Trunk / Tailgate'],
+                      ] as [keyof PreVehicleChecks, string][]).map(([key, label]) => (
+                        <div key={key} className="flex items-center gap-2.5 cursor-pointer group" onClick={() => togglePreVehicleCheck(key)}>
+                          <div className={cn(
+                            "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
+                            preVehicleChecks[key]
+                              ? 'bg-emerald-500/20 border-emerald-500'
+                              : 'border-zinc-600 group-hover:border-emerald-500/50'
+                          )}>
+                            {preVehicleChecks[key] && <Check className="w-3 h-3 text-emerald-400" />}
+                          </div>
+                          <span className={cn(
+                            "text-xs transition-colors",
+                            preVehicleChecks[key] ? 'text-emerald-300 line-through' : 'text-zinc-300 group-hover:text-white'
+                          )}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* INTERIOR */}
+                  <div className="border-2 border-zinc-700 rounded-xl overflow-hidden">
+                    <div className="bg-zinc-800 px-4 py-2 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-400" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white">Interior</span>
+                      <span className="ml-auto text-[10px] text-zinc-400">7 Points</span>
+                    </div>
+                    <div className="p-3 space-y-2">
+                      {([
+                        ['frontSeats', 'Front Seats'],
+                        ['frontCarpetMats', 'Front Carpet / Floor Mats'],
+                        ['dashboardConsole', 'Dashboard / Center Console'],
+                        ['odorCheck', 'Odor Check'],
+                        ['rearSeats', 'Rear Seats'],
+                        ['rearCarpetFloor', 'Rear Carpet / Floor'],
+                        ['trunkCargoArea', 'Trunk / Cargo Area'],
+                      ] as [keyof PreVehicleChecks, string][]).map(([key, label]) => (
+                        <div key={key} className="flex items-center gap-2.5 cursor-pointer group" onClick={() => togglePreVehicleCheck(key)}>
+                          <div className={cn(
+                            "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
+                            preVehicleChecks[key]
+                              ? 'bg-blue-500/20 border-blue-500'
+                              : 'border-zinc-600 group-hover:border-blue-500/50'
+                          )}>
+                            {preVehicleChecks[key] && <Check className="w-3 h-3 text-blue-400" />}
+                          </div>
+                          <span className={cn(
+                            "text-xs transition-colors",
+                            preVehicleChecks[key] ? 'text-blue-300 line-through' : 'text-zinc-300 group-hover:text-white'
+                          )}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cost-Impact Flags + Ask The Customer side-by-side */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* COST-IMPACT FLAGS */}
+                  <div className="border-2 border-red-900/50 rounded-xl overflow-hidden">
+                    <div className="bg-red-950/60 px-4 py-2 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400" />
+                      <span className="text-xs font-black uppercase tracking-widest text-red-300">Cost-Impact Flags</span>
+                    </div>
+                    <div className="p-3 space-y-2 bg-red-950/10">
+                      {([
+                        ['excessivePetHair', 'Excessive Pet Hair'],
+                        ['heavyMudDirt', 'Heavy Mud / Dirt Buildup'],
+                        ['smokeOdor', 'Smoke Odor'],
+                        ['stainsExtraction', 'Stains Requiring Extraction'],
+                        ['biohazard', 'Biohazard / Bodily Fluid'],
+                        ['excessiveTrash', 'Excessive Trash / Clutter'],
+                      ] as [keyof PreVehicleChecks, string][]).map(([key, label]) => (
+                        <div key={key} className="flex items-center gap-2.5 cursor-pointer group" onClick={() => togglePreVehicleCheck(key)}>
+                          <div className={cn(
+                            "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all",
+                            preVehicleChecks[key]
+                              ? 'bg-red-500/30 border-red-500'
+                              : 'border-red-900/60 group-hover:border-red-500/60'
+                          )}>
+                            {preVehicleChecks[key] && <Check className="w-3 h-3 text-red-400" />}
+                          </div>
+                          <span className={cn(
+                            "text-xs transition-colors",
+                            preVehicleChecks[key] ? 'text-red-300 font-semibold' : 'text-zinc-400 group-hover:text-red-300'
+                          )}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ASK THE CUSTOMER */}
+                  <div className="border-2 border-zinc-700 rounded-xl overflow-hidden">
+                    <div className="bg-zinc-800 px-4 py-2 flex items-center gap-2">
+                      <Info className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-black uppercase tracking-widest text-white">Ask The Customer</span>
+                      <span className="ml-auto text-[9px] text-zinc-500 italic">Reference — not checkable</span>
+                    </div>
+                    <div className="p-3 space-y-3">
+                      {[
+                        'When was the last time the vehicle was professionally detailed?',
+                        'Are there any specific problem areas you\u2019d like us to focus on?',
+                        'Are there pets or smokers that regularly use this vehicle?',
+                        'Are there any fragile or valuable items in the vehicle we should know about?',
+                      ].map((q, i) => (
+                        <div key={i} className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[9px] font-black text-amber-400">{i + 1}</span>
+                          </div>
+                          <p className="text-xs text-zinc-400 leading-relaxed">{q}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="border-2 border-zinc-700 rounded-xl overflow-hidden">
+                  <div className="bg-zinc-800 px-4 py-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-zinc-400" />
+                    <span className="text-xs font-black uppercase tracking-widest text-white">Inspection Notes</span>
+                  </div>
+                  <div className="p-3">
+                    <Textarea
+                      value={preVehicleNotes}
+                      onChange={e => setPreVehicleNotes(e.target.value)}
+                      placeholder="Document pre-existing damage, special conditions, or customer requests..."
+                      className="min-h-[100px] bg-zinc-950/60 border-zinc-700 text-zinc-200 text-xs resize-none focus:border-amber-500/50"
+                    />
+                  </div>
+                </div>
+
+                {/* Sign-off */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Customer Signature</label>
+                    <Input
+                      value={preVehicleCustomerSig}
+                      onChange={e => setPreVehicleCustomerSig(e.target.value)}
+                      placeholder="Type name as signature..."
+                      className="h-9 bg-zinc-950/60 border-zinc-700 text-zinc-200 text-xs italic"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Detailer Signature</label>
+                    <Input
+                      value={preVehicleDetailerSig}
+                      onChange={e => setPreVehicleDetailerSig(e.target.value)}
+                      placeholder="Type name as signature..."
+                      className="h-9 bg-zinc-950/60 border-zinc-700 text-zinc-200 text-xs italic"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Sign-off Date</label>
+                    <Input
+                      value={preVehicleSigDate}
+                      onChange={e => setPreVehicleSigDate(e.target.value)}
+                      placeholder={format(new Date(), 'MM/dd/yyyy')}
+                      className="h-9 bg-zinc-950/60 border-zinc-700 text-zinc-200 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Summary badge row */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {Object.values(preVehicleChecks).filter(Boolean).length > 0 && (
+                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-bold">
+                      ✓ {Object.values(preVehicleChecks).filter(Boolean).length} items flagged / confirmed
+                    </span>
+                  )}
+                  {(preVehicleChecks.excessivePetHair || preVehicleChecks.heavyMudDirt || preVehicleChecks.smokeOdor || preVehicleChecks.stainsExtraction || preVehicleChecks.biohazard || preVehicleChecks.excessiveTrash) && (
+                    <span className="text-[10px] bg-red-500/10 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-full font-bold animate-pulse">
+                      ⚠ Cost-impact flags active — discuss surcharge
+                    </span>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </Card>
+          {/* ============================================================ */}
 
           {/* Job Setup */}
           <Card className={`bg-gradient-card border-border overflow-visible mb-4 transition-all duration-300`}>
