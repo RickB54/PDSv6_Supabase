@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, CheckCircle, Plus, Minus, Info, AlertTriangle, ChevronDown, ChevronUp, Printer, Filter, ArrowDownUp, Check, Download } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, saveTool, saveUsageHistory } from '@/lib/inventory-data';
@@ -322,7 +322,31 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     let currentY = 30;
 
     if (activeTab === 'chemicals') {
-      groupedChemicals.forEach(([groupName, groupItems]) => {
+      const shelfOrder = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"];
+      const sectionOrder = ["Left Side", "Middle", "Right Side", "Unassigned"];
+
+      const pdfGroups: Record<string, Chemical[]> = {};
+      filteredChemicals.forEach(chem => {
+        const shelf = (chem as any).shelf || 'Unassigned';
+        const section = (chem as any).section || 'Unassigned';
+        const key = `${shelf} - ${section}`;
+        if (!pdfGroups[key]) pdfGroups[key] = [];
+        pdfGroups[key].push(chem as Chemical);
+      });
+
+      // Sort groups logically by shelf then section
+      const sortedGroupKeys = Object.keys(pdfGroups).sort((a, b) => {
+        const [shelfA, sectionA] = a.split(' - ');
+        const [shelfB, sectionB] = b.split(' - ');
+        
+        const shelfDiff = shelfOrder.indexOf(shelfA) - shelfOrder.indexOf(shelfB);
+        if (shelfDiff !== 0) return shelfDiff;
+        
+        return sectionOrder.indexOf(sectionA) - sectionOrder.indexOf(sectionB);
+      });
+
+      sortedGroupKeys.forEach(groupName => {
+        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
         if (groupItems.length === 0) return;
         
         autoTable(doc, {
@@ -456,6 +480,24 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-purple-500" /> 
               {reviewMode ? 'Review Audit Changes' : 'Inventory Audit Checklist'}
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
+                      <HelpCircle className="h-5 w-5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl">
+                    <p className="font-bold text-white mb-2">How to perform an Audit:</p>
+                    <ul className="list-disc pl-4 space-y-1 text-sm">
+                      <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
+                      <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
+                      <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
+                      <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -680,7 +722,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400" /> : <div className="h-5 w-5 rounded-full border border-zinc-600" />}
                         <div>
                           <div className="font-bold text-zinc-200">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
-                          <div className="text-xs text-zinc-500">DB: {c.currentStock} {c.bottleSize}</div>
+                          <div className="text-xs text-zinc-500 flex items-center gap-2">
+                            <span>DB: {c.currentStock} {c.bottleSize}</span>
+                            {(c.shelf || c.section) && (
+                              <>
+                                <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                <span className="text-purple-400/80">
+                                  {c.shelf || 'No Shelf'} / {c.section || 'No Section'}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">

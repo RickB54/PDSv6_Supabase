@@ -531,6 +531,42 @@ const InventoryControl = () => {
     }
   };
 
+  const handleMigrate = async () => {
+    try {
+      const { supabase } = await import('@/lib/supa-data');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return toast({ title: 'Error', description: 'Not logged in' });
+
+      const updates = [
+        { names: ["Does It All Enzyme Cleaner", "Zap IT", "P&S Carpet Bomber", "P&S Terminator"], shelf: "Top Shelf", section: "Left Side", category: "Carpet & Upholstery" },
+        { names: ["Pink Perfection", "Green All", "Road Warrior", "McGuire's APC", "P&S Express Interior"], shelf: "Top Shelf", section: "Middle", category: "APC / Degreaser" },
+        { names: ["Cherry Foam", "Dirt Buster"], shelf: "Top Shelf", section: "Right Side", category: "Soaps" },
+        { names: ["Spray Wax", "Formula 4 Spray Wax", "Super Shine 2"], shelf: "2nd Shelf", section: "Left Side", category: "Waxes & Sealants" },
+        { names: ["Dark Fury", "Muscle Magic", "Wire Wheel Cleaner (Acid)"], shelf: "2nd Shelf", section: "Middle", category: "Wheels & Tires" },
+        { names: ["Purple X"], shelf: "2nd Shelf", section: "Right Side", category: "Iron Removers" }
+      ];
+      
+      let count = 0;
+      for (const group of updates) {
+        for (const name of group.names) {
+          const match = chemicals.find(c => c.name.toLowerCase() === name.toLowerCase());
+          if (match) {
+            await supabase.from('chemicals').update({
+              shelf: group.shelf,
+              section: group.section,
+              category: group.category
+            }).eq('id', match.id);
+            count++;
+          }
+        }
+      }
+      toast({ title: 'Migration Complete', description: `Updated ${count} items.` });
+      loadData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadData = async () => {
     setIsRefreshing(true);
     // Always clear the session cache flag so fresh data is re-fetched on next visit
@@ -2394,7 +2430,7 @@ const InventoryControl = () => {
                 <Package className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">Inventory Summary</h2>
+                <h2 className="text-2xl font-bold text-white" onDoubleClick={handleMigrate}>Inventory Summary</h2>
                 <p className="text-zinc-400 text-sm">Overview of all assets and stock levels</p>
               </div>
             </div>

@@ -17,6 +17,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import { uploadFile } from "@/lib/storage-utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, Plus, Check } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Updated naming: material → supply, tool → equipment
 // Backward compatibility maintained in data layer
@@ -40,6 +41,9 @@ interface ChemicalForm {
   wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
+  shelf?: string;
+  section?: string;
+  category?: string;
 }
 
 // Renamed: Material → Supply
@@ -144,6 +148,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     wherePurchased: "",
     updatedAt: "",
     createdAt: "",
+    shelf: "",
+    section: "",
   });
 
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
@@ -458,6 +464,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         wherePurchased: initialPurchased,
         updatedAt: (firstItem as any).updated_at || (firstItem as any).updatedAt || "",
         createdAt: (firstItem as any).createdAt || (firstItem as any).created_at || "",
+        shelf: (firstItem as any).shelf || "",
+        section: (firstItem as any).section || "",
 
         // Safety: Ensure all properties from initial are preserved even if not explicitly mapped
         ...((firstItem as any).purchase_date ? { purchaseDate: (firstItem as any).purchase_date } : {}),
@@ -493,7 +501,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         chemicalLibraryId: "",
         dilutionRatios: [],
         wherePurchased: "",
-
+        shelf: "",
+        section: "",
       });
       setChemicalSizes([{ bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
       setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
@@ -664,6 +673,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             actualPrice: numeric(size.actualPrice) || undefined,
             salePrice: numeric(size.costPerBottle) || undefined,
             unitOfMeasure: form.unitOfMeasure,
+            shelf: form.shelf || undefined,
+            section: form.section || undefined,
+            category: form.category || undefined,
           };
           
           await saveChemical(payload, !size.id);
@@ -1014,9 +1026,51 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     )}
                   </div>
                 )}
+                {mode === 'chemical' && (
+                  <div>
+                    <Label className="text-xs text-zinc-400">Category</Label>
+                    <Input
+                      value={form.category || ""}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                      placeholder="e.g. Waxes & Sealants"
+                    />
+                  </div>
+                )}
               </div>
               {mode === 'chemical' ? (
                 <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-zinc-400">Shelf Location</Label>
+                      <Select value={form.shelf || "none"} onValueChange={(v) => setForm({ ...form, shelf: v === "none" ? "" : v })}>
+                        <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9">
+                          <SelectValue placeholder="Select Shelf" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="Top Shelf">Top Shelf</SelectItem>
+                          <SelectItem value="2nd Shelf">2nd Shelf</SelectItem>
+                          <SelectItem value="3rd Shelf">3rd Shelf</SelectItem>
+                          <SelectItem value="Bottom Shelf">Bottom Shelf</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-400">Section</Label>
+                      <Select value={form.section || "none"} onValueChange={(v) => setForm({ ...form, section: v === "none" ? "" : v })}>
+                        <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9">
+                          <SelectValue placeholder="Select Section" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="Left Side">Left Side</SelectItem>
+                          <SelectItem value="Middle">Middle</SelectItem>
+                          <SelectItem value="Right Side">Right Side</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Where Purchased</Label>
                     {!customPurchased ? (
