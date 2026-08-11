@@ -303,6 +303,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => (supplyAudit[id]?.counted ?? 0) > 0);
   const filteredEquip = getFilteredItems(equipment, equipAudit, id => (equipAudit[id]?.counted ?? 0) > 0);
 
+  const groupedNonChemicals = useMemo(() => {
+    const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
+    const groups: Record<string, any[]> = {};
+    items.forEach(item => {
+      const loc = (item as any).location || 'Unassigned';
+      if (!groups[loc]) groups[loc] = [];
+      groups[loc].push(item);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [activeTab, filteredSupplies, filteredEquip]);
+
   const numCountedChems = normalizedChemicals.filter(c => isChemCounted(c.id)).length;
   const numCountedSupplies = supplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
   const numCountedEquip = equipment.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
@@ -371,22 +382,39 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       });
     } else {
       const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
-      autoTable(doc, {
-        startY: currentY,
-        head: [[activeTab === 'supplies' ? 'Supplies' : 'Equipment', 'DB Qty', 'Actual Count']],
-        body: items.map((item: any) => [
-          item.name,
-          item.quantity || 1,
-          ''
-        ]),
-        theme: 'grid',
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-        styles: { textColor: [0, 0, 0] },
-        columnStyles: {
-          0: { cellWidth: 'auto' },
-          1: { cellWidth: 30, halign: 'center' },
-          2: { cellWidth: 40 }
-        }
+      
+      const pdfGroups: Record<string, any[]> = {};
+      items.forEach(item => {
+        const loc = (item as any).location || 'Unassigned';
+        if (!pdfGroups[loc]) pdfGroups[loc] = [];
+        pdfGroups[loc].push(item);
+      });
+
+      const sortedLocs = Object.keys(pdfGroups).sort();
+
+      sortedLocs.forEach(loc => {
+        const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
+        if (groupItems.length === 0) return;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [[`Location: ${loc}`, 'DB Qty', 'Actual Count']],
+          body: groupItems.map((item: any) => [
+            item.name,
+            item.quantity || 1,
+            ''
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+          styles: { textColor: [0, 0, 0] },
+          columnStyles: {
+            0: { cellWidth: 'auto' },
+            1: { cellWidth: 30, halign: 'center' },
+            2: { cellWidth: 40 }
+          },
+          margin: { top: 10 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 10;
       });
     }
 
@@ -694,8 +722,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       </PopoverContent>
                     </Popover>
                   )}
-                  <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()}>
+                  <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()} title="Print">
                     <Printer className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={handleExportPDF} title="Save PDF">
+                    <Download className="h-4 w-4 mr-2" /> Save PDF
                   </Button>
                 </div>
               </div>
@@ -893,7 +924,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400" /> : <div className="h-5 w-5 rounded-full border border-zinc-600" />}
                       <div>
                         <div className="font-bold text-zinc-200">{item.name}</div>
-                        <div className="text-xs text-zinc-500">DB Qty: {item.quantity || 1}</div>
+                        <div className="text-xs text-zinc-500 flex items-center gap-2">
+                          <span>DB Qty: {item.quantity || 1}</span>
+                          {(item as any).location && (
+                            <>
+                              <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                              <span className="text-blue-400/80">{(item as any).location}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -959,9 +998,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </div>
           ))}
           
-          {activeTab !== 'chemicals' && (
-            <div className="mb-8 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
-              <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">{activeTab === 'supplies' ? 'Supplies' : 'Equipment'}</h2>
+          {activeTab !== 'chemicals' && groupedNonChemicals.map(([groupName, groupItems]) => (
+            <div key={groupName} className="mb-8 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
+              <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">
+                {activeTab === 'supplies' ? 'Supplies' : 'Equipment'} - Location: {groupName}
+              </h2>
               <table className="w-full border-collapse border border-black text-left text-sm">
                 <thead>
                   <tr className="bg-gray-100 border-b border-black">
@@ -972,7 +1013,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </tr>
                 </thead>
                 <tbody>
-                  {(activeTab === 'supplies' ? filteredSupplies : filteredEquip).map((item: any) => (
+                  {groupItems.map((item: any) => (
                     <tr key={item.id} className="border-b border-black break-inside-avoid">
                       <td className="p-2 border border-black text-center"><div className="w-4 h-4 border border-black mx-auto"></div></td>
                       <td className="p-2 border border-black font-bold">{item.name}</td>
@@ -983,7 +1024,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 </tbody>
               </table>
             </div>
-          )}
+          ))}
         </div>
       </DialogContent>
     </Dialog>
