@@ -224,6 +224,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [customPurchased, setCustomPurchased] = useState(false);
   const [customBrand, setCustomBrand] = useState(false);
   const [customSize, setCustomSize] = useState(false);
+  const [customShelf, setCustomShelf] = useState(false);
+  const [customSection, setCustomSection] = useState(false);
 
   const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
   const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
@@ -245,6 +247,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other"]
   };
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
+  const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
+  const DEFAULT_SECTIONS = ["Left Side", "Middle", "Right Side"];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -269,6 +273,16 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availablePurchased, setAvailablePurchased] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_purchased');
     return saved ? JSON.parse(saved) : DEFAULT_PURCHASED;
+  });
+
+  const [availableShelves, setAvailableShelves] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_shelves');
+    return saved ? JSON.parse(saved) : DEFAULT_SHELVES;
+  });
+
+  const [availableSections, setAvailableSections] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_sections');
+    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
   });
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
@@ -1043,32 +1057,77 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="text-xs text-zinc-400">Shelf Location</Label>
-                      <Select value={form.shelf || "none"} onValueChange={(v) => setForm({ ...form, shelf: v === "none" ? "" : v })}>
-                        <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9">
-                          <SelectValue placeholder="Select Shelf" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="Top Shelf">Top Shelf</SelectItem>
-                          <SelectItem value="2nd Shelf">2nd Shelf</SelectItem>
-                          <SelectItem value="3rd Shelf">3rd Shelf</SelectItem>
-                          <SelectItem value="Bottom Shelf">Bottom Shelf</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {!customShelf ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                              <span className="truncate">{form.shelf || "None"}</span>
+                              <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                            <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                              <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, shelf: ""})}>None</span>
+                                {!form.shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                              </div>
+                              {availableShelves.map(shelf => (
+                                <div key={shelf} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, shelf})}>{shelf}</span>
+                                  {form.shelf === shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); updateShelves(availableShelves.filter(s => s !== shelf)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                                </div>
+                              ))}
+                              <div className="h-px bg-zinc-800 my-1" />
+                              <button type="button" onClick={() => { setCustomShelf(true); setForm({...form, shelf: ""}); }} className="flex items-center gap-2 px-2 py-1.5 text-sm text-purple-400 hover:bg-zinc-800 rounded font-medium transition-colors">
+                                <Plus className="h-4 w-4" /> Add Custom Shelf
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input value={form.shelf} autoFocus onChange={(e) => setForm({ ...form, shelf: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (form.shelf && !availableShelves.includes(form.shelf)) { updateShelves([...availableShelves, form.shelf].sort()); } setCustomShelf(false); } }} className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm" placeholder="Enter shelf name..." />
+                          <Button type="button" variant="outline" size="sm" onClick={() => { if (form.shelf && !availableShelves.includes(form.shelf)) { updateShelves([...availableShelves, form.shelf].sort()); } setCustomShelf(false); }} className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700" title="Save and Return"><Check className="h-4 w-4" /></Button>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs text-zinc-400">Section</Label>
-                      <Select value={form.section || "none"} onValueChange={(v) => setForm({ ...form, section: v === "none" ? "" : v })}>
-                        <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9">
-                          <SelectValue placeholder="Select Section" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="Left Side">Left Side</SelectItem>
-                          <SelectItem value="Middle">Middle</SelectItem>
-                          <SelectItem value="Right Side">Right Side</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {!customSection ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                              <span className="truncate">{form.section || "None"}</span>
+                              <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                            <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                              <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, section: ""})}>None</span>
+                                {!form.section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                              </div>
+                              {availableSections.map(section => (
+                                <div key={section} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, section})}>{section}</span>
+                                  {form.section === section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); updateSections(availableSections.filter(s => s !== section)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                                </div>
+                              ))}
+                              <div className="h-px bg-zinc-800 my-1" />
+                              <button type="button" onClick={() => { setCustomSection(true); setForm({...form, section: ""}); }} className="flex items-center gap-2 px-2 py-1.5 text-sm text-purple-400 hover:bg-zinc-800 rounded font-medium transition-colors">
+                                <Plus className="h-4 w-4" /> Add Custom Section
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input value={form.section} autoFocus onChange={(e) => setForm({ ...form, section: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (form.section && !availableSections.includes(form.section)) { updateSections([...availableSections, form.section].sort()); } setCustomSection(false); } }} className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm" placeholder="Enter section name..." />
+                          <Button type="button" variant="outline" size="sm" onClick={() => { if (form.section && !availableSections.includes(form.section)) { updateSections([...availableSections, form.section].sort()); } setCustomSection(false); }} className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700" title="Save and Return"><Check className="h-4 w-4" /></Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
