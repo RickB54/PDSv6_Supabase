@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, saveTool, saveUsageHistory } from '@/lib/inventory-data';
@@ -26,6 +26,30 @@ interface InventoryAuditModalProps {
 }
 
 type TabType = 'chemicals' | 'supplies' | 'equipment';
+
+// Audit snapshot for save-progress / history
+interface AuditSnapshot {
+  id: string;
+  timestamp: string; // ISO
+  status: 'in-progress' | 'completed';
+  note?: string;
+  chemAudit: Record<string, ChemicalAuditState>;
+  supplyAudit: Record<string, SupplyEquipAuditState>;
+  equipAudit: Record<string, SupplyEquipAuditState>;
+  activeTab: TabType;
+  totalCounted: number;
+}
+
+const HISTORY_KEY = 'inventory_audit_history';
+
+const loadHistory = (): AuditSnapshot[] => {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+};
+
+const saveHistory = (history: AuditSnapshot[]) => {
+  // Keep max 50 entries, newest first
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 50)));
+};
 
 // State interfaces
 interface SupplyEquipAuditState {
@@ -93,7 +117,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [search, setSearch] = useState('');
   const [hideCounted, setHideCounted] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'in-progress' | 'completed'>('all');
+  const [historyDateFilter, setHistoryDateFilter] = useState('');
 
   // Filters & Sorting
   const [filterTags, setFilterTags] = useState<string[]>([]);
@@ -128,6 +155,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       });
       setChemAudit(initialChem);
       setReviewMode(false);
+      setShowHistory(false);
       setActiveTab('chemicals');
       setHideCounted(false);
     }
@@ -482,6 +510,23 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       }
 
       toast({ title: 'Audit Complete', description: 'Inventory updated successfully.' });
+
+      // Save completed snapshot to history
+      const completedSnapshot: AuditSnapshot = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        status: 'completed',
+        chemAudit,
+        supplyAudit,
+        equipAudit,
+        activeTab,
+        totalCounted: Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
+          Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
+          Object.values(equipAudit).filter(e => (e.counted ?? 0) > 0).length
+      };
+      const existing = loadHistory();
+      saveHistory([completedSnapshot, ...existing]);
+
       onRefresh();
       onOpenChange(false);
     } catch (err: any) {
@@ -489,6 +534,57 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Save Progress handler
+  const handleSaveProgress = () => {
+    const totalCounted =
+      Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
+      Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
+      Object.values(equipAudit).filter(e => (e.counted ?? 0) > 0).length;
+
+    if (totalCounted === 0) {
+      toast({ title: 'Nothing to Save', description: 'Count at least one item before saving progress.', variant: 'destructive' });
+      return;
+    }
+
+    const snapshot: AuditSnapshot = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      status: 'in-progress',
+      chemAudit,
+      supplyAudit,
+      equipAudit,
+      activeTab,
+      totalCounted
+    };
+    const existing = loadHistory();
+    saveHistory([snapshot, ...existing]);
+    toast({ title: 'Progress Saved', description: `${totalCounted} item${totalCounted !== 1 ? 's' : ''} saved. Resume anytime from History.` });
+  };
+
+  // Resume from snapshot
+  const handleResume = (snapshot: AuditSnapshot) => {
+    // Merge snapshot chem audit with any newly added chemicals
+    const mergedChem: Record<string, ChemicalAuditState> = { ...chemAudit };
+    Object.entries(snapshot.chemAudit).forEach(([id, state]) => {
+      if (mergedChem[id]) mergedChem[id] = state;
+    });
+    setChemAudit(mergedChem);
+    setSupplyAudit(snapshot.supplyAudit);
+    setEquipAudit(snapshot.equipAudit);
+    setActiveTab(snapshot.activeTab);
+    setShowHistory(false);
+    toast({ title: 'Resumed', description: `Audit from ${new Date(snapshot.timestamp).toLocaleString()} loaded.` });
+  };
+
+  // Delete snapshot from history
+  const handleDeleteSnapshot = (id: string) => {
+    const updated = loadHistory().filter(s => s.id !== id);
+    saveHistory(updated);
+    // Force re-render via local state
+    setHistoryFilter(f => f); // no-op to trigger re-render
+    toast({ title: 'Deleted', description: 'Audit record removed from history.' });
   };
 
   const renderJugTallyRow = (fillLevel: number, count: number, onDelta: (delta: number) => void) => (
@@ -509,26 +605,38 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           <div className="flex justify-between items-center">
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-purple-500" /> 
-              {reviewMode ? 'Review Audit Changes' : 'Inventory Audit Checklist'}
-              <TooltipProvider>
-                <Tooltip delayDuration={300}>
-                  <TooltipTrigger asChild>
-                    <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
-                      <HelpCircle className="h-5 w-5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl">
-                    <p className="font-bold text-white mb-2">How to perform an Audit:</p>
-                    <ul className="list-disc pl-4 space-y-1 text-sm">
-                      <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
-                      <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
-                      <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
-                      <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
-                    </ul>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {showHistory ? 'Audit History' : reviewMode ? 'Review Audit Changes' : 'Inventory Audit Checklist'}
+              {!showHistory && !reviewMode && (
+                <TooltipProvider>
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
+                        <HelpCircle className="h-5 w-5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl">
+                      <p className="font-bold text-white mb-2">How to perform an Audit:</p>
+                      <ul className="list-disc pl-4 space-y-1 text-sm">
+                        <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
+                        <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
+                        <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
+                        <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
+                        <li><strong>Save Progress:</strong> Use &quot;Save Progress&quot; to pause and resume later from History.</li>
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-8 text-xs flex items-center gap-1.5 border-zinc-700 ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
+              onClick={() => { setShowHistory(h => !h); setReviewMode(false); }}
+            >
+              <History className="h-3.5 w-3.5" />
+              {showHistory ? 'Back to Audit' : 'History'}
+            </Button>
           </div>
         </DialogHeader>
 
@@ -987,20 +1095,140 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           </div>
         )}
 
+        {/* HISTORY VIEW */}
+        {showHistory && (
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Filters */}
+            <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-zinc-500 uppercase">Filter:</span>
+                {(['all', 'in-progress', 'completed'] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setHistoryFilter(f)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                      historyFilter === f
+                        ? f === 'in-progress' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : f === 'completed' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                        : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700'
+                    }`}
+                  >
+                    {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : 'Completed'}
+                  </button>
+                ))}
+                <input
+                  type="date"
+                  value={historyDateFilter}
+                  onChange={e => setHistoryDateFilter(e.target.value)}
+                  className="ml-auto h-8 px-2 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded"
+                  title="Filter by date"
+                />
+                {historyDateFilter && (
+                  <button onClick={() => setHistoryDateFilter('')} className="text-zinc-500 hover:text-zinc-300">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* History list */}
+            <div className="flex-1 overflow-auto p-4 space-y-3">
+              {(() => {
+                let entries = loadHistory();
+                if (historyFilter !== 'all') entries = entries.filter(e => e.status === historyFilter);
+                if (historyDateFilter) entries = entries.filter(e => e.timestamp.startsWith(historyDateFilter));
+
+                if (entries.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-40 text-zinc-500 gap-3">
+                      <History className="h-10 w-10 opacity-30" />
+                      <p className="text-sm">No audit records found</p>
+                      <p className="text-xs text-zinc-600">Use &quot;Save Progress&quot; during an audit to build your history.</p>
+                    </div>
+                  );
+                }
+
+                return entries.map(entry => {
+                  const d = new Date(entry.timestamp);
+                  const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                  const isCompleted = entry.status === 'completed';
+
+                  return (
+                    <div key={entry.id} className={`flex items-start justify-between p-4 rounded-lg border gap-4 ${
+                      isCompleted ? 'bg-emerald-950/20 border-emerald-700/30' : 'bg-amber-950/20 border-amber-700/30'
+                    }`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                            isCompleted ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {isCompleted ? '✓ Completed' : '⏸ In Progress'}
+                          </span>
+                          <span className="text-sm font-bold text-zinc-200">{dateStr}</span>
+                          <span className="text-xs text-zinc-500">{timeStr}</span>
+                        </div>
+                        <div className="mt-1.5 text-xs text-zinc-400 flex flex-wrap gap-3">
+                          <span><strong className="text-zinc-300">{entry.totalCounted}</strong> item{entry.totalCounted !== 1 ? 's' : ''} counted</span>
+                          <span className="capitalize">Started on: {['chemicals', 'supplies', 'equipment'].includes(entry.activeTab) ? entry.activeTab : 'chemicals'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {!isCompleted && (
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-white border border-amber-500/40 gap-1"
+                            onClick={() => handleResume(entry)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Resume
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-zinc-600 hover:text-red-400"
+                          onClick={() => handleDeleteSnapshot(entry.id)}
+                          title="Delete this record"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
         <DialogFooter className="p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex justify-between print:hidden">
-          <Button variant="ghost" onClick={() => reviewMode ? setReviewMode(false) : onOpenChange(false)}>
-            {reviewMode ? 'Back to Audit' : 'Cancel'}
-          </Button>
-          {!reviewMode ? (
-            <Button className="bg-purple-600 hover:bg-purple-500 text-white font-bold" onClick={() => setReviewMode(true)}>
-              Review Changes
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => showHistory ? setShowHistory(false) : reviewMode ? setReviewMode(false) : onOpenChange(false)}>
+              {showHistory ? 'Back to Audit' : reviewMode ? 'Back to Audit' : 'Cancel'}
             </Button>
-          ) : (
-            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={handleConfirmUpdate} disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Confirm & Update Inventory'}
-            </Button>
+            {!showHistory && !reviewMode && (
+              <Button
+                variant="outline"
+                className="h-9 border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white gap-1.5"
+                onClick={handleSaveProgress}
+              >
+                <Save className="h-4 w-4" /> Save Progress
+              </Button>
+            )}
+          </div>
+          {!showHistory && (
+            !reviewMode ? (
+              <Button className="bg-purple-600 hover:bg-purple-500 text-white font-bold" onClick={() => setReviewMode(true)}>
+                Review Changes
+              </Button>
+            ) : (
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={handleConfirmUpdate} disabled={isSubmitting}>
+                {isSubmitting ? 'Updating...' : 'Confirm & Update Inventory'}
+              </Button>
+            )
           )}
         </DialogFooter>
+
 
         {/* PRINT LAYOUT */}
         <div className="hidden print:block bg-white text-black print:absolute print:left-0 print:top-0 print:w-full print:bg-white print:p-8 print:m-0" style={{ zIndex: 99999 }}>
