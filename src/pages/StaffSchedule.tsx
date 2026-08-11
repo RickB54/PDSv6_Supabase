@@ -627,6 +627,8 @@ export default function StaffSchedule() {
                                                     const aids = bAddons.map((name: string) => allAddons.find(a => a.name === name)?.id).filter(Boolean);
                                                     if (aids.length > 0) params.set('addons', aids.join(','));
                                                 }
+                                                if (b.address) params.set('address', b.address);
+                                                
                                                 params.set('employeeId', selectedShift.employeeId);
                                                 params.set('employee', selectedShift.employeeName);
                                                 navigate(`/service-checklist?${params.toString()}`);

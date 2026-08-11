@@ -58,6 +58,7 @@ import { Progress } from "@/components/ui/progress";
 import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
 import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
 import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
+import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 import { PrepChemicalsSummary } from "@/components/checklist/PrepChemicalsSummary";
 import HelpModal from "@/components/help/HelpModal";
 import TipSelectionScreen from "@/components/TipSelectionScreen";
@@ -203,6 +204,7 @@ const ServiceChecklist = () => {
   }, [refreshCoupons]);
   
   const [destinationFee, setDestinationFee] = useState(0);
+  const [customerAddress, setCustomerAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [aiProcessing, setAiProcessing] = useState(false);
   const [prevNotes, setPrevNotes] = useState<string | null>(null);
@@ -836,6 +838,9 @@ const ServiceChecklist = () => {
       
       const destFee = params.get("destinationFee");
       if (destFee) setDestinationFee(Number(destFee) || 0);
+
+      const addr = params.get("address");
+      if (addr) setCustomerAddress(decodeURIComponent(addr));
     })();
   }, [params]);
 
@@ -4315,6 +4320,23 @@ const ServiceChecklist = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {customerAddress && !params.get('destinationFee') && (
+              <div className="mb-4">
+                <DestinationFeeInline 
+                  address={customerAddress} 
+                  mode="booking" 
+                  theme="dark"
+                  onFeeCalculated={(m, fee) => {
+                    // Only auto-apply if it hasn't been set manually yet
+                    if (destinationFee === 0 && fee > 0) {
+                      setDestinationFee(fee);
+                      toast({ title: "Destination Fee Added", description: `Automatically added $${fee} based on customer address.` });
+                    }
+                  }} 
+                />
               </div>
             )}
 
