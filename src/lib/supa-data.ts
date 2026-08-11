@@ -3227,5 +3227,112 @@ export const deletePrimeBookingReview = async (bookingId: string) => {
     if (blockDemo('delete booking review')) return null;
     const { error } = await supabase.from('prime_booking_reviews').delete().eq('booking_id', bookingId);
     if (error) { console.error('deletePrimeBookingReview', error); throw error; }
-    return true;
+};
+
+// ------------------------------------------------------------------
+// Inventory Audit History
+// ------------------------------------------------------------------
+
+export interface AuditSnapshot {
+    id: string;
+    timestamp: string; // ISO
+    status: 'in-progress' | 'completed';
+    note?: string;
+    chemAudit: any; // Record<string, ChemicalAuditState>
+    supplyAudit: any; // Record<string, SupplyEquipAuditState>
+    equipAudit: any; // Record<string, SupplyEquipAuditState>
+    activeTab: 'chemicals' | 'supplies' | 'equipment';
+    totalCounted: number;
+}
+
+export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('inventory_audit_history')
+            .select('*')
+            .order('timestamp', { ascending: false })
+            .limit(50);
+            
+        if (error) {
+            console.error('getInventoryAuditHistory error:', error);
+            return [];
+        }
+
+        return (data || []).map(row => ({
+            id: row.id,
+            timestamp: row.timestamp,
+            status: row.status,
+            note: row.note,
+            chemAudit: row.chem_audit || {},
+            supplyAudit: row.supply_audit || {},
+            equipAudit: row.equip_audit || {},
+            activeTab: row.active_tab,
+            totalCounted: row.total_counted || 0
+        }));
+    } catch (err) {
+        console.error('getInventoryAuditHistory exception:', err);
+        return [];
+    }
+};
+
+export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
+    if (blockDemo('save inventory audit progress')) return snapshot;
+    try {
+        const payload = {
+            id: snapshot.id,
+            timestamp: snapshot.timestamp,
+            status: snapshot.status,
+            note: snapshot.note || null,
+            chem_audit: snapshot.chemAudit,
+            supply_audit: snapshot.supplyAudit,
+            equip_audit: snapshot.equipAudit,
+            active_tab: snapshot.activeTab,
+            total_counted: snapshot.totalCounted,
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('inventory_audit_history')
+            .upsert(payload)
+            .select()
+            .single();
+
+        if (error) throw error;
+        
+        // Background cleanup: keep only top 50
+        try {
+            const { data: allRows } = await supabase
+                .from('inventory_audit_history')
+                .select('id')
+                .order('timestamp', { ascending: false })
+                .limit(100); // Fetch a bunch
+            if (allRows && allRows.length > 50) {
+                const idsToDelete = allRows.slice(50).map(r => r.id);
+                if (idsToDelete.length > 0) {
+                    await supabase.from('inventory_audit_history').delete().in('id', idsToDelete);
+                }
+            }
+        } catch (cleanupErr) {
+            console.error('Failed to cleanup old audit history:', cleanupErr);
+        }
+
+        return data;
+    } catch (err) {
+        console.error('upsertInventoryAuditHistory error:', err);
+        throw err;
+    }
+};
+
+export const deleteInventoryAuditHistory = async (id: string) => {
+    if (blockDemo('delete inventory audit')) return;
+    try {
+        const { error } = await supabase
+            .from('inventory_audit_history')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    } catch (err) {
+        console.error('deleteInventoryAuditHistory error:', err);
+        throw err;
+    }
 };

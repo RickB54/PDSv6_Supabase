@@ -570,6 +570,37 @@ const App = () => {
             console.error('[MIGRATION] Fatal error during prime_booking_reviews migration:', err);
         }
     })();
+
+    // ONE-TIME MIGRATION: inventory_audit_history to Supabase
+    (async () => {
+        try {
+            const migrated = localStorage.getItem('inventory_audit_history_MIGRATED');
+            const raw = localStorage.getItem('inventory_audit_history');
+            if (raw && !migrated && !isDemoActive) {
+                const history = JSON.parse(raw);
+                if (Array.isArray(history) && history.length > 0) {
+                    console.log(`[MIGRATION] Found ${history.length} legacy inventory_audit_history records. Migrating to Supabase...`);
+                    const { upsertInventoryAuditHistory } = await import('@/lib/supa-data');
+                    let successCount = 0;
+                    for (const snapshot of history) {
+                        try {
+                            await upsertInventoryAuditHistory(snapshot);
+                            successCount++;
+                        } catch (err) {
+                            console.error('[MIGRATION] Failed to migrate audit history snapshot:', snapshot.id, err);
+                        }
+                    }
+                    console.log(`[MIGRATION] Successfully migrated ${successCount} audit snapshots.`);
+                    if (successCount === history.length) {
+                        localStorage.setItem('inventory_audit_history_MIGRATED', 'true');
+                        console.log('[MIGRATION] Migration complete. LocalStorage key preserved but marked as migrated.');
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[MIGRATION] Fatal error during inventory_audit_history migration:', err);
+        }
+    })();
     
     try {
       if (import.meta.env.VITE_AUTH_MODE === 'supabase') setAuthMode('supabase');
