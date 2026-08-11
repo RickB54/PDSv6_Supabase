@@ -93,6 +93,7 @@ export interface Material {
     purchaseDate?: string;
     actualPrice?: number;
     salePrice?: number;
+    location?: string;
 }
 
 export interface Tool {
@@ -112,6 +113,7 @@ export interface Tool {
     wherePurchased?: string;
     actualPrice?: number;
     salePrice?: number;
+    location?: string;
 }
 
 export interface SetupMedia {
@@ -502,7 +504,8 @@ export async function getMaterials(): Promise<Material[]> {
         wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
         purchaseDate: item.purchase_date,
         actualPrice: item.actual_price,
-        salePrice: item.sale_price
+        salePrice: item.sale_price,
+        location: item.location
     }));
 }
 
@@ -535,6 +538,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         purchase_date: material.purchaseDate || null,
         actual_price: material.actualPrice || null,
         sale_price: material.salePrice || null,
+        location: material.location || null,
         updated_at: new Date().toISOString()
     };
 
@@ -561,12 +565,14 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                 else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
+                else if (errMsg.includes('location') && 'location' in sanitized) { delete sanitized.location; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitized.where_purchased;
                     delete sanitized.purchase_date;
                     delete sanitized.actual_price;
                     delete sanitized.sale_price;
+                    delete sanitized.location;
                 }
                 const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
                 currentErr = retryErr;
@@ -588,6 +594,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                 salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
+                location: dbData.location,
                 updatedAt: dbData.updated_at
             } as any;
         } else {
@@ -680,7 +687,8 @@ export async function getTools(): Promise<Tool[]> {
         imageUrl: item.image_url,
         createdAt: item.created_at,
         updatedAt: item.updated_at,
-        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon"
+        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+        location: item.location
     }));
 }
 
@@ -705,6 +713,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         where_purchased: tool.wherePurchased || null,
         actual_price: tool.actualPrice || null,
         sale_price: tool.salePrice || null,
+        location: tool.location || null,
         updated_at: new Date().toISOString()
     };
 
@@ -731,6 +740,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                 else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitizedData) { delete sanitizedData.purchase_date; dropped = true; }
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitizedData) { delete sanitizedData.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitizedData) { delete sanitizedData.sale_price; dropped = true; }
+                else if (errMsg.includes('location') && 'location' in sanitizedData) { delete sanitizedData.location; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitizedData.quantity;
@@ -740,6 +750,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                     delete sanitizedData.purchase_date;
                     delete sanitizedData.actual_price;
                     delete sanitizedData.sale_price;
+                    delete sanitizedData.location;
                 }
                 const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
                 currentErr = retryErr;
@@ -760,6 +771,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                 salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
+                location: dbData.location,
                 updatedAt: dbData.updated_at
             } as any;
         } else {

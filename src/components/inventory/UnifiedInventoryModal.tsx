@@ -61,8 +61,10 @@ interface SupplyForm {
   imageUrl?: string;
 
   wherePurchased?: string;
+  wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
+  location?: string;
 }
 
 // Renamed: Tool → Equipment
@@ -83,8 +85,10 @@ interface EquipmentForm {
   imageUrl?: string;
 
   wherePurchased?: string;
+  wherePurchased?: string;
   updatedAt?: string;
   createdAt?: string;
+  location?: string;
 }
 
 type Props = {
@@ -226,6 +230,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [customSize, setCustomSize] = useState(false);
   const [customShelf, setCustomShelf] = useState(false);
   const [customSection, setCustomSection] = useState(false);
+  const [customLocation, setCustomLocation] = useState(false);
 
   const [uniqueBrands, setUniqueBrands] = useState<string[]>([]);
   const [uniqueSizes, setUniqueSizes] = useState<string[]>([]);
@@ -249,6 +254,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
   const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
   const DEFAULT_SECTIONS = ["Left Side", "Middle", "Right Side"];
+  const DEFAULT_LOCATIONS = ["Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet", "Detail Cart"];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -283,6 +289,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availableSections, setAvailableSections] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sections');
     return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+  });
+
+  const [availableLocations, setAvailableLocations] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_locations');
+    return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
   });
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
@@ -725,6 +736,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             notes: form.notes || "",
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
+            location: form.location || undefined,
           };
           
           await saveTool(payload, !purchase.id);
@@ -760,6 +772,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             purchaseDate: purchase.purchaseDate || undefined,
+            location: form.location || undefined,
           };
           
           await saveMaterial(payload, !purchase.id);
@@ -1504,6 +1517,46 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     >
                       <Check className="h-4 w-4" />
                     </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mode !== 'chemical' && (
+              <div className="mt-4">
+                <Label className="text-xs text-zinc-400">Location</Label>
+                {!customLocation ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                        <span className="truncate">{form.location || "Select location..."}</span>
+                        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                      <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                        <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                          <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, location: ""})}>None</span>
+                          {!form.location && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                        </div>
+                        {availableLocations.map(loc => (
+                          <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                            <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, location: loc})}>{loc}</span>
+                            {form.location === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); updateLocations(availableLocations.filter(l => l !== loc)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        ))}
+                        <div className="h-px bg-zinc-800 my-1" />
+                        <button type="button" onClick={() => { setCustomLocation(true); setForm({...form, location: ""}); }} className="flex items-center gap-2 px-2 py-1.5 text-sm text-purple-400 hover:bg-zinc-800 rounded font-medium transition-colors">
+                          <Plus className="h-4 w-4" /> Add Custom Location
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input value={form.location || ""} autoFocus onChange={(e) => setForm({ ...form, location: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (form.location && !availableLocations.includes(form.location)) { updateLocations([...availableLocations, form.location].sort()); } setCustomLocation(false); } }} className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm" placeholder="Enter location name..." />
+                    <Button type="button" variant="outline" size="sm" onClick={() => { if (form.location && !availableLocations.includes(form.location)) { updateLocations([...availableLocations, form.location].sort()); } setCustomLocation(false); }} className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700" title="Save and Return"><Check className="h-4 w-4" /></Button>
                   </div>
                 )}
               </div>
