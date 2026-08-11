@@ -426,6 +426,75 @@ const InventoryControl = () => {
       }
     }
 
+    // ONE-TIME MIGRATION SCRIPT FOR SHELF/SECTION/CATEGORY POPULATION
+    if (!localStorage.getItem('did_populate_inventory_v3')) {
+      localStorage.setItem('did_populate_inventory_v3', 'true');
+      const performMigration = async () => {
+        try {
+          const { supabase } = await import('@/lib/supabase');
+          const { data } = await supabase.from('chemicals').select('*');
+          if (!data) return;
+          
+          const updates: any[] = [];
+          const notFound: string[] = [];
+          
+          const applyTo = (match: string, changes: any, maxCount: number = 1) => {
+            let count = 0;
+            for (const item of data) {
+              if (item.name.toLowerCase().includes(match.toLowerCase())) {
+                if (count < maxCount && !updates.find(u => u.id === item.id)) {
+                   updates.push({ id: item.id, name: item.name, ...changes });
+                   count++;
+                }
+              }
+            }
+            if (count === 0) {
+              notFound.push(match);
+            }
+          };
+
+          // Top Shelf - Left - Upholstery
+          applyTo('does it all', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
+          applyTo('zap it', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
+          applyTo('carpet bomber', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
+          applyTo('terminator', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
+
+          // Top Shelf - Middle - APCs
+          applyTo('pink perfection', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' }, 1);
+          applyTo('green all', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
+          applyTo('road warrior', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
+          applyTo('apc', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
+          applyTo('express interior', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
+
+          // 2nd Shelf - Middle - Exterior
+          applyTo('cherry foam', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' }, 1);
+          applyTo('dirt buster', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' });
+          applyTo('spray wax', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' }, 2);
+          applyTo('super shine', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' });
+
+          // 2nd Shelf - Right - Wheels
+          applyTo('dark fury', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
+          applyTo('muscle magic', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
+          applyTo('wire wheel', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
+          applyTo('purple x', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
+
+          // 3rd Shelf - Right - Overflow
+          applyTo('pink perfection', { shelf: '3rd Shelf', section: 'Right Side', category: 'Overflow/Duplicate Stock' }, 1);
+          applyTo('cherry foam', { shelf: '3rd Shelf', section: 'Right Side', category: 'Overflow/Duplicate Stock' }, 1);
+
+          for (const u of updates) {
+            const sanitized = { shelf: u.shelf, section: u.section, category: u.category };
+            await supabase.from('chemicals').update(sanitized).eq('id', u.id);
+          }
+          console.log('Migrated', updates.length, 'chemicals! Not found:', notFound);
+          loadData();
+        } catch (e) {
+          console.error('Migration failed', e);
+        }
+      };
+      performMigration();
+    }
+
     // SESSION RECOVERY: Check if we were in the middle of an edit when the app reloaded
     // (Common on mobile after OS kills browser to free memory for the Camera app)
     const checkRecovery = () => {
