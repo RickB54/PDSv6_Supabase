@@ -234,7 +234,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             let sanitized = { ...dbData };
             let currentErr = error;
             let retries = 0;
-            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
                 const errMsg = (currentErr.message || '').toLowerCase();
                 let dropped = false;
                 if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
@@ -558,7 +558,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
             let sanitized = { ...dbData };
             let currentErr = error;
             let retries = 0;
-            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
                 const errMsg = (currentErr.message || '').toLowerCase();
                 let dropped = false;
                 if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
@@ -730,7 +730,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
             let sanitizedData = { ...dbData };
             let currentErr = error;
             let retries = 0;
-            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 5) {
+            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
                 const errMsg = (currentErr.message || '').toLowerCase();
                 let dropped = false;
                 if (errMsg.includes('quantity') && 'quantity' in sanitizedData) { delete sanitizedData.quantity; dropped = true; }
