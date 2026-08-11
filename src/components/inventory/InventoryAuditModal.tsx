@@ -314,9 +314,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [activeTab, filteredSupplies, filteredEquip]);
 
-  const numCountedChems = normalizedChemicals.filter(c => isChemCounted(c.id)).length;
-  const numCountedSupplies = supplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
-  const numCountedEquip = equipment.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
+  const numCountedChems = filteredChemicals.filter(c => isChemCounted(c.id)).length;
+  const numCountedSupplies = filteredSupplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
+  const numCountedEquip = filteredEquip.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
 
   const allTags = useMemo(() => Array.from(new Set(normalizedChemicals.flatMap(c => c.tags || []))).sort(), [normalizedChemicals]);
   const allBrands = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
@@ -608,9 +608,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
                 <div className="flex items-center gap-4">
                   <div className="text-sm font-bold text-zinc-400">
-                    {activeTab === 'chemicals' && `${numCountedChems} of ${chemicals.length} counted`}
-                    {activeTab === 'supplies' && `${numCountedSupplies} of ${supplies.length} counted`}
-                    {activeTab === 'equipment' && `${numCountedEquip} of ${equipment.length} counted`}
+                    {activeTab === 'chemicals' && `${numCountedChems} of ${filteredChemicals.length} counted`}
+                    {activeTab === 'supplies' && `${numCountedSupplies} of ${filteredSupplies.length} counted`}
+                    {activeTab === 'equipment' && `${numCountedEquip} of ${filteredEquip.length} counted`}
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch id="hide-counted" checked={hideCounted} onCheckedChange={setHideCounted} className="data-[state=checked]:bg-purple-500" />
@@ -732,6 +732,42 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </Button>
                 </div>
               </div>
+              
+              {activeTab === 'chemicals' && (filterTags.length > 0 || filterBrands.length > 0 || filterShelves.length > 0 || filterSizes.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-800/50">
+                  <span className="text-xs font-bold text-zinc-500 uppercase mr-2 flex items-center gap-1">
+                    <Filter className="h-3 w-3" /> Active Filters:
+                  </span>
+                  
+                  {filterBrands.map(brand => (
+                    <Badge key={`brand-${brand}`} className="bg-blue-500/10 text-blue-300 border-blue-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterBrands(prev => prev.filter(b => b !== brand))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Brand:</span> {brand} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  
+                  {filterShelves.map(shelf => (
+                    <Badge key={`shelf-${shelf}`} className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterShelves(prev => prev.filter(s => s !== shelf))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Shelf:</span> {shelf} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  
+                  {filterSizes.map(size => (
+                    <Badge key={`size-${size}`} className="bg-amber-500/10 text-amber-300 border-amber-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterSizes(prev => prev.filter(s => s !== size))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Size:</span> {size} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+
+                  {filterTags.map(tag => (
+                    <Badge key={`tag-${tag}`} className="bg-purple-500/10 text-purple-300 border-purple-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterTags(prev => prev.filter(t => t !== tag))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Tag:</span> {tag} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-400 hover:text-white px-2 ml-auto" onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); }}>
+                    Clear All
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-auto p-4 space-y-4 print:hidden">
