@@ -23,7 +23,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
-import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers, getSupabaseBookings, getSupabaseEmployees } from "@/lib/supa-data";
+import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers, getSupabaseBookings, getSupabaseEmployees, getInventoryAuditHistory, type AuditSnapshot } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING, MOCK_PROSPECTS } from "@/lib/demoMockData";
 
@@ -40,6 +40,7 @@ const Reports = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [estimates, setEstimates] = useState<any[]>([]);
   const [payrollHistory, setPayrollHistory] = useState<any[]>([]);
+  const [auditHistory, setAuditHistory] = useState<AuditSnapshot[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>("");
   // Accounting
   const [income, setIncome] = useState<any[]>([]);
@@ -105,6 +106,9 @@ const Reports = () => {
     const allEmps = (await getSupabaseEmployees()) || [];
     // Show all jobs except cancelled ones for comprehensive employee reporting
     const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
+    
+    const audits = await getInventoryAuditHistory();
+    setAuditHistory(audits || []);
     
     setCustomers(cust);
     setInvoices(inv);
@@ -1018,6 +1022,7 @@ const Reports = () => {
     { id: 'prospects', label: 'Prospects', icon: UserPlus, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
     { id: 'invoices', label: 'Invoices', icon: DollarSign, color: 'text-purple-400', bg: 'bg-purple-400/10' },
     { id: 'inventory', label: 'Inventory', icon: Package, color: 'text-orange-400', bg: 'bg-orange-400/10' },
+    { id: 'inventory-audit', label: 'Inv Audit', icon: History, color: 'text-rose-400', bg: 'bg-rose-400/10' },
     { id: 'employee', label: 'Employee', icon: Shield, color: 'text-indigo-400', bg: 'bg-indigo-400/10' },
     { id: 'estimates', label: 'Estimates', icon: ClipboardCheck, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
     { id: 'accounting', label: 'Accounting', icon: Calculator, color: 'text-amber-400', bg: 'bg-amber-400/10' },
@@ -1616,6 +1621,124 @@ const Reports = () => {
                   </TableBody>
                 </Table>
               </div>
+            </Card>
+          </TabsContent>
+
+          {/* INVENTORY AUDIT TAB */}
+          <TabsContent value="inventory-audit" className="space-y-4 animate-in fade-in-50">
+            <Card className="p-6 bg-zinc-900/50 border-zinc-800">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                <div className="space-y-1">
+                  <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2">
+                    <History className="h-6 w-6 text-rose-500" />
+                    Inventory Audit History
+                  </h2>
+                  <p className="text-zinc-400 text-sm">Review historical physical counts</p>
+                </div>
+              </div>
+
+              {(() => {
+                const fAudits = filterByDate(auditHistory, 'timestamp');
+                if (fAudits.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-40 text-zinc-500 gap-3">
+                      <History className="h-10 w-10 opacity-30" />
+                      <p className="text-sm">No audit records found for this period.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {fAudits.map((snapshot) => {
+                      const d = new Date(snapshot.timestamp);
+                      const isCompleted = snapshot.status === 'completed';
+                      
+                      // Calculate counts for display (simplified for report view)
+                      let chemCount = 0;
+                      if (snapshot.chemAudit) {
+                        chemCount = Object.keys(snapshot.chemAudit).length;
+                      }
+                      let supplyCount = 0;
+                      if (snapshot.supplyAudit) {
+                        supplyCount = Object.values(snapshot.supplyAudit).filter((s: any) => s.counted > 0).length;
+                      }
+                      let equipCount = 0;
+                      if (snapshot.equipAudit) {
+                        equipCount = Object.values(snapshot.equipAudit).filter((s: any) => s.counted > 0).length;
+                      }
+
+                      return (
+                        <div key={snapshot.id} className="p-4 rounded-lg border bg-zinc-950 border-zinc-800 flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                                isCompleted ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                              }`}>
+                                {isCompleted ? '✓ Completed' : '⏸ In Progress'}
+                              </span>
+                              <span className="font-bold text-white">{d.toLocaleDateString()} {d.toLocaleTimeString()}</span>
+                            </div>
+                            <div className="text-sm text-zinc-400">
+                              Total Items Counted: <span className="font-bold text-white">{snapshot.totalCounted || (chemCount + supplyCount + equipCount)}</span> 
+                              <span className="mx-2">•</span> 
+                              Chemicals: {chemCount} | Supplies: {supplyCount} | Equipment: {equipCount}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="border-rose-500/30 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
+                            onClick={() => {
+                               // Quick and dirty PDF for just this snapshot
+                               const doc = new jsPDF();
+                               doc.setFontSize(18);
+                               doc.text('Historical Inventory Audit', 14, 22);
+                               doc.setFontSize(10);
+                               doc.text(`Date: ${d.toLocaleString()}`, 14, 30);
+                               doc.text(`Status: ${isCompleted ? 'Completed' : 'In Progress'}`, 14, 35);
+                               
+                               let y = 45;
+                               
+                               // Just dump raw counts since full formatting requires modal's helper functions
+                               const rows: any[] = [];
+                               if (snapshot.chemAudit) {
+                                 Object.keys(snapshot.chemAudit).forEach(id => {
+                                    const chem = chemicals.find(c => c.id === id);
+                                    if (chem) rows.push(['Chemical', chem.name, 'Counted (See Modal for exact parts)']);
+                                 });
+                               }
+                               if (snapshot.supplyAudit) {
+                                 Object.entries(snapshot.supplyAudit).forEach(([id, state]: any) => {
+                                    const mat = materials.find(m => m.id === id);
+                                    if (mat && state.counted > 0) rows.push(['Supply', mat.name, state.counted]);
+                                 });
+                               }
+                               if (snapshot.equipAudit) {
+                                 Object.entries(snapshot.equipAudit).forEach(([id, state]: any) => {
+                                    const eq = tools.find(t => t.id === id);
+                                    if (eq && state.counted > 0) rows.push(['Equipment', eq.name, state.counted]);
+                                 });
+                               }
+                               
+                               autoTable(doc, {
+                                 startY: y,
+                                 head: [['Category', 'Item', 'Amount Counted']],
+                                 body: rows,
+                                 theme: 'striped'
+                               });
+                               
+                               doc.save(`Audit_Snapshot_${snapshot.id.substring(0, 8)}.pdf`);
+                            }}
+                          >
+                            <Download className="w-4 h-4 mr-2" /> PDF Report
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </Card>
           </TabsContent>
 

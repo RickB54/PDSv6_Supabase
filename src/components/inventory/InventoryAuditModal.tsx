@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/lib/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getInventoryAuditHistory, upsertInventoryAuditHistory, deleteInventoryAuditHistory } from '@/lib/supa-data';
 
 interface InventoryAuditModalProps {
   open: boolean;
@@ -40,14 +41,12 @@ interface AuditSnapshot {
   totalCounted: number;
 }
 
+// Legacy fallback for offline/cache if needed
 const HISTORY_KEY = 'inventory_audit_history';
-
-const loadHistory = (): AuditSnapshot[] => {
+const getLocalHistory = (): AuditSnapshot[] => {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
 };
-
-const saveHistory = (history: AuditSnapshot[]) => {
-  // Keep max 50 entries, newest first
+const saveLocalHistory = (history: AuditSnapshot[]) => {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 50)));
 };
 
@@ -121,6 +120,27 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<'all' | 'in-progress' | 'completed'>('all');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
+  
+  const [historySnapshots, setHistorySnapshots] = useState<AuditSnapshot[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  
+  const fetchHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const data = await getInventoryAuditHistory();
+      if (data && data.length > 0) {
+        setHistorySnapshots(data as AuditSnapshot[]);
+        saveLocalHistory(data as AuditSnapshot[]); // cache
+      } else {
+        setHistorySnapshots(getLocalHistory());
+      }
+    } catch (err) {
+      console.error(err);
+      setHistorySnapshots(getLocalHistory());
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   // Filters & Sorting
   const [filterTags, setFilterTags] = useState<string[]>([]);
@@ -158,6 +178,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       setShowHistory(false);
       setActiveTab('chemicals');
       setHideCounted(false);
+      fetchHistory();
     }
   }, [open, chemicals]);
 
@@ -238,8 +259,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   };
 
   // Computed totals
-  const getChemTotalStock = (id: string, chem: Chemical) => {
-    const state = chemAudit[id];
+  const getChemTotalStock = (id: string, chem: Chemical, customState?: Record<string, ChemicalAuditState>) => {
+    const state = (customState || chemAudit)[id];
     if (!state) return 0;
     
     if (!state.isConcentrate) {
@@ -271,8 +292,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     }
   };
 
-  const isChemCounted = (id: string) => {
-    const s = chemAudit[id];
+  const isChemCounted = (id: string, customState?: Record<string, ChemicalAuditState>) => {
+    const s = (customState || chemAudit)[id];
     if (!s) return false;
     if (!s.isConcentrate) return s.usedAsIsJugs.some(j => j.count > 0);
     return s.gallons.some(j => j.count > 0) || (s.detailedMode && s.bottles.length > 0);
@@ -351,21 +372,36 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const allShelves = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
   const allSizes = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = (snapshot?: AuditSnapshot) => {
+    const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
+    const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
+    const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
+    const targetTab = snapshot ? snapshot.activeTab : activeTab;
+    const dateTitle = snapshot 
+      ? new Date(snapshot.timestamp).toLocaleString()
+      : new Date().toLocaleDateString();
+
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text('Inventory Audit Checklist', 14, 22);
     doc.setFontSize(10);
-    doc.text(`Date: ______________`, 150, 22);
+    doc.text(`Date: ${dateTitle}`, 140, 22);
 
     let currentY = 30;
 
-    if (activeTab === 'chemicals') {
+    if (targetTab === 'chemicals') {
       const shelfOrder = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"];
       const sectionOrder = ["Left Side", "Middle", "Right Side", "Unassigned"];
 
       const pdfGroups: Record<string, Chemical[]> = {};
-      filteredChemicals.forEach(chem => {
+      
+      // If snapshot, we only show items that were counted in that snapshot, 
+      // or if live, show all filtered items
+      const itemsToPrint = snapshot 
+        ? normalizedChemicals.filter(c => isChemCounted(c.id, targetChemAudit))
+        : filteredChemicals;
+
+      itemsToPrint.forEach(chem => {
         const rawShelf = (chem as any).shelf;
         const rawSection = (chem as any).section;
         const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
@@ -393,11 +429,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         autoTable(doc, {
           startY: currentY,
           head: [[groupName, 'DB Qty', 'Actual Count']],
-          body: groupItems.map(c => [
-            `${c.brand ? c.brand + ' / ' : ''}${c.name} (${c.bottleSize || 'N/A'})`,
-            c.currentStock,
-            ''
-          ]),
+          body: groupItems.map(c => {
+            const countedStr = isChemCounted(c.id, targetChemAudit) ? getChemTotalStock(c.id, c, targetChemAudit).toFixed(2) : '';
+            return [
+              `${c.brand ? c.brand + ' / ' : ''}${c.name} (${c.bottleSize || 'N/A'})`,
+              c.currentStock,
+              countedStr || (snapshot ? '0' : '')
+            ]
+          }),
           theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
           styles: { textColor: [0, 0, 0] },
@@ -411,10 +450,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         currentY = (doc as any).lastAutoTable.finalY + 10;
       });
     } else {
-      const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
+      const allItems = targetTab === 'supplies' ? supplies : equipment;
+      const targetAudit = targetTab === 'supplies' ? targetSupplyAudit : targetEquipAudit;
+      
+      const itemsToPrint = snapshot
+        ? allItems.filter(i => (targetAudit[i.id]?.counted ?? 0) > 0)
+        : (targetTab === 'supplies' ? filteredSupplies : filteredEquip);
       
       const pdfGroups: Record<string, any[]> = {};
-      items.forEach(item => {
+      itemsToPrint.forEach(item => {
         const loc = (item as any).location || 'Unassigned';
         if (!pdfGroups[loc]) pdfGroups[loc] = [];
         pdfGroups[loc].push(item);
@@ -429,11 +473,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         autoTable(doc, {
           startY: currentY,
           head: [[`Location: ${loc}`, 'DB Qty', 'Actual Count']],
-          body: groupItems.map((item: any) => [
-            item.name,
-            item.quantity || 1,
-            ''
-          ]),
+          body: groupItems.map((item: any) => {
+            const counted = targetAudit[item.id]?.counted;
+            return [
+              item.name,
+              item.quantity || 1,
+              counted !== undefined ? String(counted) : (snapshot ? '0' : '')
+            ];
+          }),
           theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
           styles: { textColor: [0, 0, 0] },
@@ -448,7 +495,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       });
     }
 
-    doc.save(`Inventory_Audit_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Inventory_Audit_${targetTab}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleConfirmUpdate = async () => {
@@ -524,8 +571,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
           Object.values(equipAudit).filter(e => (e.counted ?? 0) > 0).length
       };
-      const existing = loadHistory();
-      saveHistory([completedSnapshot, ...existing]);
+      
+      await upsertInventoryAuditHistory(completedSnapshot as any);
+      const updatedHistory = [completedSnapshot, ...historySnapshots.filter(s => s.id !== completedSnapshot.id)].slice(0, 50);
+      setHistorySnapshots(updatedHistory);
+      saveLocalHistory(updatedHistory);
 
       onRefresh();
       onOpenChange(false);
@@ -537,7 +587,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   };
 
   // Save Progress handler
-  const handleSaveProgress = () => {
+  const handleSaveProgress = async () => {
     const totalCounted =
       Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
       Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
@@ -558,9 +608,19 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       activeTab,
       totalCounted
     };
-    const existing = loadHistory();
-    saveHistory([snapshot, ...existing]);
-    toast({ title: 'Progress Saved', description: `${totalCounted} item${totalCounted !== 1 ? 's' : ''} saved. Resume anytime from History.` });
+    
+    setIsSubmitting(true);
+    try {
+      await upsertInventoryAuditHistory(snapshot as any);
+      const updatedHistory = [snapshot, ...historySnapshots.filter(s => s.id !== snapshot.id)].slice(0, 50);
+      setHistorySnapshots(updatedHistory);
+      saveLocalHistory(updatedHistory);
+      toast({ title: 'Progress Saved', description: `${totalCounted} item${totalCounted !== 1 ? 's' : ''} saved. Resume anytime from History.` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to save progress', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Resume from snapshot
@@ -579,12 +639,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   };
 
   // Delete snapshot from history
-  const handleDeleteSnapshot = (id: string) => {
-    const updated = loadHistory().filter(s => s.id !== id);
-    saveHistory(updated);
-    // Force re-render via local state
-    setHistoryFilter(f => f); // no-op to trigger re-render
-    toast({ title: 'Deleted', description: 'Audit record removed from history.' });
+  const handleDeleteSnapshot = async (id: string) => {
+    try {
+      await deleteInventoryAuditHistory(id);
+      const updated = historySnapshots.filter(s => s.id !== id);
+      setHistorySnapshots(updated);
+      saveLocalHistory(updated);
+      toast({ title: 'Deleted', description: 'Audit record removed from history.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to delete snapshot', variant: 'destructive' });
+    }
   };
 
   const renderJugTallyRow = (fillLevel: number, count: number, onDelta: (delta: number) => void) => (
@@ -1117,25 +1181,27 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : 'Completed'}
                   </button>
                 ))}
-                <input
-                  type="date"
-                  value={historyDateFilter}
-                  onChange={e => setHistoryDateFilter(e.target.value)}
-                  className="ml-auto h-8 px-2 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded"
-                  title="Filter by date"
-                />
-                {historyDateFilter && (
-                  <button onClick={() => setHistoryDateFilter('')} className="text-zinc-500 hover:text-zinc-300">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                <div className="flex items-center ml-auto">
+                  <input
+                    type="month"
+                    value={historyDateFilter}
+                    onChange={(e) => setHistoryDateFilter(e.target.value)}
+                    className="h-8 px-2 text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 rounded"
+                    title="Filter by month"
+                  />
+                  {historyDateFilter && (
+                    <button onClick={() => setHistoryDateFilter('')} className="text-zinc-500 hover:text-zinc-300 ml-1">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* History list */}
             <div className="flex-1 overflow-auto p-4 space-y-3">
               {(() => {
-                let entries = loadHistory();
+                let entries = historySnapshots;
                 if (historyFilter !== 'all') entries = entries.filter(e => e.status === historyFilter);
                 if (historyDateFilter) entries = entries.filter(e => e.timestamp.startsWith(historyDateFilter));
 
@@ -1175,6 +1241,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
+                          onClick={() => handleExportPDF(entry)}
+                          title="Save PDF"
+                        >
+                          <Download className="h-3.5 w-3.5" /> PDF
+                        </Button>
                         {!isCompleted && (
                           <Button
                             size="sm"
@@ -1218,9 +1293,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           </div>
           {!showHistory && (
             !reviewMode ? (
+            <div className="flex gap-2">
+              <Button variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 h-9" onClick={() => handleExportPDF()}>
+                <Download className="h-4 w-4 mr-2" /> Save PDF
+              </Button>
               <Button className="bg-purple-600 hover:bg-purple-500 text-white font-bold" onClick={() => setReviewMode(true)}>
                 Review Changes
               </Button>
+            </div>
             ) : (
               <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={handleConfirmUpdate} disabled={isSubmitting}>
                 {isSubmitting ? 'Updating...' : 'Confirm & Update Inventory'}
