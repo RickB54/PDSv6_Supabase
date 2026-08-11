@@ -338,8 +338,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const pdfGroups: Record<string, Chemical[]> = {};
       filteredChemicals.forEach(chem => {
-        const shelf = (chem as any).shelf || 'Unassigned';
-        const section = (chem as any).section || 'Unassigned';
+        const rawShelf = (chem as any).shelf;
+        const rawSection = (chem as any).section;
+        const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
+        const section = (typeof rawSection === 'string' && rawSection.trim()) ? rawSection.trim() : 'Unassigned';
         const key = `${shelf} - ${section}`;
         if (!pdfGroups[key]) pdfGroups[key] = [];
         pdfGroups[key].push(chem as Chemical);

@@ -213,10 +213,10 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         notes: chemical.notes || null,
         is_concentrate: chemical.isConcentrate ?? true,
         tags: chemical.tags || [],
-        shelf_location: chemical.shelfLocation || null,
-        shelf: chemical.shelf || null,
-        section: chemical.section || null,
-        category: chemical.category || null,
+        shelf_location: chemical.shelfLocation?.trim() || null,
+        shelf: chemical.shelf?.trim() || null,
+        section: chemical.section?.trim() || null,
+        category: chemical.category?.trim() || null,
         updated_at: new Date().toISOString()
     };
 
