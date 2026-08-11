@@ -833,6 +833,9 @@ const ServiceChecklist = () => {
       if (make) setVMake(decodeURIComponent(make));
       const model = params.get("vehicleModel");
       if (model) setVModel(decodeURIComponent(model));
+      
+      const destFee = params.get("destinationFee");
+      if (destFee) setDestinationFee(Number(destFee) || 0);
     })();
   }, [params]);
 
@@ -1243,10 +1246,14 @@ const ServiceChecklist = () => {
     return total + destinationFee;
   };
 
-  // When package or add-ons change, re-sync selectedServices and build checklist
+  // When package, add-ons, or destination fee change, re-sync selectedServices and build checklist
   useEffect(() => {
     const vkey = toBuiltInVehKey(vehicleType);
-    const selected = [selectedPackage, ...selectedAddOns].filter(Boolean);
+    const selected = [
+      selectedPackage, 
+      ...selectedAddOns,
+      destinationFee > 0 ? 'destination-fee' : null
+    ].filter(Boolean) as string[];
     setSelectedServices(selected);
 
     // Auto-reset timer if everything is unchecked and we're switching
@@ -1307,7 +1314,7 @@ const ServiceChecklist = () => {
     });
 
     setChecklistSteps(merged);
-  }, [selectedPackage, selectedAddOns, vehicleType]);
+  }, [selectedPackage, selectedAddOns, vehicleType, destinationFee]);
 
   // --- PERSISTENCE LOGIC START ---
   const CHECKLIST_DRAFT_KEY = 'service_checklist_draft';

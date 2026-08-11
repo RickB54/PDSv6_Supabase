@@ -171,7 +171,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     placeOfService: "Customer's address",
     probonoReason: "",
     probonoReasons: [] as string[],
-    probonoPrimaryReason: ""
+    probonoPrimaryReason: "",
+    destinationFee: 0,
+    destinationMiles: 0
   });
 
   const [cancelReason, setCancelReason] = useState("");
@@ -553,8 +555,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         }
       });
     }
+    
+    subtotal += formData.destinationFee || 0;
+    
     return subtotal;
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons]);
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.destinationFee]);
 
   const liveTotal = useMemo(() => {
     let total = 0;
@@ -586,8 +591,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         total = Math.max(0, total - matchedCoupon.amount);
       }
     }
+    
+    total += formData.destinationFee || 0;
+    
     return Math.round(total);
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon]);
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee]);
 
   const activeBlinkSection = useMemo(() => {
     if (!formData.time) return 1; // 1. Time (Start/End)
@@ -684,6 +692,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         params.set('addons', aids.join(','));
       }
       
+      if ((bookingArg as any).destinationFee > 0) {
+        params.set('destinationFee', String((bookingArg as any).destinationFee));
+      }
+      
       if (bookingArg.discountAmount) {
         params.set('discountValue', String(bookingArg.discountAmount));
         // Bookings store discount as an amount, so we pass it as a dollar discount to Checklist
@@ -714,6 +726,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       if (formData.addons.length > 0) {
         const aids = formData.addons.map(name => allAddons.find(a => a.name === name)?.id).filter(Boolean);
         params.set('addons', aids.join(','));
+      }
+      
+      if (formData.destinationFee > 0) {
+        params.set('destinationFee', String(formData.destinationFee));
       }
       
       if (formData.discountType === 'custom' && formData.customDiscount) {
@@ -1222,7 +1238,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       placeOfService: "Customer's address",
       probonoReason: "",
       probonoReasons: [],
-      probonoPrimaryReason: ""
+      probonoPrimaryReason: "",
+      destinationFee: 0,
+      destinationMiles: 0
     });
     setIsAddModalOpen(true);
   };
@@ -1287,7 +1305,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       placeOfService: booking.placeOfService || "Customer's address",
       probonoReason: booking.probonoReason || "",
       probonoReasons: booking.probonoReasons || [],
-      probonoPrimaryReason: booking.probonoPrimaryReason || ""
+      probonoPrimaryReason: booking.probonoPrimaryReason || "",
+      destinationFee: (booking as any).destinationFee || 0,
+      destinationMiles: (booking as any).destinationMiles || 0
     });
     
     if (booking.date) {
@@ -2746,6 +2766,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
                       </div>
                     ) : null}
+                    {formData.destinationFee > 0 && (
+                      <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
+                        +${formData.destinationFee} Dest. Fee ({formData.destinationMiles} mi)
+                      </div>
+                    )}
                     <div className="text-zinc-500 text-[10px] mt-1">
                       {selectedDate ? formatETDate(selectedDate) : "No Date"}
                       {formData.time && ` @ ${formatETTime(`${format(selectedDate || new Date(), 'yyyy-MM-dd')}T${formData.time}`)}`}
@@ -3046,6 +3071,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         address={formData.address}
                         mode="booking"
                         theme="dark"
+                        onFeeCalculated={(m, f) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            destinationMiles: m,
+                            destinationFee: f
+                          }));
+                        }}
                       />
                     </div>
                   )}
