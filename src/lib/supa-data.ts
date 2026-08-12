@@ -3250,6 +3250,8 @@ export interface AuditSnapshot {
     totalCounted: number;
 }
 
+const AUDIT_FALLBACK_KEY = 'pds_inventory_audit_history_fallback';
+
 export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
     try {
         const { data, error } = await supabase
@@ -3259,8 +3261,9 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
             .limit(50);
             
         if (error) {
-            console.error('getInventoryAuditHistory error:', error);
-            return [];
+            console.warn('getInventoryAuditHistory error (falling back to localStorage):', error.message);
+            const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+            return local ? JSON.parse(local) : [];
         }
 
         return (data || []).map(row => ({
@@ -3275,8 +3278,9 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
             totalCounted: row.total_counted || 0
         }));
     } catch (err) {
-        console.error('getInventoryAuditHistory exception:', err);
-        return [];
+        console.warn('getInventoryAuditHistory exception (falling back to localStorage):', err);
+        const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+        return local ? JSON.parse(local) : [];
     }
 };
 
@@ -3302,7 +3306,10 @@ export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.warn('upsertInventoryAuditHistory error (falling back to localStorage):', error.message);
+            throw error; // Trigger catch block
+        }
         
         // Background cleanup: keep only top 50
         try {
@@ -3321,10 +3328,19 @@ export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
             console.error('Failed to cleanup old audit history:', cleanupErr);
         }
 
-        return data;
+        return data || snapshot;
     } catch (err) {
-        console.error('upsertInventoryAuditHistory error:', err);
-        throw err;
+        console.warn('Saving to localStorage fallback due to Supabase error:', err);
+        const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+        const history: AuditSnapshot[] = local ? JSON.parse(local) : [];
+        const index = history.findIndex(h => h.id === snapshot.id);
+        if (index >= 0) {
+            history[index] = snapshot;
+        } else {
+            history.unshift(snapshot);
+        }
+        localStorage.setItem(AUDIT_FALLBACK_KEY, JSON.stringify(history.slice(0, 50)));
+        return snapshot;
     }
 };
 
@@ -3335,9 +3351,17 @@ export const deleteInventoryAuditHistory = async (id: string) => {
             .from('inventory_audit_history')
             .delete()
             .eq('id', id);
-        if (error) throw error;
+        if (error) {
+            console.warn('deleteInventoryAuditHistory error (falling back to localStorage):', error.message);
+            throw error;
+        }
     } catch (err) {
-        console.error('deleteInventoryAuditHistory error:', err);
-        throw err;
+        console.warn('deleteInventoryAuditHistory exception (modifying localStorage):', err);
+        const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+        if (local) {
+            let history: AuditSnapshot[] = JSON.parse(local);
+            history = history.filter(h => h.id !== id);
+            localStorage.setItem(AUDIT_FALLBACK_KEY, JSON.stringify(history));
+        }
     }
 };

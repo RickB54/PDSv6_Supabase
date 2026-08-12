@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2 } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, saveTool, saveUsageHistory } from '@/lib/inventory-data';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -222,6 +223,26 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       }
       return { ...prev, [id]: { ...state, [type]: arr } };
     });
+  };
+
+  const resetCategoryAudit = () => {
+    if (activeTab === 'chemicals') {
+      const initialChem: Record<string, ChemicalAuditState> = {};
+      normalizedChemicals.forEach(c => {
+        initialChem[c.id] = {
+          isConcentrate: c.isConcentrate !== false,
+          usedAsIsJugs: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
+          detailedMode: false,
+          gallons: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
+          bottles: []
+        };
+      });
+      setChemAudit(initialChem);
+    } else if (activeTab === 'supplies') {
+      setSupplyAudit({});
+    } else if (activeTab === 'equipment') {
+      setEquipAudit({});
+    }
   };
 
   const addBottle = (id: string) => {
@@ -809,19 +830,18 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
                     <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
                   </div>
-                  {activeTab === 'chemicals' && (
-                    <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300 relative">
-                          <Filter className="h-4 w-4 mr-2" />
-                          Filters
-                          {(filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) > 0 && (
-                            <Badge className="ml-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 text-[10px]">
-                              {filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length}
-                            </Badge>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
+                  <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300 relative">
+                        <Filter className="h-4 w-4 mr-2" />
+                        Filters
+                        {(activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) : filterLocations.length) > 0 && (
+                          <Badge className="ml-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 text-[10px]">
+                            {activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) : filterLocations.length}
+                          </Badge>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
                       <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 text-white p-4" align="end">
                         <div className="space-y-4">
                           <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
@@ -830,7 +850,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               variant="ghost" 
                               size="sm" 
                               className="h-6 text-xs text-zinc-400" 
-                              onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); setSortBy(['shelfLocation', 'brand']); }}
+                              onClick={() => { 
+                                if (activeTab === 'chemicals') {
+                                  setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); setSortBy(['shelfLocation', 'brand']); 
+                                } else {
+                                  setFilterLocations([]);
+                                }
+                              }}
                             >
                               Reset
                             </Button>
@@ -930,10 +956,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         </div>
                       </PopoverContent>
                     </Popover>
-                  )}
                   <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()} title="Print">
                     <Printer className="h-4 w-4" />
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 border-orange-500/50 bg-orange-950/20 text-orange-400 hover:bg-orange-900/40" title="Reset Category">
+                        <RotateCcw className="h-4 w-4 mr-2" /> Reset {activeTab === 'chemicals' ? 'Chemicals' : activeTab === 'supplies' ? 'Supplies' : 'Equipment'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-orange-400">
+                          <AlertTriangle className="h-5 w-5" /> Reset Audit Data?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                          This will clear all your current session counted inventory for the <strong className="text-white capitalize">{activeTab}</strong> category. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white">Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="bg-orange-600 text-white hover:bg-orange-700" onClick={resetCategoryAudit}>
+                          Yes, Reset
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
                   <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={() => handleExportPDF()} title="Save PDF">
                     <Download className="h-4 w-4 mr-2" /> Save PDF
                   </Button>
@@ -1189,7 +1238,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       const isCounted = state.isCounted;
 
                       return (
-                        <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                        <div key={item.id} className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
                           <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
                             {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
                             <div className="min-w-0">
@@ -1219,6 +1268,21 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               onClick={() => updateCount(item.id, 1, true)}
                             >
                               <Plus className="h-5 w-5" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-10 w-10 p-0 border-orange-500/30 text-orange-400 bg-orange-500/10 hover:bg-orange-500 hover:text-white ml-2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
+                              onClick={() => {
+                                if (activeTab === 'supplies') {
+                                  setSupplyAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                } else {
+                                  setEquipAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                }
+                              }}
+                              title="Reset item"
+                            >
+                              <RotateCcw className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
