@@ -1492,14 +1492,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           </div>
           {!showHistory && (
             !reviewMode ? (
-            <div className="flex gap-2">
-              <Button variant="outline" className="border-purple-500/30 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 h-9" onClick={() => handleExportPDF()}>
-                <Download className="h-4 w-4 mr-2" /> Save PDF
-              </Button>
               <Button className="bg-purple-600 hover:bg-purple-500 text-white font-bold" onClick={() => setReviewMode(true)}>
                 Review Changes
               </Button>
-            </div>
             ) : (
               <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={handleConfirmUpdate} disabled={isSubmitting}>
                 {isSubmitting ? 'Updating...' : 'Confirm & Update Inventory'}
