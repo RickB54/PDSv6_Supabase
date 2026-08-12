@@ -980,6 +980,44 @@ export async function updateSetupMediaCategory(id: string, categoryId: string, k
     }
 }
 
+export async function clearMaterialLocation(locationToClear: string): Promise<void> {
+    if (isDemoActive()) return;
+    
+    try {
+        const { error } = await supabase
+            .from('materials')
+            .update({ location: null })
+            .eq('location', locationToClear);
+            
+        if (error) {
+            console.error('Failed to clear material location:', error);
+            throw error;
+        }
+        
+        // Sync LocalForage Cache
+        try {
+            const list = (await import('localforage')).default;
+            const current = (await list.getItem<Material[]>('materials')) || [];
+            let updated = false;
+            const next = current.map(m => {
+                if (m.location === locationToClear) {
+                    updated = true;
+                    return { ...m, location: undefined };
+                }
+                return m;
+            });
+            if (updated) {
+                await list.setItem('materials', next);
+            }
+        } catch (e) {
+            console.error('Failed to update local cache for material location sync:', e);
+        }
+    } catch (e) {
+        console.error('Error clearing material location:', e);
+        throw e;
+    }
+}
+
 export async function deleteSetupMedia(id: string, key: string = MOBILE_SETUP_KEY): Promise<void> {
     if (isDemoActive()) return;
     try {

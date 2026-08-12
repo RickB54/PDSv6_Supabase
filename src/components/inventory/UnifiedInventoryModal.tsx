@@ -353,6 +353,26 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     localStorage.setItem('inventory_preferred_locations', JSON.stringify(newList));
   };
 
+  const handleDeleteLocation = async (e: React.MouseEvent, loc: string) => {
+    e.stopPropagation();
+    const newLocs = availableLocations.filter(l => l !== loc);
+    updateLocations(newLocs);
+    
+    if (mode === 'supply') {
+      setSupplyPurchases(prev => prev.map(p => p.location === loc ? { ...p, location: "" } : p));
+    } else if (mode === 'equipment' || mode === 'tool') {
+      setEquipmentPurchases(prev => prev.map(p => p.location === loc ? { ...p, location: "" } : p));
+    }
+
+    try {
+      const { clearMaterialLocation } = await import("@/lib/inventory-data");
+      await clearMaterialLocation(loc);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error("Failed to sync location deletion", err);
+    }
+  };
+
   const updateCategories = (newList: {supply: string[], equipment: string[]}) => {
     setAvailableCategories(newList);
     localStorage.setItem('inventory_preferred_categories', JSON.stringify(newList));
@@ -1846,8 +1866,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                       <button 
                                         type="button"
                                         onClick={(e) => {
-                                          e.stopPropagation();
-                                          setAvailableLocations(availableLocations.filter(l => l !== loc));
+                                          handleDeleteLocation(e, loc);
                                         }}
                                         className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                         title="Remove preset"
@@ -1887,7 +1906,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   if (e.key === 'Enter') {
                                     e.preventDefault();
                                     if (purchase.location && !availableLocations.includes(purchase.location)) {
-                                      setAvailableLocations([...availableLocations, purchase.location].sort());
+                                      updateLocations([...availableLocations, purchase.location].sort());
                                     }
                                     setCustomLocationEquip({ ...customLocationEquip, [index]: false });
                                   }
@@ -1901,7 +1920,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 size="sm"
                                 onClick={() => {
                                   if (purchase.location && !availableLocations.includes(purchase.location)) {
-                                    setAvailableLocations([...availableLocations, purchase.location].sort());
+                                    updateLocations([...availableLocations, purchase.location].sort());
                                   }
                                   setCustomLocationEquip({ ...customLocationEquip, [index]: false });
                                 }}
@@ -2153,8 +2172,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                       <button 
                                         type="button"
                                         onClick={(e) => {
-                                          e.stopPropagation();
-                                          setAvailableLocations(availableLocations.filter(l => l !== loc));
+                                          handleDeleteLocation(e, loc);
                                         }}
                                         className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                         title="Remove preset"
@@ -2194,7 +2212,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   if (e.key === 'Enter') {
                                     e.preventDefault();
                                     if (purchase.location && !availableLocations.includes(purchase.location)) {
-                                      setAvailableLocations([...availableLocations, purchase.location].sort());
+                                      updateLocations([...availableLocations, purchase.location].sort());
                                     }
                                     setCustomLocationSupply({ ...customLocationSupply, [index]: false });
                                   }
@@ -2208,7 +2226,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 size="sm"
                                 onClick={() => {
                                   if (purchase.location && !availableLocations.includes(purchase.location)) {
-                                    setAvailableLocations([...availableLocations, purchase.location].sort());
+                                    updateLocations([...availableLocations, purchase.location].sort());
                                   }
                                   setCustomLocationSupply({ ...customLocationSupply, [index]: false });
                                 }}
