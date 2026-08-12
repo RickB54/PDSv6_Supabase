@@ -111,6 +111,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   
   const normalizedChemicals = useMemo(() => chemicals.map(c => ({
     ...c,
+    shelfLocation: c.shelfLocation || ((c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined),
     bottleSize: normalizeSize(c.bottleSize)
   })), [chemicals]);
 
@@ -862,37 +863,39 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             </Button>
                           </div>
                           
-                          <div className="space-y-2">
-                            <Label className="text-xs text-zinc-500 uppercase">Sort Order</Label>
-                            <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
-                              <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="shelfLocation,brand">Shelf → Brand</SelectItem>
-                                <SelectItem value="brand,name">Brand → Name</SelectItem>
-                                <SelectItem value="tags,name">Group/Tag → Name</SelectItem>
-                                <SelectItem value="bottleSize,name">Size → Name</SelectItem>
-                                <SelectItem value="name">Name Only</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          {activeTab === 'chemicals' && (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-zinc-500 uppercase">Sort Order</Label>
+                              <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
+                                <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="shelfLocation,brand">Shelf → Brand</SelectItem>
+                                  <SelectItem value="brand,name">Brand → Name</SelectItem>
+                                  <SelectItem value="tags,name">Group/Tag → Name</SelectItem>
+                                  <SelectItem value="bottleSize,name">Size → Name</SelectItem>
+                                  <SelectItem value="name">Name Only</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
 
                           <div className="space-y-2 max-h-[40vh] overflow-auto pr-2">
-                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Tags (Groups)</Label>
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {allTags.map(t => (
-                                <Badge 
-                                  key={t} 
-                                  variant="outline" 
-                                  className={`cursor-pointer ${filterTags.includes(t) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
-                                  onClick={() => setFilterTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
-                                >
-                                  {t}
-                                </Badge>
-                              ))}
-                            </div>
-
                             {activeTab === 'chemicals' ? (
                               <>
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Tags (Groups)</Label>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {allTags.map(t => (
+                                    <Badge 
+                                      key={t} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterTags.includes(t) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])}
+                                    >
+                                      {t}
+                                    </Badge>
+                                  ))}
+                                </div>
+
                                 <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf Location</Label>
                                 <div className="flex flex-wrap gap-1 mb-3">
                                   {allShelves.map(s => (
