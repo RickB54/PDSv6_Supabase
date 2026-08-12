@@ -126,8 +126,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   
   const [historySnapshots, setHistorySnapshots] = useState<AuditSnapshot[]>([]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [cancelWarningOpen, setCancelWarningOpen] = useState(false);
   
+  const handleCloseAttempt = () => {
+    const hasChanges = Object.keys(chemAudit).length > 0 || Object.keys(supplyAudit).length > 0 || Object.keys(equipAudit).length > 0;
+    if (hasChanges) {
+      setCancelWarningOpen(true);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
   const fetchHistory = async () => {
     setIsLoadingHistory(true);
     try {
@@ -706,7 +715,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={(val) => { if (!val) handleCloseAttempt(); else onOpenChange(val); }}>
       <DialogContent className="max-w-4xl w-full h-[90vh] print:!block print:!static print:!transform-none print:!w-full print:!max-w-none print:!h-auto print:!min-h-0 print:!m-0 print:!p-0 print:!border-none print:!shadow-none flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:!overflow-visible">
         <DialogHeader className="p-4 border-b border-purple-500/20 bg-zinc-900 shrink-0 print:hidden">
           <div className="flex justify-between items-center">
@@ -1479,7 +1489,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           <Button 
             variant="outline" 
             className="border-cyan-500/40 text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/50 hover:text-cyan-300 px-3 sm:px-4" 
-            onClick={() => showHistory ? setShowHistory(false) : reviewMode ? setReviewMode(false) : onOpenChange(false)}
+            onClick={() => showHistory ? setShowHistory(false) : reviewMode ? setReviewMode(false) : handleCloseAttempt()}
           >
             {showHistory || reviewMode ? 'Back' : 'Cancel'}
           </Button>
@@ -1581,5 +1591,32 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         </div>
       </DialogContent>
     </Dialog>
+
+      <AlertDialog open={cancelWarningOpen} onOpenChange={setCancelWarningOpen}>
+        <AlertDialogContent className="bg-zinc-950 border-purple-500/30 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Unsaved Changes Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              You have unsaved counted inventory. If you cancel now, all changes from this session will be lost. If you wish to keep them, click "Cancel" to go back, and then use the "Save Progress" button instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white">Back to Audit</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 text-white hover:bg-red-700 font-bold" 
+              onClick={() => {
+                setCancelWarningOpen(false);
+                onOpenChange(false);
+              }}
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
