@@ -1286,6 +1286,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               <div className="font-bold text-zinc-200 truncate">{item.name}</div>
                               <div className="text-xs text-zinc-500 flex items-center gap-2">
                                 <span>DB Qty: {item.quantity || 1}</span>
+                                {(item as any).location && (
+                                  <>
+                                    <span className="w-1 h-1 bg-zinc-700 rounded-full" />
+                                    <span className="text-blue-400/80">
+                                      {(item as any).location}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
