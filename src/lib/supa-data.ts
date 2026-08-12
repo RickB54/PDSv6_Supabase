@@ -3233,14 +3233,19 @@ export const deletePrimeBookingReview = async (bookingId: string) => {
 // Inventory Audit History
 // ------------------------------------------------------------------
 
+export interface SupplyEquipAuditState {
+    counted: number;
+    isCounted: boolean;
+}
+
 export interface AuditSnapshot {
     id: string;
     timestamp: string; // ISO
     status: 'in-progress' | 'completed';
     note?: string;
     chemAudit: any; // Record<string, ChemicalAuditState>
-    supplyAudit: any; // Record<string, SupplyEquipAuditState>
-    equipAudit: any; // Record<string, SupplyEquipAuditState>
+    supplyAudit: Record<string, SupplyEquipAuditState>;
+    equipAudit: Record<string, SupplyEquipAuditState>;
     activeTab: 'chemicals' | 'supplies' | 'equipment';
     totalCounted: number;
 }

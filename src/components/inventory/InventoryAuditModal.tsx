@@ -185,17 +185,19 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const toggleExpand = (id: string) => setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
 
   // Handlers for Supplies & Equipment
-  const updateSupplyCount = (id: string, delta: number) => {
+  const updateSupplyCount = (id: string, delta: number, explicitIsCounted?: boolean) => {
     setSupplyAudit(prev => {
       const curr = prev[id]?.counted || 0;
-      return { ...prev, [id]: { counted: Math.max(0, curr + delta) } };
+      const newCount = Math.max(0, curr + delta);
+      return { ...prev, [id]: { counted: newCount, isCounted: explicitIsCounted ?? true } };
     });
   };
   
-  const updateEquipCount = (id: string, delta: number) => {
+  const updateEquipCount = (id: string, delta: number, explicitIsCounted?: boolean) => {
     setEquipAudit(prev => {
       const curr = prev[id]?.counted || 0;
-      return { ...prev, [id]: { counted: Math.max(0, curr + delta) } };
+      const newCount = Math.max(0, curr + delta);
+      return { ...prev, [id]: { counted: newCount, isCounted: explicitIsCounted ?? true } };
     });
   };
 
@@ -349,8 +351,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredChemicals, sortBy]);
 
-  const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => (supplyAudit[id]?.counted ?? 0) > 0);
-  const filteredEquip = getFilteredItems(equipment, equipAudit, id => (equipAudit[id]?.counted ?? 0) > 0);
+  const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted);
+  const filteredEquip = getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted);
 
   const groupedNonChemicals = useMemo(() => {
     const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
@@ -364,8 +366,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   }, [activeTab, filteredSupplies, filteredEquip]);
 
   const numCountedChems = filteredChemicals.filter(c => isChemCounted(c.id)).length;
-  const numCountedSupplies = filteredSupplies.filter(s => (supplyAudit[s.id]?.counted ?? 0) > 0).length;
-  const numCountedEquip = filteredEquip.filter(e => (equipAudit[e.id]?.counted ?? 0) > 0).length;
+  const numCountedSupplies = filteredSupplies.filter(s => supplyAudit[s.id]?.isCounted).length;
+  const numCountedEquip = filteredEquip.filter(e => equipAudit[e.id]?.isCounted).length;
 
   const allTags = useMemo(() => Array.from(new Set(normalizedChemicals.flatMap(c => c.tags || []))).sort(), [normalizedChemicals]);
   const allBrands = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
@@ -522,7 +524,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       // 2. Process Supplies
       for (const supply of supplies) {
-        if ((supplyAudit[supply.id]?.counted ?? 0) === 0) continue;
+        if (!supplyAudit[supply.id]?.isCounted) continue;
         const counted = supplyAudit[supply.id].counted;
         if (counted !== supply.quantity) {
           await saveMaterial({ ...supply, quantity: counted });
@@ -540,7 +542,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       // 3. Process Equipment
       for (const equip of equipment) {
-        if ((equipAudit[equip.id]?.counted ?? 0) === 0) continue;
+        if (!equipAudit[equip.id]?.isCounted) continue;
         const counted = equipAudit[equip.id].counted;
         if (counted !== (equip.quantity || 1)) {
           await saveTool({ ...equip, quantity: counted });
@@ -568,8 +570,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         equipAudit,
         activeTab,
         totalCounted: Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
-          Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
-          Object.values(equipAudit).filter(e => (e.counted ?? 0) > 0).length
+          Object.values(supplyAudit).filter(s => s.isCounted).length +
+          Object.values(equipAudit).filter(e => e.isCounted).length
       };
       
       await upsertInventoryAuditHistory(completedSnapshot as any);
@@ -590,8 +592,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const handleSaveProgress = async () => {
     const totalCounted =
       Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
-      Object.values(supplyAudit).filter(s => (s.counted ?? 0) > 0).length +
-      Object.values(equipAudit).filter(e => (e.counted ?? 0) > 0).length;
+      Object.values(supplyAudit).filter(s => s.isCounted).length +
+      Object.values(equipAudit).filter(e => e.isCounted).length;
 
     if (totalCounted === 0) {
       toast({ title: 'Nothing to Save', description: 'Count at least one item before saving progress.', variant: 'destructive' });
@@ -710,8 +712,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               const items = category === 'Chemicals' ? chemicals : category === 'Supplies' ? supplies : equipment;
               const hasChanges = items.some(item => {
                 if (category === 'Chemicals') return isChemCounted(item.id) && getChemTotalStock(item.id, item as Chemical) !== (item as Chemical).currentStock;
-                if (category === 'Supplies') return (supplyAudit[item.id]?.counted ?? 0) > 0 && supplyAudit[item.id].counted !== (item as Material).quantity;
-                if (category === 'Equipment') return (equipAudit[item.id]?.counted ?? 0) > 0 && equipAudit[item.id].counted !== ((item as Equipment).quantity || 1);
+                if (category === 'Supplies') return supplyAudit[item.id]?.isCounted && supplyAudit[item.id].counted !== (item as Material).quantity;
+                if (category === 'Equipment') return equipAudit[item.id]?.isCounted && equipAudit[item.id].counted !== ((item as Equipment).quantity || 1);
                 return false;
               });
 
@@ -732,12 +734,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         dbQty = (item as Chemical).currentStock || 0;
                         newQty = getChemTotalStock(item.id, item as Chemical);
                       } else if (category === 'Supplies') {
-                        counted = (supplyAudit[item.id]?.counted ?? 0) > 0;
+                        counted = !!supplyAudit[item.id]?.isCounted;
                         if (!counted) return null;
                         dbQty = (item as Material).quantity || 0;
                         newQty = supplyAudit[item.id].counted;
                       } else {
-                        counted = (equipAudit[item.id]?.counted ?? 0) > 0;
+                        counted = !!equipAudit[item.id]?.isCounted;
                         if (!counted) return null;
                         dbQty = (item as Equipment).quantity || 1;
                         newQty = equipAudit[item.id].counted;
@@ -1122,39 +1124,60 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             ))}
 
               {/* Supplies & Equipment Generic Tally */}
-              {(activeTab === 'supplies' ? filteredSupplies : activeTab === 'equipment' ? filteredEquip : []).map((item: any) => {
-                const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
-                const updateCount = activeTab === 'supplies' ? updateSupplyCount : updateEquipCount;
-                const counted = auditMap[item.id]?.counted || 0;
-                const isCounted = counted > 0;
+              {groupedNonChemicals.map(([loc, items]) => (
+                <div key={loc} className="mb-6">
+                  {loc !== 'Unassigned' && (
+                    <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
+                      {loc}
+                    </h3>
+                  )}
+                  <div className="space-y-3">
+                    {items.map((item: any) => {
+                      const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
+                      const updateCount = activeTab === 'supplies' ? updateSupplyCount : updateEquipCount;
+                      const state = auditMap[item.id] || { counted: 0, isCounted: false };
+                      const counted = state.counted;
+                      const isCounted = state.isCounted;
 
-                return (
-                  <div key={item.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
-                    <div className="flex items-center gap-3">
-                      {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400" /> : <div className="h-5 w-5 rounded-full border border-zinc-600" />}
-                      <div>
-                        <div className="font-bold text-zinc-200">{item.name}</div>
-                        <div className="text-xs text-zinc-500 flex items-center gap-2">
-                          <span>DB Qty: {item.quantity || 1}</span>
-                          {(item as any).location && (
-                            <>
-                              <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-                              <span className="text-blue-400/80">{(item as any).location}</span>
-                            </>
-                          )}
+                      return (
+                        <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                          <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
+                            {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
+                            <div className="min-w-0">
+                              <div className="font-bold text-zinc-200 truncate">{item.name}</div>
+                              <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                <span>DB Qty: {item.quantity || 1}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400" 
+                              onClick={() => updateCount(item.id, -1, true)} 
+                              disabled={counted === 0}
+                            >
+                              <Minus className="h-5 w-5" />
+                            </Button>
+                            <div className="w-12 text-center">
+                              <div className="font-black text-2xl text-white">{isCounted ? counted : '-'}</div>
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
+                              onClick={() => updateCount(item.id, 1, true)}
+                            >
+                              <Plus className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <Button variant="outline" size="sm" className="h-10 w-10 p-0 border-blue-500/30 text-blue-400" onClick={() => updateCount(item.id, -1)} disabled={counted === 0}><Minus className="h-5 w-5" /></Button>
-                      <div className="w-12 text-center">
-                        <div className="font-black text-2xl text-white">{counted}</div>
-                      </div>
-                      <Button variant="outline" size="sm" className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" onClick={() => updateCount(item.id, 1)}><Plus className="h-5 w-5" /></Button>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         )}

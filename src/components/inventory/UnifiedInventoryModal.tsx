@@ -331,6 +331,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     localStorage.setItem('inventory_preferred_purchased', JSON.stringify(newList));
   };
 
+  const updateShelves = (newList: string[]) => {
+    setAvailableShelves(newList);
+    localStorage.setItem('inventory_preferred_shelves', JSON.stringify(newList));
+  };
+
+  const updateSections = (newList: string[]) => {
+    setAvailableSections(newList);
+    localStorage.setItem('inventory_preferred_sections', JSON.stringify(newList));
+  };
+
+  const updateLocations = (newList: string[]) => {
+    setAvailableLocations(newList);
+    localStorage.setItem('inventory_preferred_locations', JSON.stringify(newList));
+  };
+
   const updateCategories = (newList: {supply: string[], equipment: string[]}) => {
     setAvailableCategories(newList);
     localStorage.setItem('inventory_preferred_categories', JSON.stringify(newList));
@@ -430,7 +445,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             actualPrice: String(m.actualPrice || ""),
             threshold: String(m.threshold || m.lowThreshold || "1"),
             purchaseDate: m.purchaseDate || m.purchase_date || "",
-            wherePurchased: m.wherePurchased || m.where_purchased || ""
+            wherePurchased: m.wherePurchased || m.where_purchased || "",
+            location: m.location || ""
           })));
         } else {
           setSupplyPurchases([{
@@ -440,7 +456,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
             threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
             purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
-            wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
+            wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
+            location: (firstItem as any).location || ""
           }]);
         }
       } else if (modeProp === 'equipment' || modeProp === 'tool') {
@@ -451,7 +468,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
           threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
           purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
-          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || ""
+          wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
+          location: (firstItem as any).location || ""
         }]);
       }
 
@@ -534,8 +552,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         section: "",
       });
       setChemicalSizes([{ bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
-      setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
-      setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }]);
+      setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
+      setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
     }
   }, [initial, open, modeProp]); // Use modeProp for initial load stabilization
 
@@ -740,7 +758,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             notes: form.notes || "",
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
-            location: form.location || undefined,
+            location: purchase.location || undefined,
           };
           
           await saveTool(payload, !purchase.id);
@@ -776,7 +794,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             purchaseDate: purchase.purchaseDate || undefined,
-            location: form.location || undefined,
+            location: purchase.location || undefined,
           };
           
           await saveMaterial(payload, !purchase.id);
@@ -1449,46 +1467,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 )}
               </div>
             )}
-
-            {mode !== 'chemical' && (
-              <div className="mt-4">
-                <Label className="text-xs text-zinc-400">Location</Label>
-                {!customLocation ? (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                        <span className="truncate">{form.location || "Select location..."}</span>
-                        <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                      <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                        <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                          <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, location: ""})}>None</span>
-                          {!form.location && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                        </div>
-                        {availableLocations.map(loc => (
-                          <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                            <span className="flex-1 text-sm text-zinc-200" onClick={() => setForm({...form, location: loc})}>{loc}</span>
-                            {form.location === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); updateLocations(availableLocations.filter(l => l !== loc)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
-                          </div>
-                        ))}
-                        <div className="h-px bg-zinc-800 my-1" />
-                        <button type="button" onClick={() => { setCustomLocation(true); setForm({...form, location: ""}); }} className="flex items-center gap-2 px-2 py-1.5 text-sm text-purple-400 hover:bg-zinc-800 rounded font-medium transition-colors">
-                          <Plus className="h-4 w-4" /> Add Custom Location
-                        </button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                ) : (
-                  <div className="flex gap-2">
-                    <Input value={form.location || ""} autoFocus onChange={(e) => setForm({ ...form, location: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (form.location && !availableLocations.includes(form.location)) { updateLocations([...availableLocations, form.location].sort()); } setCustomLocation(false); } }} className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm" placeholder="Enter location name..." />
-                    <Button type="button" variant="outline" size="sm" onClick={() => { if (form.location && !availableLocations.includes(form.location)) { updateLocations([...availableLocations, form.location].sort()); } setCustomLocation(false); }} className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700" title="Save and Return"><Check className="h-4 w-4" /></Button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Stock & Pricing Section */}
@@ -1805,7 +1783,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           <X className="h-4 w-4" />
                         </button>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Location</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. Shelf A, Van 1..."
+                            value={purchase.location || ""}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].location = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>
                           <Input
@@ -1986,8 +1978,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   <Button 
                     type="button" 
                     variant="outline" 
-                    className="w-full border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-sm mt-2"
-                    onClick={() => setEquipmentPurchases([...equipmentPurchases, { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }])}
+                    className="w-full border-dashed border-purple-700 text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 text-sm mt-2"
+                    onClick={() => setEquipmentPurchases([...equipmentPurchases, { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Purchase
@@ -2010,7 +2002,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           <X className="h-4 w-4" />
                         </button>
                       )}
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Location</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. Shelf A, Van 1..."
+                            value={purchase.location || ""}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].location = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>
                           <Input
@@ -2192,7 +2198,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-sm mt-2"
-                    onClick={() => setSupplyPurchases([...supplyPurchases, { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }])}
+                    onClick={() => setSupplyPurchases([...supplyPurchases, { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Purchase
