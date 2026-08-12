@@ -1401,15 +1401,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     </div>
                   )}
                 </div>
-                <div>
-                  <Label className="text-xs text-zinc-400">Container Location</Label>
-                  <Input
-                    value={form.location || ""}
-                    onChange={(e) => setForm({ ...form, location: e.target.value })}
-                    className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                    placeholder="e.g. Interior Carry Bag"
-                  />
-                </div>
               </div>
             )}
 
@@ -1933,6 +1924,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           )}
                         </div>
                         <div>
+                          <Label className="text-xs text-zinc-400">Container Location</Label>
+                          <Input
+                            value={form.location || ""}
+                            onChange={(e) => setForm({ ...form, location: e.target.value })}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                            placeholder="e.g. Interior Carry Bag"
+                          />
+                        </div>
+                        <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>
                           <Input
                             type="number"
@@ -2237,6 +2237,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </Button>
                             </div>
                           )}
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Container Location</Label>
+                          <Input
+                            value={form.location || ""}
+                            onChange={(e) => setForm({ ...form, location: e.target.value })}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                            placeholder="e.g. Interior Carry Bag"
+                          />
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>

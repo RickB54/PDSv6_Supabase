@@ -197,7 +197,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       setFilterLocations([]);
       fetchHistory();
     }
-  }, [open, chemicals]);
+  }, [open]);
 
   const toggleExpand = (id: string) => setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
 
@@ -1276,11 +1276,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               {/* Supplies & Equipment Generic Tally */}
               {activeTab !== 'chemicals' && groupedNonChemicals.map(([loc, items]) => (
                 <div key={loc} className="mb-6">
-                  {loc !== 'Unassigned' && (
-                    <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
-                      {loc}
-                    </h3>
-                  )}
+                  <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
+                    {loc}
+                  </h3>
                   <div className="space-y-3">
                     {items.map((item: any) => {
                       const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
