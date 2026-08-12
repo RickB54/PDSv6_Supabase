@@ -150,6 +150,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterBrands, setFilterBrands] = useState<string[]>([]);
   const [filterShelves, setFilterShelves] = useState<string[]>([]);
+  const [filterSections, setFilterSections] = useState<string[]>([]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
   const [filterLocations, setFilterLocations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string[]>(['shelfLocation', 'brand']); // Multiple sort criteria
@@ -340,7 +341,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const filteredChemicals = getFilteredItems(normalizedChemicals, chemAudit, isChemCounted).filter(c => {
     if (filterTags.length > 0 && !filterTags.some(t => c.tags?.includes(t))) return false;
     if (filterBrands.length > 0 && (!c.brand || !filterBrands.includes(c.brand))) return false;
-    if (filterShelves.length > 0 && (!c.shelfLocation || !filterShelves.includes(c.shelfLocation))) return false;
+    if (filterShelves.length > 0 && (!c.shelf || !filterShelves.includes(c.shelf))) return false;
+    if (filterSections.length > 0 && (!c.section || !filterSections.includes(c.section))) return false;
     if (filterSizes.length > 0 && (!c.bottleSize || !filterSizes.includes(c.bottleSize))) return false;
     return true;
   }).sort((a, b) => {
@@ -403,7 +405,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   const allTags = useMemo(() => Array.from(new Set(normalizedChemicals.flatMap(c => c.tags || []))).sort(), [normalizedChemicals]);
   const allBrands = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
-  const allShelves = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+  const allShelves = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.shelf).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+  const allSections = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.section).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
   const allSizes = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
   const allLocations = useMemo(() => {
     const locs = new Set<string>();
@@ -837,9 +840,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300 relative">
                         <Filter className="h-4 w-4 mr-2" />
                         Filters
-                        {(activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) : filterLocations.length) > 0 && (
+                        {(activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSections.length + filterSizes.length) : filterLocations.length) > 0 && (
                           <Badge className="ml-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 text-[10px]">
-                            {activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSizes.length) : filterLocations.length}
+                            {activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSections.length + filterSizes.length) : filterLocations.length}
                           </Badge>
                         )}
                       </Button>
@@ -897,7 +900,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                   ))}
                                 </div>
 
-                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf Location</Label>
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf</Label>
                                 <div className="flex flex-wrap gap-1 mb-3">
                                   {allShelves.map(s => (
                                     <Badge 
@@ -905,6 +908,20 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                       variant="outline" 
                                       className={`cursor-pointer ${filterShelves.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
                                       onClick={() => setFilterShelves(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                                    >
+                                      {s}
+                                    </Badge>
+                                  ))}
+                                </div>
+
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Section</Label>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {allSections.map(s => (
+                                    <Badge 
+                                      key={s} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterSections.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterSections(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
                                     >
                                       {s}
                                     </Badge>
@@ -993,7 +1010,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 </div>
               </div>
               
-              {activeTab === 'chemicals' && (filterTags.length > 0 || filterBrands.length > 0 || filterShelves.length > 0 || filterSizes.length > 0) && (
+              {activeTab === 'chemicals' && (filterTags.length > 0 || filterBrands.length > 0 || filterShelves.length > 0 || filterSections.length > 0 || filterSizes.length > 0) && (
                 <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-800/50">
                   <span className="text-xs font-bold text-zinc-500 uppercase mr-2 flex items-center gap-1">
                     <Filter className="h-3 w-3" /> Active Filters:
@@ -1011,6 +1028,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     </Badge>
                   ))}
                   
+                  {filterSections.map(section => (
+                    <Badge key={`section-${section}`} className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterSections(prev => prev.filter(s => s !== section))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Section:</span> {section} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  
                   {filterSizes.map(size => (
                     <Badge key={`size-${size}`} className="bg-amber-500/10 text-amber-300 border-amber-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterSizes(prev => prev.filter(s => s !== size))}>
                       <span className="text-[10px] text-zinc-500 mr-1">Size:</span> {size} <X className="h-3 w-3 ml-1" />
@@ -1023,7 +1046,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     </Badge>
                   ))}
 
-                  <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-400 hover:text-white px-2 ml-auto" onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); }}>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-400 hover:text-white px-2 ml-auto" onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSections([]); setFilterSizes([]); }}>
                     Clear All
                   </Button>
                 </div>
