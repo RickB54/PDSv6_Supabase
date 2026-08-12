@@ -53,6 +53,7 @@ const saveLocalHistory = (history: AuditSnapshot[]) => {
 // State interfaces
 interface SupplyEquipAuditState {
   counted: number;
+  isCounted: boolean;
 }
 
 interface JugEntry {
@@ -147,6 +148,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [filterBrands, setFilterBrands] = useState<string[]>([]);
   const [filterShelves, setFilterShelves] = useState<string[]>([]);
   const [filterSizes, setFilterSizes] = useState<string[]>([]);
+  const [filterLocations, setFilterLocations] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string[]>(['shelfLocation', 'brand']); // Multiple sort criteria
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -178,6 +180,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       setShowHistory(false);
       setActiveTab('chemicals');
       setHideCounted(false);
+      setFilterLocations([]);
       fetchHistory();
     }
   }, [open, chemicals]);
@@ -351,8 +354,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredChemicals, sortBy]);
 
-  const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted);
-  const filteredEquip = getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted);
+  const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted).filter(s => {
+    if (filterLocations.length > 0 && (!s.location || !filterLocations.includes(s.location))) return false;
+    return true;
+  });
+  const filteredEquip = getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted).filter(e => {
+    if (filterLocations.length > 0 && (!e.location || !filterLocations.includes(e.location))) return false;
+    return true;
+  });
 
   const groupedNonChemicals = useMemo(() => {
     const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
@@ -373,6 +382,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const allBrands = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.brand).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
   const allShelves = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.shelfLocation).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
   const allSizes = useMemo(() => Array.from(new Set(normalizedChemicals.map(c => c.bottleSize).filter(Boolean) as string[])).sort(), [normalizedChemicals]);
+  const allLocations = useMemo(() => {
+    const locs = new Set<string>();
+    supplies.forEach(s => s.location && locs.add(s.location));
+    equipment.forEach(e => e.location && locs.add(e.location));
+    return Array.from(locs).sort();
+  }, [supplies, equipment]);
 
   const handleExportPDF = (snapshot?: AuditSnapshot) => {
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
@@ -569,9 +584,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         supplyAudit,
         equipAudit,
         activeTab,
-        totalCounted: Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
-          Object.values(supplyAudit).filter(s => s.isCounted).length +
-          Object.values(equipAudit).filter(e => e.isCounted).length
+        totalCounted: Object.keys(chemAudit || {}).filter(id => isChemCounted(id)).length +
+          Object.values(supplyAudit || {}).filter(s => s?.isCounted).length +
+          Object.values(equipAudit || {}).filter(e => e?.isCounted).length
       };
       
       await upsertInventoryAuditHistory(completedSnapshot as any);
@@ -591,9 +606,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   // Save Progress handler
   const handleSaveProgress = async () => {
     const totalCounted =
-      Object.keys(chemAudit).filter(id => isChemCounted(id)).length +
-      Object.values(supplyAudit).filter(s => s.isCounted).length +
-      Object.values(equipAudit).filter(e => e.isCounted).length;
+      Object.keys(chemAudit || {}).filter(id => isChemCounted(id)).length +
+      Object.values(supplyAudit || {}).filter(s => s?.isCounted).length +
+      Object.values(equipAudit || {}).filter(e => e?.isCounted).length;
 
     if (totalCounted === 0) {
       toast({ title: 'Nothing to Save', description: 'Count at least one item before saving progress.', variant: 'destructive' });
@@ -629,13 +644,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const handleResume = (snapshot: AuditSnapshot) => {
     // Merge snapshot chem audit with any newly added chemicals
     const mergedChem: Record<string, ChemicalAuditState> = { ...chemAudit };
-    Object.entries(snapshot.chemAudit).forEach(([id, state]) => {
-      if (mergedChem[id]) mergedChem[id] = state;
+    Object.entries(snapshot.chemAudit || {}).forEach(([id, state]) => {
+      if (mergedChem[id]) mergedChem[id] = state as ChemicalAuditState;
     });
     setChemAudit(mergedChem);
-    setSupplyAudit(snapshot.supplyAudit);
-    setEquipAudit(snapshot.equipAudit);
-    setActiveTab(snapshot.activeTab);
+    setSupplyAudit(snapshot.supplyAudit || {});
+    setEquipAudit(snapshot.equipAudit || {});
+    setActiveTab(snapshot.activeTab || 'chemicals');
     setShowHistory(false);
     toast({ title: 'Resumed', description: `Audit from ${new Date(snapshot.timestamp).toLocaleString()} loaded.` });
   };
@@ -852,47 +867,67 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               ))}
                             </div>
 
-                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf Location</Label>
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {allShelves.map(s => (
-                                <Badge 
-                                  key={s} 
-                                  variant="outline" 
-                                  className={`cursor-pointer ${filterShelves.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
-                                  onClick={() => setFilterShelves(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
-                                >
-                                  {s}
-                                </Badge>
-                              ))}
-                            </div>
+                            {activeTab === 'chemicals' ? (
+                              <>
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Shelf Location</Label>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {allShelves.map(s => (
+                                    <Badge 
+                                      key={s} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterShelves.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterShelves(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                                    >
+                                      {s}
+                                    </Badge>
+                                  ))}
+                                </div>
 
-                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Brand</Label>
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {allBrands.map(b => (
-                                <Badge 
-                                  key={b} 
-                                  variant="outline" 
-                                  className={`cursor-pointer ${filterBrands.includes(b) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
-                                  onClick={() => setFilterBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b])}
-                                >
-                                  {b}
-                                </Badge>
-                              ))}
-                            </div>
-                            
-                            <Label className="text-xs text-zinc-500 uppercase block mb-1">Size</Label>
-                            <div className="flex flex-wrap gap-1">
-                              {allSizes.map(s => (
-                                <Badge 
-                                  key={s} 
-                                  variant="outline" 
-                                  className={`cursor-pointer ${filterSizes.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
-                                  onClick={() => setFilterSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
-                                >
-                                  {s}
-                                </Badge>
-                              ))}
-                            </div>
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Brand</Label>
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {allBrands.map(b => (
+                                    <Badge 
+                                      key={b} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterBrands.includes(b) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterBrands(prev => prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b])}
+                                    >
+                                      {b}
+                                    </Badge>
+                                  ))}
+                                </div>
+                                
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Size</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {allSizes.map(s => (
+                                    <Badge 
+                                      key={s} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterSizes.includes(s) ? 'bg-purple-500/20 text-purple-300 border-purple-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                                    >
+                                      {s}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <Label className="text-xs text-zinc-500 uppercase block mb-1">Location</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {allLocations.map(loc => (
+                                    <Badge 
+                                      key={loc} 
+                                      variant="outline" 
+                                      className={`cursor-pointer ${filterLocations.includes(loc) ? 'bg-blue-500/20 text-blue-300 border-blue-500/50' : 'text-zinc-400 border-zinc-700'}`}
+                                      onClick={() => setFilterLocations(prev => prev.includes(loc) ? prev.filter(x => x !== loc) : [...prev, loc])}
+                                    >
+                                      {loc}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </PopoverContent>
@@ -901,7 +936,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()} title="Print">
                     <Printer className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={handleExportPDF} title="Save PDF">
+                  <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={() => handleExportPDF()} title="Save PDF">
                     <Download className="h-4 w-4 mr-2" /> Save PDF
                   </Button>
                 </div>
@@ -938,6 +973,22 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   ))}
 
                   <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-400 hover:text-white px-2 ml-auto" onClick={() => { setFilterTags([]); setFilterBrands([]); setFilterShelves([]); setFilterSizes([]); }}>
+                    Clear All
+                  </Button>
+                </div>
+              )}
+              {activeTab !== 'chemicals' && filterLocations.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-zinc-800/50">
+                  <span className="text-xs font-bold text-zinc-500 uppercase mr-2 flex items-center gap-1">
+                    <Filter className="h-3 w-3" /> Active Filters:
+                  </span>
+                  
+                  {filterLocations.map(loc => (
+                    <Badge key={`loc-${loc}`} className="bg-blue-500/10 text-blue-300 border-blue-500/30 flex items-center gap-1 cursor-pointer hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors py-0.5" onClick={() => setFilterLocations(prev => prev.filter(l => l !== loc))}>
+                      <span className="text-[10px] text-zinc-500 mr-1">Location:</span> {loc} <X className="h-3 w-3 ml-1" />
+                    </Badge>
+                  ))}
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-400 hover:text-white px-2 ml-auto" onClick={() => setFilterLocations([])}>
                     Clear All
                   </Button>
                 </div>
@@ -1139,39 +1190,50 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       const counted = state.counted;
                       const isCounted = state.isCounted;
 
+                      const isExpanded = expandedItems[item.id];
+
                       return (
-                        <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
-                          <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
-                            {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
-                            <div className="min-w-0">
-                              <div className="font-bold text-zinc-200 truncate">{item.name}</div>
-                              <div className="text-xs text-zinc-500 flex items-center gap-2">
-                                <span>DB Qty: {item.quantity || 1}</span>
+                        <div key={item.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                          <div className="flex items-center justify-between p-3 cursor-pointer select-none" onClick={() => toggleExpand(item.id)}>
+                            <div className="flex items-center gap-3">
+                              {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
+                              <div className="min-w-0">
+                                <div className="font-bold text-zinc-200 truncate">{item.name}</div>
+                                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                  <span>DB Qty: {item.quantity || 1}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400" 
-                              onClick={() => updateCount(item.id, -1, true)} 
-                              disabled={counted === 0}
-                            >
-                              <Minus className="h-5 w-5" />
-                            </Button>
-                            <div className="w-12 text-center">
-                              <div className="font-black text-2xl text-white">{isCounted ? counted : '-'}</div>
+                            <div className="flex items-center gap-4 shrink-0">
+                              {isCounted && <div className="text-sm font-bold text-emerald-400">{counted} Units</div>}
+                              {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                             </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
-                              onClick={() => updateCount(item.id, 1, true)}
-                            >
-                              <Plus className="h-5 w-5" />
-                            </Button>
                           </div>
+                          {isExpanded && (
+                            <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-6">
+                              <Button 
+                                variant="outline" 
+                                size="lg" 
+                                className="h-14 w-14 p-0 border-blue-500/30 text-blue-400" 
+                                onClick={() => updateCount(item.id, -1, true)} 
+                                disabled={counted === 0}
+                              >
+                                <Minus className="h-6 w-6" />
+                              </Button>
+                              <div className="w-20 text-center">
+                                <div className="font-black text-4xl text-white">{isCounted ? counted : '-'}</div>
+                                <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider font-bold">Counted</div>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="lg" 
+                                className="h-14 w-14 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
+                                onClick={() => updateCount(item.id, 1, true)}
+                              >
+                                <Plus className="h-6 w-6" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
