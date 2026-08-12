@@ -1475,29 +1475,42 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </div>
           </div>
         )}
-        <DialogFooter className="p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex justify-between print:hidden">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => showHistory ? setShowHistory(false) : reviewMode ? setReviewMode(false) : onOpenChange(false)}>
-              {showHistory ? 'Back to Audit' : reviewMode ? 'Back to Audit' : 'Cancel'}
+        <DialogFooter className="p-3 sm:p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex flex-row items-center justify-between gap-2 print:hidden w-full !space-x-0">
+          <Button 
+            variant="outline" 
+            className="border-cyan-500/40 text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/50 hover:text-cyan-300 px-3 sm:px-4" 
+            onClick={() => showHistory ? setShowHistory(false) : reviewMode ? setReviewMode(false) : onOpenChange(false)}
+          >
+            {showHistory || reviewMode ? 'Back' : 'Cancel'}
+          </Button>
+          
+          {!showHistory && !reviewMode && (
+            <Button
+              variant="outline"
+              className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+              onClick={handleSaveProgress}
+            >
+              <Save className="h-4 w-4" /> 
+              <span className="hidden sm:inline">Save Progress</span>
+              <span className="sm:hidden">Save</span>
             </Button>
-            {!showHistory && !reviewMode && (
-              <Button
-                variant="outline"
-                className="h-9 border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white gap-1.5"
-                onClick={handleSaveProgress}
-              >
-                <Save className="h-4 w-4" /> Save Progress
-              </Button>
-            )}
-          </div>
+          )}
+
           {!showHistory && (
             !reviewMode ? (
-              <Button className="bg-purple-600 hover:bg-purple-500 text-white font-bold" onClick={() => setReviewMode(true)}>
+              <Button 
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 sm:px-4 flex-1 sm:flex-none justify-center whitespace-nowrap" 
+                onClick={() => setReviewMode(true)}
+              >
                 Review Changes
               </Button>
             ) : (
-              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold" onClick={handleConfirmUpdate} disabled={isSubmitting}>
-                {isSubmitting ? 'Updating...' : 'Confirm & Update Inventory'}
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 sm:px-4 flex-1 sm:flex-none justify-center whitespace-nowrap" 
+                onClick={handleConfirmUpdate} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Updating...' : 'Confirm Update'}
               </Button>
             )
           )}
