@@ -3715,6 +3715,11 @@ const InventoryControl = () => {
         supplies={supplies}
         equipment={equipment}
         onRefresh={loadData}
+        onEditItem={(item, type) => {
+          setEditing(item);
+          setModalMode(type);
+          setModalOpen(true);
+        }}
       />
       </div>
     </ThumbnailZoomContext.Provider>

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ interface InventoryAuditModalProps {
   supplies: Material[];
   equipment: Equipment[];
   onRefresh: () => void;
+  onEditItem?: (item: any, type: 'chemical' | 'material' | 'tool') => void;
 }
 
 type TabType = 'chemicals' | 'supplies' | 'equipment';
@@ -106,7 +107,7 @@ const normalizeSize = (size?: string) => {
   return size.trim();
 };
 
-export default function InventoryAuditModal({ open, onOpenChange, chemicals, supplies, equipment, onRefresh }: InventoryAuditModalProps) {
+export default function InventoryAuditModal({ open, onOpenChange, chemicals, supplies, equipment, onRefresh, onEditItem }: InventoryAuditModalProps) {
   const { toast } = useToast();
   
   const normalizedChemicals = useMemo(() => chemicals.map(c => ({
@@ -964,8 +965,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 border-orange-500/50 bg-orange-950/20 text-orange-400 hover:bg-orange-900/40" title="Reset Category">
-                        <RotateCcw className="h-4 w-4 mr-2" /> Reset {activeTab === 'chemicals' ? 'Chemicals' : activeTab === 'supplies' ? 'Supplies' : 'Equipment'}
+                      <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-orange-500/50 bg-orange-950/20 text-orange-400 hover:bg-orange-900/40" title={`Reset ${activeTab === 'chemicals' ? 'Chemicals' : activeTab === 'supplies' ? 'Supplies' : 'Equipment'}`}>
+                        <RotateCcw className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
@@ -987,7 +988,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </AlertDialog>
 
                   <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={() => handleExportPDF()} title="Save PDF">
-                    <Download className="h-4 w-4 mr-2" /> Save PDF
+                    <Download className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Save PDF</span>
                   </Button>
                 </div>
               </div>
@@ -1081,6 +1082,20 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       </div>
                       <div className="flex items-center gap-4">
                         {isCounted && <div className="text-sm font-bold text-emerald-400">{getChemTotalStock(c.id, c).toFixed(2).replace(/\.00$/, '')} Units</div>}
+                        {onEditItem && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-zinc-400 hover:text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditItem(c, 'chemical');
+                            }}
+                            title="Edit Item"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
                         {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                       </div>
                     </div>
@@ -1225,7 +1240,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             ))}
 
               {/* Supplies & Equipment Generic Tally */}
-              {groupedNonChemicals.map(([loc, items]) => (
+              {activeTab !== 'chemicals' && groupedNonChemicals.map(([loc, items]) => (
                 <div key={loc} className="mb-6">
                   {loc !== 'Unassigned' && (
                     <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
@@ -1252,6 +1267,20 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             </div>
                           </div>
                           <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {onEditItem && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-10 w-10 text-zinc-400 hover:text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditItem(item, activeTab === 'equipment' ? 'tool' : 'material');
+                                }}
+                                title="Edit Item"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="outline" 
                               size="sm" 
