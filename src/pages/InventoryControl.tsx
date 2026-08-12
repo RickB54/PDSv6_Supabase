@@ -417,6 +417,8 @@ const InventoryControl = () => {
     if (isDemoMode) {
       loadData();
     } else {
+      // Auto-cleanup ghost duplicates on load
+      import('@/lib/inventory-data').then(m => m.cleanupGhostDuplicates());
       // Always load from localforage first (fast, cached data)
       loadDataFromCache();
       // Only fetch from database if we haven't loaded it yet (first visit in this session)

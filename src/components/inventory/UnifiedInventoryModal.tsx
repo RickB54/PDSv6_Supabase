@@ -910,9 +910,18 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (!window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
+        return;
+      }
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b border-zinc-800">
           <DialogTitle className="text-white flex items-center">
@@ -2720,6 +2729,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
             >
               View Inventory Report
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+            >
+              Cancel
             </Button>
           </div>
           <Button

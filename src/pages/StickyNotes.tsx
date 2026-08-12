@@ -534,8 +534,8 @@ const getAnimClass = (enabled: boolean, style: string, neonBurst = false) => {
   let cls = '';
   switch (style) {
     case 'smooth': cls = 'animate-in zoom-in-95 fade-in duration-700 ease-out'; break;
-    case 'pop':    cls = 'animate-in zoom-in-50 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]'; break;
-    case 'bounce': cls = 'animate-in slide-in-from-top-16 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]'; break;
+    case 'pop':    cls = 'animate-in zoom-in-50 fade-in duration-700 ease-&lsqb;cubic-bezier(0.34,1.56,0.64,1)&rsqb;'; break;
+    case 'bounce': cls = 'animate-in slide-in-from-top-16 fade-in duration-700 ease-&lsqb;cubic-bezier(0.34,1.56,0.64,1)&rsqb;'; break;
     case 'slide':  cls = 'animate-in slide-in-from-left-16 fade-in duration-700 ease-out'; break;
     case 'flip':   cls = 'slh-flip-in-3d'; break;
     default:       cls = 'animate-in zoom-in-95 fade-in duration-500'; break;

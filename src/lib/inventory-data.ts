@@ -323,6 +323,74 @@ export async function deleteChemical(id: string): Promise<void> {
     if (error) throw error;
 }
 
+export async function cleanupGhostDuplicates(): Promise<number> {
+    if (isDemoActive()) return 0;
+    let deletedCount = 0;
+    
+    // Cleanup materials
+    const { data: materials } = await supabase.from('materials').select('*');
+    if (materials) {
+        const groups: Record<string, any[]> = {};
+        materials.forEach(m => {
+            if (!groups[m.name]) groups[m.name] = [];
+            groups[m.name].push(m);
+        });
+        
+        for (const name in groups) {
+            // Find EXACT duplicates (same name AND location)
+            const locGroups: Record<string, any[]> = {};
+            groups[name].forEach((m: any) => {
+                const loc = m.location || 'unassigned';
+                if (!locGroups[loc]) locGroups[loc] = [];
+                locGroups[loc].push(m);
+            });
+            
+            for (const loc in locGroups) {
+                if (locGroups[loc].length > 1) {
+                    locGroups[loc].sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+                    const toDelete = locGroups[loc].slice(1).map((x: any) => x.id);
+                    if (toDelete.length > 0) {
+                        await supabase.from('materials').delete().in('id', toDelete);
+                        deletedCount += toDelete.length;
+                    }
+                }
+            }
+        }
+    }
+
+    // Cleanup tools
+    const { data: tools } = await supabase.from('tools').select('*');
+    if (tools) {
+        const groups: Record<string, any[]> = {};
+        tools.forEach(m => {
+            if (!groups[m.name]) groups[m.name] = [];
+            groups[m.name].push(m);
+        });
+        
+        for (const name in groups) {
+            const locGroups: Record<string, any[]> = {};
+            groups[name].forEach((m: any) => {
+                const loc = m.location || 'unassigned';
+                if (!locGroups[loc]) locGroups[loc] = [];
+                locGroups[loc].push(m);
+            });
+            
+            for (const loc in locGroups) {
+                if (locGroups[loc].length > 1) {
+                    locGroups[loc].sort((a: any, b: any) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+                    const toDelete = locGroups[loc].slice(1).map((x: any) => x.id);
+                    if (toDelete.length > 0) {
+                        await supabase.from('tools').delete().in('id', toDelete);
+                        deletedCount += toDelete.length;
+                    }
+                }
+            }
+        }
+    }
+    
+    return deletedCount;
+}
+
 export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; linked: number }> {
     if (isDemoActive()) return { deleted: 0, linked: 0 };
     const { data: inventory, error: invErr } = await supabase.from('chemicals').select('*');
