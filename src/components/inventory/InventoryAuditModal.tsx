@@ -126,6 +126,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   
   const [historySnapshots, setHistorySnapshots] = useState<AuditSnapshot[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [cancelWarningOpen, setCancelWarningOpen] = useState(false);
   
   const handleCloseAttempt = () => {
