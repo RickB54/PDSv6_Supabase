@@ -688,25 +688,23 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               <CheckCircle className="h-5 w-5 text-purple-500" /> 
               {showHistory ? 'Audit History' : reviewMode ? 'Review Audit Changes' : 'Inventory Audit Checklist'}
               {!showHistory && !reviewMode && (
-                <TooltipProvider>
-                  <Tooltip delayDuration={300}>
-                    <TooltipTrigger asChild>
-                      <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
-                        <HelpCircle className="h-5 w-5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl">
-                      <p className="font-bold text-white mb-2">How to perform an Audit:</p>
-                      <ul className="list-disc pl-4 space-y-1 text-sm">
-                        <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
-                        <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
-                        <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
-                        <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
-                        <li><strong>Save Progress:</strong> Use &quot;Save Progress&quot; to pause and resume later from History.</li>
-                      </ul>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
+                      <HelpCircle className="h-5 w-5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl" side="bottom" align="start">
+                    <p className="font-bold text-white mb-2">How to perform an Audit:</p>
+                    <ul className="list-disc pl-4 space-y-1 text-sm">
+                      <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
+                      <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
+                      <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
+                      <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
+                      <li><strong>Save Progress:</strong> Use &quot;Save Progress&quot; to pause and resume later from History.</li>
+                    </ul>
+                  </PopoverContent>
+                </Popover>
               )}
             </DialogTitle>
             <Button
@@ -1190,50 +1188,39 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       const counted = state.counted;
                       const isCounted = state.isCounted;
 
-                      const isExpanded = expandedItems[item.id];
-
                       return (
-                        <div key={item.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
-                          <div className="flex items-center justify-between p-3 cursor-pointer select-none" onClick={() => toggleExpand(item.id)}>
-                            <div className="flex items-center gap-3">
-                              {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
-                              <div className="min-w-0">
-                                <div className="font-bold text-zinc-200 truncate">{item.name}</div>
-                                <div className="text-xs text-zinc-500 flex items-center gap-2">
-                                  <span>DB Qty: {item.quantity || 1}</span>
-                                </div>
+                        <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                          <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
+                            {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
+                            <div className="min-w-0">
+                              <div className="font-bold text-zinc-200 truncate">{item.name}</div>
+                              <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                <span>DB Qty: {item.quantity || 1}</span>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-4 shrink-0">
-                              {isCounted && <div className="text-sm font-bold text-emerald-400">{counted} Units</div>}
-                              {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
                             </div>
                           </div>
-                          {isExpanded && (
-                            <div className="p-4 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-6">
-                              <Button 
-                                variant="outline" 
-                                size="lg" 
-                                className="h-14 w-14 p-0 border-blue-500/30 text-blue-400" 
-                                onClick={() => updateCount(item.id, -1, true)} 
-                                disabled={counted === 0}
-                              >
-                                <Minus className="h-6 w-6" />
-                              </Button>
-                              <div className="w-20 text-center">
-                                <div className="font-black text-4xl text-white">{isCounted ? counted : '-'}</div>
-                                <div className="text-[10px] text-zinc-500 mt-1 uppercase tracking-wider font-bold">Counted</div>
-                              </div>
-                              <Button 
-                                variant="outline" 
-                                size="lg" 
-                                className="h-14 w-14 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
-                                onClick={() => updateCount(item.id, 1, true)}
-                              >
-                                <Plus className="h-6 w-6" />
-                              </Button>
+                          <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400" 
+                              onClick={() => updateCount(item.id, -1, true)} 
+                              disabled={counted === 0}
+                            >
+                              <Minus className="h-5 w-5" />
+                            </Button>
+                            <div className="w-12 text-center">
+                              <div className="font-black text-2xl text-white">{isCounted ? counted : '-'}</div>
                             </div>
-                          )}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
+                              onClick={() => updateCount(item.id, 1, true)}
+                            >
+                              <Plus className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
