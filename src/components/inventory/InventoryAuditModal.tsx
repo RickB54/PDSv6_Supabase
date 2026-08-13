@@ -1110,7 +1110,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
                   <div className="flex items-center gap-2">
                     <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
-                      <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-xs w-[130px]">
+                      <SelectTrigger className="h-9 bg-zinc-900 border-zinc-700 text-xs w-[130px] text-zinc-100 font-medium">
                         <SelectValue placeholder="Sort..." />
                       </SelectTrigger>
                       <SelectContent>
