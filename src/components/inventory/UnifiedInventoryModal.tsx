@@ -825,6 +825,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             location: purchase.location || undefined,
+            containerLocation: purchase.containerLocation || undefined,
           };
           
           await saveTool(payload, !purchase.id);
@@ -861,6 +862,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             purchaseDate: purchase.purchaseDate || undefined,
             location: purchase.location || undefined,
+            containerLocation: purchase.containerLocation || undefined,
           };
           
           await saveMaterial(payload, !purchase.id);
