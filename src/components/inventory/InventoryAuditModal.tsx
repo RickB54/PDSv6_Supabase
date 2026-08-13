@@ -807,6 +807,38 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </PopoverContent>
                 </Popover>
               )}
+              {reviewMode && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="ml-2 text-zinc-400 hover:text-purple-400 transition-colors focus:outline-none">
+                      <HelpCircle className="h-5 w-5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-3 shadow-2xl" side="bottom" align="start">
+                    <p className="font-bold text-white border-b border-zinc-800 pb-2">Understanding the Data Format</p>
+                    <div className="bg-zinc-950 p-3 rounded border border-zinc-800 font-mono text-xs flex justify-between items-center text-center">
+                      <div className="flex-1">
+                        <div className="text-zinc-500 mb-1 text-[10px] uppercase">Old Qty</div>
+                        <span className="text-zinc-400">1.00</span>
+                      </div>
+                      <span className="text-zinc-600 px-2">→</span>
+                      <div className="flex-1">
+                        <div className="text-emerald-400 mb-1 text-[10px] uppercase">New Qty</div>
+                        <span className="text-white font-bold">5.00</span>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <div className="text-zinc-500 mb-1 text-[10px] uppercase">Diff</div>
+                        <span className="text-emerald-400 font-bold">+4.00</span>
+                      </div>
+                    </div>
+                    <ul className="list-disc pl-4 space-y-1 text-xs mt-3">
+                      <li><strong className="text-zinc-200">Old Qty:</strong> The amount currently recorded in your database.</li>
+                      <li><strong className="text-zinc-200">New Qty:</strong> The new amount you just entered.</li>
+                      <li><strong className="text-zinc-200">Diff:</strong> Shows exactly how much stock was used or added. (<span className="text-red-400">Red</span> = Used, <span className="text-emerald-400">Green</span> = Added, <span className="text-zinc-500">Gray</span> = No Change).</li>
+                    </ul>
+                  </PopoverContent>
+                </Popover>
+              )}
             </DialogTitle>
             <Button
               variant="outline"
