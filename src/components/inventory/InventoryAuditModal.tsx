@@ -130,8 +130,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [cancelWarningOpen, setCancelWarningOpen] = useState(false);
   
   const handleCloseAttempt = () => {
-    const hasChanges = Object.keys(chemAudit).length > 0 || Object.keys(supplyAudit).length > 0 || Object.keys(equipAudit).length > 0;
-    if (hasChanges) {
+    const hasChemChanges = Object.keys(chemAudit).some(id => {
+      if (isChemCounted(id)) return true;
+      const c = chemicals.find(chem => chem.id === id);
+      if (c && chemAudit[id].isConcentrate !== !!c.isConcentrate) return true;
+      return false;
+    });
+    const hasSupplyChanges = Object.values(supplyAudit).some(s => s.isCounted);
+    const hasEquipChanges = Object.values(equipAudit).some(e => e.isCounted);
+
+    if (hasChemChanges || hasSupplyChanges || hasEquipChanges) {
       setCancelWarningOpen(true);
     } else {
       onOpenChange(false);
@@ -836,9 +844,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     {activeTab === 'supplies' && `${numCountedSupplies} of ${filteredSupplies.length} counted`}
                     {activeTab === 'equipment' && `${numCountedEquip} of ${filteredEquip.length} counted`}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Switch id="hide-counted" checked={hideCounted} onCheckedChange={setHideCounted} className="data-[state=checked]:bg-purple-500" />
-                    <Label htmlFor="hide-counted" className="text-xs text-zinc-400">Hide Counted</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Switch id="hide-counted" checked={hideCounted} onCheckedChange={setHideCounted} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
+                      <Label htmlFor="hide-counted" className="text-xs text-zinc-400">Hide Counted</Label>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 px-2" onClick={() => setExpandedItems({})}>
+                      Collapse All
+                    </Button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1139,7 +1152,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <span className="text-sm font-bold text-zinc-300">Product Type:</span>
                           <div className="flex items-center gap-2">
                             <span className={!s.isConcentrate ? 'text-white' : 'text-zinc-500'}>Used As-Is</span>
-                            <Switch checked={s.isConcentrate} onCheckedChange={() => toggleChemMode(c.id, 'isConcentrate')} className="data-[state=checked]:bg-purple-500" />
+                            <Switch checked={s.isConcentrate} onCheckedChange={() => toggleChemMode(c.id, 'isConcentrate')} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                             <span className={s.isConcentrate ? 'text-white font-bold' : 'text-zinc-500'}>Concentrate</span>
                             <TooltipProvider>
                               <Tooltip>
@@ -1167,7 +1180,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               <span className="text-sm font-bold text-zinc-300">Counting Mode:</span>
                               <div className="flex items-center gap-2">
                                 <span className={!s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Quick (Gallons)</span>
-                                <Switch checked={s.detailedMode} onCheckedChange={() => toggleChemMode(c.id, 'detailedMode')} className="data-[state=checked]:bg-purple-500" />
+                                <Switch checked={s.detailedMode} onCheckedChange={() => toggleChemMode(c.id, 'detailedMode')} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                                 <span className={s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Detailed (w/ Bottles)</span>
                                 <TooltipProvider>
                                   <Tooltip>
