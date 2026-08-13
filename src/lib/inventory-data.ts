@@ -584,25 +584,36 @@ export async function getMaterials(): Promise<Material[]> {
 
     console.log(`[InventoryData] getMaterials: Successfully loaded ${data?.length || 0} materials`);
 
-    return (data || []).map(item => ({
-        id: item.id,
-        name: item.name,
-        category: item.category || '',
-        subtype: item.subtype,
-        quantity: item.quantity || 0,
-        costPerItem: item.cost_per_item,
-        notes: item.notes,
-        lowThreshold: item.low_threshold,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        imageUrl: item.image_url,
-        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
-        purchaseDate: item.purchase_date,
-        actualPrice: item.actual_price,
-        salePrice: item.sale_price,
-        location: item.location,
-        containerLocation: item.container_location
-    }));
+    return (data || []).map(item => {
+        let loc = item.location || '';
+        let cl = item.container_location || '';
+        if (loc.includes('|__CL__|')) {
+            const parts = loc.split('|__CL__|');
+            loc = parts[0];
+            cl = parts[1] || cl;
+            if (loc === 'Unassigned') loc = '';
+        }
+
+        return {
+            id: item.id,
+            name: item.name,
+            category: item.category || '',
+            subtype: item.subtype,
+            quantity: item.quantity || 0,
+            costPerItem: item.cost_per_item,
+            notes: item.notes,
+            lowThreshold: item.low_threshold,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            imageUrl: item.image_url,
+            wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+            purchaseDate: item.purchase_date,
+            actualPrice: item.actual_price,
+            salePrice: item.sale_price,
+            location: loc,
+            containerLocation: cl
+        };
+    });
 }
 
 export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<Material | undefined> {
@@ -617,6 +628,11 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
     if (!session?.user) {
         console.error('[InventoryData] saveMaterial: No active session found!');
         throw new Error('Not authenticated');
+    }
+
+    let locToSave = material.location;
+    if (material.containerLocation && material.containerLocation.trim()) {
+        locToSave = `${material.location || 'Unassigned'}|__CL__|${material.containerLocation.trim()}`;
     }
 
     const dbData: any = {
@@ -634,8 +650,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         purchase_date: material.purchaseDate || null,
         actual_price: material.actualPrice || null,
         sale_price: material.salePrice || null,
-        location: material.location || null,
-        container_location: material.containerLocation || null,
+        location: locToSave,
         updated_at: new Date().toISOString()
     };
 
@@ -680,6 +695,10 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
             if (currentErr) throw currentErr;
             
             // Return mapped object
+            const parts = (dbData.location || '').split('|__CL__|');
+            const recoveredLoc = parts[0] === 'Unassigned' ? '' : parts[0];
+            const recoveredCl = parts[1] || dbData.container_location;
+
             return {
                 id: dbData.id,
                 name: dbData.name,
@@ -693,7 +712,8 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                 salePrice: dbData.sale_price,
                 notes: dbData.notes,
                 imageUrl: dbData.image_url,
-                location: dbData.location,
+                location: recoveredLoc,
+                containerLocation: recoveredCl,
                 updatedAt: dbData.updated_at
             } as any;
         } else {
@@ -772,30 +792,46 @@ export async function getTools(): Promise<Tool[]> {
         return [];
     }
 
-    return (data || []).map(item => ({
-        id: item.id,
-        name: item.name,
-        category: item.category || 'Other',
-        warranty: item.warranty || '',
-        purchaseDate: item.purchase_date || '',
-        price: item.price || 0,
-        quantity: item.quantity || 1,
-        lowThreshold: item.low_threshold || 1,
-        lifeExpectancy: item.life_expectancy || '',
-        notes: item.notes || '',
-        imageUrl: item.image_url,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
-        location: item.location,
-        containerLocation: item.container_location
-    }));
+    return (data || []).map(item => {
+        let loc = item.location || '';
+        let cl = item.container_location || '';
+        if (loc.includes('|__CL__|')) {
+            const parts = loc.split('|__CL__|');
+            loc = parts[0];
+            cl = parts[1] || cl;
+            if (loc === 'Unassigned') loc = '';
+        }
+
+        return {
+            id: item.id,
+            name: item.name,
+            category: item.category || 'Other',
+            warranty: item.warranty || '',
+            purchaseDate: item.purchase_date || '',
+            price: item.price || 0,
+            quantity: item.quantity || 1,
+            lowThreshold: item.low_threshold || 1,
+            lifeExpectancy: item.life_expectancy || '',
+            notes: item.notes || '',
+            imageUrl: item.image_url,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+            location: loc,
+            containerLocation: cl
+        };
+    });
 }
 
 export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Promise<void> {
     if (isDemoActive()) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
+
+    let locToSave = tool.location;
+    if (tool.containerLocation && tool.containerLocation.trim()) {
+        locToSave = `${tool.location || 'Unassigned'}|__CL__|${tool.containerLocation.trim()}`;
+    }
 
     const dbData: any = {
         id: tool.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
@@ -813,8 +849,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         where_purchased: tool.wherePurchased || null,
         actual_price: tool.actualPrice || null,
         sale_price: tool.salePrice || null,
-        location: tool.location || null,
-        container_location: tool.containerLocation || null,
+        location: locToSave,
         updated_at: new Date().toISOString()
     };
 

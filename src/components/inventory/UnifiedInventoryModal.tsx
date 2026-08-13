@@ -1917,9 +1917,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           <X className="h-4 w-4" />
                         </button>
                       )}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs text-zinc-400">Location</Label>
+                      <div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <Label className="text-xs text-zinc-400">Location</Label>
                           {!customLocationEquip[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2120,19 +2121,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                             </div>
                           )}
                         </div>
-                        <div>
-                          <Label className="text-xs text-zinc-400">Quantity</Label>
-                          <Input
-                            type="number"
-                            value={purchase.quantity}
-                            onChange={(e) => {
-                              const newP = [...equipmentPurchases];
-                              newP[index].quantity = e.target.value;
-                              setEquipmentPurchases(newP);
-                            }}
-                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          />
-                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div>
                           <Label className="text-xs text-zinc-400">Low Threshold</Label>
                           <Input
@@ -2285,8 +2275,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                             className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           />
                         </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={purchase.quantity}
+                            onChange={(e) => {
+                              const newP = [...equipmentPurchases];
+                              newP[index].quantity = e.target.value;
+                              setEquipmentPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                       </div>
-                      {numeric(purchase.actualPrice) > numeric(purchase.price) && (
+                    </div>
+                    {numeric(purchase.actualPrice) > numeric(purchase.price) && (
                         <div className="mt-1 text-[10px] text-green-400 flex justify-between font-bold uppercase tracking-tight bg-green-500/10 p-1.5 rounded border border-green-500/20">
                           <span>Savings on this purchase:</span>
                           <span className="font-black">
@@ -2324,9 +2328,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           <X className="h-4 w-4" />
                         </button>
                       )}
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs text-zinc-400">Location</Label>
+                      <div>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <Label className="text-xs text-zinc-400">Location</Label>
                           {!customLocationSupply[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2527,19 +2532,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                             </div>
                           )}
                         </div>
-                        <div>
-                          <Label className="text-xs text-zinc-400">Quantity</Label>
-                          <Input
-                            type="number"
-                            value={purchase.quantity}
-                            onChange={(e) => {
-                              const newP = [...supplyPurchases];
-                              newP[index].quantity = e.target.value;
-                              setSupplyPurchases(newP);
-                            }}
-                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          />
-                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div>
                           <Label className="text-xs text-zinc-400">Low Threshold</Label>
                           <Input
@@ -2692,8 +2686,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                             className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
                           />
                         </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={purchase.quantity}
+                            onChange={(e) => {
+                              const newP = [...supplyPurchases];
+                              newP[index].quantity = e.target.value;
+                              setSupplyPurchases(newP);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                          />
+                        </div>
                       </div>
-                      {numeric(purchase.actualPrice) > numeric(purchase.costPerItem) && (
+                    </div>
+                    {numeric(purchase.actualPrice) > numeric(purchase.costPerItem) && (
                         <div className="mt-1 text-[10px] text-green-400 flex justify-between font-bold uppercase tracking-tight bg-green-500/10 p-1.5 rounded border border-green-500/20">
                           <span>Savings on this purchase:</span>
                           <span className="font-black">
