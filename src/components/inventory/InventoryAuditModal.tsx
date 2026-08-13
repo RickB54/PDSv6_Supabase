@@ -816,7 +816,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   return (
     <>
     <Dialog open={open} onOpenChange={(val) => { if (!val) handleCloseAttempt(); else onOpenChange(val); }}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] print:!block print:!static print:!transform-none print:!w-full print:!max-w-none print:!h-auto print:!min-h-0 print:!m-0 print:!p-0 print:!border-none print:!shadow-none flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:!overflow-visible">
+      <DialogContent className="max-w-5xl w-full h-[90vh] print:!block print:!static print:!transform-none print:!w-full print:!max-w-none print:!h-auto print:!min-h-0 print:!m-0 print:!p-0 print:!border-none print:!shadow-none flex flex-col p-0 bg-zinc-950 print:bg-white border-purple-500/30 shadow-2xl overflow-hidden print:!overflow-visible">
         <DialogHeader className="p-4 border-b border-purple-500/20 bg-zinc-900 shrink-0 print:hidden">
           <div className="flex justify-between items-center">
             <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
@@ -1306,17 +1306,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     
                     return (
                       <div key={c.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-purple-950/20 border-purple-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
-                    <div className="flex items-center justify-between p-3 cursor-pointer select-none" onClick={() => toggleExpand(c.id)}>
-                      <div className="flex items-center gap-3">
-                        {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400" /> : <div className="h-5 w-5 rounded-full border border-zinc-600" />}
-                        <div>
-                          <div className="font-bold text-zinc-200">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
-                          <div className="text-xs text-zinc-500 flex items-center gap-2">
-                            <span>DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between p-3 cursor-pointer select-none gap-3" onClick={() => toggleExpand(c.id)}>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
+                        <div className="min-w-0">
+                          <div className="font-bold text-zinc-200 truncate">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
+                          <div className="text-xs text-zinc-500 flex items-center gap-2 truncate">
+                            <span className="truncate">DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
                             {(c.shelf || c.section) && (
                               <>
-                                <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-                                <span className="text-purple-400/80">
+                                <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
+                                <span className="text-purple-400/80 truncate">
                                   {c.shelf || 'No Shelf'} / {c.section || 'No Section'}
                                 </span>
                               </>
@@ -1324,7 +1324,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between lg:justify-end gap-2 md:gap-4 shrink-0 w-full lg:w-auto">
                         <div className="flex items-center gap-2 shrink-0 print:hidden" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center">
                             <Button 
@@ -1365,22 +1365,26 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             </SelectContent>
                           </Select>
                         </div>
-                        {isCounted && <div className="text-sm font-bold text-emerald-400 min-w-[4rem] text-right">{getChemTotalStock(c.id, c).toFixed(2).replace(/\.00$/, '')} Units</div>}
-                        {onEditItem && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-zinc-400 hover:text-white shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditItem(c, 'chemical');
-                            }}
-                            title="Edit Item"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500 shrink-0" /> : <ChevronDown className="h-5 w-5 text-zinc-500 shrink-0" />}
+                        <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                          <div className={`text-sm font-bold min-w-[4.5rem] text-right ${isCounted ? 'text-emerald-400' : 'invisible'}`}>
+                            {getChemTotalStock(c.id, c).toFixed(2).replace(/\.00$/, '')} Units
+                          </div>
+                          {onEditItem && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-zinc-400 hover:text-white shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditItem(c, 'chemical');
+                              }}
+                              title="Edit Item"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500 shrink-0" /> : <ChevronDown className="h-5 w-5 text-zinc-500 shrink-0" />}
+                        </div>
                       </div>
                     </div>
                     {isExpanded && (
