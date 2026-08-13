@@ -276,6 +276,19 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
   };
 
+  const setQuickPartialGallon = (id: string, fillLevel: number) => {
+    setChemAudit(prev => {
+      const state = getChemState(id, prev);
+      const type = state.isConcentrate ? 'gallons' : 'usedAsIsJugs';
+      const arr = state[type].map(j => {
+        if (j.fillLevel === 1) return j; // keep full gallons as is
+        if (j.fillLevel === fillLevel) return { ...j, count: 1 };
+        return { ...j, count: 0 };
+      });
+      return { ...prev, [id]: { ...state, [type]: arr } };
+    });
+  };
+
   const resetCategoryAudit = () => {
     if (activeTab === 'chemicals') {
       const initialChem: Record<string, ChemicalAuditState> = {};
@@ -1312,12 +1325,52 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        {isCounted && <div className="text-sm font-bold text-emerald-400">{getChemTotalStock(c.id, c).toFixed(2).replace(/\.00$/, '')} Units</div>}
+                        <div className="flex items-center gap-2 shrink-0 print:hidden" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-r-none" 
+                              onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, -1)}
+                              disabled={(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count === 0}
+                              title="-1 Full Gallon"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <div className="h-8 px-3 flex items-center justify-center bg-zinc-950 border-y border-purple-500/30 text-sm font-bold text-white min-w-[2.5rem]" title="Full Gallons Count">
+                              {(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count || 0}
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-l-none bg-purple-500/10 hover:bg-purple-500 hover:text-white" 
+                              onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, 1)}
+                              title="+1 Full Gallon"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <Select 
+                            value={String((s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel < 1 && j.count > 0)?.fillLevel || 0)}
+                            onValueChange={(v) => setQuickPartialGallon(c.id, parseFloat(v))}
+                          >
+                            <SelectTrigger className="h-8 w-24 text-xs border-purple-500/30 bg-zinc-950 text-white">
+                              <SelectValue placeholder="Partial" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                              <SelectItem value="0">No Partial</SelectItem>
+                              <SelectItem value="0.75">3/4 Gal</SelectItem>
+                              <SelectItem value="0.5">1/2 Gal</SelectItem>
+                              <SelectItem value="0.25">1/4 Gal</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {isCounted && <div className="text-sm font-bold text-emerald-400 min-w-[4rem] text-right">{getChemTotalStock(c.id, c).toFixed(2).replace(/\.00$/, '')} Units</div>}
                         {onEditItem && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-zinc-400 hover:text-white"
+                            className="h-8 w-8 text-zinc-400 hover:text-white shrink-0"
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditItem(c, 'chemical');
@@ -1327,7 +1380,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+                        {isExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500 shrink-0" /> : <ChevronDown className="h-5 w-5 text-zinc-500 shrink-0" />}
                       </div>
                     </div>
                     {isExpanded && (
