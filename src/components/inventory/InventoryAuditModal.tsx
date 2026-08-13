@@ -877,7 +877,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               );
             })}
           </div>
-        ) : (
+        ) : !showHistory ? (
           <div className="flex-1 flex flex-col min-h-0">
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0">
               <Tabs value={activeTab} onValueChange={(v) => {
@@ -1133,6 +1133,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <>
                             <SelectItem value="location">By Location</SelectItem>
                             <SelectItem value="name">A-Z Name Only</SelectItem>
+                            <SelectItem value="category">Category</SelectItem>
                             <SelectItem value="updated_at">Last Updated</SelectItem>
                           </>
                         )}
@@ -1479,10 +1480,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* HISTORY VIEW */}
-        {showHistory && (
+        {showHistory && !reviewMode && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Filters */}
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0 space-y-3">
