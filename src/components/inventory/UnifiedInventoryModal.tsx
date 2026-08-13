@@ -942,11 +942,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      if (!window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
-        return;
-      }
-    }
     onOpenChange(newOpen);
   };
 

@@ -165,12 +165,21 @@ export async function getChemicals(): Promise<Chemical[]> {
     }
 
     // Map database fields to component format
-    return (data || []).map(item => ({
-        id: item.id,
-        name: item.name,
-        brand: item.brand, // NEW: Map brand
-        bottleSize: item.bottle_size || '',
-        containerType: item.container_type,
+    return (data || []).map(item => {
+        let bs = item.bottle_size || '';
+        let ct = item.container_type || '';
+        if (bs.includes('|__CT__|')) {
+            const parts = bs.split('|__CT__|');
+            bs = parts[0];
+            ct = parts[1] || ct;
+        }
+
+        return {
+            id: item.id,
+            name: item.name,
+            brand: item.brand, // NEW: Map brand
+            bottleSize: bs,
+            containerType: ct,
         costPerBottle: item.cost_per_bottle || 0,
         threshold: item.threshold || 0,
         currentStock: item.current_stock || 0,
@@ -190,7 +199,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         shelf: item.shelf || '',
         section: item.section || '',
         category: item.category || ''
-    }));
+    };
+    });
 }
 
 export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false, skipLibrarySync: boolean = false): Promise<void> {
@@ -198,13 +208,17 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
+    let bsToSave = chemical.bottleSize;
+    if (chemical.containerType && chemical.containerType.trim()) {
+        bsToSave = `${chemical.bottleSize}|__CT__|${chemical.containerType.trim()}`;
+    }
+
     const dbData: any = {
         id: chemical.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
         user_id: session.user.id,
         name: chemical.name,
         brand: chemical.brand || null,
-        bottle_size: chemical.bottleSize,
-        container_type: chemical.containerType || null,
+        bottle_size: bsToSave,
         cost_per_bottle: chemical.costPerBottle,
         threshold: chemical.threshold,
         current_stock: chemical.currentStock,
@@ -242,9 +256,10 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
                 const errMsg = (currentErr.message || '').toLowerCase();
                 let dropped = false;
+                const isCTError = errMsg.includes('container_type') && 'container_type' in sanitized;
                 if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
                 else if (errMsg.includes('brand') && 'brand' in sanitized) { delete sanitized.brand; dropped = true; }
-                else if (errMsg.includes('container_type') && 'container_type' in sanitized) { delete sanitized.container_type; dropped = true; }
+                else if (isCTError) { delete sanitized.container_type; dropped = true; }
                 else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
@@ -276,14 +291,18 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             if (currentErr) throw currentErr;
             
             // Return correctly mapped object to keep UI consistent
+            const parts = (dbData.bottle_size || '').split('|__CT__|');
+            const recoveredBs = parts[0];
+            const recoveredCt = parts[1] || dbData.container_type;
+
             return {
                 id: dbData.id,
                 name: dbData.name,
                 brand: dbData.brand,
                 category: dbData.category,
                 formula: dbData.formula,
-                bottleSize: dbData.bottle_size,
-                containerType: dbData.container_type,
+                bottleSize: recoveredBs,
+                containerType: recoveredCt,
                 currentStock: dbData.current_stock,
                 threshold: dbData.threshold,
                 costPerBottle: dbData.cost_per_bottle,
