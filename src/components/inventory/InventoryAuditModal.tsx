@@ -371,8 +371,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       return totalFractional;
     } else {
       let totalOz = 0;
-      // Add gallons (128 oz)
-      totalOz += state.gallons.reduce((acc, j) => acc + (j.count * j.fillLevel * 128), 0);
+      let sizeInOz = 128; // Default to gallon
+      const sizeMatch = chem.bottleSize?.match(/(\d+)\s*oz/i);
+      if (sizeMatch) sizeInOz = parseInt(sizeMatch[1]);
+      else if (chem.bottleSize?.toLowerCase().includes('gallon') || chem.bottleSize?.toLowerCase().includes('gal')) sizeInOz = 128;
+      
+      // Add base containers
+      totalOz += state.gallons.reduce((acc, j) => acc + (j.count * j.fillLevel * sizeInOz), 0);
       
       // Add bottles if detailed mode
       if (state.detailedMode) {
@@ -383,12 +388,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           totalOz += chemOz;
         });
       }
-      
-      // Convert to units
-      let sizeInOz = 128; // Default to gallon
-      const sizeMatch = chem.bottleSize?.match(/(\d+)\s*oz/i);
-      if (sizeMatch) sizeInOz = parseInt(sizeMatch[1]);
-      else if (chem.bottleSize?.toLowerCase().includes('gallon') || chem.bottleSize?.toLowerCase().includes('gal')) sizeInOz = 128;
       
       return totalOz / sizeInOz;
     }
@@ -1461,7 +1460,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             </div>
 
                             <div className="space-y-2">
-                              <Label className="text-xs text-zinc-400 uppercase">Gallons on Hand</Label>
+                              <Label className="text-xs text-zinc-400 uppercase">
+                                {c.bottleSize?.toLowerCase().includes('gallon') ? 'Gallons on Hand' : 'Containers on Hand'}
+                              </Label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                 {FILL_LEVELS.map(f => renderJugTallyRow(f.value, s.gallons.find(j => j.fillLevel === f.value)?.count || 0, (delta) => updateChemJugCount(c.id, 'gallons', f.value, delta)))}
                               </div>
