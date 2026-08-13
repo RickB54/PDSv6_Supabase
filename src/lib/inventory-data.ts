@@ -56,6 +56,7 @@ export interface Chemical {
     name: string;
     brand?: string; 
     bottleSize: string;
+    containerType?: string;
     costPerBottle: number;
     threshold: number;
     currentStock: number;
@@ -169,6 +170,7 @@ export async function getChemicals(): Promise<Chemical[]> {
         name: item.name,
         brand: item.brand, // NEW: Map brand
         bottleSize: item.bottle_size || '',
+        containerType: item.container_type,
         costPerBottle: item.cost_per_bottle || 0,
         threshold: item.threshold || 0,
         currentStock: item.current_stock || 0,
@@ -202,6 +204,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         name: chemical.name,
         brand: chemical.brand || null,
         bottle_size: chemical.bottleSize,
+        container_type: chemical.containerType || null,
         cost_per_bottle: chemical.costPerBottle,
         threshold: chemical.threshold,
         current_stock: chemical.currentStock,
@@ -228,7 +231,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     
     if (error) {
         const msg = (error.message || '').toLowerCase();
-        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand');
+        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand') || msg.includes('container_type');
         
         if (isColumnError) {
             console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
@@ -241,6 +244,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 let dropped = false;
                 if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
                 else if (errMsg.includes('brand') && 'brand' in sanitized) { delete sanitized.brand; dropped = true; }
+                else if (errMsg.includes('container_type') && 'container_type' in sanitized) { delete sanitized.container_type; dropped = true; }
                 else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
@@ -254,6 +258,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 if (!dropped) {
                     delete sanitized.where_purchased;
                     delete sanitized.brand;
+                    delete sanitized.container_type;
                     delete sanitized.purchase_date;
                     delete sanitized.actual_price;
                     delete sanitized.sale_price;
@@ -278,6 +283,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
                 category: dbData.category,
                 formula: dbData.formula,
                 bottleSize: dbData.bottle_size,
+                containerType: dbData.container_type,
                 currentStock: dbData.current_stock,
                 threshold: dbData.threshold,
                 costPerBottle: dbData.cost_per_bottle,

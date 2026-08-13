@@ -116,7 +116,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   }, [modeProp, open]);
 
   const [chemicalSizes, setChemicalSizes] = useState<any[]>([
-    { bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }
+    { bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }
   ]);
   const [supplyPurchases, setSupplyPurchases] = useState<any[]>([
     { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "" }
@@ -250,6 +250,17 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       setIsFullscreenImage(false);
     }
   }, [open]);
+
+  const DEFAULT_CONTAINER_TYPES = ["Spray Bottle", "Squeeze Bottle", "Aerosol Spray Can", "Pump Sprayer – Hand (56 oz)", "Pump Sprayer – Medium (1 gal)", "Pump Sprayer – Large (2 gal)", "Gallon Jug", "Bottle"];
+  const [availableContainerTypes, setAvailableContainerTypes] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_container_types');
+    return saved ? JSON.parse(saved) : DEFAULT_CONTAINER_TYPES;
+  });
+  const updateContainerTypes = (newList: string[]) => {
+    setAvailableContainerTypes(newList);
+    localStorage.setItem('inventory_preferred_container_types', JSON.stringify(newList));
+  };
+  const [customContainerType, setCustomContainerType] = useState<Record<number, boolean>>({});
 
   const DEFAULT_SIZES = ["1 unit", "1 gallon", "14 oz", "16 oz", "24 oz", "32 oz", "64 oz", "128 oz", "256 oz"];
   const DEFAULT_UNITS = ["oz", "mL", "Gallons", "Quarts", "Pints"];
@@ -466,6 +477,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         setChemicalSizes(initial.map(c => ({
           id: c.id,
           bottleSize: c.bottleSize || "",
+          containerType: c.containerType || "",
           costPerBottle: String(c.costPerBottle || c.salePrice || ""),
           actualPrice: String(c.actualPrice || ""),
           currentStock: String(c.currentStock || "1"),
@@ -479,6 +491,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         setChemicalSizes([{
           id: firstItem.id,
           bottleSize: (firstItem as any).bottleSize || "",
+          containerType: (firstItem as any).containerType || "",
           costPerBottle: firstItem?.costPerBottle ? String(firstItem.costPerBottle) : ((firstItem as any).costPerBottle || (firstItem as any).salePrice || ""),
           actualPrice: (firstItem as any).actualPrice ? String((firstItem as any).actualPrice) : "",
           currentStock: firstItem?.currentStock ? String(firstItem.currentStock) : ((firstItem as any).currentStock || form.currentStock),
@@ -603,7 +616,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         shelf: "",
         section: "",
       });
-      setChemicalSizes([{ bottleSize: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
+      setChemicalSizes([{ bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
       setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
       setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
     }
@@ -760,6 +773,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             name: form.name.trim(),
             brand: form.brand?.trim() || undefined,
             bottleSize: size.bottleSize.trim(),
+            containerType: size.containerType?.trim() || undefined,
             costPerBottle: numeric(size.costPerBottle),
             currentStock: Math.round(numeric(size.currentStock)),
             threshold: Math.round(numeric(size.threshold)),
@@ -888,14 +902,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       if (onSaved) {
         console.log('[UnifiedInventoryModal] Notifying parent to refresh data...');
         await onSaved();
-      }
-
-      // Auto-open Card if we just linked one
-      if (mode === 'chemical' && form.chemicalLibraryId) {
-        // Small delay to ensure modal closes first
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('open-chemical-detail', { detail: form.chemicalLibraryId }));
-        }, 100);
       }
     } catch (err: any) {
       console.error("Save error:", err);
@@ -1563,18 +1569,79 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </button>
                       )}
                       
-                      <div className="col-span-2">
-                        <Label className="text-xs text-zinc-400">Bottle Size</Label>
-                        <Input
-                          value={size.bottleSize}
-                          onChange={(e) => {
-                            const newSizes = [...chemicalSizes];
-                            newSizes[index].bottleSize = e.target.value;
-                            setChemicalSizes(newSizes);
-                          }}
-                          className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                          placeholder="e.g., 32 oz"
-                        />
+                      <div className="col-span-2 grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Bottle Size</Label>
+                          <Input
+                            value={size.bottleSize}
+                            onChange={(e) => {
+                              const newSizes = [...chemicalSizes];
+                              newSizes[index].bottleSize = e.target.value;
+                              setChemicalSizes(newSizes);
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                            placeholder="e.g., 32 oz"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-zinc-400">Container Type</Label>
+                          {customContainerType[index] ? (
+                            <div className="flex gap-2">
+                              <Input
+                                value={size.containerType || ""}
+                                onChange={(e) => {
+                                  const newSizes = [...chemicalSizes];
+                                  newSizes[index].containerType = e.target.value;
+                                  setChemicalSizes(newSizes);
+                                }}
+                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm flex-1"
+                                placeholder="Custom container..."
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                                onClick={() => {
+                                  if (size.containerType && !availableContainerTypes.includes(size.containerType)) {
+                                    updateContainerTypes([...availableContainerTypes, size.containerType].sort());
+                                  }
+                                  setCustomContainerType(prev => ({ ...prev, [index]: false }));
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Select
+                              value={size.containerType || ""}
+                              onValueChange={(val) => {
+                                if (val === 'custom') {
+                                  setCustomContainerType(prev => ({ ...prev, [index]: true }));
+                                  const newSizes = [...chemicalSizes];
+                                  newSizes[index].containerType = "";
+                                  setChemicalSizes(newSizes);
+                                } else {
+                                  const newSizes = [...chemicalSizes];
+                                  newSizes[index].containerType = val;
+                                  setChemicalSizes(newSizes);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9 bg-zinc-900 border-zinc-700 text-white">
+                                <SelectValue placeholder="Select type..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-64">
+                                {availableContainerTypes.map(t => (
+                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                ))}
+                                <SelectItem value="custom" className="text-purple-400 font-bold border-t border-zinc-800 mt-1 pt-1">
+                                  + Custom Type...
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="col-span-2 grid grid-cols-2 gap-3">
@@ -1832,7 +1899,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-emerald-700 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 text-sm mt-2"
-                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", costPerBottle: "", currentStock: "1", threshold: "1", shelf: "", section: "" }])}
+                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", containerType: "", costPerBottle: "", currentStock: "1", threshold: "1", shelf: "", section: "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Bottle Size

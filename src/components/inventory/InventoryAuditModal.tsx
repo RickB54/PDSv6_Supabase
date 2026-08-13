@@ -516,11 +516,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         
         autoTable(doc, {
           startY: currentY,
-          head: [[groupName, 'DB Qty', 'Actual Count']],
+          head: [[groupName, 'Container Type', 'DB Qty', 'Actual Count']],
           body: groupItems.map(c => {
             const countedStr = isChemCounted(c.id, targetChemAudit) ? getChemTotalStock(c.id, c, targetChemAudit).toFixed(2) : '';
+            const containerType = (c as any).containerType || '';
             return [
               `${c.brand ? c.brand + ' / ' : ''}${c.name} (${c.bottleSize || 'N/A'})`,
+              containerType,
               c.currentStock,
               countedStr || (snapshot ? '0' : '')
             ]
@@ -530,8 +532,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           styles: { textColor: [0, 0, 0] },
           columnStyles: {
             0: { cellWidth: 'auto' },
-            1: { cellWidth: 30, halign: 'center' },
-            2: { cellWidth: 40 }
+            1: { cellWidth: 35 },
+            2: { cellWidth: 20, halign: 'center' },
+            3: { cellWidth: 30 }
           },
           margin: { top: 10 }
         });
@@ -1173,7 +1176,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <div>
                           <div className="font-bold text-zinc-200">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
                           <div className="text-xs text-zinc-500 flex items-center gap-2">
-                            <span>DB: {c.currentStock} {c.bottleSize}</span>
+                            <span>DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
                             {(c.shelf || c.section) && (
                               <>
                                 <span className="w-1 h-1 bg-zinc-700 rounded-full" />
@@ -1620,7 +1623,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <td className="p-2 border border-black text-center"><div className="w-4 h-4 border border-black mx-auto"></div></td>
                       <td className="p-2 border border-black">
                         <div className="font-bold">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
-                        <div className="text-xs text-gray-600">{c.bottleSize}</div>
+                        <div className="text-xs text-gray-600">{c.bottleSize} {(c as any).containerType ? ` - ${(c as any).containerType}` : ''}</div>
                       </td>
                       <td className="p-2 border border-black text-center font-bold text-lg">{c.currentStock}</td>
                       <td className="p-2 border border-black"></td>
