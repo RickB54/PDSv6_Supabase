@@ -436,13 +436,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const groupedNonChemicals = useMemo(() => {
     const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
     const groups: Record<string, any[]> = {};
+    const primarySort = sortBy[0] || 'location';
+    
     items.forEach(item => {
-      const loc = (item as any).location || 'Unassigned';
+      let loc = (item as any).location || 'Unassigned';
+      if (primarySort === 'name' || primarySort === 'updated_at') loc = 'All Items';
+      else if (primarySort === 'category') loc = (item as any).category || 'Unassigned';
+      
       if (!groups[loc]) groups[loc] = [];
       groups[loc].push(item);
     });
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [activeTab, filteredSupplies, filteredEquip]);
+    
+    const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    
+    sortedGroups.forEach(([_, groupItems]) => {
+      groupItems.sort((a, b) => {
+        if (primarySort === 'name') return (a.name || '').localeCompare(b.name || '');
+        if (primarySort === 'updated_at') {
+           const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+           const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+           return dateB - dateA;
+        }
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    });
+
+    return sortedGroups;
+  }, [activeTab, filteredSupplies, filteredEquip, sortBy]);
 
   const numCountedChems = filteredChemicals.filter(c => isChemCounted(c.id)).length;
   const numCountedSupplies = filteredSupplies.filter(s => supplyAudit[s.id]?.isCounted).length;
@@ -860,7 +880,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         ) : (
           <div className="flex-1 flex flex-col min-h-0">
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0">
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
+              <Tabs value={activeTab} onValueChange={(v) => {
+                setActiveTab(v as TabType);
+                if (v === 'chemicals') {
+                  setSortBy(['shelfLocation', 'brand']);
+                } else {
+                  setSortBy(['location']);
+                }
+              }} className="w-full">
                 <TabsList className="w-full grid grid-cols-3 bg-zinc-950 border border-purple-500/20">
                   <TabsTrigger value="chemicals" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-300">Chemicals</TabsTrigger>
                   <TabsTrigger value="supplies" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300">Supplies</TabsTrigger>
@@ -947,22 +974,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               Reset
                             </Button>
                           </div>
-                          
-                          {activeTab === 'chemicals' && (
-                            <div className="space-y-2">
-                              <Label className="text-xs text-zinc-500 uppercase">Sort Order</Label>
-                              <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
-                                <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="shelfLocation,brand">Shelf → Brand</SelectItem>
-                                  <SelectItem value="brand,name">Brand → Name</SelectItem>
-                                  <SelectItem value="tags,name">Group/Tag → Name</SelectItem>
-                                  <SelectItem value="bottleSize,name">Size → Name</SelectItem>
-                                  <SelectItem value="name">Name Only</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
 
                           <div className="space-y-2 max-h-[40vh] overflow-auto pr-2">
                             {activeTab === 'chemicals' ? (
@@ -1090,9 +1101,41 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     </AlertDialogContent>
                   </AlertDialog>
 
-                  <Button variant="outline" size="sm" className="h-9 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40" onClick={() => handleExportPDF()} title="Save PDF">
-                    <Download className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Save PDF</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Select value={sortBy.join(',')} onValueChange={(v) => setSortBy(v.split(','))}>
+                      <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-xs w-[130px]">
+                        <SelectValue placeholder="Sort..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeTab === 'chemicals' ? (
+                          <>
+                            <SelectItem value="shelfLocation,brand">Shelf / Brand</SelectItem>
+                            <SelectItem value="brand,name">Brand / Name</SelectItem>
+                            <SelectItem value="tags,name">Group / Name</SelectItem>
+                            <SelectItem value="bottleSize,name">Size / Name</SelectItem>
+                            <SelectItem value="name">A-Z Name Only</SelectItem>
+                          </>
+                        ) : activeTab === 'supplies' ? (
+                          <>
+                            <SelectItem value="location">By Location</SelectItem>
+                            <SelectItem value="name">A-Z Name Only</SelectItem>
+                            <SelectItem value="category">Category</SelectItem>
+                            <SelectItem value="updated_at">Last Updated</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="location">By Location</SelectItem>
+                            <SelectItem value="name">A-Z Name Only</SelectItem>
+                            <SelectItem value="updated_at">Last Updated</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    <Button variant="outline" size="sm" className="h-9 w-9 px-0 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40 shrink-0" onClick={() => handleExportPDF()} title="Save PDF">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               

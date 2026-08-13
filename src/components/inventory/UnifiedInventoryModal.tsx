@@ -511,7 +511,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             threshold: String(m.threshold || m.lowThreshold || "1"),
             purchaseDate: m.purchaseDate || m.purchase_date || "",
             wherePurchased: m.wherePurchased || m.where_purchased || "",
-            location: m.location || ""
+            location: m.location || "",
+            containerLocation: m.containerLocation || m.container_location || ""
           })));
         } else {
           setSupplyPurchases([{
@@ -522,7 +523,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
             purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
             wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
-            location: (firstItem as any).location || ""
+            location: (firstItem as any).location || "",
+            containerLocation: (firstItem as any).containerLocation || (firstItem as any).container_location || ""
           }]);
         }
       } else if (modeProp === 'equipment' || modeProp === 'tool') {
@@ -534,7 +536,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
           purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
           wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
-          location: (firstItem as any).location || ""
+          location: (firstItem as any).location || "",
+          containerLocation: (firstItem as any).containerLocation || (firstItem as any).container_location || ""
         }]);
       }
 
@@ -617,8 +620,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         section: "",
       });
       setChemicalSizes([{ bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
-      setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
-      setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }]);
+      setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }]);
+      setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }]);
     }
   }, [initial, open, modeProp]); // Use modeProp for initial load stabilization
 
