@@ -119,6 +119,18 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [activeTab, setActiveTab] = useState<TabType>('chemicals');
   const [search, setSearch] = useState('');
   const [hideCounted, setHideCounted] = useState(false);
+  const [globalDetailedMode, setGlobalDetailedMode] = useState(false);
+  
+  const handleGlobalDetailedModeToggle = (checked: boolean) => {
+    setGlobalDetailedMode(checked);
+    setChemAudit(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(id => {
+        next[id] = { ...next[id], detailedMode: checked };
+      });
+      return next;
+    });
+  };
   const [reviewMode, setReviewMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -233,7 +245,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return {
       isConcentrate: true, // safe default for fallback
       usedAsIsJugs: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
-      detailedMode: false,
+      detailedMode: globalDetailedMode,
       gallons: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
       bottles: []
     };
@@ -268,7 +280,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         initialChem[c.id] = {
           isConcentrate: c.isConcentrate !== false,
           usedAsIsJugs: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
-          detailedMode: false,
+          detailedMode: globalDetailedMode,
           gallons: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
           bottles: []
         };
@@ -860,6 +872,28 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     {activeTab === 'equipment' && `${numCountedEquip} of ${filteredEquip.length} counted`}
                   </div>
                   <div className="flex items-center gap-4">
+                    {activeTab === 'chemicals' && (
+                      <div className="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-md border border-zinc-800">
+                        <Label htmlFor="global-mode" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider cursor-pointer select-none">Quick</Label>
+                        <Switch 
+                          id="global-mode" 
+                          checked={globalDetailedMode} 
+                          onCheckedChange={handleGlobalDetailedModeToggle} 
+                          className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600 scale-75 origin-center" 
+                        />
+                        <Label htmlFor="global-mode" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none">
+                          Detailed
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Info className="h-3 w-3 text-zinc-500 hover:text-zinc-300 transition-colors" />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 text-xs bg-zinc-900 border-zinc-700 text-zinc-300 p-2 z-[9999]" sideOffset={5}>
+                              Sets the default counting mode for all chemicals. You can still manually override this per-card without affecting others.
+                            </PopoverContent>
+                          </Popover>
+                        </Label>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
                       <Switch id="hide-counted" checked={hideCounted} onCheckedChange={setHideCounted} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                       <Label htmlFor="hide-counted" className="text-xs text-zinc-400">Hide Counted</Label>
@@ -872,7 +906,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <div className="relative flex-1 sm:w-64">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
-                    <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
+                    <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 pr-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
+                    {search && (
+                      <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-white transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                   <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                     <PopoverTrigger asChild>
