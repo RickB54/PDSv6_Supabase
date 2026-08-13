@@ -984,16 +984,21 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               <>
                                 <Label className="text-xs text-zinc-500 uppercase block mb-1">Location</Label>
                                 <div className="flex flex-wrap gap-1">
-                                  {allLocations.map(loc => (
-                                    <Badge 
-                                      key={loc} 
-                                      variant="outline" 
-                                      className={`cursor-pointer ${filterLocations.includes(loc) ? 'bg-blue-500/20 text-blue-300 border-blue-500/50' : 'text-zinc-400 border-zinc-700'}`}
-                                      onClick={() => setFilterLocations(prev => prev.includes(loc) ? prev.filter(x => x !== loc) : [...prev, loc])}
-                                    >
-                                      {loc}
-                                    </Badge>
-                                  ))}
+                                  {allLocations.map(loc => {
+                                    const items = activeTab === 'supplies' ? supplies : equipment;
+                                    const count = items.filter((item: any) => item.location === loc).length;
+                                    if (count === 0) return null;
+                                    return (
+                                      <Badge 
+                                        key={loc} 
+                                        variant="outline" 
+                                        className={`cursor-pointer ${filterLocations.includes(loc) ? (activeTab === 'supplies' ? 'bg-blue-500/20 text-blue-300 border-blue-500/50' : 'bg-amber-500/20 text-amber-300 border-amber-500/50') : 'text-zinc-400 border-zinc-700'}`}
+                                        onClick={() => setFilterLocations(prev => prev.includes(loc) ? prev.filter(x => x !== loc) : [...prev, loc])}
+                                      >
+                                        {loc} ({count})
+                                      </Badge>
+                                    );
+                                  })}
                                 </div>
                               </>
                             )}
@@ -1308,11 +1313,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               <div className="font-bold text-zinc-200 truncate">{item.name}</div>
                               <div className="text-xs text-zinc-500 flex items-center gap-2">
                                 <span>DB Qty: {item.quantity || 1}</span>
-                                {(item as any).location && (
+                                {((item as any).location || (item as any).containerLocation) && (
                                   <>
-                                    <span className="w-1 h-1 bg-zinc-700 rounded-full" />
-                                    <span className="text-blue-400/80">
-                                      {(item as any).location}
+                                    <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
+                                    <span className={`truncate ${activeTab === 'supplies' ? 'text-blue-400/80' : 'text-amber-400/80'}`}>
+                                      {(item as any).location || 'No Location'} / {(item as any).containerLocation || 'No Container'}
                                     </span>
                                   </>
                                 )}
