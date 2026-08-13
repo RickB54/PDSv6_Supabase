@@ -289,6 +289,18 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
   };
 
+  const setNonGallonAmount = (id: string, fillLevel: number) => {
+    setChemAudit(prev => {
+      const state = getChemState(id, prev);
+      const type = state.isConcentrate ? 'gallons' : 'usedAsIsJugs';
+      const arr = state[type].map(j => {
+        if (fillLevel > 0 && j.fillLevel === fillLevel) return { ...j, count: 1 };
+        return { ...j, count: 0 };
+      });
+      return { ...prev, [id]: { ...state, [type]: arr } };
+    });
+  };
+
   const resetCategoryAudit = () => {
     if (activeTab === 'chemicals') {
       const initialChem: Record<string, ChemicalAuditState> = {};
@@ -1328,44 +1340,64 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       </div>
                       <div className="flex items-center justify-between lg:justify-end gap-2 md:gap-4 shrink-0 w-full lg:w-auto">
                         <div className="flex items-center gap-2 shrink-0 print:hidden" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-r-none" 
-                              onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, -1)}
-                              disabled={(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count === 0}
-                              title="-1 Full Gallon"
+                          {c.bottleSize?.toLowerCase().includes('gallon') ? (
+                            <>
+                              <div className="flex items-center">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-r-none" 
+                                  onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, -1)}
+                                  disabled={(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count === 0}
+                                  title="-1 Full Gallon"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <div className="h-8 px-3 flex items-center justify-center bg-zinc-950 border-y border-purple-500/30 text-sm font-bold text-white min-w-[2.5rem]" title="Full Gallons Count">
+                                  {(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count || 0}
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-l-none bg-purple-500/10 hover:bg-purple-500 hover:text-white" 
+                                  onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, 1)}
+                                  title="+1 Full Gallon"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <Select 
+                                value={String((s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel < 1 && j.count > 0)?.fillLevel || 0)}
+                                onValueChange={(v) => setQuickPartialGallon(c.id, parseFloat(v))}
+                              >
+                                <SelectTrigger className="h-8 w-24 text-xs border-purple-500/30 bg-zinc-950 text-white">
+                                  <SelectValue placeholder="Partial" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                                  <SelectItem value="0">No Partial</SelectItem>
+                                  <SelectItem value="0.75">3/4 Gal</SelectItem>
+                                  <SelectItem value="0.5">1/2 Gal</SelectItem>
+                                  <SelectItem value="0.25">1/4 Gal</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </>
+                          ) : (
+                            <Select 
+                              value={String((s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.count > 0)?.fillLevel || 0)}
+                              onValueChange={(v) => setNonGallonAmount(c.id, parseFloat(v))}
                             >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <div className="h-8 px-3 flex items-center justify-center bg-zinc-950 border-y border-purple-500/30 text-sm font-bold text-white min-w-[2.5rem]" title="Full Gallons Count">
-                              {(s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel === 1)?.count || 0}
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 border-purple-500/30 text-purple-400 rounded-l-none bg-purple-500/10 hover:bg-purple-500 hover:text-white" 
-                              onClick={() => updateChemJugCount(c.id, s.isConcentrate ? 'gallons' : 'usedAsIsJugs', 1, 1)}
-                              title="+1 Full Gallon"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <Select 
-                            value={String((s.isConcentrate ? s.gallons : s.usedAsIsJugs).find(j => j.fillLevel < 1 && j.count > 0)?.fillLevel || 0)}
-                            onValueChange={(v) => setQuickPartialGallon(c.id, parseFloat(v))}
-                          >
-                            <SelectTrigger className="h-8 w-24 text-xs border-purple-500/30 bg-zinc-950 text-white">
-                              <SelectValue placeholder="Partial" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
-                              <SelectItem value="0">No Partial</SelectItem>
-                              <SelectItem value="0.75">3/4 Gal</SelectItem>
-                              <SelectItem value="0.5">1/2 Gal</SelectItem>
-                              <SelectItem value="0.25">1/4 Gal</SelectItem>
-                            </SelectContent>
-                          </Select>
+                              <SelectTrigger className="h-8 w-32 text-xs border-purple-500/30 bg-zinc-950 text-white">
+                                <SelectValue placeholder="Select Amount" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                                <SelectItem value="0">Empty (0)</SelectItem>
+                                <SelectItem value="0.25">1/4 {c.bottleSize || 'Bottle'}</SelectItem>
+                                <SelectItem value="0.5">1/2 {c.bottleSize || 'Bottle'}</SelectItem>
+                                <SelectItem value="0.75">3/4 {c.bottleSize || 'Bottle'}</SelectItem>
+                                <SelectItem value="1">Full (1)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 md:gap-4 shrink-0">
                           <div className={`text-sm font-bold min-w-[4.5rem] text-right ${isCounted ? 'text-emerald-400' : 'invisible'}`}>
