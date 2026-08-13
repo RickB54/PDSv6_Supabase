@@ -1310,13 +1310,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
                         <div className="min-w-0">
-                          <div className="font-bold text-zinc-200 truncate">{c.brand ? `${c.brand} / ` : ''}{c.name}</div>
-                          <div className="text-xs text-zinc-500 flex items-center gap-2 truncate">
-                            <span className="truncate">DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
+                          <div className="font-bold text-zinc-200 leading-tight">
+                            {c.brand ? `${c.brand === 'Superior Products' ? 'SP' : c.brand} / ` : ''}{c.name}
+                          </div>
+                          <div className="text-xs text-zinc-500 flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                            <span>DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
                             {(c.shelf || c.section) && (
                               <>
                                 <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
-                                <span className="text-purple-400/80 truncate">
+                                <span className="text-purple-400/80 break-words">
                                   {c.shelf || 'No Shelf'} / {c.section || 'No Section'}
                                 </span>
                               </>
