@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +41,7 @@ interface AuditSnapshot {
   equipAudit: Record<string, SupplyEquipAuditState>;
   activeTab: TabType;
   totalCounted: number;
+  archived?: boolean;
 }
 
 // Legacy fallback for offline/cache if needed
@@ -134,12 +135,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [reviewMode, setReviewMode] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'in-progress' | 'completed'>('all');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'in-progress' | 'completed' | 'archived'>('all');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
   
   const [historySnapshots, setHistorySnapshots] = useState<AuditSnapshot[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [cancelWarningOpen, setCancelWarningOpen] = useState(false);
+  const [viewingSnapshot, setViewingSnapshot] = useState<AuditSnapshot | null>(null);
+  const [historyDeleteId, setHistoryDeleteId] = useState<string | null>(null);
   
   const handleCloseAttempt = () => {
     const hasChemChanges = Object.keys(chemAudit).some(id => {
@@ -768,6 +771,24 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     }
   };
 
+  const toggleArchiveSnapshot = (id: string) => {
+    setHistorySnapshots(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, archived: !s.archived } : s);
+      saveLocalHistory(updated);
+      return updated;
+    });
+  };
+
+  const confirmDeleteSnapshot = (id: string) => {
+    setHistoryDeleteId(id);
+  };
+
+  const executeDeleteSnapshot = () => {
+    if (!historyDeleteId) return;
+    handleDeleteSnapshot(historyDeleteId);
+    setHistoryDeleteId(null);
+  };
+
   const renderJugTallyRow = (fillLevel: number, count: number, onDelta: (delta: number) => void) => (
     <div key={fillLevel} className="flex items-center justify-between p-2 bg-zinc-950/50 rounded border border-zinc-800">
       <div className="text-sm font-medium w-16">{FILL_LEVELS.find(f => f.value === fillLevel)?.label}</div>
@@ -844,26 +865,38 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               variant="outline"
               size="sm"
               className={`h-8 text-xs flex items-center gap-1.5 border-zinc-700 ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
-              onClick={() => { setShowHistory(h => !h); setReviewMode(false); }}
+              onClick={() => { 
+                if (viewingSnapshot) {
+                  setViewingSnapshot(null);
+                } else {
+                  setShowHistory(h => !h); 
+                  setReviewMode(false); 
+                }
+              }}
             >
               <History className="h-3.5 w-3.5" />
-              {showHistory ? 'Back to Audit' : 'History'}
+              {showHistory && !viewingSnapshot ? 'Back to Audit' : viewingSnapshot ? 'Back to History' : 'History'}
             </Button>
           </div>
         </DialogHeader>
 
-        {reviewMode ? (
+        {reviewMode || viewingSnapshot ? (
           <div className="flex-1 overflow-auto p-4 space-y-6">
-            {['Chemicals', 'Supplies', 'Equipment'].map(category => {
-              const items = category === 'Chemicals' ? chemicals : category === 'Supplies' ? supplies : equipment;
-              const hasChanges = items.some(item => {
-                if (category === 'Chemicals') return isChemCounted(item.id);
-                if (category === 'Supplies') return supplyAudit[item.id]?.isCounted;
-                if (category === 'Equipment') return equipAudit[item.id]?.isCounted;
-                return false;
-              });
+            {(() => {
+              const targetChemAudit = viewingSnapshot ? viewingSnapshot.chemAudit : chemAudit;
+              const targetSupplyAudit = viewingSnapshot ? viewingSnapshot.supplyAudit : supplyAudit;
+              const targetEquipAudit = viewingSnapshot ? viewingSnapshot.equipAudit : equipAudit;
+              
+              return ['Chemicals', 'Supplies', 'Equipment'].map(category => {
+                const items = category === 'Chemicals' ? chemicals : category === 'Supplies' ? supplies : equipment;
+                const hasChanges = items.some(item => {
+                  if (category === 'Chemicals') return isChemCounted(item.id, targetChemAudit);
+                  if (category === 'Supplies') return targetSupplyAudit[item.id]?.isCounted;
+                  if (category === 'Equipment') return targetEquipAudit[item.id]?.isCounted;
+                  return false;
+                });
 
-              if (!hasChanges) return null;
+                if (!hasChanges) return null;
 
               return (
                 <div key={category} className="space-y-3">
@@ -875,20 +908,20 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       let counted = false;
 
                       if (category === 'Chemicals') {
-                        counted = isChemCounted(item.id);
+                        counted = isChemCounted(item.id, targetChemAudit);
                         if (!counted) return null;
                         dbQty = (item as Chemical).currentStock || 0;
-                        newQty = getChemTotalStock(item.id, item as Chemical);
+                        newQty = getChemTotalStock(item.id, item as Chemical, targetChemAudit);
                       } else if (category === 'Supplies') {
-                        counted = !!supplyAudit[item.id]?.isCounted;
+                        counted = !!targetSupplyAudit[item.id]?.isCounted;
                         if (!counted) return null;
                         dbQty = (item as Material).quantity || 0;
-                        newQty = supplyAudit[item.id].counted;
+                        newQty = targetSupplyAudit[item.id].counted;
                       } else {
-                        counted = !!equipAudit[item.id]?.isCounted;
+                        counted = !!targetEquipAudit[item.id]?.isCounted;
                         if (!counted) return null;
                         dbQty = (item as Equipment).quantity || 1;
-                        newQty = equipAudit[item.id].counted;
+                        newQty = targetEquipAudit[item.id].counted;
                       }
 
 
@@ -913,7 +946,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </div>
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
         ) : !showHistory ? (
           <div className="flex-1 flex flex-col min-h-0">
@@ -1521,13 +1555,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         ) : null}
 
         {/* HISTORY VIEW */}
-        {showHistory && !reviewMode && (
+        {showHistory && !reviewMode && !viewingSnapshot && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Filters */}
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-zinc-500 uppercase">Filter:</span>
-                {(['all', 'in-progress', 'completed'] as const).map(f => (
+                {(['all', 'in-progress', 'completed', 'archived'] as const).map(f => (
                   <button
                     key={f}
                     onClick={() => setHistoryFilter(f)}
@@ -1539,7 +1573,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700'
                     }`}
                   >
-                    {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : 'Completed'}
+                    {f === 'all' ? 'All' : f === 'in-progress' ? 'In Progress' : f === 'completed' ? 'Completed' : 'Archived'}
                   </button>
                 ))}
                 <div className="flex items-center ml-auto">
@@ -1563,7 +1597,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             <div className="flex-1 overflow-auto p-4 space-y-3">
               {(() => {
                 let entries = historySnapshots;
-                if (historyFilter !== 'all') entries = entries.filter(e => e.status === historyFilter);
+                if (historyFilter === 'archived') {
+                  entries = entries.filter(e => e.archived);
+                } else {
+                  entries = entries.filter(e => !e.archived);
+                  if (historyFilter !== 'all') entries = entries.filter(e => e.status === historyFilter);
+                }
                 if (historyDateFilter) entries = entries.filter(e => e.timestamp.startsWith(historyDateFilter));
 
                 if (entries.length === 0) {
@@ -1606,6 +1645,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
+                          onClick={() => setViewingSnapshot(entry)}
+                          title="View Data"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
                           onClick={() => handleExportPDF(entry)}
                           title="Save PDF"
                         >
@@ -1623,8 +1671,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <Button
                           size="sm"
                           variant="ghost"
+                          className={`h-8 w-8 p-0 ${entry.archived ? 'text-amber-400 hover:text-amber-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+                          onClick={() => toggleArchiveSnapshot(entry.id)}
+                          title={entry.archived ? "Unarchive" : "Archive"}
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           className="h-8 w-8 p-0 text-zinc-600 hover:text-red-400"
-                          onClick={() => handleDeleteSnapshot(entry.id)}
+                          onClick={() => confirmDeleteSnapshot(entry.id)}
                           title="Delete this record"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1765,6 +1822,29 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               }}
             >
               Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!historyDeleteId} onOpenChange={(val) => { if (!val) setHistoryDeleteId(null); }}>
+        <AlertDialogContent className="bg-zinc-950 border-purple-500/30 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Delete History Record?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to permanently delete this audit snapshot? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 text-white hover:bg-red-700 font-bold" 
+              onClick={executeDeleteSnapshot}
+            >
+              Delete Record
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
