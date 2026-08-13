@@ -913,14 +913,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         />
                         <Label htmlFor="global-mode" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1 cursor-pointer select-none">
                           Detailed
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Info className="h-3 w-3 text-zinc-500 hover:text-zinc-300 transition-colors" />
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 text-xs bg-zinc-900 border-zinc-700 text-zinc-300 p-2 z-[9999]" sideOffset={5}>
-                              Sets the default counting mode for all chemicals. You can still manually override this per-card without affecting others.
-                            </PopoverContent>
-                          </Popover>
                         </Label>
                       </div>
                     )}
@@ -928,8 +920,23 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <Switch id="hide-counted" checked={hideCounted} onCheckedChange={setHideCounted} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                       <Label htmlFor="hide-counted" className="text-xs text-zinc-400">Hide Counted</Label>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 px-2" onClick={() => setExpandedItems({})}>
-                      Collapse All
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 px-2" 
+                      onClick={() => {
+                        if (Object.values(expandedItems).some(Boolean)) {
+                          setExpandedItems({});
+                        } else {
+                          const allExpanded: Record<string, boolean> = {};
+                          if (activeTab === 'chemicals') filteredChemicals.forEach(c => allExpanded[c.id] = true);
+                          else if (activeTab === 'supplies') filteredSupplies.forEach(s => allExpanded[s.id] = true);
+                          else filteredEquip.forEach(e => allExpanded[e.id] = true);
+                          setExpandedItems(allExpanded);
+                        }
+                      }}
+                    >
+                      {Object.values(expandedItems).some(Boolean) ? 'Collapse All' : 'Expand All'}
                     </Button>
                   </div>
                 </div>
@@ -1286,16 +1293,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                 <span className={!s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Quick (Gallons)</span>
                                 <Switch checked={s.detailedMode} onCheckedChange={() => toggleChemMode(c.id, 'detailedMode')} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                                 <span className={s.detailedMode ? 'text-white font-bold' : 'text-zinc-500'}>Detailed (w/ Bottles)</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="cursor-help inline-flex"><Info className="h-4 w-4 text-zinc-500 ml-2" /></span>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 max-w-xs text-center">
-                                      <p>Quick ignores spray bottles (fast reserve check). Detailed adds individual spray bottles converted back to concentrate oz.</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
                               </div>
                             </div>
 
