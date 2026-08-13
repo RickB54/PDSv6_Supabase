@@ -94,6 +94,7 @@ export interface Material {
     actualPrice?: number;
     salePrice?: number;
     location?: string;
+    containerLocation?: string;
 }
 
 export interface Tool {
@@ -114,6 +115,7 @@ export interface Tool {
     actualPrice?: number;
     salePrice?: number;
     location?: string;
+    containerLocation?: string;
 }
 
 export interface SetupMedia {
@@ -573,7 +575,8 @@ export async function getMaterials(): Promise<Material[]> {
         purchaseDate: item.purchase_date,
         actualPrice: item.actual_price,
         salePrice: item.sale_price,
-        location: item.location
+        location: item.location,
+        containerLocation: item.container_location
     }));
 }
 
@@ -607,6 +610,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         actual_price: material.actualPrice || null,
         sale_price: material.salePrice || null,
         location: material.location || null,
+        container_location: material.containerLocation || null,
         updated_at: new Date().toISOString()
     };
 
@@ -634,6 +638,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
                 else if (errMsg.includes('location') && 'location' in sanitized) { delete sanitized.location; dropped = true; }
+                else if (errMsg.includes('container_location') && 'container_location' in sanitized) { delete sanitized.container_location; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitized.where_purchased;
@@ -641,6 +646,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
                     delete sanitized.actual_price;
                     delete sanitized.sale_price;
                     delete sanitized.location;
+                    delete sanitized.container_location;
                 }
                 const { error: retryErr } = await supabase.from('materials').upsert(sanitized);
                 currentErr = retryErr;
@@ -756,7 +762,8 @@ export async function getTools(): Promise<Tool[]> {
         createdAt: item.created_at,
         updatedAt: item.updated_at,
         wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
-        location: item.location
+        location: item.location,
+        containerLocation: item.container_location
     }));
 }
 
@@ -782,6 +789,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         actual_price: tool.actualPrice || null,
         sale_price: tool.salePrice || null,
         location: tool.location || null,
+        container_location: tool.containerLocation || null,
         updated_at: new Date().toISOString()
     };
 
@@ -809,6 +817,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                 else if (errMsg.includes('actual_price') && 'actual_price' in sanitizedData) { delete sanitizedData.actual_price; dropped = true; }
                 else if (errMsg.includes('sale_price') && 'sale_price' in sanitizedData) { delete sanitizedData.sale_price; dropped = true; }
                 else if (errMsg.includes('location') && 'location' in sanitizedData) { delete sanitizedData.location; dropped = true; }
+                else if (errMsg.includes('container_location') && 'container_location' in sanitizedData) { delete sanitizedData.container_location; dropped = true; }
                 
                 if (!dropped) {
                     delete sanitizedData.quantity;
@@ -819,6 +828,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
                     delete sanitizedData.actual_price;
                     delete sanitizedData.sale_price;
                     delete sanitizedData.location;
+                    delete sanitizedData.container_location;
                 }
                 const { error: retryErr } = await supabase.from('tools').upsert(sanitizedData);
                 currentErr = retryErr;

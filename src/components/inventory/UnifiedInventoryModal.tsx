@@ -127,6 +127,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [customLocationSupply, setCustomLocationSupply] = useState<Record<number, boolean>>({});
   const [customLocationEquip, setCustomLocationEquip] = useState<Record<number, boolean>>({});
+  const [customContainerLocationEquip, setCustomContainerLocationEquip] = useState<Record<number, boolean>>({});
+  const [customContainerLocationSupply, setCustomContainerLocationSupply] = useState<Record<number, boolean>>({});
 
   const [form, setForm] = useState<ChemicalForm & SupplyForm & EquipmentForm>({
     id: undefined,
@@ -262,6 +264,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
   const DEFAULT_SECTIONS = ["Left Side", "Middle", "Right Side"];
   const DEFAULT_LOCATIONS = ["Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet", "Detail Cart"];
+  const DEFAULT_CONTAINER_LOCATIONS: string[] = [];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -301,6 +304,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availableLocations, setAvailableLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_locations');
     return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
+  });
+
+  const [availableContainerLocations, setAvailableContainerLocations] = useState<string[]>(() => {
+    const saved = localStorage.getItem('inventory_preferred_container_locations');
+    return saved ? JSON.parse(saved) : DEFAULT_CONTAINER_LOCATIONS;
   });
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
@@ -370,6 +378,23 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error("Failed to sync location deletion", err);
+    }
+  };
+
+  const updateContainerLocations = (newList: string[]) => {
+    setAvailableContainerLocations(newList);
+    localStorage.setItem('inventory_preferred_container_locations', JSON.stringify(newList));
+  };
+
+  const handleDeleteContainerLocation = async (e: React.MouseEvent, loc: string) => {
+    e.stopPropagation();
+    const newLocs = availableContainerLocations.filter(l => l !== loc);
+    updateContainerLocations(newLocs);
+    
+    if (mode === 'supply') {
+      setSupplyPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
+    } else if (mode === 'equipment' || mode === 'tool') {
+      setEquipmentPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
     }
   };
 
@@ -1934,12 +1959,104 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Container Location</Label>
-                          <Input
-                            value={form.location || ""}
-                            onChange={(e) => setForm({ ...form, location: e.target.value })}
-                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                            placeholder="e.g. Interior Carry Bag"
-                          />
+                          {!customContainerLocationEquip[index] ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                                >
+                                  <span className="truncate">{purchase.containerLocation || "Select container..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...equipmentPurchases]; newP[index].containerLocation = ""; setEquipmentPurchases(newP); }}>None</span>
+                                    {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  </div>
+                                  {availableContainerLocations.map(loc => (
+                                    <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newP = [...equipmentPurchases];
+                                          newP[index].containerLocation = loc;
+                                          setEquipmentPurchases(newP);
+                                        }}
+                                      >
+                                        {loc}
+                                      </span>
+                                      {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          handleDeleteContainerLocation(e, loc);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                        title="Remove preset"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: true });
+                                      const newP = [...equipmentPurchases];
+                                      newP[index].containerLocation = "";
+                                      setEquipmentPurchases(newP);
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add Custom Container
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                value={purchase.containerLocation || ""}
+                                autoFocus
+                                onChange={(e) => {
+                                  const newP = [...equipmentPurchases];
+                                  newP[index].containerLocation = e.target.value;
+                                  setEquipmentPurchases(newP);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
+                                      updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
+                                    }
+                                    setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: false });
+                                  }
+                                }}
+                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                                placeholder="e.g. Interior Carry Bag"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
+                                    updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
+                                  }
+                                  setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: false });
+                                }}
+                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                                title="Save and Return"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>
@@ -2122,7 +2239,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-purple-700 text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 text-sm mt-2"
-                    onClick={() => setEquipmentPurchases([...equipmentPurchases, { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }])}
+                    onClick={() => setEquipmentPurchases([...equipmentPurchases, { quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Purchase
@@ -2249,12 +2366,104 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Container Location</Label>
-                          <Input
-                            value={form.location || ""}
-                            onChange={(e) => setForm({ ...form, location: e.target.value })}
-                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                            placeholder="e.g. Interior Carry Bag"
-                          />
+                          {!customContainerLocationSupply[index] ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                                >
+                                  <span className="truncate">{purchase.containerLocation || "Select container..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...supplyPurchases]; newP[index].containerLocation = ""; setSupplyPurchases(newP); }}>None</span>
+                                    {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  </div>
+                                  {availableContainerLocations.map(loc => (
+                                    <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newP = [...supplyPurchases];
+                                          newP[index].containerLocation = loc;
+                                          setSupplyPurchases(newP);
+                                        }}
+                                      >
+                                        {loc}
+                                      </span>
+                                      {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          handleDeleteContainerLocation(e, loc);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                        title="Remove preset"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: true });
+                                      const newP = [...supplyPurchases];
+                                      newP[index].containerLocation = "";
+                                      setSupplyPurchases(newP);
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add Custom Container
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                value={purchase.containerLocation || ""}
+                                autoFocus
+                                onChange={(e) => {
+                                  const newP = [...supplyPurchases];
+                                  newP[index].containerLocation = e.target.value;
+                                  setSupplyPurchases(newP);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
+                                      updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
+                                    }
+                                    setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: false });
+                                  }
+                                }}
+                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                                placeholder="e.g. Interior Carry Bag"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
+                                    updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
+                                  }
+                                  setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: false });
+                                }}
+                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                                title="Save and Return"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Quantity</Label>
@@ -2437,7 +2646,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-blue-700 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-sm mt-2"
-                    onClick={() => setSupplyPurchases([...supplyPurchases, { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "" }])}
+                    onClick={() => setSupplyPurchases([...supplyPurchases, { quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Purchase

@@ -25,7 +25,7 @@ interface InventoryAuditModalProps {
   supplies: Material[];
   equipment: Equipment[];
   onRefresh: () => void;
-  onEditItem?: (item: any, type: 'chemical' | 'material' | 'tool') => void;
+  onEditItem?: (item: any, type: 'chemical' | 'supply' | 'equipment') => void;
 }
 
 type TabType = 'chemicals' | 'supplies' | 'equipment';
@@ -1332,7 +1332,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                                 className="h-10 w-10 text-zinc-400 hover:text-white"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onEditItem(item, activeTab === 'equipment' ? 'tool' : 'material');
+                                  onEditItem(item, activeTab === 'equipment' ? 'equipment' : 'supply');
                                 }}
                                 title="Edit Item"
                               >
