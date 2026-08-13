@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { MessageSquareQuote, X, ChevronDown, CheckCircle2, Info, FileText, ClipboardCheck } from "lucide-react";
+import { MessageSquareQuote, X, ChevronDown, CheckCircle2, Info, FileText, ClipboardCheck, Download } from "lucide-react";
+import jsPDF from 'jspdf';
+import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -199,8 +201,199 @@ const VehicleScratchpad = () => {
 };
 
 export function CustomerCommunicationGuide({ showTrigger = true }: { showTrigger?: boolean } = {}) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<number | null>(0);
+
+  const handleSavePDF = () => {
+    toast({ title: "Generating PDF", description: "Preparing the Customer Communication Guide..." });
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxY = pageHeight - 10; // Reduced margin to fit section 4 on page 1
+    let currentY = 20;
+
+    const checkPageBreak = (neededHeight: number) => {
+        if (currentY + neededHeight > maxY) {
+            doc.addPage();
+            currentY = 20;
+        }
+    };
+
+    // Draw Header
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(255, 255, 255);
+    doc.text("PRIME AUTO DETAILING", 14, 16);
+    doc.setFontSize(9);
+    doc.setTextColor(148, 163, 184); // slate-400
+    doc.setFont("helvetica", "normal");
+    doc.text(`Customer Communication Guide | Date: ${new Date().toLocaleDateString()}`, 14, 23);
+    currentY = 36;
+    
+    // Main Section Header
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 99, 235); // Blue-600
+    doc.text("COMMUNICATION SCRIPTS & REFERENCE GUIDE", 14, currentY);
+    doc.setDrawColor(37, 99, 235);
+    doc.setLineWidth(0.5);
+    doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
+    currentY += 10;
+
+    const printSection = (title: string, contents: { type: 'bold' | 'normal' | 'bullet' | 'italic', text: string }[]) => {
+        // Enforce specific page breaks
+        if (title.startsWith("5.") || title.startsWith("7.")) {
+            doc.addPage();
+            currentY = 20;
+        }
+
+        // title
+        checkPageBreak(12);
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42);
+        doc.text(title, 14, currentY);
+        currentY += 6;
+
+        contents.forEach(item => {
+            doc.setFontSize(9.5);
+            if (item.type === 'bold') doc.setFont("helvetica", "bold");
+            else if (item.type === 'italic') doc.setFont("helvetica", "italic");
+            else doc.setFont("helvetica", "normal");
+
+            doc.setTextColor(51, 65, 85);
+            
+            const indent = item.type === 'bullet' ? 18 : 14;
+            
+            const splitText = doc.splitTextToSize(item.text, pageWidth - indent - 14);
+            const estimatedHeight = (splitText.length * 5) + 2;
+            checkPageBreak(estimatedHeight);
+            
+            splitText.forEach((line: string, i: number) => {
+                checkPageBreak(6);
+                if (i === 0 && item.type === 'bullet') {
+                    doc.text("•", 14, currentY);
+                }
+                doc.text(line, indent, currentY);
+                currentY += 5;
+            });
+            currentY += 2;
+        });
+        currentY += 4;
+    };
+
+    const pdfSections = [
+        {
+            title: "1. Opening / Warm-Up",
+            contents: [
+                { type: 'bold', text: "Goal: Start the conversation naturally and warmly without sounding overly scripted." },
+                { type: 'normal', text: "Sample Greetings:" },
+                { type: 'bullet', text: "\"Hi there, this is Rick from Prime Auto Detail. How's your day going?\"" },
+                { type: 'bullet', text: "\"Hey! I saw your inquiry come through. Thanks for reaching out. What can I help you with today?\"" },
+                { type: 'bullet', text: "(If delayed) \"Hi, thanks for your patience! I was just wrapping up a detail. I saw you were looking for some info on our services?\"" },
+                { type: 'italic', text: "Note: Keep it brief. Let the customer guide the initial direction before diving into questions." }
+            ]
+        },
+        {
+            title: "2. Collecting Vehicle Info",
+            contents: [
+                { type: 'bold', text: "Goal: Gather all necessary details to provide an accurate estimate. Let the customer talk first, then gently ask follow-ups." },
+                { type: 'normal', text: "Conversational Prompts:" },
+                { type: 'bullet', text: "Basic Info: \"What kind of vehicle are we looking at? Year, make, model, and color?\"" },
+                { type: 'bullet', text: "Interior: \"For the inside, do you have cloth or leather seats? Any pet hair, tough stains, or odors we should know about?\"" },
+                { type: 'bullet', text: "Exterior: \"How's the paint holding up? Any noticeable scratches, swirls, or fading?\"" },
+                { type: 'bullet', text: "Usage: \"Is this your daily driver, or mostly a weekend car? Does it stay in a garage?\"" },
+                { type: 'bullet', text: "Goal: \"What's the main goal for the detail? Just general upkeep, getting ready to sell, or a special occasion?\"" }
+            ]
+        },
+        {
+            title: "3. Explaining Services & Shop Location",
+            contents: [
+                { type: 'bold', text: "If they ask \"How much is it?\" right away:" },
+                { type: 'italic', text: "\"I'd love to give you an accurate price. Since every vehicle is different, do you mind if I ask a few quick questions about the car's condition first? That way I don't misquote you.\"" },
+                { type: 'bold', text: "Mobile vs. In-Shop:" },
+                { type: 'bullet', text: "When to require In-Shop: \"For full interior details or heavy paint correction, I require the vehicle to be brought into my shop. It allows me to use specialized equipment, control the lighting and climate, and ensures you get the absolute best result possible.\"" },
+                { type: 'bullet', text: "When Mobile is okay: \"If you're just looking for a maintenance wash or a basic exterior detail, I can absolutely come to you, as long as you have water and power access.\"" }
+            ]
+        },
+        {
+            title: "4. Explaining the Estimate Process",
+            contents: [
+                { type: 'bold', text: "Goal: Set clear expectations on how they will receive their quote and how to move forward." },
+                { type: 'italic', text: "\"Based on what you've told me, here is how we'll proceed:\"" },
+                { type: 'bullet', text: "\"I'm going to build a customized estimate for you (one for each vehicle if multiple).\"" },
+                { type: 'bullet', text: "\"I'll email you a secure link where you can review the proposed services and the exact price breakdown.\"" },
+                { type: 'bullet', text: "\"You don't need an account or any paperwork. You can just review it on your phone.\"" },
+                { type: 'bullet', text: "\"Once you accept, it notifies me, and I'll reach right back out to lock in your appointment date and time.\"" }
+            ]
+        },
+        {
+            title: "5. Likely Questions & Answers (FAQ)",
+            contents: [
+                { type: 'bold', text: "Q: Do I need to create an account to book?" },
+                { type: 'normal', text: "A: \"Nope! Everything is handled via simple secure links sent to your email or phone.\"" },
+                { type: 'bold', text: "Q: How do you determine vehicle size/category?" },
+                { type: 'normal', text: "A: \"We base it on the actual size and surface area. For example, a large truck or van requires significantly more time and product than a 2-door coupe, so the pricing reflects that.\"" },
+                { type: 'bold', text: "Q: How long does a detail take?" },
+                { type: 'normal', text: "A: \"It varies heavily by condition. A standard full detail is usually 2.5-5 hours. If we are dealing with heavy pet hair or severe staining, I might need it for the full day.\"" },
+                { type: 'bold', text: "Q: I have three cars, can you do them all in one day?" },
+                { type: 'normal', text: "A: \"Typically, I focus on one or two cars per day to ensure the highest quality. We can schedule them across a couple of days, or back-to-back depending on exactly what services they need.\"" },
+                { type: 'bold', text: "Handling Price Pushback - Objection: \"That seems expensive / high\"" },
+                { type: 'italic', text: "Response: \"I completely understand. Our pricing reflects the level of detail, professional-grade equipment, and time we dedicate to your vehicle. We focus on high-quality, lasting results rather than a quick surface wash...\"" },
+                { type: 'bold', text: "Handling Price Pushback - Objection: \"Do you offer a discount for multiple vehicles?\"" },
+                { type: 'italic', text: "Response: \"We price each vehicle based on its individual size, condition, and the work required to get it right. Because our costs for time and premium materials don't decrease with volume, we don't typically offer multi-car discounts...\"" },
+                { type: 'bold', text: "Handling Price Pushback - Objection: \"The shop down the street is cheaper\"" },
+                { type: 'italic', text: "Response: \"There are definitely cheaper options out there! Many high-volume shops compete on price by rushing through cars. We compete on quality. We take the time needed to safely and thoroughly care for your vehicle...\"" }
+            ]
+        },
+        {
+            title: "6. Must-Have Info Checklist",
+            contents: [
+                { type: 'bold', text: "CRITICAL (Do Not Skip):" },
+                { type: 'bullet', text: "Year, Make, Model" },
+                { type: 'bullet', text: "Service Wanted (Int/Ext/Both)" },
+                { type: 'bullet', text: "Interior Material (Cloth vs Leather)" },
+                { type: 'bullet', text: "Overall Dirt/Condition Level" },
+                { type: 'bullet', text: "Customer Name" },
+                { type: 'bullet', text: "Email or Phone (to send estimate)" },
+                { type: 'bold', text: "Optional (Nice to Have):" },
+                { type: 'bullet', text: "Vehicle Color" },
+                { type: 'bullet', text: "Daily vs. Weekend Usage" },
+                { type: 'bullet', text: "Garage vs. Outside Storage" },
+                { type: 'bullet', text: "Last Professional Detail Date" },
+                { type: 'bullet', text: "Specific Motivation for service" }
+            ]
+        },
+        {
+            title: "7. Voicemail / No-Answer Follow-Up Text",
+            contents: [
+                { type: 'bold', text: "Goal: Confirm receipt of a new online booking via text message when a live phone call goes to voicemail." },
+                { type: 'bold', text: "Sample Greetings (New Booking / Prospect):" },
+                { type: 'bullet', text: "\"Hello, this is Rick from Prime Auto Detail. I saw your booking come through and tried calling but it went to voicemail. No rush, just wanted to confirm we got it and answer any questions before we get started. Also, so I will be fully prepped, what's the general condition inside and out (any stains, pet hair, heavy dirt/mud, smoke odor)? And roughly when was it last detailed, if ever? That's all I need for now, feel free to call or text back anytime!\"" },
+                { type: 'bold', text: "Shorter Version (Repeat / Existing Customers):" },
+                { type: 'bullet', text: "\"Hello, this is Rick from Prime Auto Detail! I saw your new booking come through and tried giving you a quick call, but hit voicemail. Just confirming we received it and locking things in. Feel free to text back or call anytime if you have any questions!\"" }
+            ]
+        },
+        {
+            title: "8. Closing / Wrap-Up",
+            contents: [
+                { type: 'bold', text: "Goal: End the conversation naturally, confirm next steps, and set clear expectations on timing." },
+                { type: 'normal', text: "Sample Sign-Offs:" },
+                { type: 'bullet', text: "\"I've got all the notes I need. I'll put together that customized estimate and email it over to you within the next couple of hours. Keep an eye out for it!\"" },
+                { type: 'bullet', text: "\"Thanks so much for taking the time to chat. I'll have that estimate over to you within a day or so. If it looks good, just click accept and we'll get you on the schedule.\"" },
+                { type: 'bullet', text: "\"I appreciate you reaching out! I'll get to work on this quote right away. If you have any other questions in the meantime, feel free to text or call this number back.\"" },
+                { type: 'italic', text: "Important Note on Google Reviews: Do not ask for a Google review during this initial intake conversation. The review ask happens later, after the service is completed and payment is successful." }
+            ]
+        }
+    ];
+
+    pdfSections.forEach(sec => printSection(sec.title, sec.contents as any));
+
+    doc.save(`Prime_Customer_Comm_Guide_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -482,9 +675,15 @@ export function CustomerCommunicationGuide({ showTrigger = true }: { showTrigger
               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">General Reference & Scripts</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="text-slate-500 hover:bg-slate-100 shrink-0">
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleSavePDF} className="hidden sm:flex text-slate-600 hover:text-slate-900">
+               <Download className="w-4 h-4 mr-2" />
+               Save PDF
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="text-slate-500 hover:bg-slate-100 shrink-0">
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Content Body */}

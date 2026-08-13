@@ -353,6 +353,8 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
         ];
 
         exteriorSteps.forEach((step, idx) => {
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
             const splitText = doc.splitTextToSize(step.content, pageWidth - 28);
             const estimatedHeight = 8 + (splitText.length * 5) + 6;
             checkPageBreak(estimatedHeight);
@@ -402,6 +404,8 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
         ];
 
         interiorSteps.forEach((step, idx) => {
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
             const splitText = doc.splitTextToSize(step.content, pageWidth - 28);
             const estimatedHeight = 8 + (splitText.length * 5) + 6;
             checkPageBreak(estimatedHeight);
