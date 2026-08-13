@@ -442,6 +442,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       let loc = (item as any).location || 'Unassigned';
       if (primarySort === 'name' || primarySort === 'updated_at') loc = 'All Items';
       else if (primarySort === 'category') loc = (item as any).category || 'Unassigned';
+      else {
+        const containerLoc = (item as any).containerLocation || '';
+        if (containerLoc) loc = `${loc} - ${containerLoc}`;
+      }
       
       if (!groups[loc]) groups[loc] = [];
       groups[loc].push(item);
@@ -570,7 +574,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       
       const pdfGroups: Record<string, any[]> = {};
       itemsToPrint.forEach(item => {
-        const loc = (item as any).location || 'Unassigned';
+        const baseLoc = (item as any).location || 'Unassigned';
+        const containerLoc = (item as any).containerLocation || '';
+        const loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
         if (!pdfGroups[loc]) pdfGroups[loc] = [];
         pdfGroups[loc].push(item);
       });
