@@ -227,16 +227,31 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   };
 
   // Handlers for Chemicals
+  const getChemState = (id: string, customState?: Record<string, ChemicalAuditState>): ChemicalAuditState => {
+    const s = (customState || chemAudit)[id];
+    if (s) return s;
+    return {
+      isConcentrate: true, // safe default for fallback
+      usedAsIsJugs: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
+      detailedMode: false,
+      gallons: FILL_LEVELS.map(f => ({ fillLevel: f.value, count: 0 })),
+      bottles: []
+    };
+  };
+
   const toggleChemMode = (id: string, field: 'isConcentrate' | 'detailedMode') => {
-    setChemAudit(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: !prev[id][field] }
-    }));
+    setChemAudit(prev => {
+      const state = getChemState(id, prev);
+      return {
+        ...prev,
+        [id]: { ...state, [field]: !state[field] }
+      };
+    });
   };
 
   const updateChemJugCount = (id: string, type: 'usedAsIsJugs' | 'gallons', fillLevel: number, delta: number) => {
     setChemAudit(prev => {
-      const state = prev[id];
+      const state = getChemState(id, prev);
       const arr = [...state[type]];
       const idx = arr.findIndex(x => x.fillLevel === fillLevel);
       if (idx >= 0) {
@@ -268,7 +283,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   const addBottle = (id: string) => {
     setChemAudit(prev => {
-      const state = prev[id];
+      const state = getChemState(id, prev);
       return {
         ...prev,
         [id]: {
@@ -281,7 +296,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   const updateBottle = (id: string, bottleId: string, updates: Partial<BottleEntry>) => {
     setChemAudit(prev => {
-      const state = prev[id];
+      const state = getChemState(id, prev);
       return {
         ...prev,
         [id]: {
@@ -294,7 +309,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   const removeBottle = (id: string, bottleId: string) => {
     setChemAudit(prev => {
-      const state = prev[id];
+      const state = getChemState(id, prev);
       return {
         ...prev,
         [id]: {
@@ -307,7 +322,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   // Computed totals
   const getChemTotalStock = (id: string, chem: Chemical, customState?: Record<string, ChemicalAuditState>) => {
-    const state = (customState || chemAudit)[id];
+    const state = getChemState(id, customState);
     if (!state) return 0;
     
     if (!state.isConcentrate) {
@@ -340,7 +355,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   };
 
   const isChemCounted = (id: string, customState?: Record<string, ChemicalAuditState>) => {
-    const s = (customState || chemAudit)[id];
+    const s = getChemState(id, customState);
     if (!s) return false;
     if (!s.isConcentrate) return s.usedAsIsJugs.some(j => j.count > 0);
     return s.gallons.some(j => j.count > 0) || (s.detailedMode && s.bottles.length > 0);
@@ -1107,8 +1122,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     </h3>
                   )}
                   {groupItems.map(c => {
-                    const s = chemAudit[c.id];
-                    if (!s) return null;
+                    const s = getChemState(c.id);
                     const isCounted = isChemCounted(c.id);
                     const isExpanded = expandedItems[c.id];
                     
