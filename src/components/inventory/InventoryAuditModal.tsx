@@ -825,9 +825,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             {['Chemicals', 'Supplies', 'Equipment'].map(category => {
               const items = category === 'Chemicals' ? chemicals : category === 'Supplies' ? supplies : equipment;
               const hasChanges = items.some(item => {
-                if (category === 'Chemicals') return isChemCounted(item.id) && getChemTotalStock(item.id, item as Chemical) !== (item as Chemical).currentStock;
-                if (category === 'Supplies') return supplyAudit[item.id]?.isCounted && supplyAudit[item.id].counted !== (item as Material).quantity;
-                if (category === 'Equipment') return equipAudit[item.id]?.isCounted && equipAudit[item.id].counted !== ((item as Equipment).quantity || 1);
+                if (category === 'Chemicals') return isChemCounted(item.id);
+                if (category === 'Supplies') return supplyAudit[item.id]?.isCounted;
+                if (category === 'Equipment') return equipAudit[item.id]?.isCounted;
                 return false;
               });
 
@@ -859,7 +859,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         newQty = equipAudit[item.id].counted;
                       }
 
-                      if (dbQty === newQty) return null; // Only show actual diffs
+
 
                       const delta = newQty - dbQty;
                       const isMatch = delta === 0;
