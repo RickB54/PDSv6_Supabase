@@ -535,6 +535,29 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
     let currentY = 30;
 
+    // Build descriptive subtitle based on filters/sort
+    let subtitleParts: string[] = [];
+    if (targetTab === 'chemicals') {
+      if (filterShelves.length > 0) subtitleParts.push(`Shelves: ${filterShelves.join(', ')}`);
+      if (filterBrands.length > 0) subtitleParts.push(`Brands: ${filterBrands.join(', ')}`);
+      const sort = sortBy[0] || 'shelfLocation';
+      if (sort.startsWith('shelfLocation')) subtitleParts.push('Sorted By Location');
+      else if (sort.startsWith('brand')) subtitleParts.push('Sorted By Brand');
+    } else {
+      if (filterLocations.length > 0) subtitleParts.push(`Locations: ${filterLocations.join(', ')}`);
+      const sort = sortBy[0] || 'location';
+      if (sort.startsWith('location')) subtitleParts.push('Sorted By Location');
+      else if (sort.startsWith('category')) subtitleParts.push('Sorted By Category');
+    }
+    
+    if (subtitleParts.length > 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(subtitleParts.join('  •  '), 14, 28);
+      doc.setTextColor(0, 0, 0); // reset
+      currentY = 35;
+    }
+
     if (targetTab === 'chemicals') {
       const shelfOrder = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"];
       const sectionOrder = ["Left Side", "Middle", "Right Side", "Unassigned"];
