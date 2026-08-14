@@ -531,7 +531,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     const doc = new jsPDF();
     doc.setFontSize(18);
     const categoryName = targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
-    doc.text(`Inventory Audit Checklist for ${categoryName}`, 14, 22);
+    
+    let mainTitle = `Inventory Audit Checklist for ${categoryName}`;
+    if (targetTab === 'chemicals' && filterShelves.length > 0) {
+      mainTitle = `IAC for ${categoryName}: ${filterShelves.join(', ')}`;
+    } else if (targetTab !== 'chemicals' && filterLocations.length > 0) {
+      mainTitle = `IAC for ${categoryName}: ${filterLocations.join(', ')}`;
+    }
+    
+    doc.text(mainTitle, 14, 22);
     doc.setFontSize(10);
     doc.text(`Date: ${dateTitle}`, 140, 22);
 
@@ -597,6 +605,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
         if (groupItems.length === 0) return;
         
+        if (currentY > 260) {
+          doc.addPage();
+          currentY = 20;
+        }
+
         autoTable(doc, {
           startY: currentY,
           head: [[groupName, 'Container Type', 'DB Qty', 'Actual Count']],
@@ -645,6 +658,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       sortedLocs.forEach(loc => {
         const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
         if (groupItems.length === 0) return;
+
+        if (currentY > 260) {
+          doc.addPage();
+          currentY = 20;
+        }
 
         autoTable(doc, {
           startY: currentY,
