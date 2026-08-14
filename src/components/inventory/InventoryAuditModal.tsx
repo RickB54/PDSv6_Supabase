@@ -872,8 +872,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <HelpCircle className="h-5 w-5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="z-[99999] max-w-lg max-h-[70vh] overflow-y-auto bg-zinc-900 border-zinc-700 text-zinc-300 p-4 shadow-2xl" side="bottom" align="start">
-                    <div className="space-y-5 text-sm">
+                  <PopoverContent className="z-[99999] w-[95vw] sm:max-w-lg p-0 bg-zinc-900 border-zinc-700 shadow-2xl overflow-hidden" side="bottom" align="start">
+                    <div className="max-h-[70vh] overflow-y-auto p-4 text-zinc-300 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      <div className="space-y-5 text-sm">
                       <div className="border-b border-zinc-800 pb-3">
                         <h3 className="font-bold text-white text-base">Inventory Audit Guide</h3>
                         <p className="text-xs text-zinc-400 mt-1">Everything you need to know to effectively audit your inventory.</p>
@@ -917,6 +918,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <li><strong>PDF Save/Print (Review Modal):</strong> When finishing an audit, use this button on the final Review Changes modal to save or print a verified record of the actual updates being committed to the database.</li>
                         </ul>
                       </div>
+                    </div>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -1101,14 +1103,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         }
                       }}
                     >
-                      {Object.values(expandedItems).some(Boolean) ? 'Collapse All' : 'Expand All'}
+                      <ArrowDownUp className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <div className="relative flex-1 sm:w-64">
+                  <div className="relative flex-1 sm:w-64 min-w-[140px]">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
-                    <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 pr-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white" />
+                    <Input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 pr-8 bg-zinc-950 border-zinc-800 text-sm h-9 text-white w-full" />
                     {search && (
                       <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 top-2.5 text-zinc-500 hover:text-white transition-colors">
                         <X className="h-4 w-4" />
@@ -1117,11 +1119,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </div>
                   <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300 relative">
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filters
+                      <Button variant="outline" size="sm" className="h-9 w-9 p-0 shrink-0 border-zinc-800 bg-zinc-950 text-zinc-300 relative" title="Filters">
+                        <Filter className="h-4 w-4" />
                         {(activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSections.length + filterSizes.length) : filterLocations.length) > 0 && (
-                          <Badge className="ml-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 text-[10px]">
+                          <Badge className="absolute -top-2 -right-2 bg-purple-500 hover:bg-purple-600 px-1 py-0 h-4 min-w-[16px] flex items-center justify-center text-[10px]">
                             {activeTab === 'chemicals' ? (filterTags.length + filterBrands.length + filterShelves.length + filterSections.length + filterSizes.length) : filterLocations.length}
                           </Badge>
                         )}
