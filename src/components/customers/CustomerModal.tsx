@@ -318,7 +318,7 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
         const file = fileArray[i];
         let fileToUpload = file;
         if (file.type.startsWith('image/')) {
-          fileToUpload = await browserImageCompression(file, { maxSizeMB: 0.4, maxWidthOrHeight: 1280, useWebWorker: true });
+          fileToUpload = await browserImageCompression(file, { maxSizeMB: 0.15, maxWidthOrHeight: 1024, useWebWorker: true });
         }
 
         const ext = file.name.split('.').pop();

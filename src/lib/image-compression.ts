@@ -13,8 +13,8 @@ export const compressImageForUpload = async (file: File, options = {}) => {
   // memory reclamation cycle. 500ms is the "sweet spot" for snappy but stable.
   await new Promise(resolve => setTimeout(resolve, 500));
   const defaultOptions = {
-    maxSizeMB: 0.3,           // Target size < 300KB (even safer for mobile)
-    maxWidthOrHeight: 800,   // Slightly smaller dimensions for faster processing/lower RAM
+    maxSizeMB: 0.15,          // Aggressive target < 150KB for egress savings
+    maxWidthOrHeight: 1024,  // Limit dimensions to 1024px (highly viewable but space-efficient)
     useWebWorker: true,
     initialQuality: 0.5,      // Lower initial quality to reduce initial canvas pressure
     alwaysKeepResolution: false,
