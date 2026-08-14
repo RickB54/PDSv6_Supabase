@@ -797,6 +797,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             shelf: size.shelf?.trim() || undefined,
             section: size.section?.trim() || undefined,
             category: form.category || undefined,
+            hideFromIac: form.hideFromIac,
           };
           
           await saveChemical(payload, !size.id);
@@ -834,6 +835,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             location: purchase.location || undefined,
             containerLocation: purchase.containerLocation || undefined,
+            hideFromIac: form.hideFromIac,
           };
           
           await saveTool(payload, !purchase.id);
@@ -871,6 +873,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             purchaseDate: purchase.purchaseDate || undefined,
             location: purchase.location || undefined,
             containerLocation: purchase.containerLocation || undefined,
+            hideFromIac: form.hideFromIac,
           };
           
           await saveMaterial(payload, !purchase.id);
