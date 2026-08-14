@@ -39,6 +39,7 @@ interface ChemicalForm {
   notes?: string;
   dilutionRatios: DilutionRatio[];
   wherePurchased?: string;
+  hideFromIac?: boolean;
   updatedAt?: string;
   createdAt?: string;
   shelf?: string;
@@ -61,8 +62,8 @@ interface SupplyForm {
   imageUrl?: string;
 
   wherePurchased?: string;
-  wherePurchased?: string;
   updatedAt?: string;
+  hideFromIac?: boolean;
   createdAt?: string;
   location?: string;
 }
@@ -85,8 +86,8 @@ interface EquipmentForm {
   imageUrl?: string;
 
   wherePurchased?: string;
-  wherePurchased?: string;
   updatedAt?: string;
+  hideFromIac?: boolean;
   createdAt?: string;
   location?: string;
 }
@@ -159,6 +160,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     createdAt: "",
     shelf: "",
     section: "",
+    hideFromIac: false,
   });
 
   const [libraryOptions, setLibraryOptions] = useState<any[]>([]);
@@ -582,6 +584,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         createdAt: (firstItem as any).createdAt || (firstItem as any).created_at || "",
         shelf: (firstItem as any).shelf || "",
         section: (firstItem as any).section || "",
+        hideFromIac: (firstItem as any).hideFromIac || false,
 
         // Safety: Ensure all properties from initial are preserved even if not explicitly mapped
         ...((firstItem as any).purchase_date ? { purchaseDate: (firstItem as any).purchase_date } : {}),
@@ -619,6 +622,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         wherePurchased: "",
         shelf: "",
         section: "",
+        hideFromIac: false,
       });
       setChemicalSizes([{ bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
       setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }]);
@@ -1058,10 +1062,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
           {/* Basic Info Section */}
           <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-zinc-300 mb-3 flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              Basic Information
-            </h3>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Basic Information
+              </h3>
+              <label className="flex items-center gap-2 text-xs text-red-400 bg-red-900/10 px-2 py-1 rounded border border-red-900/30 cursor-pointer hover:bg-red-900/20 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={form.hideFromIac || false}
+                  onChange={(e) => setForm({ ...form, hideFromIac: e.target.checked })}
+                  className="rounded border-zinc-700 text-red-500 focus:ring-red-500 bg-zinc-900 w-3 h-3"
+                />
+                Do NOT Show in IAC
+              </label>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div>

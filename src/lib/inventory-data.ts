@@ -76,6 +76,7 @@ export interface Chemical {
     shelf?: string;
     section?: string;
     category?: string;
+    hideFromIac?: boolean;
 }
 
 export interface Material {
@@ -96,6 +97,7 @@ export interface Material {
     salePrice?: number;
     location?: string;
     containerLocation?: string;
+    hideFromIac?: boolean;
 }
 
 export interface Tool {
@@ -117,6 +119,7 @@ export interface Tool {
     salePrice?: number;
     location?: string;
     containerLocation?: string;
+    hideFromIac?: boolean;
 }
 
 export interface SetupMedia {
@@ -198,7 +201,8 @@ export async function getChemicals(): Promise<Chemical[]> {
         shelfLocation: item.shelf_location || '',
         shelf: item.shelf || '',
         section: item.section || '',
-        category: item.category || ''
+        category: item.category || '',
+        hideFromIac: item.hide_from_iac || false
     };
     });
 }
@@ -236,6 +240,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
         category: chemical.category?.trim() || null,
+        hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
     };
 
@@ -611,7 +616,8 @@ export async function getMaterials(): Promise<Material[]> {
             actualPrice: item.actual_price,
             salePrice: item.sale_price,
             location: loc,
-            containerLocation: cl
+            containerLocation: cl,
+            hideFromIac: item.hide_from_iac || false
         };
     });
 }
@@ -651,6 +657,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         actual_price: material.actualPrice || null,
         sale_price: material.salePrice || null,
         location: locToSave,
+        hide_from_iac: material.hideFromIac ?? false,
         updated_at: new Date().toISOString()
     };
 
@@ -818,7 +825,8 @@ export async function getTools(): Promise<Tool[]> {
             updatedAt: item.updated_at,
             wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
             location: loc,
-            containerLocation: cl
+            containerLocation: cl,
+            hideFromIac: item.hide_from_iac || false
         };
     });
 }
@@ -850,6 +858,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         actual_price: tool.actualPrice || null,
         sale_price: tool.salePrice || null,
         location: locToSave,
+        hide_from_iac: tool.hideFromIac ?? false,
         updated_at: new Date().toISOString()
     };
 

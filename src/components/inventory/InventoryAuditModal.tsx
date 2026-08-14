@@ -111,7 +111,7 @@ const normalizeSize = (size?: string) => {
 export default function InventoryAuditModal({ open, onOpenChange, chemicals, supplies, equipment, onRefresh, onEditItem }: InventoryAuditModalProps) {
   const { toast } = useToast();
   
-  const normalizedChemicals = useMemo(() => chemicals.map(c => ({
+  const normalizedChemicals = useMemo(() => chemicals.filter(c => !c.hideFromIac).map(c => ({
     ...c,
     shelfLocation: c.shelfLocation || ((c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined),
     bottleSize: normalizeSize(c.bottleSize)
@@ -458,10 +458,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   }, [filteredChemicals, sortBy]);
 
   const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted).filter(s => {
+    if (s.hideFromIac) return false;
     if (filterLocations.length > 0 && (!s.location || !filterLocations.includes(s.location))) return false;
     return true;
   });
   const filteredEquip = getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted).filter(e => {
+    if (e.hideFromIac) return false;
     if (filterLocations.length > 0 && (!e.location || !filterLocations.includes(e.location))) return false;
     return true;
   });
