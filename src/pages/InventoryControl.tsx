@@ -404,9 +404,12 @@ const InventoryControl = () => {
       }
     };
 
+    const handleOpenAudit = () => setInventoryAuditOpen(true);
     window.addEventListener('open-chemical-detail', handleOpenDetail as EventListener);
+    window.addEventListener('open-inventory-audit', handleOpenAudit);
     return () => {
       window.removeEventListener('open-chemical-detail', handleOpenDetail as EventListener);
+      window.removeEventListener('open-inventory-audit', handleOpenAudit);
     };
   }, []);
 

@@ -27,6 +27,7 @@ import {
     Banknote,
     Receipt,
     Zap,
+    ClipboardCheck,
     BarChart2,
     Bell,
     Scale,
@@ -277,6 +278,8 @@ const renderSidebarContent = (
                 <ListChecks className="w-5 h-5 text-cyan-400" />
                 {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">SOPs</span>}
             </Button>
+            
+            <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/sticky-notes')} title="Sticky Notes" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <CheckSquare className="w-5 h-5 text-yellow-400" />
@@ -406,10 +409,18 @@ const renderSidebarContent = (
 
             {/* GROUP 3: Chemicals & Inventory */}
             {isAdmin && (
-                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                    <Package className="w-5 h-5 text-cyan-500" />
-                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
-                </Button>
+                <>
+                    <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/inventory-control')} title="Inventory" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                        <Package className="w-5 h-5 text-cyan-500" />
+                        {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
+                    </Button>
+                    <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => { navigate('/inventory-control'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-inventory-audit')), 100); }} title="Inventory Audit" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                        <ClipboardCheck className="w-5 h-5 text-fuchsia-400" />
+                        {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Audit</span>}
+                    </Button>
+                    
+                    <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
+                </>
             )}
 
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/chemicals')} title="Chemicals" className={collapsed ? "" : "w-full justify-start gap-2"}>

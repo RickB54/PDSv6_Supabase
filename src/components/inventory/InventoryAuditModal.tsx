@@ -419,6 +419,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return true;
   }).sort((a, b) => {
     for (const field of sortBy) {
+      if (field === 'updated_at') {
+        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        if (dateA !== dateB) return dateB - dateA; // Descending
+        continue;
+      }
       let valA = (a as any)[field] || '';
       let valB = (b as any)[field] || '';
       // tags is an array, let's join it for sorting
@@ -522,7 +528,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('Inventory Audit Checklist', 14, 22);
+    const categoryName = targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
+    doc.text(`Inventory Audit Checklist for ${categoryName}`, 14, 22);
     doc.setFontSize(10);
     doc.text(`Date: ${dateTitle}`, 140, 22);
 
@@ -1217,6 +1224,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             <SelectItem value="tags,name">Group / Name</SelectItem>
                             <SelectItem value="bottleSize,name">Size / Name</SelectItem>
                             <SelectItem value="name">A-Z Name Only</SelectItem>
+                            <SelectItem value="updated_at">Last Updated</SelectItem>
                           </>
                         ) : activeTab === 'supplies' ? (
                           <>
