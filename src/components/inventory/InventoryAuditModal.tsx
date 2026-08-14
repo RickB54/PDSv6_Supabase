@@ -872,15 +872,52 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <HelpCircle className="h-5 w-5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="z-[99999] max-w-sm bg-zinc-900 border-zinc-700 text-zinc-300 p-4 space-y-2 shadow-2xl" side="bottom" align="start">
-                    <p className="font-bold text-white mb-2">How to perform an Audit:</p>
-                    <ul className="list-disc pl-4 space-y-1 text-sm">
-                      <li><strong>Count:</strong> For liquids, enter the exact remaining amount (e.g., 0.5 for half a jug).</li>
-                      <li><strong>Detailed vs Quick:</strong> Use &quot;Detailed View&quot; to set exact fill levels, or use the + / - buttons.</li>
-                      <li><strong>Organization:</strong> Chemicals are displayed by Shelf and Section. You can also group by Brand or Category.</li>
-                      <li><strong>Review:</strong> Click &quot;Review Changes&quot; to see a summary of your counts before saving.</li>
-                      <li><strong>Save Progress:</strong> Use &quot;Save Progress&quot; to pause and resume later from History.</li>
-                    </ul>
+                  <PopoverContent className="z-[99999] max-w-lg max-h-[70vh] overflow-y-auto bg-zinc-900 border-zinc-700 text-zinc-300 p-4 shadow-2xl" side="bottom" align="start">
+                    <div className="space-y-5 text-sm">
+                      <div className="border-b border-zinc-800 pb-3">
+                        <h3 className="font-bold text-white text-base">Inventory Audit Guide</h3>
+                        <p className="text-xs text-zinc-400 mt-1">Everything you need to know to effectively audit your inventory.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-purple-400 flex items-center gap-2"><CheckCircle className="h-4 w-4" /> Counting Controls</h4>
+                        <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
+                          <li><strong>Quick vs. Detailed Mode:</strong> Quick mode lets you count whole units (like Gallons). Detailed mode opens a dropdown to count partial amounts (e.g., 0.5 bottles).</li>
+                          <li><strong>Quick Edit Inline:</strong> Use the + / - buttons on Chemical cards to quickly add or remove whole units, or use the Partial Dropdown for exact fill levels.</li>
+                          <li><strong>Bottle Size Dropdown:</strong> Replaces the old Unit of Measure. Select standard sizes or add custom ones directly in the item's edit modal.</li>
+                          <li><strong>Product Type Toggle:</strong> Switch between &quot;Used As-Is&quot; (direct from bottle) and &quot;Concentrate&quot; (diluted with water) to properly track liquid usage.</li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-purple-400 flex items-center gap-2"><Filter className="h-4 w-4" /> Filtering & Visibility</h4>
+                        <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
+                          <li><strong>Filter & Sort Panel:</strong> Combine filters like Brand, Size, Shelf, Section, and Location to narrow down exactly what you are counting.</li>
+                          <li><strong>&quot;X of Y counted&quot; Badge:</strong> Tracks your live progress. It updates dynamically to reflect only the items visible in your current filter.</li>
+                          <li><strong>Global Sort Dropdown:</strong> Quickly sort the entire list by Name, Brand, Location, Last Updated, etc.</li>
+                          <li><strong>Hide Counted & Collapse All:</strong> Toggle &quot;Hide Counted&quot; to make completed items disappear. Use &quot;Collapse All&quot; to shrink cards and save screen space.</li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-purple-400 flex items-center gap-2"><Edit className="h-4 w-4" /> Organization & Assignment</h4>
+                        <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
+                          <li><strong>Chemicals (Shelf, Section, Category):</strong> Assigned via the edit modal. You can filter the audit list by these values to count one section at a time.</li>
+                          <li><strong>Supplies & Equipment (Location, Container Location):</strong> Uses a preset system to standardize where items live. You can add custom entries directly in the edit modal, and filter the audit list by these locations.</li>
+                          <li><strong>hideFromIac:</strong> In any item's edit modal, check &quot;Do NOT Show in IAC&quot; to permanently exclude it from all audits and PDF reports.</li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-purple-400 flex items-center gap-2"><History className="h-4 w-4" /> Saving, History, & Exports</h4>
+                        <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
+                          <li><strong>Save Progress:</strong> Pause your audit at any time without submitting. Resume later from the History tab.</li>
+                          <li><strong>Audit History:</strong> View past snapshots of your inventory, archive old audits, or permanently delete them (with confirmation).</li>
+                          <li><strong>Save PDF (Main Toolbar):</strong> Generates a printable PDF of your current live audit view and counts.</li>
+                          <li><strong>PDF Save/Print (Review Modal):</strong> When finishing an audit, use this button on the final Review Changes modal to save or print a verified record of the actual updates being committed to the database.</li>
+                        </ul>
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
               )}
