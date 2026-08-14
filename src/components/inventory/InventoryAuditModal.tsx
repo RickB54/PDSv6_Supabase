@@ -872,8 +872,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <HelpCircle className="h-5 w-5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="z-[99999] w-[95vw] sm:max-w-lg p-0 bg-zinc-900 border-zinc-700 shadow-2xl overflow-hidden" side="bottom" align="start">
-                    <div className="max-h-[70vh] overflow-y-auto p-4 text-zinc-300 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <PopoverContent className="z-[99999] w-[95vw] sm:max-w-lg p-0 bg-zinc-900 border-zinc-700 shadow-2xl overflow-hidden pointer-events-auto" side="bottom" align="start">
+                    <div className="max-h-[70vh] overflow-y-auto p-4 text-zinc-300 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }} onWheel={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                       <div className="space-y-5 text-sm">
                       <div className="border-b border-zinc-800 pb-3">
                         <h3 className="font-bold text-white text-base">Inventory Audit Guide</h3>
@@ -1128,7 +1128,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         )}
                       </Button>
                     </PopoverTrigger>
-                      <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 text-white p-4" align="end">
+                    <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden pointer-events-auto" align="end">
+                      <div className="max-h-[70vh] overflow-y-auto p-4 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }} onWheel={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                         <div className="space-y-4">
                           <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
                             <h4 className="font-bold">Filter & Sort</h4>
@@ -1245,7 +1246,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             )}
                           </div>
                         </div>
-                      </PopoverContent>
+                      </div>
+                    </PopoverContent>
                     </Popover>
                   <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()} title="Print">
                     <Printer className="h-4 w-4" />
