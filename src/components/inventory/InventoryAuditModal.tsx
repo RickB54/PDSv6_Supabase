@@ -534,9 +534,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const pdfGroups: Record<string, Chemical[]> = {};
       
-      // If snapshot, we only show items that were counted in that snapshot, 
-      // or if live, show all filtered items
-      const itemsToPrint = snapshot 
+      // If snapshot or review mode, we only show items that were counted, 
+      // or if live on main view, show all filtered items for checklist printing
+      const itemsToPrint = (snapshot || reviewMode) 
         ? normalizedChemicals.filter(c => isChemCounted(c.id, targetChemAudit))
         : filteredChemicals;
 
@@ -595,8 +595,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       const allItems = targetTab === 'supplies' ? supplies : equipment;
       const targetAudit = targetTab === 'supplies' ? targetSupplyAudit : targetEquipAudit;
       
-      const itemsToPrint = snapshot
-        ? allItems.filter(i => (targetAudit[i.id]?.counted ?? 0) > 0)
+      const itemsToPrint = (snapshot || reviewMode)
+        ? allItems.filter(i => targetAudit[i.id]?.isCounted)
         : (targetTab === 'supplies' ? filteredSupplies : filteredEquip);
       
       const pdfGroups: Record<string, any[]> = {};
