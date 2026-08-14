@@ -1309,9 +1309,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       </SelectContent>
                     </Select>
 
-                    <Button variant="outline" size="sm" className="h-9 w-9 px-0 border-purple-500/50 bg-purple-950/20 text-purple-300 hover:bg-purple-900/40 shrink-0" onClick={() => handleExportPDF()} title="Save PDF">
-                      <Download className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -1501,16 +1498,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                             <span className={!s.isConcentrate ? 'text-white' : 'text-zinc-500'}>Used As-Is</span>
                             <Switch checked={s.isConcentrate} onCheckedChange={() => toggleChemMode(c.id, 'isConcentrate')} className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-zinc-600" />
                             <span className={s.isConcentrate ? 'text-white font-bold' : 'text-zinc-500'}>Concentrate</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help inline-flex"><Info className="h-4 w-4 text-zinc-500 ml-2" /></span>
-                                </TooltipTrigger>
-                                <TooltipContent className="z-[99999] bg-zinc-800 text-white border-zinc-700">
-                                  <p>Is this diluted with water (Concentrate) or used directly from the bottle (Used As-Is)?</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Popover modal={true}>
+                              <PopoverTrigger asChild>
+                                <button className="cursor-help inline-flex focus:outline-none"><Info className="h-4 w-4 text-zinc-500 ml-2" /></button>
+                              </PopoverTrigger>
+                              <PopoverContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 p-3 max-w-[250px] text-sm" side="top">
+                                Is this diluted with water (Concentrate) or used directly from the bottle (Used As-Is)?
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </div>
 
@@ -1869,10 +1864,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               {showHistory || reviewMode || viewingSnapshot ? 'Back' : 'Cancel'}
             </Button>
             
-            {(reviewMode || viewingSnapshot) && (
+            {!showHistory && (
               <Button
                 variant="outline"
-                className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4"
+                className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center"
                 onClick={() => handleExportPDF(viewingSnapshot || undefined)}
                 title="Save PDF"
               >
