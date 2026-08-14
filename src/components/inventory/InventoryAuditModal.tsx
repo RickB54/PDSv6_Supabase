@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive, FileText } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -1409,8 +1409,21 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {isCounted ? <CheckCircle className="h-5 w-5 text-purple-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
                         <div className="min-w-0">
-                          <div className="font-bold text-zinc-200 leading-tight">
-                            {c.brand ? `${c.brand === 'Superior Products' ? 'SP' : c.brand} / ` : ''}{c.name}
+                          <div className="font-bold text-zinc-200 leading-tight flex items-center flex-wrap gap-2">
+                            <span>{c.brand ? `${c.brand === 'Superior Products' ? 'SP' : c.brand} / ` : ''}{c.name}</span>
+                            {c.notes && (
+                              <Popover modal={true}>
+                                <PopoverTrigger asChild>
+                                  <button onClick={e => e.stopPropagation()} className="cursor-pointer text-amber-500/70 hover:text-amber-400 focus:outline-none shrink-0" title="View Notes">
+                                    <FileText className="h-4 w-4" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 p-4 max-w-[300px] sm:max-w-[400px] text-sm break-words whitespace-pre-wrap max-h-[50vh] overflow-y-auto" side="bottom" align="start">
+                                  <div className="font-bold text-amber-500 mb-2 border-b border-zinc-700 pb-1">Notes for {c.name}</div>
+                                  {c.notes}
+                                </PopoverContent>
+                              </Popover>
+                            )}
                           </div>
                           <div className="text-xs text-zinc-500 flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
                             <span>DB: {c.currentStock} {c.bottleSize} {(c as any).containerType ? `(${(c as any).containerType})` : ''}</span>
@@ -1657,7 +1670,22 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
                             {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
                             <div className="min-w-0">
-                              <div className="font-bold text-zinc-200 truncate">{item.name}</div>
+                              <div className="font-bold text-zinc-200 flex items-center gap-2">
+                                <span className="truncate">{item.name}</span>
+                                {item.notes && (
+                                  <Popover modal={true}>
+                                    <PopoverTrigger asChild>
+                                      <button onClick={e => e.stopPropagation()} className="cursor-pointer text-amber-500/70 hover:text-amber-400 focus:outline-none shrink-0" title="View Notes">
+                                        <FileText className="h-4 w-4" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 p-4 max-w-[300px] sm:max-w-[400px] text-sm break-words whitespace-pre-wrap max-h-[50vh] overflow-y-auto" side="bottom" align="start">
+                                      <div className="font-bold text-amber-500 mb-2 border-b border-zinc-700 pb-1">Notes for {item.name}</div>
+                                      {item.notes}
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
+                              </div>
                               <div className="text-xs text-zinc-500 flex items-center gap-2">
                                 <span>DB Qty: {item.quantity || 1}</span>
                                 {((item as any).location || (item as any).containerLocation) && (
