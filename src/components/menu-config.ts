@@ -87,6 +87,7 @@ export const getMenuGroups = (counts: {
             title: "Customer Intake", icon: UserPlus, iconColor: "text-blue-400",
             items: [
                 { title: "Phone Assistant", url: "#call-assistant", key: "phone-assistant", icon: Phone, helpTopicId: 'phone-assistant' },
+                { title: "Pre-Vehicle Walkaround", url: "#pre-vehicle-checklist", key: "pre-vehicle-checklist", icon: ClipboardCheck, helpTopicId: 'service-checklist' },
                 { title: "Package Comparison", url: "/package-selection", key: "package-selection", icon: Package, helpTopicId: 'package-selection' },
                 { title: "Vehicle Classification", url: "/vehicle-classification", key: "vehicle-classification", icon: FileText, helpTopicId: 'vehicle-classification' },
                 { title: "Client Evaluation", url: "/client-evaluation", key: "client-evaluation", icon: ClipboardCheck, helpTopicId: 'client-evaluation' },

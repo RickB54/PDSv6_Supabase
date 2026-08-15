@@ -1,4 +1,4 @@
-﻿import jsPDF from "jspdf";
+import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { Booking } from "@/store/bookings";
 import { pushAdminAlert, dismissAlertsForRecord } from "@/lib/adminAlerts";
@@ -35,7 +35,7 @@ export function generateBookingPDF(booking: Booking, details?: {
   doc.text("BOOKING CONFIRMATION", 20, 30);
   doc.text(`Created: ${new Date().toLocaleString()}`, 20, 40);
   doc.text(`Customer: ${booking.customer || 'N/A'}`, 20, 55);
-  if (booking.customerEmail) doc.text(`Email: ${targetEmail}`, 20, 62);
+  if (booking.customerEmail) doc.text(`Email: ${booking.customerEmail}`, 20, 62);
   if (booking.customerPhone) doc.text(`Phone: ${booking.customerPhone}`, 20, 69);
   if (booking.address) {
     doc.text("Address:", 20, 76);

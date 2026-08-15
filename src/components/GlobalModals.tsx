@@ -10,11 +10,13 @@ import { toast } from "sonner";
 
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { PreVehicleChecklistModal } from "@/components/modals/PreVehicleChecklistModal";
 
 export const GlobalModals: React.FC = () => {
     const [noteOpen, setNoteOpen] = useState(false);
     const [taskOpen, setTaskOpen] = useState(false);
     const [ricksTipsOpen, setRicksTipsOpen] = useState(false);
+    const [showPreVehicle, setShowPreVehicle] = useState(false);
     const [ricksTipsTab, setRicksTipsTab] = useState<'package' | 'description' | 'prep'>('package');
 
     // Note State
@@ -46,15 +48,18 @@ export const GlobalModals: React.FC = () => {
             }
             setRicksTipsOpen(true);
         };
+        const handlePreVehicle = () => setShowPreVehicle(true);
 
         window.addEventListener('open-quick-note', handleNote);
         window.addEventListener('open-quick-task', handleTask);
         window.addEventListener('open-ricks-tips', handleRicksTips);
+        window.addEventListener('open-pre-vehicle-checklist', handlePreVehicle);
 
         return () => {
             window.removeEventListener('open-quick-note', handleNote);
             window.removeEventListener('open-quick-task', handleTask);
             window.removeEventListener('open-ricks-tips', handleRicksTips);
+            window.removeEventListener('open-pre-vehicle-checklist', handlePreVehicle);
         };
     }, []);
 
@@ -189,6 +194,7 @@ export const GlobalModals: React.FC = () => {
             />
 
             <CustomerCommunicationGuide showTrigger={false} />
+            <PreVehicleChecklistModal open={showPreVehicle} onOpenChange={setShowPreVehicle} />
         </>
     );
 };

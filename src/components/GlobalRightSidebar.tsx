@@ -1,6 +1,7 @@
-﻿import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import {
     MessageSquare,
     MessageSquareQuote,
@@ -280,9 +281,19 @@ const renderSidebarContent = (
                 {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">SOPs</span>}
             </Button>
 
-            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => setShowPreVehicleModal(true)} title="Pre-Vehicle Checklist (Standalone)" className={collapsed ? "" : "w-full justify-start gap-2"}>
-                <ClipboardCheck className="w-5 h-5 text-rose-400" />
-                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Pre-Veh</span>}
+            <Button 
+                variant="ghost" 
+                size={collapsed ? "icon" : "default"} 
+                onClick={() => window.dispatchEvent(new Event('open-pre-vehicle-checklist'))} 
+                title="Pre-Vehicle Checklist (Standalone)" 
+                className={cn(
+                    collapsed ? "relative overflow-hidden" : "w-full justify-start gap-2 relative overflow-hidden",
+                    "bg-gradient-to-r from-white/10 to-transparent hover:from-white/20 border-l-2 border-white group transition-all duration-300"
+                )}
+            >
+                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ClipboardCheck className="w-5 h-5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] relative z-10" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate relative z-10 drop-shadow-md">Pre-Veh</span>}
             </Button>
             
             <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
@@ -453,7 +464,6 @@ export function GlobalRightSidebar() {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
-    const [showPreVehicleModal, setShowPreVehicleModal] = useState(false);
     const [pendingPayroll, setPendingPayroll] = useState(0);
     const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
@@ -669,10 +679,9 @@ export function GlobalRightSidebar() {
             </Button>
             
             <div className={`flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0 pb-4 ${collapsed ? 'items-center' : 'items-start'}`}>
-                {renderSidebarContent(collapsed, handleNavigate, isAdmin, pendingPayroll, isDemoMode, activeMode)}
+                {renderSidebarContent(collapsed, handleNavigate, isAdmin, pendingPayroll, isDemoMode, activeMode as any)}
             </div>
         </div>
-        <PreVehicleChecklistModal open={showPreVehicleModal} onOpenChange={setShowPreVehicleModal} />
     </>
   );
 }

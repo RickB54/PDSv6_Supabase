@@ -507,6 +507,8 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
       e.preventDefault();
       if (url === '#call-assistant') {
         window.dispatchEvent(new Event('open-call-assistant'));
+      } else if (url === '#pre-vehicle-checklist') {
+        window.dispatchEvent(new Event('open-pre-vehicle-checklist'));
       } else if (url === '#quick-pay') {
         window.dispatchEvent(new Event('open-quick-pay'));
       } else if (url === '#notify-admin') {
