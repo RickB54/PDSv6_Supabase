@@ -1,4 +1,4 @@
-﻿import jsPDF from "jspdf";
+import jsPDF from "jspdf";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { Booking } from "@/store/bookings";
 import { pushAdminAlert, dismissAlertsForRecord } from "@/lib/adminAlerts";
@@ -109,7 +109,7 @@ export async function sendConfirmationEmail(booking: Booking) {
       // Clear any pending created alerts for this booking so red badge goes down
       dismissAlertsForRecord('Bookings', booking.id);
 
-      const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast.error("No email address found for this customer."); throw new Error("Missing target email address"); } if (targetEmail) {
+      const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
         console.log(`Ã°Å¸Å¡â‚¬ Booking confirmed! Sending email to: ${booking.customerEmail}`);
 
         const formattedDate = formatETDate(booking.date);
@@ -269,13 +269,16 @@ export async function sendConfirmationEmail(booking: Booking) {
           });
         } else {
           console.error("Failed to send customer confirmation email:", error);
-          toast.error(`Failed to send email: ${error?.message || 'Unknown error from server'}`);
-          throw new Error("Failed to send email");
+          const serverError = error?.message || (error as any)?.error || JSON.stringify(error) || 'Unknown error from server';
+          toast({ title: "Error", description: `Supabase Server Error: ${serverError}`, variant: "destructive" });
+          throw new Error(`Supabase Server Error: ${serverError}`);
         }
       }
   } catch (e: any) {
     console.error('Failed to send confirmation email', e);
-    toast.error(e.message || "An unexpected error occurred while sending the email");
+    if (!e.message.includes("Supabase Server Error") && !e.message.includes("Missing target email")) {
+        toast({ title: "Error", description: e.message || "An unexpected error occurred while sending the email", variant: "destructive" });
+    }
     throw e;
   }
 }
@@ -349,7 +352,7 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
     const formattedTime = formatETTime(booking.date);
     const year = new Date().getFullYear();
 
-    const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast.error("No email address found for this customer."); throw new Error("Missing target email address"); } if (targetEmail) {
+    const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
       console.log(`Ã°Å¸Å¡â‚¬ Sending cancellation email to: ${booking.customerEmail}`);
 
       const cancellationHtml = `
@@ -437,7 +440,7 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
   try {
     const year = new Date().getFullYear();
 
-    const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast.error("No email address found for this customer."); throw new Error("Missing target email address"); } if (targetEmail) {
+    const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
       console.log(`Ã°Å¸Å¡â‚¬ Sending personalized follow-up reminder to: ${booking.customerEmail}`);
 
       const reminderHtml = `
@@ -981,5 +984,6 @@ export const PROSPECT_CAMPAIGNS: EmailCampaign[] = [
     suggestedIncentive: true
   }
 ];
+
 
 
