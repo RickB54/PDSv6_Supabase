@@ -104,12 +104,8 @@ export async function onBookingCreated(booking: Booking) {
 }
 
 // Generate a lightweight PDF and alert when booking status changes
-export async function onBookingStatusChanged(booking: Booking, prevStatus: string, nextStatus: string) {
+export async function sendConfirmationEmail(booking: Booking) {
   try {
-    // Removed automatic status-change PDF archival to minimize file manager clutter
-
-    // 2. SPECIAL LOGIC: When confirmed, send professional email to customer
-    if (nextStatus === 'confirmed') {
       // Clear any pending created alerts for this booking so red badge goes down
       dismissAlertsForRecord('Bookings', booking.id);
 
@@ -275,8 +271,13 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
           console.error("Failed to send customer confirmation email:", error);
         }
       }
-    }
+  } catch (e) {
+    console.error('Failed to send confirmation email', e);
+  }
+}
 
+export async function onBookingStatusChanged(booking: Booking, prevStatus: string, nextStatus: string) {
+  try {
     if (nextStatus === 'done' && prevStatus !== 'done') {
       console.log(`🚀 Booking marked done. Calculating Payroll Earnings for ${booking.assignedEmployee}...`);
       

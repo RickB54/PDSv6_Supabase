@@ -1537,6 +1537,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           }
         });
       }
+      
+      calculatedPrice += formData.destinationFee || 0;
  
       // Apply discount to calculatedPrice if matched or manual
       let discountAmount = 0;
@@ -2116,6 +2118,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     
     setEmailPreviewType(type);
     setShowEmailPreview(true);
+  };
+
+  const handleSendManualEmail = async (data: any, type: string) => {
+    try {
+      const { sendConfirmationEmail } = await import("@/lib/bookingsSync");
+      // Just manually send the confirmation
+      await sendConfirmationEmail(data);
+      setShowEmailPreview(false);
+    } catch (err) {
+      console.error("Failed to send manual email", err);
+      toast.error("Failed to send email");
+    }
   };
 
 
@@ -3787,26 +3801,25 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             </div>
 
             <DialogFooter className="px-4 sm:px-6 py-4 shrink-0 border-t border-zinc-800 bg-zinc-900/50 mt-auto">
-              <div className="flex flex-wrap items-center gap-2 w-full">
-                {selectedBooking && selectedBooking.status !== 'cancelled' && isAdmin && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setIsCancelConfirmOpen(true)}
-                    className="text-orange-400 border-orange-950/50 hover:bg-orange-950/20 hover:text-orange-300 h-9 font-bold px-3"
-                  >
-                    <X className="mr-1.5 h-4 w-4" /> Cancel Job
-                  </Button>
-                )}
+              <div className="flex flex-wrap gap-2 w-full justify-center sm:justify-start">
+                
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleCloseBookingModal} 
+                  className="bg-red-950/40 hover:bg-red-900 text-red-200 border border-red-900/50 h-8 px-2 text-xs"
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Cancel <span className="hidden sm:inline">&nbsp;Job</span>
+                </Button>
                 
                 {selectedBooking && isAdmin && (
                   <Button 
                     variant="destructive" 
                     size="icon" 
                     onClick={handleDelete} 
-                    className="bg-red-950/40 hover:bg-red-900 text-red-200 border border-red-900/50 h-9 w-9"
+                    className="bg-red-950/40 hover:bg-red-900 text-red-200 border border-red-900/50 h-8 w-8 shrink-0"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 )}
 
@@ -3815,9 +3828,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 h-9 px-3"
+                      className="border-zinc-800 hover:bg-zinc-800 text-zinc-300 h-8 px-2 text-xs"
                     >
-                      <Mail className="mr-1.5 h-4 w-4" /> Previews <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
+                      <Mail className="mr-1.5 h-3.5 w-3.5" /> Previews <ChevronDown className="ml-1 h-3 w-3 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent side="top" align="start" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-56 z-[9999]">
@@ -3846,10 +3859,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Button 
                     variant="secondary" 
                     size="sm" 
-                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(true); }} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); calculatedPrice += formData.destinationFee || 0; handleSave(true); }} 
+                    className="bg-blue-600 hover:bg-blue-700 text-white border-none h-8 px-2 text-xs font-bold relative z-[200] pointer-events-auto shrink-0"
                   >
-                    <Check className="mr-1.5 h-4 w-4" /> {formData.status === 'confirmed' ? 'Resend Approval' : 'Approve & Email'}
+                    <Check className="mr-1 h-3.5 w-3.5" /> {formData.status === 'confirmed' ? 'Re-Approve' : 'Approve Booking'}
                   </Button>
                 )}
 
@@ -3857,10 +3870,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Button 
                     variant="secondary" 
                     size="sm" 
-                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-9 px-4 font-bold relative z-[200] pointer-events-auto"
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); calculatedPrice += formData.destinationFee || 0; handleSave(); }} 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-8 px-2 text-xs font-bold relative z-[200] pointer-events-auto shrink-0"
                   >
-                    <Save className="mr-1.5 h-4 w-4" /> Save Booking
+                    <Save className="mr-1 h-3.5 w-3.5" /> Save
                   </Button>
                 )}
 
@@ -3868,19 +3881,20 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   variant="secondary" 
                   size="sm" 
                   onClick={() => handleStartJob()} 
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-8 px-2 text-xs shrink-0"
                 >
-                  <Wrench className="mr-1.5 h-4 w-4 text-purple-400" /> Start Job
+                  <Wrench className="mr-1.5 h-3.5 w-3.5 text-purple-400" /> Start Job
                 </Button>
 
                 {isAdmin && (
                   <Button 
                     variant="secondary" 
-                    size="sm" 
+                    size="icon" 
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDuplicate(selectedBooking); }} 
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-9 px-3"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-8 w-8 shrink-0"
+                    title="Duplicate Booking"
                   >
-                    <Copy className="mr-1.5 h-4 w-4 opacity-50" /> Duplicate
+                    <Copy className="h-3.5 w-3.5 opacity-50" />
                   </Button>
                 )}
               </div>
@@ -5057,6 +5071,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         onOpenChange={setShowEmailPreview}
         type={emailPreviewType}
         data={emailFormData}
+        onSend={handleSendManualEmail}
       />
 
       <Dialog open={!!selectedActivityLog} onOpenChange={(open) => !open && setSelectedActivityLog(null)}>

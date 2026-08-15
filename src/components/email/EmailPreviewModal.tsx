@@ -8,9 +8,11 @@ interface EmailPreviewModalProps {
   onOpenChange: (open: boolean) => void
   type: 'confirmation' | 'request' | 'cancelled' | 'reminder' | 'payment-success' | 'prospect' | 'correspondence'
   data: any
+  onSend?: (data: any, type: string) => void
+  isSending?: boolean
 }
 
-export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPreviewModalProps) {
+export function EmailPreviewModal({ open, onOpenChange, type, data, onSend, isSending }: EmailPreviewModalProps) {
   if (!data) return null
 
   // Helpers to match bookingsSync.ts logic
@@ -46,6 +48,15 @@ export function EmailPreviewModal({ open, onOpenChange, type, data }: EmailPrevi
                  type === 'correspondence'? 'Direct Correspondence' :
                                           'Payment Success'}
               </Badge>
+              {onSend && !data.last_email_sent_at && !data.sent_at && (
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSend(data, type); }}
+                  disabled={isSending}
+                  className="bg-blue-600 hover:bg-blue-700 text-white border-none h-6 px-3 rounded-md text-[10px] font-bold tracking-wider uppercase transition-colors shadow-sm ml-2 flex items-center"
+                >
+                  {isSending ? 'Sending...' : 'Send Now'}
+                </button>
+              )}
             </div>
           </div>
 
