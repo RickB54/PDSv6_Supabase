@@ -1009,7 +1009,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             placeOfService: booking.placeOfService || "Customer's address",
             probonoReason: booking.probonoReason || "",
             probonoReasons: booking.probonoReasons || [],
-            probonoPrimaryReason: booking.probonoPrimaryReason || ""
+            probonoPrimaryReason: booking.probonoPrimaryReason || "",
+            howFound: booking.howFound || "",
+            destinationFee: 0,
+            destinationMiles: 0
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -1580,7 +1583,6 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy,
-          howFound: formData.howFound,
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -1677,7 +1679,6 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           address: formData.address,
           assignedEmployee: formData.assignedEmployee,
           bookedBy: formData.bookedBy || getCurrentUser()?.name || 'Staff',
-          howFound: formData.howFound,
           notes: formData.notes,
           addons: formData.addons,
           hasReminder: formData.hasReminder,
@@ -1782,7 +1783,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           placeOfService: "Customer's address",
           probonoReason: "",
           probonoReasons: [],
-          probonoPrimaryReason: ""
+          probonoPrimaryReason: "",
+          howFound: "",
+          destinationFee: 0,
+          destinationMiles: 0
         });
       }, 300);
 
@@ -1854,7 +1858,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       placeOfService: booking.placeOfService || "Customer's address",
       probonoReason: booking.probonoReason || "",
       probonoReasons: booking.probonoReasons || [],
-      probonoPrimaryReason: booking.probonoPrimaryReason || ""
+      probonoPrimaryReason: booking.probonoPrimaryReason || "",
+      howFound: booking.howFound || "",
+      destinationFee: 0,
+      destinationMiles: 0
     });
 
     // Reset validation/selection states for "New" mode
