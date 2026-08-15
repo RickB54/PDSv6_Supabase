@@ -8,6 +8,11 @@ All colors MUST be HSL.
 
 @layer base {
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
   /* Light mode theme for public pages */
   /* Active menu item styling: make current item blue */
   a[aria-current="page"],
