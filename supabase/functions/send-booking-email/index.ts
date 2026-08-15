@@ -151,11 +151,11 @@ serve(async (req) => {
       JSON.stringify({ success: true, id: data.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Edge Function Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || String(error) }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
   }
 })
