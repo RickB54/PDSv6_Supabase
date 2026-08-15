@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom";
+﻿import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import {
@@ -47,6 +47,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { contentService } from "@/lib/content";
+import { PreVehicleChecklistModal } from "@/components/modals/PreVehicleChecklistModal";
 
 const renderSidebarContent = (
     collapsed: boolean, 
@@ -278,6 +279,11 @@ const renderSidebarContent = (
                 <ListChecks className="w-5 h-5 text-cyan-400" />
                 {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">SOPs</span>}
             </Button>
+
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => setShowPreVehicleModal(true)} title="Pre-Vehicle Checklist (Standalone)" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <ClipboardCheck className="w-5 h-5 text-rose-400" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Pre-Veh</span>}
+            </Button>
             
             <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
 
@@ -447,6 +453,7 @@ export function GlobalRightSidebar() {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = useState(false);
     const [collapsed, setCollapsed] = useState(true);
+    const [showPreVehicleModal, setShowPreVehicleModal] = useState(false);
     const [pendingPayroll, setPendingPayroll] = useState(0);
     const { isDemoMode } = useDemoMode();
     const user = getCurrentUser();
@@ -641,6 +648,7 @@ export function GlobalRightSidebar() {
     }
 
     return (
+        <>
         <div 
           className={`sticky z-40 border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
           style={{ 
@@ -664,5 +672,9 @@ export function GlobalRightSidebar() {
                 {renderSidebarContent(collapsed, handleNavigate, isAdmin, pendingPayroll, isDemoMode, activeMode)}
             </div>
         </div>
-    );
+        <PreVehicleChecklistModal open={showPreVehicleModal} onOpenChange={setShowPreVehicleModal} />
+    </>
+  );
 }
+
+
