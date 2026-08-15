@@ -314,7 +314,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   if (isPublicPage) {
     return (
       <SidebarProvider defaultOpen={false}>
-        <div className="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
+        <div className="min-h-screen w-full bg-white text-zinc-900 selection:bg-blue-600 selection:text-white flex border-none">
           { (effectiveUser || location.pathname.startsWith('/estimate/') || location.pathname.startsWith('/invoice/') || location.pathname.startsWith('/invoice-success/')) && (
             <div className="dark-theme">
               <AppSidebar key={effectiveUser?.id || 'sidebar-anon'} user={effectiveUser} businessStatus={businessStatus} />
@@ -344,7 +344,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   // 2. UNAUTHENTICATED AUTH PAGES
   if (!effectiveUser) {
     return (
-      <div className="min-h-screen w-full overflow-x-hidden bg-white text-zinc-900">
+      <div className="min-h-screen w-full bg-white text-zinc-900">
         <Routes>
           {publicRoutes}
           <Route path="/login" element={<Login />} />
@@ -386,7 +386,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
   // 3. INTERNAL APP LAYOUT: Flex with Sidebar for Dashboards/Admin
   // Unified padding management: paddingClass handles banners + header height
   return (
-    <div className={`flex min-h-screen w-full overflow-x-hidden ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
+    <div className={`flex min-h-screen w-full ${showDarkTheme ? 'bg-black text-white' : 'bg-white text-black'}`}>
       <div className={`dark-theme min-h-screen ${paddingClass}`}>
         <AppSidebar key={effectiveUser?.id || 'sidebar-authenticated'} user={effectiveUser} businessStatus={businessStatus} />
       </div>
