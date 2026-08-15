@@ -3859,7 +3859,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Button 
                     variant="secondary" 
                     size="sm" 
-                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); calculatedPrice += formData.destinationFee || 0; handleSave(true); }} 
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(true); }} 
                     className="bg-blue-600 hover:bg-blue-700 text-white border-none h-8 px-2 text-xs font-bold relative z-[200] pointer-events-auto shrink-0"
                   >
                     <Check className="mr-1 h-3.5 w-3.5" /> {formData.status === 'confirmed' ? 'Re-Approve' : 'Approve Booking'}
@@ -3870,7 +3870,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Button 
                     variant="secondary" 
                     size="sm" 
-                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); calculatedPrice += formData.destinationFee || 0; handleSave(); }} 
+                    onClick={async (e) => { e.preventDefault(); e.stopPropagation(); handleSave(); }} 
                     className="bg-emerald-600 hover:bg-emerald-700 text-white border-none h-8 px-2 text-xs font-bold relative z-[200] pointer-events-auto shrink-0"
                   >
                     <Save className="mr-1 h-3.5 w-3.5" /> Save
