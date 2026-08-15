@@ -1597,10 +1597,6 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
         };
-        
-        if (triggerEmailSend) {
-          (updates as any).last_email_sent_at = new Date().toISOString();
-        }
 
         // Reschedule Tracking Logic
         const oldDateObj = new Date(selectedBooking.date);
@@ -1698,10 +1694,6 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
         };
-        
-        if (triggerEmailSend) {
-          (newBooking as any).last_email_sent_at = new Date().toISOString();
-        }
         
         await add(newBooking as any);
         resultingBooking = newBooking;
