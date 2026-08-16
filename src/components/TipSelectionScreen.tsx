@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone, HelpCircle, Info } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
@@ -29,8 +29,9 @@ export default function TipSelectionScreen({
   const [loading, setLoading] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   
-  const [selectedTip, setSelectedTip] = useState<number | null | 'custom' | undefined>(undefined);
+  const [selectedTip, setSelectedTip] = useState<number | null | 'custom' | 'custom_dollar' | undefined>(undefined);
   const [customTip, setCustomTip] = useState<string>('');
+  const [customTipDollar, setCustomTipDollar] = useState<string>('');
   
   // The base price in dollars
   const basePriceFormatted = (remainingBalanceInCents / 100).toFixed(2);
@@ -49,6 +50,12 @@ export default function TipSelectionScreen({
       const parsed = parseFloat(customTip);
       if (isNaN(parsed) || parsed < 0) return;
       finalTip = parsed;
+    } else if (selectedTip === 'custom_dollar') {
+      const parsedDollar = parseFloat(customTipDollar);
+      if (isNaN(parsedDollar) || parsedDollar < 0) return;
+      // Convert flat dollar amount to a percentage that the Edge Function's Math.round logic will digest correctly
+      const amountInCents = parsedDollar * 100;
+      finalTip = (amountInCents / remainingBalanceInCents) * 100;
     } else {
       finalTip = selectedTip;
     }
@@ -92,6 +99,12 @@ export default function TipSelectionScreen({
     if (selectedTip === null) return "$0.00";
     if (selectedTip === undefined) return "$0.00";
     
+    if (selectedTip === 'custom_dollar') {
+      const parsed = parseFloat(customTipDollar);
+      if (!isNaN(parsed)) return "$" + parsed.toFixed(2);
+      return "$0.00";
+    }
+
     let percent = 0;
     if (selectedTip === 'custom') {
       const parsed = parseFloat(customTip);
@@ -108,6 +121,12 @@ export default function TipSelectionScreen({
       return basePriceFormatted;
     }
     
+    if (selectedTip === 'custom_dollar') {
+      const parsed = parseFloat(customTipDollar);
+      const tipAmountCents = !isNaN(parsed) ? parsed * 100 : 0;
+      return ((remainingBalanceInCents + tipAmountCents) / 100).toFixed(2);
+    }
+
     let percent = 0;
     if (selectedTip === 'custom') {
       const parsed = parseFloat(customTip);
@@ -120,7 +139,9 @@ export default function TipSelectionScreen({
     return ((remainingBalanceInCents + tipAmountCents) / 100).toFixed(2);
   };
 
-  const canProceed = selectedTip !== undefined && (selectedTip !== 'custom' || (!isNaN(parseFloat(customTip)) && parseFloat(customTip) >= 0));
+  const canProceed = selectedTip !== undefined && 
+    (selectedTip !== 'custom' || (!isNaN(parseFloat(customTip)) && parseFloat(customTip) >= 0)) &&
+    (selectedTip !== 'custom_dollar' || (!isNaN(parseFloat(customTipDollar)) && parseFloat(customTipDollar) >= 0));
 
   return (
     <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
@@ -172,35 +193,35 @@ export default function TipSelectionScreen({
                   <div className="flex gap-2.5 items-start">
                     <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
                     <div>
-                      <p className="font-bold text-xs text-gray-900">💵 Pay with Cash (via Invoices page)</p>
-                      <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> → open invoice → tap <b>Record Payment</b> → choose <b>Pay with Cash</b>.</p>
+                      <p className="font-bold text-xs text-gray-900">ðŸ’µ Pay with Cash (via Invoices page)</p>
+                      <p className="text-[11px] text-gray-600 mt-0.5">Go to <b>Invoices</b> â†’ open invoice â†’ tap <b>Record Payment</b> â†’ choose <b>Pay with Cash</b>.</p>
                     </div>
                   </div>
                 )}
                 <div className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '2' : '1'}</span>
                   <div>
-                    <p className="font-bold text-xs text-gray-900">📱 Pay with Stripe</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay with Stripe</b> below — hand phone to customer to enter card.</p>
+                    <p className="font-bold text-xs text-gray-900">ðŸ“± Pay with Stripe</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Pay with Stripe</b> below â€” hand phone to customer to enter card.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '3' : '2'}</span>
                   <div>
-                    <p className="font-bold text-xs text-gray-900">📷 Show QR Code (Remote)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Show QR Code</b> — customer scans code to pay.</p>
+                    <p className="font-bold text-xs text-gray-900">ðŸ“· Show QR Code (Remote)</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Tap <b>Show QR Code</b> â€” customer scans code to pay.</p>
                   </div>
                 </div>
                 <div className="flex gap-2.5 items-start">
                   <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '4' : '3'}</span>
                   <div>
-                    <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount → Continue → choose tip → <b>Pay with Cash</b>.</p>
+                    <p className="font-bold text-xs text-gray-900">âš¡ Quick Pay Cash (Walk-in only)</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount â†’ Continue â†’ choose tip â†’ <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
                 {isAdmin && (
                   <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
-                    → Go to Invoices page now
+                    â†’ Go to Invoices page now
                   </a>
                 )}
               </div>
@@ -273,45 +294,82 @@ export default function TipSelectionScreen({
                 );
               })}
 
-              <div 
-                className={`w-full rounded-2xl overflow-hidden transition-all border-2 ${
-                  selectedTip === 'custom' 
-                    ? 'border-accent bg-accent/5' 
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <button
-                  onClick={() => setSelectedTip('custom')}
-                  className={`w-full py-3 px-6 text-lg font-semibold transition-all flex justify-between items-center ${
-                    selectedTip === 'custom' ? 'text-accent' : 'text-gray-600'
+              <div className="flex gap-2 w-full">
+                <div 
+                  className={`w-full rounded-2xl overflow-hidden transition-all border-2 ${
+                    selectedTip === 'custom' 
+                      ? 'border-accent bg-accent/5' 
+                      : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
-                  <span>Other %</span>
-                </button>
-                
-                {selectedTip === 'custom' && (
-                  <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200 space-y-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        autoFocus
-                        value={customTip}
-                        onChange={(e) => setCustomTip(e.target.value)}
-                        placeholder="Enter percentage"
-                        className="w-full py-3 px-4 pr-10 border-2 border-accent rounded-xl text-lg font-bold focus:ring-0 focus:outline-none shadow-inner bg-white text-gray-900"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-extrabold text-lg">%</span>
-                    </div>
-                    {customTip && !isNaN(parseFloat(customTip)) && (
-                      <div className="flex justify-between items-center px-1">
-                        <span className="text-sm text-gray-400 font-medium italic">Calculated Tip:</span>
-                        <span className="text-xl font-bold text-accent">+{getTipAmountDisplay()}</span>
+                  <button
+                    onClick={() => setSelectedTip('custom')}
+                    className={`w-full py-3 px-6 text-lg font-semibold transition-all flex justify-center items-center ${
+                      selectedTip === 'custom' ? 'text-accent' : 'text-gray-600'
+                    }`}
+                  >
+                    <span>Other %</span>
+                  </button>
+                  
+                  {selectedTip === 'custom' && (
+                    <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200 space-y-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          autoFocus
+                          value={customTip}
+                          onChange={(e) => setCustomTip(e.target.value)}
+                          placeholder="Percentage"
+                          className="w-full py-3 px-4 pr-10 border-2 border-accent rounded-xl text-lg font-bold focus:ring-0 focus:outline-none shadow-inner bg-white text-gray-900"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-extrabold text-lg">%</span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      {customTip && !isNaN(parseFloat(customTip)) && (
+                        <div className="flex justify-between items-center px-1">
+                          <span className="text-sm text-gray-400 font-medium italic">Calculated Tip:</span>
+                          <span className="text-xl font-bold text-accent">+{getTipAmountDisplay()}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div 
+                  className={`w-full rounded-2xl overflow-hidden transition-all border-2 ${
+                    selectedTip === 'custom_dollar' 
+                      ? 'border-accent bg-accent/5' 
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+                >
+                  <button
+                    onClick={() => setSelectedTip('custom_dollar')}
+                    className={`w-full py-3 px-6 text-lg font-semibold transition-all flex justify-center items-center ${
+                      selectedTip === 'custom_dollar' ? 'text-accent' : 'text-gray-600'
+                    }`}
+                  >
+                    <span>Other Amount ($)</span>
+                  </button>
+                  
+                  {selectedTip === 'custom_dollar' && (
+                    <div className="px-6 pb-6 pt-2 animate-in slide-in-from-top-2 duration-200 space-y-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-extrabold text-lg">$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          autoFocus
+                          value={customTipDollar}
+                          onChange={(e) => setCustomTipDollar(e.target.value)}
+                          placeholder="Amount"
+                          className="w-full py-3 px-4 pl-8 border-2 border-accent rounded-xl text-lg font-bold focus:ring-0 focus:outline-none shadow-inner bg-white text-gray-900"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -347,16 +405,22 @@ export default function TipSelectionScreen({
             {onCashPayment && (
               <button
                 onClick={() => {
-                  let percent = 0;
-                  if (selectedTip === 'custom') {
-                    const parsed = parseFloat(customTip);
-                    if (!isNaN(parsed)) percent = parsed;
-                  } else if (selectedTip !== null && selectedTip !== undefined) {
-                    percent = selectedTip;
-                  }
-                  const tipAmount = (remainingBalanceInCents * (percent / 100)) / 100;
-                  onCashPayment(tipAmount);
-                }}
+                    let tipAmount = 0;
+                    if (selectedTip === 'custom_dollar') {
+                      const parsed = parseFloat(customTipDollar);
+                      if (!isNaN(parsed)) tipAmount = parsed;
+                    } else {
+                      let percent = 0;
+                      if (selectedTip === 'custom') {
+                        const parsed = parseFloat(customTip);
+                        if (!isNaN(parsed)) percent = parsed;
+                      } else if (selectedTip !== null && selectedTip !== undefined) {
+                        percent = selectedTip as number;
+                      }
+                      tipAmount = (remainingBalanceInCents * (percent / 100)) / 100;
+                    }
+                    onCashPayment(tipAmount);
+                  }}
                 disabled={!canProceed}
                 className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
@@ -376,3 +440,4 @@ export default function TipSelectionScreen({
     </div>
   );
 }
+
