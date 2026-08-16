@@ -144,27 +144,18 @@ export default function TipSelectionScreen({
     (selectedTip !== 'custom_dollar' || (!isNaN(parseFloat(customTipDollar)) && parseFloat(customTipDollar) >= 0));
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
-      <div className="w-full max-w-lg bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden max-h-[92vh] my-auto">
+    <div className="fixed inset-0 z-[100] bg-gray-900/80 backdrop-blur-sm flex flex-col items-center animate-in fade-in duration-300 p-2 sm:p-4 overflow-y-auto">
+      <div className="w-full max-w-lg bg-white rounded-3xl flex flex-col shadow-2xl relative overflow-hidden max-h-[92vh] my-auto shrink-0">
         
         {/* Top Header - Condensed for Mobile */}
         <div className="bg-gray-50 px-5 py-3.5 text-center border-b border-gray-100 flex-shrink-0 relative sticky top-0 z-20">
           {!loading && (
-            <>
-              <button 
-                onClick={() => setShowInfo(!showInfo)} 
-                className="absolute top-3 right-12 p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-                title="What does this do?"
-              >
-                <HelpCircle size={20} />
-              </button>
-              <button 
-                onClick={onCancel} 
-                className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </>
+            <button 
+              onClick={onCancel} 
+              className="absolute top-3 right-3 p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
           )}
           <h2 className="text-xl font-extrabold text-gray-900 mb-0.5 tracking-tight">Final Details</h2>
           <div className="flex flex-col items-center gap-1">
@@ -177,18 +168,23 @@ export default function TipSelectionScreen({
           </div>
         </div>
 
-        {/* Scrollable Content Body */}
         <div className="p-4 sm:p-6 flex-1 overflow-y-auto w-full pb-6 styled-scrollbar">
-          {showInfo && (
-            <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm mx-auto max-w-md">
-              <div className="px-4 pt-3 pb-2 border-b border-blue-200/60 sticky top-0 bg-blue-50/90 backdrop-blur-xs z-10">
+          <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden shadow-sm mx-auto max-w-md">
+            <button 
+              onClick={() => setShowInfo(!showInfo)}
+              className="w-full px-4 pt-3 pb-2 border-b border-blue-200/60 sticky top-0 bg-blue-50/90 backdrop-blur-xs z-10 flex items-center justify-between hover:bg-blue-100/50 transition-colors"
+            >
+              <div className="text-left">
                 <div className="font-extrabold text-xs flex items-center gap-2">
                   <Info size={14} className="text-blue-600 shrink-0" />
                   Payment Process Guide
                 </div>
                 <p className="text-[11px] text-blue-700/80 mt-0.5">Quick Pay creates a <b>standalone</b> invoice only.{isAdmin ? ' For booking-linked payments, use the Invoices page.' : ''}</p>
               </div>
-              <div className="px-4 py-2.5 flex flex-col gap-2.5">
+              <ChevronRight size={16} className={`text-blue-500 shrink-0 ml-2 transition-transform ${showInfo ? 'rotate-90' : ''}`} />
+            </button>
+            {showInfo && (
+              <div className="px-4 py-2.5 flex flex-col gap-2.5 animate-in slide-in-from-top-2 duration-200">
                 {isAdmin && (
                   <div className="flex gap-2.5 items-start">
                     <span className="shrink-0 w-5 h-5 rounded-full bg-green-500 text-white text-[10px] font-black flex items-center justify-center">1</span>
@@ -216,20 +212,21 @@ export default function TipSelectionScreen({
                   <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center">{isAdmin ? '4' : '3'}</span>
                   <div>
                     <p className="font-bold text-xs text-gray-900">âš¡ Quick Pay Cash (Walk-in only)</p>
-                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount â†’ Continue â†’ choose tip â†’ <b>Pay with Cash</b>.</p>
+                    <p className="font-bold text-xs text-gray-900">⚡ Quick Pay Cash (Walk-in only)</p>
+                    <p className="text-[11px] text-gray-600 mt-0.5">Enter amount → Continue → choose tip → <b>Pay with Cash</b>.</p>
                   </div>
                 </div>
                 {isAdmin && (
                   <a href="#" onClick={(e) => { e.preventDefault(); onCancel(); window.location.href='/invoicing'; }} className="mt-0.5 text-center text-xs font-bold text-blue-800 underline hover:text-blue-600">
-                    â†’ Go to Invoices page now
+                    → Go to Invoices page now
                   </a>
                 )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-accent gap-6 h-full">
+            <div className="flex flex-col items-center py-20 text-accent gap-6 h-full">
               <Loader2 size={64} className="animate-spin" />
               <p className="text-xl text-gray-700 font-semibold">Preparing payment...</p>
               <p className="text-sm text-gray-400">Please do not close this window</p>

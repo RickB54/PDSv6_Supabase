@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -2670,12 +2670,12 @@ const ServiceChecklist = () => {
                 {/* Info Row */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    { label: 'Customer', value: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || 'â€”' },
+                    { label: 'Customer', value: customers.find(c => c.id === selectedCustomer)?.name || genericCustomerName || '' },
                     { label: 'Date', value: format(new Date(), 'MMM d, yyyy') },
-                    { label: 'Service', value: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || 'â€”' },
-                    { label: 'Year', value: vYear || 'â€”' },
-                    { label: 'Make', value: vMake || 'â€”' },
-                    { label: 'Model', value: vModel || 'â€”' },
+                    { label: 'Service', value: servicePackages.find(p => p.id === selectedPackage)?.name || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name || '' },
+                    { label: 'Year', value: vYear || '' },
+                    { label: 'Make', value: vMake || '' },
+                    { label: 'Model', value: vModel || '' },
                   ].map(f => (
                     <div key={f.label} className="bg-zinc-950/50 border border-zinc-800 rounded-lg px-3 py-2">
                       <div className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{f.label}</div>
