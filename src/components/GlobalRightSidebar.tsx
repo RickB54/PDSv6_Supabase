@@ -490,7 +490,14 @@ export function GlobalRightSidebar() {
             try {
                 const { getSupabasePayrollRecords } = await import("@/lib/supa-data");
                 const records = await getSupabasePayrollRecords('pending');
-                setPendingPayroll(records.length);
+                
+                const lastViewed = localStorage.getItem('last_viewed_payment_time');
+                let count = records.length;
+                if (lastViewed) {
+                    const lastViewedTime = new Date(lastViewed).getTime();
+                    count = records.filter((r: any) => new Date(r.created_at).getTime() > lastViewedTime).length;
+                }
+                setPendingPayroll(count);
             } catch {}
         };
         fetchPayroll();

@@ -12,6 +12,7 @@ import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeF
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export interface UnifiedPayment {
   id: string;
@@ -36,6 +37,28 @@ const Payments = () => {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
+  
+  const handlePaymentClick = async (payment: UnifiedPayment) => {
+    // Clear the notification badge in GlobalRightSidebar
+    localStorage.setItem('last_viewed_payment_time', new Date().toISOString());
+    window.dispatchEvent(new Event('payroll-updated'));
+
+    if (payment.source === 'Invoice' || payment.source === 'Quick Pay') {
+      try {
+        const invoices = await getSupabaseInvoices();
+        const inv = invoices.find(i => 
+          i.id === payment.id || 
+          (payment.reference && i.invoiceNumber && i.invoiceNumber === payment.reference.replace('INV #', '').replace(' (Owed)', '').trim())
+        );
+        if (inv) {
+          setSelectedInvoice(inv);
+        }
+      } catch (err) {
+        console.error("Failed to fetch invoice details", err);
+      }
+    }
+  };
   
   const { isDemoMode } = useDemoMode();
 
@@ -261,7 +284,11 @@ const Payments = () => {
                   </TableRow>
                 ) : (
                   filteredPayments.map((p) => (
-                    <TableRow key={p.id} className="border-zinc-800/50 hover:bg-zinc-800/30 transition-colors group">
+                    <TableRow 
+                      key={p.id} 
+                      className="border-zinc-800/50 hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                      onClick={() => handlePaymentClick(p)}
+                    >
                       <TableCell className="text-zinc-300 font-medium whitespace-nowrap">
                         {new Date(p.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </TableCell>
@@ -302,6 +329,65 @@ const Payments = () => {
           </div>
         </Card>
       </main>
+
+      <Dialog open={!!selectedInvoice} onOpenChange={() => setSelectedInvoice(null)}>
+        <DialogContent className="max-w-md bg-[#18181b] border-zinc-800 text-white rounded-xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-100 font-black tracking-wide flex items-center gap-2 text-xl">
+              <FileText className="w-5 h-5 text-emerald-500" />
+              Invoice #{selectedInvoice?.invoiceNumber || 'Detail'}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedInvoice && (
+            <div className="space-y-6 mt-2">
+              <div className="grid grid-cols-2 gap-4 bg-[#202025] p-4 rounded-xl border border-zinc-800/50">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-black text-zinc-500 mb-1">Date</p>
+                  <p className="font-semibold text-zinc-200">{selectedInvoice.date || selectedInvoice.createdAt}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-black text-zinc-500 mb-1">Vehicle / Info</p>
+                  <p className="font-semibold text-zinc-200">{selectedInvoice.vehicle || 'Not Specified'}</p>
+                </div>
+              </div>
+              
+              {selectedInvoice.services && selectedInvoice.services.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-black text-zinc-500 mb-3 pl-1">Services</p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                    {selectedInvoice.services.map((s: any, idx: number) => {
+                      if (s.name?.startsWith('VIRTUAL_')) return null;
+                      return (
+                        <div key={idx} className="flex justify-between items-center p-3 bg-black/40 rounded-lg border border-zinc-800/30">
+                          <span className="text-sm font-medium text-zinc-300">{s.name}</span>
+                          <span className="font-black text-zinc-100">${(s.price || 0).toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              <div className="border-t border-zinc-800/80 pt-5">
+                <div className="flex justify-between items-center bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20">
+                  <span className="text-sm font-black uppercase tracking-widest text-emerald-500">Total</span>
+                  <span className="text-2xl font-black text-emerald-400">${(selectedInvoice.total || 0).toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <div className="pt-2">
+                <Button 
+                  onClick={() => navigate(`/invoice/${selectedInvoice.id}`)} 
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black tracking-wide h-12 shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+                >
+                  <ArrowRight className="w-4 h-4 mr-2" />
+                  Open Interactive Invoice
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-﻿import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
+import { SidebarTrigger } from "@/components/ui/sidebar"; // NEW IMPORT
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, addWeeks, subWeeks, addYears, subYears, parseISO, isToday, isWithinInterval, startOfYear, endOfYear, eachMonthOfInterval, isBefore } from "date-fns";
@@ -1179,10 +1179,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
   const getStatusIcon = (status: BookingStatus | undefined) => {
     switch (status) {
-      case 'tentative': return 'â±';
+      case 'tentative': return '⏳';
       case 'blocked': return '🚫';
       case 'confirmed': return '✓';
-      case 'pending': return 'â³';
+      case 'pending': return '⏳';
       case 'in_progress': return '🔄';
       case 'done': return '✅';
       case 'rescheduled': return '🔄';
@@ -1507,7 +1507,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             console.log("✅ Customer record verified/created in Supabase:", finalCustomerId);
           }
         } catch (e) {
-          console.error('âš ï¸ Critical: Supabase customer sync failed. Booking will proceed but record might be disconnected.', e);
+          console.error('⚠️ Critical: Supabase customer sync failed. Booking will proceed but record might be disconnected.', e);
         }
       }
 
@@ -1644,7 +1644,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
               updates.notes = (updates.notes || "") + rescheduleNoteLine;
             }
           } catch (crmErr) {
-            console.error("âš ï¸ Failed to log reschedule history:", crmErr);
+            console.error("⚠️ Failed to log reschedule history:", crmErr);
           }
         }
         
@@ -1872,7 +1872,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     toast.info("Booking duplicated. Please select a new time.");
   };
 
-  // ðŸ—‘ï¸ Delete Test Bookings - Only deletes bookings with test notes
+  // 🗑️ Delete Test Bookings - Only deletes bookings with test notes
   const handleDeleteTestBookings = async () => {
     const testBookings = items.filter(b =>
       b.notes?.includes('Test booking - can be deleted') ||
@@ -2725,9 +2725,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                             <DropdownMenuLabel className="text-[9px] uppercase font-black tracking-wider text-zinc-500">Quick Change Status</DropdownMenuLabel>
                             {[
                               { val: 'confirmed', label: '✓ Confirmed Booking' },
-                              { val: 'tentative', label: 'â± Tentative (Hold)' },
+                              { val: 'tentative', label: '⏳ Tentative (Hold)' },
                               { val: 'blocked', label: '🚫 Blocked' },
-                              { val: 'pending', label: 'â³ Pending' },
+                              { val: 'pending', label: '⏳ Pending' },
                               { val: 'in_progress', label: '🔄 In Progress' },
                               { val: 'done', label: '✅ Done' },
                               { val: 'rescheduled', label: '🔄 Rescheduled' }
@@ -3404,9 +3404,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                       >
                         <option value="confirmed">✓ Confirmed Booking</option>
-                        <option value="tentative">â± Tentative (Hold)</option>
+                        <option value="tentative">⏳ Tentative (Hold)</option>
                         <option value="blocked">🚫 Blocked</option>
-                        <option value="pending">â³ Pending</option>
+                        <option value="pending">⏳ Pending</option>
                         <option value="in_progress">🔄 In Progress</option>
                         <option value="done">✅ Done</option>
                         <option value="rescheduled">🔄 Rescheduled</option>
