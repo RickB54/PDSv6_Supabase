@@ -110,7 +110,7 @@ export async function sendConfirmationEmail(booking: Booking) {
       dismissAlertsForRecord('Bookings', booking.id);
 
       const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
-        console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Booking confirmed! Sending email to: ${booking.customerEmail}`);
+        console.log(` Booking confirmed! Sending email to: ${booking.customerEmail}`);
 
         const formattedDate = formatETDate(booking.date);
         const formattedTime = formatETTime(booking.date);
@@ -119,7 +119,7 @@ export async function sendConfirmationEmail(booking: Booking) {
         const customerHtml = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
           <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
-            <div style="font-size: 48px; margin-bottom: 15px;">ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â‚¬â€</div>
+            <div style="font-size: 48px; margin-bottom: 15px;"></div>
             <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Booking Confirmed!</h1>
             <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">We've officially set your appointment.</p>
           </div>
@@ -132,23 +132,23 @@ export async function sendConfirmationEmail(booking: Booking) {
               <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b;">Appointment Details</h3>
               
               <div style="display: flex; margin-bottom: 12px;">
-                <span style="color: #94a3b8; width: 30px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦</span>
+                <span style="color: #94a3b8; width: 30px;"></span>
                 <span style="color: #334155; font-weight: 600;">${formattedDate}</span>
               </div>
               
               <div style="display: flex; margin-bottom: 12px;">
-                <span style="color: #94a3b8; width: 30px;">ÃƒÂ¢Ã‚ÂÃ‚Â°</span>
+                <span style="color: #94a3b8; width: 30px;"></span>
                 <span style="color: #334155; font-weight: 600;">${formattedTime}</span>
               </div>
               
               <div style="display: flex; margin-bottom: 12px;">
-                <span style="color: #94a3b8; width: 30px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§</span>
+                <span style="color: #94a3b8; width: 30px;"></span>
                 <span style="color: #334155; font-weight: 600;">${booking.title}</span>
               </div>
 
               ${booking.vehicleYear ? `
               <div style="display: flex; margin-bottom: 12px;">
-                <span style="color: #94a3b8; width: 30px;">ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€žÂ¢</span>
+                <span style="color: #94a3b8; width: 30px;"></span>
                 <span style="color: #334155; font-weight: 600;">${booking.vehicleYear} ${booking.vehicleMake} ${booking.vehicleModel}</span>
               </div>
               ` : ''}
@@ -160,12 +160,12 @@ export async function sendConfirmationEmail(booking: Booking) {
             </div>
             
             <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 25px; margin: 25px 0;">
-              <h3 style="margin-top: 0; font-size: 16px; color: #166534;">ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â³ Secure Payment Options</h3>
+              <h3 style="margin-top: 0; font-size: 16px; color: #166534;"> Secure Payment Options</h3>
               <p style="font-size: 14px; color: #166534; margin: 10px 0;">You have the flexibility to pay for your service however you prefer:</p>
               <div style="font-size: 14px; color: #166534; line-height: 1.5;">
-                ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <strong>Pay in Full:</strong> Settle the balance now for a contactless experience.<br>
-                ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <strong>Partial Deposit:</strong> Pay any amount now to secure your spot.<br>
-                ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <strong>Pay Later:</strong> No pressure! You can pay in person once the job is completed to your satisfaction.
+                 <strong>Pay in Full:</strong> Settle the balance now for a contactless experience.<br>
+                 <strong>Partial Deposit:</strong> Pay any amount now to secure your spot.<br>
+                 <strong>Pay Later:</strong> No pressure! You can pay in person once the job is completed to your satisfaction.
               </div>
               <div style="text-align: center; margin-top: 25px;">
                 <a href="${window.location.origin}/checkout?bookingId=${booking.id}&email=${encodeURIComponent(booking.customerEmail || '')}&amount=${booking.price || ''}" 
@@ -202,7 +202,7 @@ export async function sendConfirmationEmail(booking: Booking) {
         const { data, error } = await supabase.functions.invoke('send-booking-email', {
           body: {
             to: targetEmail,
-            subject: `ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Confirmed: Your Booking with Prime Auto Detail`,
+            subject: ` Confirmed: Your Booking with Prime Auto Detail`,
             customerName: booking.customer,
             service: booking.title,
             date: formattedDate,
@@ -286,7 +286,7 @@ export async function sendConfirmationEmail(booking: Booking) {
 export async function onBookingStatusChanged(booking: Booking, prevStatus: string, nextStatus: string) {
   try {
     if (nextStatus === 'done' && prevStatus !== 'done') {
-      console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Booking marked done. Calculating Payroll Earnings for ${booking.assignedEmployee}...`);
+      console.log(` Booking marked done. Calculating Payroll Earnings for ${booking.assignedEmployee}...`);
       
       try {
         const { getSupabaseEmployees } = await import("@/lib/supa-data");
@@ -332,10 +332,10 @@ export async function onBookingStatusChanged(booking: Booking, prevStatus: strin
           if (prError) {
              console.error("Failed to insert payroll_record:", prError);
           } else {
-             console.log("ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Payroll earning calculated and logged:", payrollRecord);
+             console.log(" Payroll earning calculated and logged:", payrollRecord);
           }
         } else {
-           console.log(`ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â No matching employee found for payroll calculation: ${booking.assignedEmployee}`);
+           console.log(` No matching employee found for payroll calculation: ${booking.assignedEmployee}`);
         }
       } catch (err) {
         console.error("Failed to calculate payroll earnings:", err);
@@ -353,12 +353,12 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
     const year = new Date().getFullYear();
 
     const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
-      console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Sending cancellation email to: ${booking.customerEmail}`);
+      console.log(` Sending cancellation email to: ${booking.customerEmail}`);
 
       const cancellationHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #fee2e2; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
-          <div style="font-size: 48px; margin-bottom: 15px;">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â</div>
+          <div style="font-size: 48px; margin-bottom: 15px;"></div>
           <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Appointment Cancelled</h1>
           <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Notification regarding your upcoming service.</p>
         </div>
@@ -376,17 +376,17 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
             <h3 style="margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b;">Original Appointment Info</h3>
             
             <div style="display: flex; margin-bottom: 12px;">
-              <span style="color: #94a3b8; width: 30px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦</span>
+              <span style="color: #94a3b8; width: 30px;"></span>
               <span style="color: #334155;">Original Date: <strong>${formattedDate}</strong></span>
             </div>
             
             <div style="display: flex; margin-bottom: 12px;">
-              <span style="color: #94a3b8; width: 30px;">ÃƒÂ¢Ã‚ÂÃ‚Â°</span>
+              <span style="color: #94a3b8; width: 30px;"></span>
               <span style="color: #334155;">Original Time: <strong>${formattedTime}</strong></span>
             </div>
             
             <div style="display: flex; margin-bottom: 12px;">
-              <span style="color: #94a3b8; width: 30px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§</span>
+              <span style="color: #94a3b8; width: 30px;"></span>
               <span style="color: #334155;">Service: <strong>${booking.title}</strong></span>
             </div>
 
@@ -414,7 +414,7 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
       await supabase.functions.invoke('send-booking-email', {
         body: {
           to: targetEmail,
-          subject: `ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Cancellation: Your Booking with Prime Auto Detail`,
+          subject: ` Cancellation: Your Booking with Prime Auto Detail`,
           html: cancellationHtml
         }
       });
@@ -429,7 +429,7 @@ export async function onBookingCancelled(booking: Booking, reason: string) {
         note: `Cancellation email sent: ${reason}`
       });
       
-      console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Cancellation email sent to ${booking.customerEmail}`);
+      console.log(` Cancellation email sent to ${booking.customerEmail}`);
     }
   } catch (e) {
     console.error('Failed to process booking cancellation sync', e);
@@ -441,12 +441,12 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
     const year = new Date().getFullYear();
 
     const targetEmail = booking.customerEmail || (booking as any).email || (booking as any).customer_email; if (!targetEmail) { toast({ title: "Error", description: "No email address found for this customer.", variant: "destructive" }); throw new Error("Missing target email address"); } if (targetEmail) {
-      console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Sending personalized follow-up reminder to: ${booking.customerEmail}`);
+      console.log(` Sending personalized follow-up reminder to: ${booking.customerEmail}`);
 
       const reminderHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
-          <div style="font-size: 48px; margin-bottom: 15px;">ÃƒÂ¢Ã…â€œÃ‚Â¨</div>
+          <div style="font-size: 48px; margin-bottom: 15px;"></div>
           <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">A Personalized Note from Prime</h1>
           <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Professional Maintenance Reminder</p>
         </div>
@@ -483,9 +483,9 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
           
           <p style="color: #4b5563; font-weight: 600; margin-top: 25px; margin-bottom: 10px;">Our Premium Add-ons for returning clients:</p>
           <ul style="color: #4b5563; line-height: 1.8; padding-left: 20px; margin-bottom: 30px;">
-            <li>ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â <strong>Ceramic Maintenance:</strong> Boost your coating's hydrophobicity.</li>
-            <li>ÃƒÂ°Ã…Â¸Ã‚Â§Ã‚Â¼ <strong>Engine Bay Detailing:</strong> Keep the heart of your car looking new.</li>
-            <li>ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¡ <strong>Headlight Restoration:</strong> Restore clarity and safety.</li>
+            <li> <strong>Ceramic Maintenance:</strong> Boost your coating's hydrophobicity.</li>
+            <li> <strong>Engine Bay Detailing:</strong> Keep the heart of your car looking new.</li>
+            <li> <strong>Headlight Restoration:</strong> Restore clarity and safety.</li>
           </ul>
 
           <div style="text-align: center; margin: 35px 0;">
@@ -584,9 +584,9 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
           silent: true
         });
         
-        console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Outreach PDF archived to File Manager');
+        console.log(' Outreach PDF archived to File Manager');
       } catch (pdfErr) {
-        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Failed to archive outreach PDF:', pdfErr);
+        console.error(' Failed to archive outreach PDF:', pdfErr);
       }
 
       // Log engagement BEFORE sending email to ensure audit trail exists even if email fails
@@ -609,8 +609,8 @@ export async function onSendReminderEmail(booking: Booking, frequencyLabel: stri
           to: targetEmail,
           bcc: options?.bccMe ? "rick.primeautodetail@gmail.com" : undefined, // User's email from notes
           subject: options?.couponCode 
-            ? `ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â A Special Gift from Prime Auto Detail for ${booking.customer}`
-            : `ÃƒÂ¢Ã…â€œÃ‚Â¨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
+            ? ` A Special Gift from Prime Auto Detail for ${booking.customer}`
+            : ` Time for a Refresh? Your Prime Auto Detail Maintenance Reminder`,
           customerName: booking.customer,
           service: booking.title,
           price: (booking.price || 0).toFixed(2),
@@ -633,12 +633,12 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
     const year = new Date().getFullYear();
 
     if (prospect.email) {
-      console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Sending professional intro to prospect: ${prospect.email}`);
+      console.log(` Sending professional intro to prospect: ${prospect.email}`);
 
       const prospectHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 45px 20px; text-align: center; color: #ffffff;">
-          <div style="font-size: 48px; margin-bottom: 20px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã…Â½</div>
+          <div style="font-size: 48px; margin-bottom: 20px;"></div>
           <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Welcome to Prime</h1>
           <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.9;">Professional Detailing Solutions</p>
         </div>
@@ -660,21 +660,21 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
              <h3 style="margin-top: 0; font-size: 15px; color: #1f2937; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #6366f1; display: inline-block; padding-bottom: 4px;">The Prime Difference:</h3>
              <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 12px;">
                 <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;">
-                  <span style="font-size: 18px;">ÃƒÂ¢Ã…â€œÃ‚Â¨</span>
+                  <span style="font-size: 18px;"></span>
                   <div>
                     <strong style="color: #111827; display: block;">Precision Detailing:</strong>
                     <span style="color: #6b7280; font-size: 13px;">Advanced techniques for an immaculate finish, inside and out.</span>
                   </div>
                 </div>
                 <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 15px;">
-                  <span style="font-size: 18px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â</span>
+                  <span style="font-size: 18px;"></span>
                   <div>
                     <strong style="color: #111827; display: block;">Superior Protection:</strong>
                     <span style="color: #6b7280; font-size: 13px;">Ceramic coatings and paint sealants that defy the elements.</span>
                   </div>
                 </div>
                 <div style="display: flex; align-items: flex-start; gap: 10px;">
-                  <span style="font-size: 18px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¨ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§</span>
+                  <span style="font-size: 18px;"></span>
                   <div>
                     <strong style="color: #111827; display: block;">Expert Craftsmanship:</strong>
                     <span style="color: #6b7280; font-size: 13px;">Highly trained specialists who treat every car like their own.</span>
@@ -780,7 +780,7 @@ export async function onSendProspectEmail(prospect: any, options?: { customNote?
         body: {
           to: prospect.email,
           bcc: options?.bccMe ? "rick.primeautodetail@gmail.com" : undefined,
-          subject: `ÃƒÂ¢Ã…â€œÃ‚Â¨ A Special Welcome to Prime Auto Detail for ${prospect.name}`,
+          subject: ` A Special Welcome to Prime Auto Detail for ${prospect.name}`,
           customerName: prospect.name,
           service: "Initial Welcome",
           html: prospectHtml,
@@ -806,20 +806,20 @@ export async function onSendProspectEstimateEmail(prospect: any, estimate: any) 
     const year = new Date().getFullYear();
 
     if (prospect.email) {
-      console.log(`ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Sending detailing estimate email to prospect: ${prospect.email}`);
+      console.log(` Sending detailing estimate email to prospect: ${prospect.email}`);
 
       // Parse estimate notes to extract scenarios or show them beautifully
       const formattedNotes = (estimate.notes || "")
         .replace(/\n/g, "<br/>")
         .replace(/\[(Scenario [A-Z].*?)\]/g, '<strong style="color: #6366f1; font-size: 16px; display: block; margin-top: 15px;">$1</strong>')
-        .replace(/ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ (.*?):/g, 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <strong>$1</strong>:');
+        .replace(/ (.*?):/g, ' <strong>$1</strong>:');
 
       const estimateHtml = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
         <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 45px 20px; text-align: center; color: #ffffff;">
-          <div style="font-size: 48px; margin-bottom: 20px;">ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Å¾</div>
+          <div style="font-size: 48px; margin-bottom: 20px;"></div>
           <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.025em; text-transform: uppercase;">Your Custom Estimate</h1>
-          <p style="margin: 10px 0 0; font-size: 15px; opacity: 0.9;">Professional Detailing Solutions ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Estimate #${estimate.estimateNumber || 'N/A'}</p>
+          <p style="margin: 10px 0 0; font-size: 15px; opacity: 0.9;">Professional Detailing Solutions  Estimate #${estimate.estimateNumber || 'N/A'}</p>
         </div>
         
         <div style="padding: 35px 30px;">
@@ -886,7 +886,7 @@ export async function onSendProspectEstimateEmail(prospect: any, estimate: any) 
         body: {
           to: prospect.email,
           bcc: "rick.primeautodetail@gmail.com",
-          subject: `ÃƒÂ¢Ã…â€œÃ‚Â¨ Custom Detailing Estimate #${estimate.estimateNumber} for ${prospect.name}`,
+          subject: ` Custom Detailing Estimate #${estimate.estimateNumber} for ${prospect.name}`,
           customerName: prospect.name,
           service: "Estimate Quote",
           html: estimateHtml,
@@ -919,39 +919,39 @@ export const CLIENT_CAMPAIGNS: EmailCampaign[] = [
   {
     id: "maintenance_standard",
     name: "Standard Maintenance Check-in",
-    subject: "ÃƒÂ¢Ã…â€œÃ‚Â¨ Time for a Refresh? Your Prime Auto Detail Maintenance Reminder",
+    subject: " Time for a Refresh? Your Prime Auto Detail Maintenance Reminder",
     defaultText: "It's been a while since your last professional detail with us, and we wanted to check in to see how your vehicle is looking! Regular maintenance is key to preserving that showroom shine. We'd love to have you back in for a refresh to keep everything protected."
   },
   {
     id: "seasonal_refresh",
     name: "Seasonal Protection Refresh",
-    subject: "ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Å¡ Seasonal Care Prep: Protect Your Vehicle with Prime Auto Detail",
+    subject: " Seasonal Care Prep: Protect Your Vehicle with Prime Auto Detail",
     defaultText: "With the changing season, your vehicle is exposed to unique elements like road salt, pollen, intense heat, and UV rays. A premium seasonal refresh is perfect right now to protect the paint, restore gloss, and deep-clean the interior. Let's get your vehicle fully shielded!"
   },
   {
     id: "ceramic_booster",
     name: "Ceramic Coating Booster Care",
-    subject: "ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Ceramic Coating Status Check: Keep Your Shield Performing",
+    subject: " Ceramic Coating Status Check: Keep Your Shield Performing",
     defaultText: "Just checking in on how your ceramic coating is performing! To preserve the intense hydrophobic qualities, self-cleaning properties, and gloss of your coating, regular booster washes are highly recommended. Let's schedule a professional booster wash to ensure absolute protection."
   },
   {
     id: "dormant_wakeup",
     name: "We Miss You (Dormant Wake-Up)",
-    subject: "ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â We Miss You! A Special Offer to Refresh Your Ride",
+    subject: " We Miss You! A Special Offer to Refresh Your Ride",
     defaultText: "It's been far too long since we pampered your ride! We miss seeing that beautiful vehicle in our garage. If you book a signature refresh detail this week, we'll give it our full white-glove treatment and get it looking brand new again.",
     suggestedIncentive: true
   },
   {
     id: "vip_special",
     name: "VIP Holiday / Exclusive Marketing Offer",
-    subject: "ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â An Exclusive VIP Invitation & Special Offer from Prime",
+    subject: " An Exclusive VIP Invitation & Special Offer from Prime",
     defaultText: "As one of our most valued VIP clients, we wanted to reach out with an exclusive signature offer. Treat your pride and joy to a deep interior reset and professional exterior enhancement. We've set aside a special campaign voucher for you!",
     suggestedIncentive: true
   },
   {
     id: "thank_you_feedback",
     name: "Post-Service Thank You & Feedback",
-    subject: "ÃƒÂ°Ã…Â¸Ã¢â€žÂ¢Ã‚Â Thank You from Prime Auto Detail (Your Experience Matters)",
+    subject: " Thank You from Prime Auto Detail (Your Experience Matters)",
     defaultText: "Thank you so much for choosing Prime Auto Detail! We take pride in our expert craftsmanship and hope we exceeded your expectations. If you love how your vehicle looks, we would be incredibly grateful if you could share your experience or leave us a review. It helps us continue to deliver perfection!"
   }
 ];
@@ -960,26 +960,26 @@ export const PROSPECT_CAMPAIGNS: EmailCampaign[] = [
   {
     id: "prospect_welcome",
     name: "Welcome Intro & First-Time Gift",
-    subject: "ÃƒÂ¢Ã…â€œÃ‚Â¨ A Special Welcome to Prime Auto Detail",
+    subject: " A Special Welcome to Prime Auto Detail",
     defaultText: "Welcome to Prime Auto Detail! We noticed you're looking for premium car care, and we'd love to introduce you to our signature processes. I'd love to discuss how our signature detailing and ceramic protection packages can keep your vehicle looking its absolute best.",
     suggestedIncentive: true
   },
   {
     id: "ceramic_education",
     name: "Ceramic Coating Education",
-    subject: "ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã…Â½ Why Choose a Professional Ceramic Coating?",
+    subject: " Why Choose a Professional Ceramic Coating?",
     defaultText: "Did you know that a professional ceramic coating is the ultimate shield for your vehicle? It protects against MA road salt, bird droppings, acid rain, and UV fading while locking in a permanent wet-gloss look. Plus, it makes washing your car virtually effortless! Let's discuss a ceramic package custom-tailored for you."
   },
   {
     id: "seasonal_kickoff",
     name: "Seasonal Protection Kickoff",
-    subject: "ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â‚¬â€ Kick Off the Season with Absolute Vehicle Protection",
+    subject: " Kick Off the Season with Absolute Vehicle Protection",
     defaultText: "Kick off the season with absolute peace of mind! Preserve your vehicle's paint, resale value, and comfort with our signature detailing package. We deep-clean every crevice and apply premium paint sealants. Secure your spot today before our schedule books out!"
   },
   {
     id: "slot_urgency",
     name: "VIP Limited Slot Warning (Urgency)",
-    subject: "ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Final Call: Limited VIP Detailing Slots Available",
+    subject: " Final Call: Limited VIP Detailing Slots Available",
     defaultText: "Our schedule is filling up incredibly fast for this month and we have only a handful of VIP slots remaining. We hate to see you miss out on premium care. Book your appointment today and give your vehicle the professional treatment it deserves!",
     suggestedIncentive: true
   }

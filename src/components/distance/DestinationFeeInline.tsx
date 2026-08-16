@@ -178,7 +178,7 @@ export const DestinationFeeInline: React.FC<DestinationFeeInlineProps> = ({
         }`}>
         <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />
         <span>
-          You\u2019re within 1 mile of our shop ({miles} mi) \u2014 <strong>no destination fee!</strong>
+          You're within 1 mile of our shop ({miles} mi) - <strong>no destination fee!</strong>
         </span>
       </div>
     );

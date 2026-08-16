@@ -1446,7 +1446,7 @@ const ServiceChecklist = () => {
   }, [checklistSteps]);
 
   // 2. Re-apply steps checked status after regeneration
-  // Matches by ID first, then falls back to step name â€” handles old drafts
+  // Matches by ID first, then falls back to step name - handles old drafts
   // that may not have exterior/interior steps (they're regenerated fresh each time)
   useEffect(() => {
     const pending = window.sessionStorage.getItem('pending_draft_steps');
@@ -1787,7 +1787,7 @@ const ServiceChecklist = () => {
       const customer = customers.find(c => c.id === selectedCustomer);
       const customerName = customer?.name || genericCustomerName || 'Generic Customer';
       const doc = new jsPDF();
-      const title = finalize ? 'Service Checklist â€” Job Completed' : 'Service Checklist â€” Progress Saved';
+      const title = finalize ? 'Service Checklist - Job Completed' : 'Service Checklist - Progress Saved';
       doc.setFontSize(18);
       doc.text('Prime Auto Detail', 105, 18, { align: 'center' });
       doc.setFontSize(12);
@@ -1825,7 +1825,7 @@ const ServiceChecklist = () => {
       doc.text(`Discount: $${calculateDiscount().toFixed(2)}`, 20, y); y += 6;
       doc.text(`Total: $${calculateTotal().toFixed(2)}`, 20, y);
 
-      // Checklist Details â€” tasks, progress, and notes
+      // Checklist Details - tasks, progress, and notes
       y += 10;
       doc.setFontSize(13);
       doc.text('Checklist Details', 20, y); y += 7;
@@ -1841,7 +1841,7 @@ const ServiceChecklist = () => {
         doc.text(`${label}:`, 20, y); y += 6;
         doc.setFontSize(10);
         tasks.forEach(t => {
-          const mark = t.checked ? 'âœ“' : 'âœ—';
+          const mark = t.checked ? '✓' : '✗';
           // Draw colored mark, then item text in default color
           if (t.checked) doc.setTextColor(22, 163, 74); // green
           else doc.setTextColor(220, 38, 38); // red
@@ -1867,7 +1867,7 @@ const ServiceChecklist = () => {
         y += split.length * 5 + 4;
       }
 
-      // Materials Used â€” chemicals and materials rows
+      // Materials Used - chemicals and materials rows
       doc.setFontSize(13);
       doc.text('Materials Used', 20, y); y += 7;
       doc.setFontSize(11);
@@ -1876,8 +1876,8 @@ const ServiceChecklist = () => {
       const chemLines = (chemRows || []).map(row => {
         const name = String(chemicalsList.find(c => String(c.id) === String(row.chemicalId))?.name || row.chemicalId || '');
         const frac = row.fraction ? String(row.fraction) : '';
-        const note = row.notes ? ` â€” ${row.notes}` : '';
-        return name ? `â€¢ ${name}${frac ? ` (${frac})` : ''}${note}` : '';
+        const note = row.notes ? ` - ${row.notes}` : '';
+        return name ? `• ${name}${frac ? ` (${frac})` : ''}${note}` : '';
       }).filter(Boolean);
       const chemText = doc.splitTextToSize(chemLines.length ? chemLines.join('\n') : '(none)', 170);
       doc.text(chemText, 28, y); y += chemText.length * 5 + 4;
@@ -1886,7 +1886,7 @@ const ServiceChecklist = () => {
       const matLines = (matRows || []).map(row => {
         const name = String(materialsList.find(m => String(m.id) === String(row.materialId))?.name || row.materialId || '');
         const qty = row.quantityNote ? row.quantityNote : '';
-        return name ? `â€¢ ${name}${qty ? ` â€” ${qty}` : ''}` : '';
+        return name ? `• ${name}${qty ? ` - ${qty}` : ''}` : '';
       }).filter(Boolean);
       const matText = doc.splitTextToSize(matLines.length ? matLines.join('\n') : '(none)', 170);
       doc.text(matText, 28, y); y += matText.length * 5 + 4;
@@ -1894,8 +1894,8 @@ const ServiceChecklist = () => {
       doc.text('Tools:', 20, y); y += 6;
       const toolLines = (toolRows || []).map(row => {
         const name = String(toolsList.find(t => String(t.id) === String(row.toolId))?.name || row.toolId || '');
-        const note = row.notes ? ` â€” ${row.notes}` : '';
-        return name ? `â€¢ ${name}${note}` : '';
+        const note = row.notes ? ` - ${row.notes}` : '';
+        return name ? `• ${name}${note}` : '';
       }).filter(Boolean);
       const toolText = doc.splitTextToSize(toolLines.length ? toolLines.join('\n') : '(none)', 170);
       doc.text(toolText, 28, y); y += toolText.length * 5 + 4;
@@ -2241,7 +2241,7 @@ const ServiceChecklist = () => {
           };
           await upsertSupabaseInvoice(invoiceData);
           setHasCreatedInvoice(true);
-          console.log("âœ… Auto-invoice created for job:", idToUse);
+          console.log("✅ Auto-invoice created for job:", idToUse);
         } catch (invErr) {
           console.error("Auto-invoice creation failed:", invErr);
           // Don't fail the whole job finish if just invoice creation fails, 
@@ -2546,7 +2546,7 @@ const ServiceChecklist = () => {
                          const vString = [vYear, vMake, vModel].filter(Boolean).join(" ");
                          const vClass = vehicleLabels[vehicleType] || vehicleType;
                          const fullVehicle = vString ? `${vString} (${vClass})` : (vClass !== 'choose' && vClass !== 'Choose Type') ? `(${vClass})` : '';
-                         return [cName, fullVehicle].filter(Boolean).join(" â€¢ ");
+                         return [cName, fullVehicle].filter(Boolean).join(" • ");
                       })()}
                     </div>
                     <div className="text-white font-black text-sm md:text-lg tracking-tight leading-tight uppercase truncate">
@@ -2658,7 +2658,7 @@ const ServiceChecklist = () => {
                     <img src={logo} alt="Prime Auto Detail" className="h-12 w-12 object-contain" />
                     <div>
                       <div className="text-white font-black text-base tracking-tight uppercase">PRIME AUTO DETAIL</div>
-                      <div className="text-zinc-400 text-[10px]">Methuen, MA â€¢ primeautodetail.net â€¢ (978) 555-0100</div>
+                      <div className="text-zinc-400 text-[10px]">Methuen, MA • primeautodetail.net • (978) 555-0100</div>
                     </div>
                   </div>
                   <div className="border-2 border-zinc-600 rounded-lg px-4 py-2 text-right">
@@ -2801,7 +2801,7 @@ const ServiceChecklist = () => {
                     <div className="bg-zinc-800 px-4 py-2 flex items-center gap-2">
                       <Info className="w-4 h-4 text-amber-400" />
                       <span className="text-xs font-black uppercase tracking-widest text-white">Ask The Customer</span>
-                      <span className="ml-auto text-[9px] text-zinc-500 italic">Reference â€” not checkable</span>
+                      <span className="ml-auto text-[9px] text-zinc-500 italic">Reference - not checkable</span>
                     </div>
                     <div className="p-3 space-y-3">
                       {[
@@ -2872,12 +2872,12 @@ const ServiceChecklist = () => {
                 <div className="flex flex-wrap gap-2 pt-1">
                   {Object.values(preVehicleChecks).filter(Boolean).length > 0 && (
                     <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-bold">
-                      âœ“ {Object.values(preVehicleChecks).filter(Boolean).length} items flagged / confirmed
+                      ✓ {Object.values(preVehicleChecks).filter(Boolean).length} items flagged / confirmed
                     </span>
                   )}
                   {(preVehicleChecks.excessivePetHair || preVehicleChecks.heavyMudDirt || preVehicleChecks.smokeOdor || preVehicleChecks.stainsExtraction || preVehicleChecks.biohazard || preVehicleChecks.excessiveTrash) && (
                     <span className="text-[10px] bg-red-500/10 border border-red-500/30 text-red-400 px-2.5 py-1 rounded-full font-bold animate-pulse">
-                      âš  Cost-impact flags active â€” discuss surcharge
+                      âš  Cost-impact flags active - discuss surcharge
                     </span>
                   )}
                 </div>
@@ -2935,7 +2935,7 @@ const ServiceChecklist = () => {
             {jobSetupExpanded && (
               <>
                 <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
-            {/* Customer selection restored â€” includes Generic option */}
+            {/* Customer selection restored - includes Generic option */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -3138,7 +3138,7 @@ const ServiceChecklist = () => {
               </div>
               </div>
 
-              {/* Job Notes & Professional AI Assistant â€” MOVED INSIDE JOB SETUP */}
+              {/* Job Notes & Professional AI Assistant - MOVED INSIDE JOB SETUP */}
               <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -3184,7 +3184,7 @@ const ServiceChecklist = () => {
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="font-black text-emerald-400 text-base uppercase tracking-wider">âœ“ Job Completed</p>
+                <p className="font-black text-emerald-400 text-base uppercase tracking-wider">✓ Job Completed</p>
                 <p className="text-zinc-400 text-sm mt-0.5">
                   This checklist was completed on {completedAt ? new Date(completedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'just now'}.
                 </p>
@@ -3718,7 +3718,7 @@ const ServiceChecklist = () => {
 
                                             <div className="mt-3 pt-3 border-t border-zinc-800/60">
                                               <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                                <span>ðŸ§ª</span> Chemicals for this step
+                                                <span>🧪</span> Chemicals for this step
                                               </p>
                                               {chemicalsList.length === 0 ? (
                                                 <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
@@ -4613,11 +4613,11 @@ const ServiceChecklist = () => {
                         <span className="text-white/90 font-medium flex items-center gap-1">
                           <Package className="h-3 w-3" /> {bPackage}
                         </span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span className="flex items-center gap-1">
                           <Car className="h-3 w-3" /> {vehicleLabels[bVehicle] || bVehicle}
                         </span>
-                        <span>â€¢</span>
+                        <span>•</span>
                         <span className="flex items-center gap-1 text-zinc-500">
                           <Clock className="h-3 w-3" /> {new Date(booking.date || booking.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
@@ -4674,7 +4674,7 @@ const ServiceChecklist = () => {
                               <span className="text-white/90 font-medium flex items-center gap-1">
                                 <Package className="h-3 w-3" /> {session.packageName || 'Service'}
                               </span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span className="flex items-center gap-1 text-zinc-500">
                                 <User className="h-3 w-3" /> {employees.find(e => e.id === session.employeeAssigned)?.name || 'Unassigned'}
                               </span>
@@ -4728,7 +4728,7 @@ const ServiceChecklist = () => {
                                size="sm" 
                                variant="ghost" 
                                className="h-8 w-8 p-0 rounded-full hover:bg-orange-500/20 hover:text-orange-400"
-                               title="Reset form â€” clears checklist for fresh start, keeps this history entry"
+                               title="Reset form - clears checklist for fresh start, keeps this history entry"
                                onClick={() => {
                                  if (confirm("Reset this session? This clears the checklist form for a fresh start. The history entry will remain.")) {
                                    resetForm();

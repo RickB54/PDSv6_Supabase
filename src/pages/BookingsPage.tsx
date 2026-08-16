@@ -487,9 +487,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           : (customerName === 'INTERNAL: System Blocks' ? 'System Allocation' : 'N/A'),
         vehicles: customerData?.vehicles || [],
         address: mostRecent.type === 'booking' ? (items.find(i => i.id === mostRecent.id)?.address || customerData?.address || 'N/A') : 'Internal System',
-        phone: customerData?.phone || 'â€”',
-        email: customerData?.email || 'â€”',
-        notes: customerData?.notes || 'â€”',
+        phone: customerData?.phone || '-',
+        email: customerData?.email || '-',
+        notes: customerData?.notes || '-',
         type: customerData?.type || 'customer',
         events: sortedEvents,
         isSystem: customerName === 'INTERNAL: System Blocks',
@@ -1180,13 +1180,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const getStatusIcon = (status: BookingStatus | undefined) => {
     switch (status) {
       case 'tentative': return 'â±';
-      case 'blocked': return 'ðŸš«';
-      case 'confirmed': return 'âœ“';
+      case 'blocked': return '🚫';
+      case 'confirmed': return '✓';
       case 'pending': return 'â³';
-      case 'in_progress': return 'ðŸ”„';
-      case 'done': return 'âœ…';
-      case 'rescheduled': return 'ðŸ”„';
-      default: return 'âœ“';
+      case 'in_progress': return '🔄';
+      case 'done': return '✅';
+      case 'rescheduled': return '🔄';
+      default: return '✓';
     }
   };
 
@@ -1504,7 +1504,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           const savedCust = await upsertSupabaseCustomer(custPayload);
           if (savedCust?.id) {
             finalCustomerId = savedCust.id;
-            console.log("âœ… Customer record verified/created in Supabase:", finalCustomerId);
+            console.log("✅ Customer record verified/created in Supabase:", finalCustomerId);
           }
         } catch (e) {
           console.error('âš ï¸ Critical: Supabase customer sync failed. Booking will proceed but record might be disconnected.', e);
@@ -1905,7 +1905,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       // Force calendar refresh
       window.dispatchEvent(new Event('availability-changed'));
 
-      toast.success(`âœ… Deleted ${testBookings.length} test booking(s)`);
+      toast.success(`✅ Deleted ${testBookings.length} test booking(s)`);
     } catch (error) {
       console.error('Failed to delete test bookings:', error);
       toast.error('Failed to delete test bookings');
@@ -2302,15 +2302,15 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                   if (event.type === 'manual-block') {
                     eventColor = 'bg-blue-500/20 border-blue-500 text-blue-200';
-                    eventIcon = 'ðŸ”µ';
+                    eventIcon = '🔵';
                   } else if (event.type === 'google-event') {
                     eventColor = 'bg-purple-500/20 border-purple-500 text-purple-200';
-                    eventIcon = 'ðŸ“…';
+                    eventIcon = '📅';
                   } else {
                     // Real booking - use status color
                     const booking = items.find(b => b.id === event.id);
                     eventColor = booking ? getStatusColor(booking.status) : 'bg-primary/20 border-primary text-primary-foreground';
-                    eventIcon = booking ? getStatusIcon(booking.status) : 'âœ“';
+                    eventIcon = booking ? getStatusIcon(booking.status) : '✓';
                   }
 
                   return (
@@ -2408,7 +2408,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                 );
                               })()}
                               {booking.type === 'booking'
-                                ? `${(booking as any).title} â€¢ ${booking.vehicleYear || ''} ${booking.vehicleMake || ''} ${booking.vehicleModel || ''}`
+                                ? `${(booking as any).title} • ${booking.vehicleYear || ''} ${booking.vehicleMake || ''} ${booking.vehicleModel || ''}`
                                 : (booking as any).title}
                             </div>
                             <div className="flex items-center gap-1 text-xs mt-0.5 opacity-90 font-medium">
@@ -2417,10 +2417,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                             {booking.type === 'booking' && (((booking as Booking).customerEmail || (booking as any).email) || ((booking as Booking).customerPhone || (booking as any).phone)) && (
                               <div className="flex flex-col gap-0.5 mt-1.5 text-xs text-zinc-400 font-medium">
                                 {((booking as Booking).customerEmail || (booking as any).email) && (
-                                  <div>ðŸ“§ {((booking as Booking).customerEmail || (booking as any).email)}</div>
+                                  <div>📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
                                 )}
                                 {((booking as Booking).customerPhone || (booking as any).phone) && (
-                                  <div>ðŸ“ž {((booking as Booking).customerPhone || (booking as any).phone)}</div>
+                                  <div>📞 {((booking as Booking).customerPhone || (booking as any).phone)}</div>
                                 )}
                               </div>
                             )}
@@ -2605,17 +2605,17 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                   <div className="pt-1 border-t border-zinc-800 mt-1 flex flex-col gap-1">
                                     <div className="flex items-center gap-2 text-[10px]">
                                       <Badge variant="outline" className="text-[9px] h-4 px-1">{booking.status}</Badge>
-                                      {booking.assignedEmployee && booking.assignedEmployee !== 'Unassigned' && <span className="text-zinc-400">ðŸ‘¤ {getEmployeeName(booking.assignedEmployee)}</span>}
+                                      {booking.assignedEmployee && booking.assignedEmployee !== 'Unassigned' && <span className="text-zinc-400">👤 {getEmployeeName(booking.assignedEmployee)}</span>}
                                     </div>
                                     {((booking as Booking).customerEmail || (booking as any).email) && (
-                                      <div className="text-[10px] text-zinc-400">ðŸ“§ {((booking as Booking).customerEmail || (booking as any).email)}</div>
+                                      <div className="text-[10px] text-zinc-400">📧 {((booking as Booking).customerEmail || (booking as any).email)}</div>
                                     )}
                                     {((booking as Booking).customerPhone || (booking as any).phone) && (
-                                      <div className="text-[10px] text-zinc-400">ðŸ“ž {((booking as Booking).customerPhone || (booking as any).phone)}</div>
+                                      <div className="text-[10px] text-zinc-400">📞 {((booking as Booking).customerPhone || (booking as any).phone)}</div>
                                     )}
                                     {(booking as Booking).vehicleMake && (
                                       <div className="text-[10px] text-blue-300 font-semibold px-1 py-0.5 bg-blue-500/10 rounded border border-blue-500/20">
-                                        ðŸš— {(booking as Booking).vehicleYear} {(booking as Booking).vehicleMake} {(booking as Booking).vehicleModel}
+                                        🚗 {(booking as Booking).vehicleYear} {(booking as Booking).vehicleMake} {(booking as Booking).vehicleModel}
                                       </div>
                                     )}
                                   </div>
@@ -2724,13 +2724,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                           <DropdownMenuContent side="bottom" align="start" className="bg-zinc-950 border-zinc-800 text-white w-48 z-[99999]">
                             <DropdownMenuLabel className="text-[9px] uppercase font-black tracking-wider text-zinc-500">Quick Change Status</DropdownMenuLabel>
                             {[
-                              { val: 'confirmed', label: 'âœ“ Confirmed Booking' },
+                              { val: 'confirmed', label: '✓ Confirmed Booking' },
                               { val: 'tentative', label: 'â± Tentative (Hold)' },
-                              { val: 'blocked', label: 'ðŸš« Blocked' },
+                              { val: 'blocked', label: '🚫 Blocked' },
                               { val: 'pending', label: 'â³ Pending' },
-                              { val: 'in_progress', label: 'ðŸ”„ In Progress' },
-                              { val: 'done', label: 'âœ… Done' },
-                              { val: 'rescheduled', label: 'ðŸ”„ Rescheduled' }
+                              { val: 'in_progress', label: '🔄 In Progress' },
+                              { val: 'done', label: '✅ Done' },
+                              { val: 'rescheduled', label: '🔄 Rescheduled' }
                             ].map(st => (
                               <DropdownMenuItem
                                 key={st.val}
@@ -2751,13 +2751,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         const vString = [formData.vehicleYear, formData.vehicleMake, formData.vehicleModel].filter(Boolean).join(" ");
                         const vClass = formData.vehicle || "";
                         const fullVehicle = vString ? `${vString} (${vClass})` : vClass ? `(${vClass})` : '';
-                        return [cName, fullVehicle].filter(Boolean).join(" â€¢ ");
+                        return [cName, fullVehicle].filter(Boolean).join(" • ");
                       })()}
                     </div>
                     <div className="text-white font-black text-xl tracking-tight leading-tight uppercase">{formData.service || "No Service Selected"}</div>
                     {formData.assignedEmployee && formData.assignedEmployee !== 'Unassigned' && (
                       <div className="text-xs text-zinc-400 mt-1 font-bold">
-                        ðŸ‘¤ Assigned to: {getEmployeeName(formData.assignedEmployee)}
+                        👤 Assigned to: {getEmployeeName(formData.assignedEmployee)}
                       </div>
                     )}
                   </div>
@@ -3071,7 +3071,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                       </select>
                     </div>
                   </div>
-                  {/* Customer address + destination fee â€” only for mobile service */}
+                  {/* Customer address + destination fee - only for mobile service */}
                   {formData.placeOfService !== 'Shop in Methuen' && (
                     <div className="col-span-4 pt-1 space-y-1">
                       {formData.address && (
@@ -3274,7 +3274,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                               ))}
                               <option value="CUSTOM_CODE" className="bg-zinc-900 text-yellow-500 font-bold">-- Enter Custom Code --</option>
                             </select>
-                            <div className="absolute right-3 top-3 pointer-events-none text-zinc-500 text-xs font-mono">â–¼</div>
+                            <div className="absolute right-3 top-3 pointer-events-none text-zinc-500 text-xs font-mono">▼</div>
                           </div>
                           {((formData.discountCode && !coupons.some(c => c.code === formData.discountCode)) || formData.discountCode === 'CUSTOM') && (
                             <div className="relative animate-in slide-in-from-top-1 duration-150">
@@ -3294,7 +3294,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                           )}
                           {formData.discountCode && coupons.some(c => c.code === formData.discountCode) && matchedCoupon && (
                             <div className="text-[10px] text-green-500 font-bold uppercase tracking-wider pl-1">
-                              âœ“ {matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} discount applied from coupon: {matchedCoupon.code}
+                              ✓ {matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} discount applied from coupon: {matchedCoupon.code}
                             </div>
                           )}
                         </div>
@@ -3340,7 +3340,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                   }}
                                 />
                                 <div className={`w-3 h-3 rounded-sm flex items-center justify-center border ${isChecked ? 'bg-pink-500 border-pink-500 text-white font-bold text-[10px]' : 'border-zinc-600 bg-zinc-950'}`}>
-                                  {isChecked && "âœ“"}
+                                  {isChecked && "✓"}
                                 </div>
                                 {reason}
                               </label>
@@ -3403,13 +3403,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         value={formData.status || 'confirmed'}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                       >
-                        <option value="confirmed">âœ“ Confirmed Booking</option>
+                        <option value="confirmed">✓ Confirmed Booking</option>
                         <option value="tentative">â± Tentative (Hold)</option>
-                        <option value="blocked">ðŸš« Blocked</option>
+                        <option value="blocked">🚫 Blocked</option>
                         <option value="pending">â³ Pending</option>
-                        <option value="in_progress">ðŸ”„ In Progress</option>
-                        <option value="done">âœ… Done</option>
-                        <option value="rescheduled">ðŸ”„ Rescheduled</option>
+                        <option value="in_progress">🔄 In Progress</option>
+                        <option value="done">✅ Done</option>
+                        <option value="rescheduled">🔄 Rescheduled</option>
                       </select>
                     </div>
                   </div>
@@ -3746,7 +3746,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                 <div key={idx} className="text-[10px] text-zinc-400 font-medium flex items-center gap-2 bg-zinc-900/40 p-2 rounded-lg border border-white/5">
                                   <span className="font-bold text-zinc-500">#{idx + 1}</span>
                                   <span>{oldStr}</span>
-                                  <span className="text-cyan-500">âžœ</span>
+                                  <span className="text-cyan-500">➜</span>
                                   <span className="text-zinc-200 font-bold">{newStr}</span>
                                 </div>
                               );
@@ -4364,7 +4364,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                     <div className="font-semibold truncate">{customer.name}</div>
                                     <div className="flex items-center flex-wrap gap-2 mt-0.5">
                                       <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                                        {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} â€¢ Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
+                                        {customer.bookingCount} record{customer.bookingCount > 1 ? 's' : ''} • Last: {format(parseISO(customer.lastBooking), "MMM d, yyyy")}
                                       </div>
                                       <Badge 
                                         variant="outline" 
@@ -4466,11 +4466,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                       <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
                                         <div className="text-[10px] text-zinc-500 uppercase font-black mb-1">Email Connection</div>
-                                        <div className="text-sm truncate text-zinc-300 font-bold">{customer.email || 'â€”'}</div>
+                                        <div className="text-sm truncate text-zinc-300 font-bold">{customer.email || '-'}</div>
                                       </div>
                                       <div className="bg-zinc-950/50 p-3 rounded-xl border border-zinc-800/50">
                                         <div className="text-[10px] text-zinc-500 uppercase font-black mb-1">Mobile Contact</div>
-                                        <div className="text-sm text-zinc-300 font-bold">{customer.phone || 'â€”'}</div>
+                                        <div className="text-sm text-zinc-300 font-bold">{customer.phone || '-'}</div>
                                       </div>
                                     </div>
 
@@ -4478,7 +4478,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                        <div className="text-[10px] text-zinc-500 uppercase font-black mb-1 flex items-center gap-2">
                                          <MapPinIcon className="w-3 h-3 group-hover/address:text-red-500 transition-colors" /> Registered Address
                                        </div>
-                                       <div className="text-sm text-zinc-300 font-bold">{customer.address || 'â€”'}</div>
+                                       <div className="text-sm text-zinc-300 font-bold">{customer.address || '-'}</div>
                                     </div>
 
                                     {!customer.id && (
@@ -4563,7 +4563,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                   </div>
                                                   <div className="text-[9px] text-zinc-500 font-bold uppercase">
                                                     {v.type || 'Standard'}
-                                                    {v.color ? ` â€¢ Color: ${v.color}` : ''}
+                                                    {v.color ? ` • Color: ${v.color}` : ''}
                                                   </div>
                                                 </div>
                                               </div>
@@ -4709,14 +4709,14 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                               
                                               {event.type === 'booking' && (items.find(i => i.id === event.id)?.createdAt || (event as any).createdAt) && (
                                                 <>
-                                                  <span className="text-zinc-700">â€¢</span>
+                                                  <span className="text-zinc-700">•</span>
                                                   <span className="text-zinc-500 italic" title="Time booking was placed">Placed: {format(parseISO(items.find(i => i.id === event.id)?.createdAt || (event as any).createdAt), "MMM d, yyyy 'at' h:mm a")}</span>
                                                 </>
                                               )}
 
                                               {event.type === 'booking' && (
                                                 <>
-                                                  <span className="text-zinc-700">â€¢</span>
+                                                  <span className="text-zinc-700">•</span>
                                                   <span className="text-amber-400/80 font-bold uppercase text-[10px] flex items-center gap-1">
                                                     <MapPinIcon className="w-3 h-3" />
                                                     {event.placeOfService || event.address || "Customer's Address"}
@@ -4726,7 +4726,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                                               {event.type === 'booking' && (event.vehicleYear || event.vehicleMake) && (
                                                 <>
-                                                  <span className="text-zinc-700">â€¢</span>
+                                                  <span className="text-zinc-700">•</span>
                                                   <span className="text-blue-400/80 font-bold uppercase text-[10px]">
                                                     {(event.vehicleYear && event.vehicleYear !== '-' && event.vehicleYear !== '---') ? `${event.vehicleYear} ` : ''}{event.vehicleMake} {event.vehicleModel}{event.vehicleColor ? ` (${event.vehicleColor})` : ''}
                                                   </span>
@@ -4746,11 +4746,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                   if (!email && !phone && !empName) return null;
                                                   return (
                                                     <div className="flex flex-col gap-1 text-[11px] text-zinc-400 font-medium">
-                                                      {email && <div>ðŸ“§ {email}</div>}
-                                                      {phone && <div>ðŸ“ž {phone}</div>}
+                                                      {email && <div>📧 {email}</div>}
+                                                      {phone && <div>📞 {phone}</div>}
                                                       {empName && (
                                                         <div className="text-zinc-300 font-semibold flex items-center gap-1.5 bg-zinc-900/50 w-fit px-1.5 py-0.5 rounded border border-zinc-800">
-                                                          ðŸ‘¤ Assigned to: {empName}
+                                                          👤 Assigned to: {empName}
                                                         </div>
                                                       )}
                                                     </div>
