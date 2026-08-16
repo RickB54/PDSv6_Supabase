@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Loader2, DollarSign, ChevronRight, X, ArrowRight, Clock, QrCode, Smartphone, HelpCircle, Info } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
@@ -180,7 +180,7 @@ export default function TipSelectionScreen({
         {/* Scrollable Content Body */}
         <div className="p-4 sm:p-6 flex-1 overflow-y-auto w-full pb-6 styled-scrollbar">
           {showInfo && (
-            <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm mx-auto max-w-md max-h-56 overflow-y-auto styled-scrollbar">
+            <div className="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50 to-indigo-50 text-blue-900 overflow-hidden animate-in fade-in zoom-in-95 duration-200 shadow-sm mx-auto max-w-md">
               <div className="px-4 pt-3 pb-2 border-b border-blue-200/60 sticky top-0 bg-blue-50/90 backdrop-blur-xs z-10">
                 <div className="font-extrabold text-xs flex items-center gap-2">
                   <Info size={14} className="text-blue-600 shrink-0" />
