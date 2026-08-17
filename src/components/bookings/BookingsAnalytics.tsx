@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target, X } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -2995,12 +2995,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>History of all completed services</CardDescription>
                         </div>
                     </div>
+                    <div className="flex items-center gap-1">
                     <Popover open={perfFilterOpen} onOpenChange={setPerfFilterOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white")}>
                                 <Filter className="h-4 w-4" />
-                                Filter
-                                
+                                {getFilterLabel(perfDateFilter, "Filter")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3071,6 +3071,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </PopoverContent>
                     </Popover>
+                    {(perfDateFilter.start || perfDateFilter.end) && (
+                        <Button variant="ghost" size="icon" onClick={() => setPerfDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto hidden md:block">
@@ -3156,12 +3162,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Track invoice statuses (Not Sent, Sent, Unpaid, Paid)</CardDescription>
                         </div>
                     </div>
+                    <div className="flex items-center gap-1">
                     <Popover open={invFilterOpen} onOpenChange={setInvFilterOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (invDateFilter.start || invDateFilter.end) && "bg-zinc-800 text-white")}>
                                 <Filter className="h-4 w-4" />
-                                Filter
-                                
+                                {getFilterLabel(invDateFilter, "Filter")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3232,6 +3238,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </PopoverContent>
                     </Popover>
+                    {(invDateFilter.start || invDateFilter.end) && (
+                        <Button variant="ghost" size="icon" onClick={() => setInvDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
@@ -3481,6 +3493,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </PopoverContent>
                     </Popover>
+                    {(quotesDateFilter.start || quotesDateFilter.end) && (
+                        <Button variant="ghost" size="icon" onClick={() => setQuotesDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
@@ -3734,11 +3751,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20">
                             {probonoJobs.length} FREE JOBS
                         </Badge>
-                        <Popover>
+                        <div className="flex items-center gap-1">
+                        <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white")}>
                                     <Filter className="h-4 w-4" />
-                                    Filter
+                                    {getFilterLabel(qualDateFilter, "Filter")}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3747,13 +3765,13 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => setQualDateFilter({ start: undefined, end: undefined })}>All Time</Button>
+                                                onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }}>All Time</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}>Today</Button>
+                                                onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setQualFilterOpen(false); }}>Today</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); }}>This Week</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); }}>This Month</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Month</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -3762,16 +3780,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             mode="range"
                                             selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
                                             onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
-                                            initialFocus
                                             className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
                                         />
-                                        {(qualDateFilter.start || qualDateFilter.end) && (
-                                            <Button variant="ghost" size="sm" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="w-full text-zinc-400 hover:text-white mt-2">Clear Range</Button>
-                                        )}
+                                        <div className="flex gap-2 mt-2">
+                                            <Button variant="outline" size="sm" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                            <Button size="sm" onClick={() => setQualFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                        </div>
                                     </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
+                        {(qualDateFilter.start || qualDateFilter.end) && (
+                            <Button variant="ghost" size="icon" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -3956,12 +3980,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <CardTitle>Customer Insights & Follow-up</CardTitle>
                         <CardDescription>Track recent customers and set reminders for repeat business</CardDescription>
                     </div>
-                    <Popover>
+                    <div className="flex items-center gap-1">
+                    <Popover open={insFilterOpen} onOpenChange={setInsFilterOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (insDateFilter.start || insDateFilter.end) && "bg-zinc-800 text-white")}>
                                 <Filter className="h-4 w-4" />
-                                Filter
-                                
+                                {getFilterLabel(insDateFilter, "Filter")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -4024,20 +4048,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="rounded-md border border-zinc-800 bg-zinc-900"
                                         />
                                     </div>
-                                    {(insDateFilter.start || insDateFilter.end) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="w-full text-xs text-muted-foreground hover:text-white"
-                                            onClick={() => setInsDateFilter({ start: undefined, end: undefined })}
-                                        >
-                                            Clear Dates
-                                        </Button>
-                                    )}
+                                    <div className="flex gap-2 mt-2">
+                                        <Button variant="outline" size="sm" onClick={() => { setInsDateFilter({ start: undefined, end: undefined }); setInsFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                        <Button size="sm" onClick={() => setInsFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                    </div>
                                 </div>
                             </div>
                         </PopoverContent>
                     </Popover>
+                    {(insDateFilter.start || insDateFilter.end) && (
+                        <Button variant="ghost" size="icon" onClick={() => setInsDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {sourceBreakdown.length > 0 && (
@@ -4187,12 +4211,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </div>
                     </div>
 
-                    <Popover>
+                    <div className="flex items-center gap-1">
+                    <Popover open={acqFilterOpen} onOpenChange={setAcqFilterOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50 text-xs">
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold text-xs", (acqDateFilter.start || acqDateFilter.end) && "bg-zinc-800 text-white")}>
                                 <Filter className="h-4 w-4 text-cyan-400" />
-                                Filter
-                                {acqDateFilter.start && <span className="w-2 h-2 rounded-full bg-cyan-400" />}
+                                {getFilterLabel(acqDateFilter, "Filter")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -4247,6 +4271,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </div>
                         </PopoverContent>
                     </Popover>
+                    {(acqDateFilter.start || acqDateFilter.end) && (
+                        <Button variant="ghost" size="icon" onClick={() => setAcqDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                    </div>
                 </CardHeader>
 
                 <CardContent className="p-6 space-y-6">
@@ -4396,12 +4426,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <CardDescription className="text-zinc-400">Log internal notes, mistakes, and customer sentiment for continuous improvement</CardDescription>
                             </div>
                         </div>
-                        <Popover>
+                        <div className="flex items-center gap-1">
+                        <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                                <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white")}>
                                     <Filter className="h-4 w-4" />
-                                    Filter
-                                    
+                                    {getFilterLabel(qualDateFilter, "Filter")}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -4413,30 +4443,34 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
                                         <div className="grid grid-cols-2 gap-2">
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => setQualDateFilter({ start: undefined, end: undefined })}>All Time</Button>
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}>Today</Button>
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) }); }}>This Week</Button>
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); }}>This Month</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }}>All Time</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setQualFilterOpen(false); }}>Today</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Week</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Month</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
-                                        <div className="grid gap-2 text-zinc-200">
-                                            <Calendar
-                                                mode="range"
-                                                selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
-                                                onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
-                                                initialFocus
-                                                className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
-                                            />
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
+                                            onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
+                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                        />
+                                        <div className="flex gap-2 mt-2">
+                                            <Button variant="outline" size="sm" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                            <Button size="sm" onClick={() => setQualFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
                                         </div>
-                                        {(qualDateFilter.start || qualDateFilter.end) && (
-                                            <Button variant="ghost" size="sm" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="w-full text-zinc-400 hover:text-white mt-2">Clear Range</Button>
-                                        )}
                                     </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
+                        {(qualDateFilter.start || qualDateFilter.end) && (
+                            <Button variant="ghost" size="icon" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 relative">
