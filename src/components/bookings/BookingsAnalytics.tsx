@@ -68,6 +68,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'employee-analytics');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+    const [perfFilterOpen, setPerfFilterOpen] = useState(false);
+    const [invFilterOpen, setInvFilterOpen] = useState(false);
 
     const followUpStatus = useFollowUpStatus(customers, bookings);
 
@@ -2898,15 +2900,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto hidden md:block">
                         <Table>
                             <TableHeader className="bg-zinc-950/50">
                                 <TableRow className="hover:bg-transparent border-zinc-800">
                                     <TableHead className="w-[120px]">Scheduled</TableHead>
                                     <TableHead>Customer</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Location</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Service</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Status</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Est. Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -2924,7 +2926,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
                                             </TableCell>
                                             <TableCell className="font-medium text-zinc-300">{svc.customer}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">
+                                            <TableCell>
                                                 <Badge variant="outline" className={cn(
                                                     "text-[10px] h-5 px-1.5 font-bold uppercase",
                                                     svc.locationType === 'Shop' 
@@ -2934,8 +2936,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     {svc.locationType}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="hidden sm:table-cell text-zinc-400 text-sm">{svc.service}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">
+                                            <TableCell className="text-zinc-400 text-sm">{svc.service}</TableCell>
+                                            <TableCell>
                                                 <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">
                                                     {svc.status}
                                                 </Badge>
@@ -2948,6 +2950,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+                    <div className="md:hidden flex flex-col gap-3 p-4">
+                        {toDoServices.length === 0 ? (
+                            <div className="text-center text-zinc-500 py-10 italic">No upcoming services scheduled.</div>
+                        ) : (
+                            toDoServices.map((svc) => (
+                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{format(parseISO(svc.date), "MMM d, yyyy")}</div>
+                                        <div className="text-zinc-300 font-mono text-sm">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div className="font-medium text-zinc-200 text-base">{svc.customer}</div>
+                                    <div className="flex justify-between items-center mt-1">
+                                        <div className="text-zinc-400 text-sm">{svc.service}</div>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">{svc.status}</Badge>
+                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -2963,7 +2987,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>History of all completed services</CardDescription>
                         </div>
                     </div>
-                    <Popover>
+                    <Popover open={perfFilterOpen} onOpenChange={setPerfFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
@@ -3031,31 +3055,25 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
                                         />
                                     </div>
-                                    {(perfDateFilter.start || perfDateFilter.end) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
-                                            className="w-full text-zinc-400 hover:text-white mt-2"
-                                        >
-                                            Clear Range
-                                        </Button>
-                                    )}
+                                    <div className="flex gap-2 mt-4">
+                                        <Button variant="outline" size="sm" onClick={() => { setPerfDateFilter({ start: undefined, end: undefined }); setPerfFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                        <Button size="sm" onClick={() => setPerfFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                    </div>
                                 </div>
                             </div>
                         </PopoverContent>
                     </Popover>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto hidden md:block">
                         <Table>
                             <TableHeader className="bg-zinc-950/50">
                                 <TableRow className="hover:bg-transparent border-zinc-800">
                                     <TableHead className="w-[120px]">Date</TableHead>
                                     <TableHead>Customer</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Location</TableHead>
-                                    <TableHead className="hidden md:table-cell">Address</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Service Package</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Address</TableHead>
+                                    <TableHead>Service Package</TableHead>
                                     <TableHead className="text-right">Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -3073,7 +3091,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
                                             </TableCell>
                                             <TableCell className="font-semibold text-zinc-200">{svc.customer}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">
+                                            <TableCell>
                                                 <Badge variant="outline" className={cn(
                                                     "text-[10px] h-5 px-1.5 font-bold uppercase",
                                                     svc.locationType === 'Shop' 
@@ -3083,10 +3101,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     {svc.locationType}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell text-xs text-zinc-500 max-w-[180px] truncate" title={svc.address}>
+                                            <TableCell className="text-xs text-zinc-500 max-w-[180px] truncate" title={svc.address}>
                                                 {svc.address}
                                             </TableCell>
-                                            <TableCell className="hidden sm:table-cell text-zinc-300 font-medium">{svc.service}</TableCell>
+                                            <TableCell className="text-zinc-300 font-medium">{svc.service}</TableCell>
                                             <TableCell className="text-right">
                                                 <span className="text-emerald-400 font-bold font-mono">
                                                     ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -3097,6 +3115,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+                    <div className="md:hidden flex flex-col gap-3 p-4">
+                        {doneServices.length === 0 ? (
+                            <div className="text-center text-zinc-500 py-10 italic">No completed services recorded yet.</div>
+                        ) : (
+                            doneServices.map((svc) => (
+                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{format(parseISO(svc.date), "MMM d, yyyy")}</div>
+                                        <div className="text-emerald-400 font-bold font-mono text-sm">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                    </div>
+                                    <div className="font-medium text-zinc-200 text-base">{svc.customer}</div>
+                                    <div className="flex flex-col mt-1 gap-1">
+                                        <div className="text-zinc-300 font-medium text-sm">{svc.service}</div>
+                                        <div className="text-zinc-500 text-xs">{svc.address}</div>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -3110,7 +3150,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Track invoice statuses (Not Sent, Sent, Unpaid, Paid)</CardDescription>
                         </div>
                     </div>
-                    <Popover>
+                    <Popover open={invFilterOpen} onOpenChange={setInvFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
                                 <Filter className="h-4 w-4" />
@@ -3178,16 +3218,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
                                         />
                                     </div>
-                                    {(invDateFilter.start || invDateFilter.end) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setInvDateFilter({ start: undefined, end: undefined })}
-                                            className="w-full text-zinc-400 hover:text-white mt-2"
-                                        >
-                                            Clear Range
-                                        </Button>
-                                    )}
+                                    <div className="flex gap-2 mt-4">
+                                        <Button variant="outline" size="sm" onClick={() => { setInvDateFilter({ start: undefined, end: undefined }); setInvFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                        <Button size="sm" onClick={() => setInvFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                    </div>
                                 </div>
                             </div>
                         </PopoverContent>
@@ -3195,15 +3229,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
-                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
+                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px] hidden md:block">
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
                                         <TableHead>Date</TableHead>
                                         <TableHead>Customer</TableHead>
-                                        <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
+                                        <TableHead>Vehicle</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead className="hidden sm:table-cell text-center">Delivery</TableHead>
+                                        <TableHead className="text-center">Delivery</TableHead>
                                         <TableHead className="text-right">Outcome</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -3235,11 +3269,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         {inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}
                                                     </TableCell>
                                                     <TableCell className="font-semibold text-zinc-200">{inv.customerName}</TableCell>
-                                                    <TableCell className="hidden sm:table-cell text-zinc-500 text-xs">{inv.vehicle}</TableCell>
+                                                    <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
                                                     <TableCell className="font-bold text-zinc-300">
                                                         ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </TableCell>
-                                                    <TableCell className="hidden sm:table-cell text-center">
+                                                    <TableCell className="text-center">
                                                         <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
                                                             {isSent ? 'Sent' : 'Not Sent'}
                                                         </Badge>
@@ -3255,6 +3289,45 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     )}
                                 </TableBody>
                             </Table>
+                        </div>
+                        <div className="md:hidden flex flex-col gap-3 p-4 bg-zinc-950/50">
+                            {filteredInvoices.length === 0 ? (
+                                <div className="text-center text-zinc-500 py-10 italic">No invoices found for the selected period.</div>
+                            ) : (
+                                filteredInvoices.map((inv) => {
+                                    const isSent = inv.isSent;
+                                    const status = (inv.paymentStatus || 'unpaid').toLowerCase();
+                                    
+                                    let outcomeDisplay = 'Unpaid';
+                                    let outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                    if (status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total)) {
+                                        outcomeDisplay = 'Paid';
+                                        outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                    } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
+                                        outcomeDisplay = 'Partially Paid';
+                                        outcomeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                                    }
+
+                                    return (
+                                        <div key={inv.id} onClick={() => navigate(`/invoicing?editId=${inv.id}`)} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:bg-zinc-800/50 transition-colors">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}</div>
+                                                <div className="text-zinc-300 font-bold text-sm">${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                            </div>
+                                            <div className="font-semibold text-zinc-200 text-base">{inv.customerName}</div>
+                                            <div className="text-zinc-500 text-xs mt-1">{inv.vehicle}</div>
+                                            <div className="flex justify-between items-center mt-3">
+                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
+                                                    {isSent ? 'Sent' : 'Not Sent'}
+                                                </Badge>
+                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
+                                                    {outcomeDisplay}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                         <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
                             <div className="w-full max-w-[400px] flex flex-col items-center">

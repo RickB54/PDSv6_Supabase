@@ -249,9 +249,29 @@ const Payments = () => {
             </Select>
           </div>
           
-          <div className="w-full md:w-auto">
-             <DateRangeFilter value={dateFilter} onChange={setDateFilter} dateRange={dateRange} onDateRangeChange={setDateRange} />
+          <div className="w-[150px]">
+            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block">Date</label>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="bg-zinc-950 border-zinc-800 text-white">
+                <SelectValue placeholder="All Time" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="daily">Today</SelectItem>
+                <SelectItem value="weekly">This Week</SelectItem>
+                <SelectItem value="monthly">This Month</SelectItem>
+                <SelectItem value="yearly">This Year</SelectItem>
+                <SelectItem value="custom">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {dateFilter === "custom" && (
+            <div className="w-full md:w-auto">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1 block opacity-0">Custom</label>
+              <DateRangeFilter value={dateRange} onChange={setDateRange} />
+            </div>
+          )}
         </div>
 
         {/* Table */}
