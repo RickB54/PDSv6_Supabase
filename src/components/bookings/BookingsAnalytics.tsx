@@ -70,6 +70,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [perfFilterOpen, setPerfFilterOpen] = useState(false);
     const [invFilterOpen, setInvFilterOpen] = useState(false);
+    const [quotesFilterOpen, setQuotesFilterOpen] = useState(false);
+    const [qualFilterOpen, setQualFilterOpen] = useState(false);
+    const [insFilterOpen, setInsFilterOpen] = useState(false);
+    const [acqFilterOpen, setAcqFilterOpen] = useState(false);
 
     const followUpStatus = useFollowUpStatus(customers, bookings);
 
@@ -3403,12 +3407,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Track estimates statuses (Not Received, Sent, Accepted, Denied)</CardDescription>
                         </div>
                     </div>
-                    <Popover>
+                    <Popover open={quotesFilterOpen} onOpenChange={setQuotesFilterOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (quotesDateFilter.start || quotesDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
                                 <Filter className="h-4 w-4" />
-                                Filter
-                                
+                                {getFilterLabel(quotesDateFilter, "Filter")}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -3460,27 +3463,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         </Button>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
-                                    <div className="grid gap-2 text-zinc-200">
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
+                                    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
                                         <Calendar
                                             mode="range"
                                             selected={{ from: quotesDateFilter.start, to: quotesDateFilter.end }}
                                             onSelect={(range) => setQuotesDateFilter({ start: range?.from, end: range?.to })}
-                                            initialFocus
-                                            className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                            className="bg-transparent"
                                         />
                                     </div>
-                                    {(quotesDateFilter.start || quotesDateFilter.end) && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setQuotesDateFilter({ start: undefined, end: undefined })}
-                                            className="w-full text-zinc-400 hover:text-white mt-2"
-                                        >
-                                            Clear Range
-                                        </Button>
-                                    )}
+                                    <div className="flex gap-2 mt-4">
+                                        <Button variant="outline" size="sm" onClick={() => { setQuotesDateFilter({ start: undefined, end: undefined }); setQuotesFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                        <Button size="sm" onClick={() => setQuotesFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                    </div>
                                 </div>
                             </div>
                         </PopoverContent>

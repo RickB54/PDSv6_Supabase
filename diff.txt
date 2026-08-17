@@ -1,0 +1,58 @@
+﻿diff --git a/src/components/bookings/BookingsAnalytics.tsx b/src/components/bookings/BookingsAnalytics.tsx
+index ffb589e..f75b6e9 100644
+--- a/src/components/bookings/BookingsAnalytics.tsx
++++ b/src/components/bookings/BookingsAnalytics.tsx
+@@ -3403,11 +3403,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
+                             <CardDescription>Track estimates statuses (Not Received, Sent, Accepted, Denied)</CardDescription>
+                         </div>
+                     </div>
+-                    <Popover>
++                    <Popover open={quotesFilterOpen} onOpenChange={setQuotesFilterOpen}>
+                         <PopoverTrigger asChild>
+-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
++                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (quotesDateFilter.start || quotesDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                 <Filter className="h-4 w-4" />
+-                                Filter
++                                {getFilterLabel(quotesDateFilter, "Filter")}
+                                 
+                             </Button>
+                         </PopoverTrigger>
+@@ -3738,11 +3738,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
+                         <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20">
+                             {probonoJobs.length} FREE JOBS
+                         </Badge>
+-                        <Popover>
++                        <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
+                             <PopoverTrigger asChild>
+-                                <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
++                                <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                     <Filter className="h-4 w-4" />
+-                                    Filter
++                                    {getFilterLabel(qualDateFilter, "Filter")}
+                                 </Button>
+                             </PopoverTrigger>
+                             <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+@@ -3824,7 +3824,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
+                                                 <TableCell className="text-zinc-400 text-xs">{job.assignedEmployee || "Rick Berube"}</TableCell>
+                                                 <TableCell className="text-zinc-400 text-xs font-mono">{job.hoursWorked ? `${job.hoursWorked}h` : "-"}</TableCell>
+                                                 <TableCell>
+-                                                    <Popover>
++                                                    <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
+                                                         <PopoverTrigger asChild>
+                                                             <Button 
+                                                                 variant="outline" 
+@@ -3960,11 +3960,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
+                         <CardTitle>Customer Insights & Follow-up</CardTitle>
+                         <CardDescription>Track recent customers and set reminders for repeat business</CardDescription>
+                     </div>
+-                    <Popover>
++                    <Popover open={insFilterOpen} onOpenChange={setInsFilterOpen}>
+                         <PopoverTrigger asChild>
+-                            <Button variant="outline" size="sm" className="gap-2 border-zinc-800 bg-zinc-900/50">
++                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                 <Filter className="h-4 w-4" />
+-                                Filter
++                                {getFilterLabel(insDateFilter, "Filter")}
+                                 
+                             </Button>
+                         </PopoverTrigger>
