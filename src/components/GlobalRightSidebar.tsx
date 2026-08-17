@@ -631,7 +631,7 @@ export function GlobalRightSidebar() {
     if (isMobile) {
         return (
             <div 
-                className={`fixed right-0 z-40 border-l border-zinc-800 bg-zinc-950 flex flex-col pt-2 pb-24 gap-1.5 transition-all duration-300 ${collapsed ? 'w-12 items-center px-0' : 'w-48 items-start px-2'}`}
+                className={`fixed right-0 z-[999] border-l border-zinc-800 bg-zinc-950 flex flex-col pt-2 pb-24 gap-1.5 transition-all duration-300 ${collapsed ? 'w-12 items-center px-0' : 'w-48 items-start px-2'}`}
                 style={{ 
                     top: `${dynamicTop}px`,
                     height: `calc(100vh - ${dynamicTop}px)`,
@@ -667,7 +667,7 @@ export function GlobalRightSidebar() {
     return (
         <>
         <div 
-          className={`sticky z-40 border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
+          className={`sticky z-[999] border-l border-zinc-800 bg-zinc-950 flex flex-col items-center pt-2 pb-24 gap-1.5 shrink-0 transition-all duration-300 ${collapsed ? 'w-12' : 'w-48 items-start px-2'}`}
           style={{ 
             top: `${dynamicTop}px`,
             height: `calc(100vh - ${dynamicTop}px)`,
