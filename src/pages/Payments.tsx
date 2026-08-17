@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getSupabaseInvoices, getSupabasePayments } from "@/lib/supa-data";
 import { getReceivables, Receivable } from "@/lib/receivables";
-import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity, ArrowLeft, Trash2 } from "lucide-react";
+import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity, ArrowLeft, Trash2, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";

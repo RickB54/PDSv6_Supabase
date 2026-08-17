@@ -72,6 +72,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [invFilterOpen, setInvFilterOpen] = useState(false);
     const [quotesFilterOpen, setQuotesFilterOpen] = useState(false);
     const [qualFilterOpen, setQualFilterOpen] = useState(false);
+    const [probonoFilterOpen, setProbonoFilterOpen] = useState(false);
     const [insFilterOpen, setInsFilterOpen] = useState(false);
     const [acqFilterOpen, setAcqFilterOpen] = useState(false);
 
@@ -3501,7 +3502,61 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
-                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
+                        {/* Mobile card layout */}
+                        <div className="md:hidden divide-y divide-zinc-800/60">
+                            {filteredQuotes.length === 0 ? (
+                                <div className="text-center text-zinc-500 py-12 italic text-sm">No estimates found for the selected period.</div>
+                            ) : (
+                                filteredQuotes.map((q) => {
+                                    let s = (q.status || '').toLowerCase();
+                                    const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+                                    
+                                    let outcomeDisplay = 'Pending';
+                                    let outcomeClass = "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
+                                    if (s === 'accepted') {
+                                        outcomeDisplay = 'Accepted';
+                                        outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                    } else if (s === 'denied' || s === 'declined') {
+                                        outcomeDisplay = 'Declined';
+                                        outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                    } else if (isSent) {
+                                        outcomeDisplay = 'No Answer';
+                                        outcomeClass = "bg-purple-500/10 text-purple-400 border-purple-500/20";
+                                    }
+
+                                    return (
+                                        <div 
+                                            key={q.id} 
+                                            className="p-3 hover:bg-zinc-900/30 cursor-pointer space-y-1.5"
+                                            onClick={() => navigate(`/estimates?editId=${q.id}`)}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="font-semibold text-zinc-100 text-sm block truncate">{q.customerName || q.customer}</span>
+                                                    <span className="text-zinc-500 text-xs block">{q.createdAt ? format(parseISO(q.createdAt), "MMM d, yy") : "N/A"}</span>
+                                                </div>
+                                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                                    <span className="text-emerald-400 font-mono text-sm font-bold block">${(q.total || 0).toFixed(2)}</span>
+                                                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5 py-0 font-bold uppercase", isSent ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
+                                                        {isSent ? 'Sent' : 'Not Received'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-end gap-2">
+                                                <div className="text-zinc-300 line-clamp-2 text-xs flex-1">
+                                                    {Array.isArray(q.services) ? q.services.map((s)=>s.name).join(', ') : (q.service || 'N/A')}
+                                                </div>
+                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase shrink-0", outcomeClass)}>
+                                                    {outcomeDisplay}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {/* Desktop table */}
+                        <div className="hidden md:block bg-zinc-950/50 overflow-x-auto max-h-[400px]" style={{touchAction: 'pan-y'}}>
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -3698,7 +3753,43 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-md border border-zinc-800 overflow-x-auto">
+                    {/* Mobile cards */}
+                    <div className="md:hidden divide-y divide-zinc-800/60">
+                        {customerStats.length === 0 ? (
+                            <div className="text-center text-zinc-500 py-10 italic text-sm">No customer data found.</div>
+                        ) : (
+                            customerStats.map((cust) => (
+                                <div key={cust.name} className="p-3 hover:bg-zinc-800/20 space-y-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-semibold text-zinc-100 text-sm block truncate">{cust.name}</span>
+                                            <span className="text-zinc-500 text-xs">{new Date(cust.lastService).toLocaleDateString()}</span>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <span className="text-emerald-400 font-mono text-sm font-bold block">${(cust.totalSpent || 0).toLocaleString()}</span>
+                                            <span className="text-zinc-500 text-xs">{cust.count} Jobs</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
+                                        {cust.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{cust.email}</span>}
+                                        {cust.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{cust.phone}</span>}
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-400 hover:text-blue-300 px-2"
+                                            onClick={() => navigate(`/search-customer?customerId=${cust.id || ''}&search=${encodeURIComponent(cust.name)}`)}>
+                                            <Edit className="w-3 h-3 mr-1" />Edit
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-400 hover:text-blue-300 px-2"
+                                            onClick={() => { setSelectedCustomerForReminder(cust); setReminderFrequency("3"); const d = new Date(); d.setMonth(d.getMonth() + 3); setReminderDate(d.toISOString().split('T')[0]); setReminderOpen(true); }}>
+                                            <Bell className="w-3 h-3 mr-1" />Remind
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden md:block rounded-md border border-zinc-800 overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-zinc-950">
                                 <TableRow>
@@ -3752,7 +3843,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             {probonoJobs.length} FREE JOBS
                         </Badge>
                         <div className="flex items-center gap-1">
-                        <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
+                        <Popover open={probonoFilterOpen} onOpenChange={setProbonoFilterOpen}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white")}>
                                     <Filter className="h-4 w-4" />
@@ -3765,13 +3856,13 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }}>All Time</Button>
+                                                onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }}>All Time</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setQualFilterOpen(false); }}>Today</Button>
+                                                onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setProbonoFilterOpen(false); }}>Today</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Week</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Month</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -3783,8 +3874,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
                                         />
                                         <div className="flex gap-2 mt-2">
-                                            <Button variant="outline" size="sm" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
-                                            <Button size="sm" onClick={() => setQualFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                            <Button variant="outline" size="sm" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                            <Button size="sm" onClick={() => setProbonoFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
                                         </div>
                                     </div>
                                 </div>
@@ -3800,7 +3891,46 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
-                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px]">
+                        {/* Mobile card layout */}
+                        <div className="md:hidden divide-y divide-zinc-800/60">
+                            {probonoJobs.length === 0 ? (
+                                <div className="text-center text-zinc-500 py-12 italic text-sm">No probono jobs found for the selected period. 🎉</div>
+                            ) : (
+                                probonoJobs.map((job) => (
+                                    <div
+                                        key={job.id}
+                                        className="p-3 hover:bg-pink-900/10 cursor-pointer"
+                                        onClick={() => {
+                                            if (job.invoiceId) navigate(`/invoicing?editId=${job.invoiceId}`);
+                                            else if (job.customerId) navigate(`/invoicing?customerId=${job.customerId}`);
+                                            else navigate(`/invoicing?search=${encodeURIComponent(job.customer)}`);
+                                        }}
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-semibold text-zinc-100 text-sm block truncate">{job.customer}</span>
+                                                <span className="text-zinc-400 text-xs block truncate">{job.service}</span>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-pink-400 font-mono font-bold text-sm block">$0.00</span>
+                                                {job.value > 0 && <span className="text-emerald-400 font-mono text-xs block">${job.value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1.5 text-xs text-zinc-500">
+                                            <span>{job.date ? format(parseISO(job.date), "MMM d, yy") : "N/A"}</span>
+                                            {job.hoursWorked && <span>{job.hoursWorked}h</span>}
+                                            {(job.probonoPrimaryReason || job.probonoReason) && (
+                                                <Badge className="bg-pink-500/10 text-pink-400 border-pink-500/20 text-[10px] px-1.5 py-0 h-4">
+                                                    {job.probonoPrimaryReason || job.probonoReason}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        {/* Desktop table */}
+                        <div className="hidden md:block bg-zinc-950/50 overflow-x-auto max-h-[400px]">
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -4474,7 +4604,47 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 relative">
-                    <div className="overflow-x-auto">
+                    {/* Mobile cards */}
+                    <div className="md:hidden divide-y divide-zinc-800/60">
+                        {qualDoneServices.length === 0 ? (
+                            <div className="text-center text-zinc-500 py-10 italic text-sm">No completed jobs available for review yet.</div>
+                        ) : (
+                            qualDoneServices.slice(0, 15).map((svc) => {
+                                const review = bookingReviews[svc.id];
+                                return (
+                                    <div key={svc.id} className="p-3 hover:bg-zinc-800/20 space-y-1.5">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-semibold text-zinc-100 text-sm block truncate">{svc.customer}</span>
+                                                <span className="text-zinc-500 text-xs">{svc.date ? format(parseISO(svc.date), "MMM d, yyyy") : "N/A"}</span>
+                                            </div>
+                                            <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                                {review ? (
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[10px] px-1.5 py-0 h-4 font-black",
+                                                        review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                        review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                        "bg-red-500/10 text-red-400 border-red-500/20"
+                                                    )}>{review.sentiment.toUpperCase()}</Badge>
+                                                ) : (
+                                                    <span className="text-[10px] text-zinc-600 italic">Pending</span>
+                                                )}
+                                                {review?.googleReview && <span className="text-amber-400 text-xs">{review.googleStars}/5 ★</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="ghost" size="sm" className={cn("h-7 px-2 text-xs font-bold", review ? "text-zinc-400" : "text-violet-400 bg-violet-500/5 border border-violet-500/10")} onClick={() => openReview(svc)}>
+                                                {review ? 'Edit Report' : 'Log Feedback'}
+                                            </Button>
+                                            {review && <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500/70 hover:text-red-400" onClick={() => clearReview(svc)}><Trash2 className="w-3.5 h-3.5" /></Button>}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                    {/* Desktop table */}
+                    <div className="hidden md:block overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-zinc-950/50">
                                 <TableRow className="hover:bg-transparent border-zinc-800">
