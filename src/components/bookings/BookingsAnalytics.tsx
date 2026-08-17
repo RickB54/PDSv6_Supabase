@@ -3248,7 +3248,58 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
-                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px] hidden md:block">
+                        {/* Mobile card layout */}
+                        <div className="md:hidden divide-y divide-zinc-800/60">
+                            {filteredInvoices.length === 0 ? (
+                                <div className="text-center text-zinc-500 py-12 italic text-sm">No invoices found for the selected period.</div>
+                            ) : (
+                                filteredInvoices.map((inv) => {
+                                    const isSent = inv.isSent;
+                                    const status = (inv.paymentStatus || 'unpaid').toLowerCase();
+                                    
+                                    let outcomeDisplay = 'Unpaid';
+                                    let outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                                    if (status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total)) {
+                                        outcomeDisplay = 'Paid';
+                                        outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                    } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
+                                        outcomeDisplay = 'Partially Paid';
+                                        outcomeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+                                    }
+
+                                    return (
+                                        <div 
+                                            key={inv.id} 
+                                            className="p-3 hover:bg-zinc-900/30 cursor-pointer space-y-1.5"
+                                            onClick={() => navigate(`/invoicing?editId=${inv.id}`)}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="font-semibold text-zinc-100 text-sm block truncate">{inv.customerName}</span>
+                                                    <span className="text-zinc-500 text-xs block">{inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yy") : "N/A")}</span>
+                                                </div>
+                                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                                    <span className="text-emerald-400 font-mono text-sm font-bold block">${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1.5 py-0 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
+                                                        {isSent ? 'Sent' : 'Not Sent'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-end gap-2">
+                                                <div className="text-zinc-300 line-clamp-2 text-xs flex-1">
+                                                    {inv.vehicle || 'N/A'}
+                                                </div>
+                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase shrink-0", outcomeClass)}>
+                                                    {outcomeDisplay}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {/* Desktop table */}
+                        <div className="bg-zinc-950/50 overflow-x-auto max-h-[400px] hidden md:block" style={{touchAction: 'pan-y'}}>
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
@@ -3308,45 +3359,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     )}
                                 </TableBody>
                             </Table>
-                        </div>
-                        <div className="md:hidden flex flex-col gap-3 p-4 bg-zinc-950/50">
-                            {filteredInvoices.length === 0 ? (
-                                <div className="text-center text-zinc-500 py-10 italic">No invoices found for the selected period.</div>
-                            ) : (
-                                filteredInvoices.map((inv) => {
-                                    const isSent = inv.isSent;
-                                    const status = (inv.paymentStatus || 'unpaid').toLowerCase();
-                                    
-                                    let outcomeDisplay = 'Unpaid';
-                                    let outcomeClass = "bg-red-500/10 text-red-400 border-red-500/20";
-                                    if (status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total)) {
-                                        outcomeDisplay = 'Paid';
-                                        outcomeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                                    } else if (status === 'partially-paid' || (inv.paidAmount && inv.paidAmount > 0)) {
-                                        outcomeDisplay = 'Partially Paid';
-                                        outcomeClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
-                                    }
-
-                                    return (
-                                        <div key={inv.id} onClick={() => navigate(`/invoicing?editId=${inv.id}`)} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:bg-zinc-800/50 transition-colors">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}</div>
-                                                <div className="text-zinc-300 font-bold text-sm">${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                                            </div>
-                                            <div className="font-semibold text-zinc-200 text-base">{inv.customerName}</div>
-                                            <div className="text-zinc-500 text-xs mt-1">{inv.vehicle}</div>
-                                            <div className="flex justify-between items-center mt-3">
-                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
-                                                    {isSent ? 'Sent' : 'Not Sent'}
-                                                </Badge>
-                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
-                                                    {outcomeDisplay}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
                         </div>
                         <div className="p-4 bg-zinc-900 flex flex-row flex-wrap lg:flex-nowrap items-center justify-around border-t border-zinc-800 gap-8">
                             <div className="w-full max-w-[400px] flex flex-col items-center">
