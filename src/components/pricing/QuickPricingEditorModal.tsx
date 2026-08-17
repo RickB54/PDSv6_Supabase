@@ -243,44 +243,44 @@ export const QuickPricingEditorModal = ({
               </div>
               <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
+                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-[10px] md:text-xs tracking-wider sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="p-4 w-12 text-center">Sel</th>
-                      <th className="p-4">Package Name</th>
+                      <th className="p-2 md:p-4 w-8 md:w-12 text-center">Sel</th>
+                      <th className="p-2 md:p-4">Package Name</th>
                       {vehicleTypes.map(v => (
-                        <th key={v} className="p-4 text-center">{vehicleLabels[v]}</th>
+                        <th key={v} className="p-1 md:p-4 text-center">{vehicleLabels[v]}</th>
                       ))}
-                      <th className="p-4 text-center">Row Actions</th>
+                      <th className="p-2 md:p-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {packages.filter(pkg => showAllPackages || !pkg.isArchived).map(pkg => (
                       <tr key={pkg.id} className={`border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors ${pkg.isArchived ? 'opacity-50 grayscale' : ''}`}>
-                        <td className="p-4 text-center">
+                        <td className="p-2 md:p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`package:${pkg.id}:${v}`))}
                             onCheckedChange={(c) => handleSelectRow('package', pkg.id, !!c)}
-                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
+                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-100 md:scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-blue-400 text-base">
+                        <td className="p-2 md:p-4 font-black text-blue-400 text-sm md:text-base">
                           {pkg.name}
-                          {pkg.isArchived && <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
+                          {pkg.isArchived && <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] bg-zinc-800 text-zinc-400 px-1 md:px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
                         </td>
                         {vehicleTypes.map(v => {
                           const key = `package:${pkg.id}:${v}`;
                           return (
-                            <td key={v} className="p-2">
-                              <div className="flex items-center gap-3 justify-center">
+                            <td key={v} className="p-1 md:p-2">
+                              <div className="flex items-center gap-1 md:gap-3 justify-center">
                                 <Checkbox 
                                   checked={selectedKeys.has(key)}
                                   onCheckedChange={(c) => handleCheckbox(key, !!c)}
-                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-110"
+                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-90 md:scale-110 hidden md:block"
                                 />
                                 <div className="relative">
-                                  <span className="absolute left-2 top-2 text-zinc-600 font-bold text-sm">$</span>
+                                  <span className="absolute left-1 md:left-2 top-1.5 md:top-2 text-zinc-600 font-bold text-xs md:text-sm">$</span>
                                   <Input 
-                                    className="w-24 pl-6 h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-sm" 
+                                    className="w-12 md:w-24 pl-3 md:pl-6 h-7 md:h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-xs md:text-sm px-1 md:px-3" 
                                     value={localPrices[key] !== undefined ? localPrices[key] : (pkg.pricing[v] || 0)}
                                     onChange={(e) => handlePriceChange(key, e.target.value)}
                                   />
@@ -289,10 +289,10 @@ export const QuickPricingEditorModal = ({
                             </td>
                           );
                         })}
-                        <td className="p-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('package', pkg.id, 5)}>+5%</Button>
-                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('package', pkg.id, 10)}>+10%</Button>
+                        <td className="p-1 md:p-2 text-center">
+                          <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+                            <Button size="sm" variant="outline" className="h-6 md:h-8 px-1.5 md:px-3 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 text-[10px] md:text-xs" onClick={() => applyRowPercentage('package', pkg.id, 5)}>+5%</Button>
+                            <Button size="sm" variant="outline" className="h-6 md:h-8 px-1.5 md:px-3 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 text-[10px] md:text-xs" onClick={() => applyRowPercentage('package', pkg.id, 10)}>+10%</Button>
                           </div>
                         </td>
                       </tr>
@@ -336,44 +336,44 @@ export const QuickPricingEditorModal = ({
               </div>
               <div className="overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-900/40">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-xs tracking-wider sticky top-0 z-10 shadow-sm">
+                  <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-black uppercase text-[10px] md:text-xs tracking-wider sticky top-0 z-10 shadow-sm">
                     <tr>
-                      <th className="p-4 w-12 text-center">Sel</th>
-                      <th className="p-4">Add-On Name</th>
+                      <th className="p-2 md:p-4 w-8 md:w-12 text-center">Sel</th>
+                      <th className="p-2 md:p-4">Add-On Name</th>
                       {vehicleTypes.map(v => (
-                        <th key={v} className="p-4 text-center">{vehicleLabels[v]}</th>
+                        <th key={v} className="p-1 md:p-4 text-center">{vehicleLabels[v]}</th>
                       ))}
-                      <th className="p-4 text-center">Row Actions</th>
+                      <th className="p-2 md:p-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {addons.filter(addon => showAllAddons || !addon.isArchived).map(addon => (
                       <tr key={addon.id} className={`border-b border-zinc-800/60 hover:bg-zinc-800/40 transition-colors ${addon.isArchived ? 'opacity-50 grayscale' : ''}`}>
-                        <td className="p-4 text-center">
+                        <td className="p-2 md:p-4 text-center">
                           <Checkbox 
                             checked={vehicleTypes.every(v => selectedKeys.has(`addon:${addon.id}:${v}`))}
                             onCheckedChange={(c) => handleSelectRow('addon', addon.id, !!c)}
-                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-125"
+                            className="border-zinc-500 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-100 md:scale-125"
                           />
                         </td>
-                        <td className="p-4 font-black text-purple-400 text-base">
+                        <td className="p-2 md:p-4 font-black text-purple-400 text-sm md:text-base">
                           {addon.name}
-                          {addon.isArchived && <span className="ml-2 text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
+                          {addon.isArchived && <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] bg-zinc-800 text-zinc-400 px-1 md:px-2 py-0.5 rounded border border-zinc-700 uppercase tracking-widest align-middle">Archived</span>}
                         </td>
                         {vehicleTypes.map(v => {
                           const key = `addon:${addon.id}:${v}`;
                           return (
-                            <td key={v} className="p-2">
-                              <div className="flex items-center gap-3 justify-center">
+                            <td key={v} className="p-1 md:p-2">
+                              <div className="flex items-center gap-1 md:gap-3 justify-center">
                                 <Checkbox 
                                   checked={selectedKeys.has(key)}
                                   onCheckedChange={(c) => handleCheckbox(key, !!c)}
-                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-110"
+                                  className="border-zinc-600 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 scale-90 md:scale-110 hidden md:block"
                                 />
                                 <div className="relative">
-                                  <span className="absolute left-2 top-2 text-zinc-600 font-bold text-sm">$</span>
+                                  <span className="absolute left-1 md:left-2 top-1.5 md:top-2 text-zinc-600 font-bold text-xs md:text-sm">$</span>
                                   <Input 
-                                    className="w-24 pl-6 h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-sm" 
+                                    className="w-12 md:w-24 pl-3 md:pl-6 h-7 md:h-9 bg-black border-zinc-700 focus:border-emerald-500 text-center font-mono font-bold text-white shadow-sm text-xs md:text-sm px-1 md:px-3" 
                                     value={localPrices[key] !== undefined ? localPrices[key] : (addon.pricing[v] || 0)}
                                     onChange={(e) => handlePriceChange(key, e.target.value)}
                                   />
@@ -382,10 +382,10 @@ export const QuickPricingEditorModal = ({
                             </td>
                           );
                         })}
-                        <td className="p-2 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('addon', addon.id, 5)}>+5%</Button>
-                            <Button size="sm" variant="outline" className="h-8 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50" onClick={() => applyRowPercentage('addon', addon.id, 10)}>+10%</Button>
+                        <td className="p-1 md:p-2 text-center">
+                          <div className="flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2">
+                            <Button size="sm" variant="outline" className="h-6 md:h-8 px-1.5 md:px-3 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 text-[10px] md:text-xs" onClick={() => applyRowPercentage('addon', addon.id, 5)}>+5%</Button>
+                            <Button size="sm" variant="outline" className="h-6 md:h-8 px-1.5 md:px-3 border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 text-[10px] md:text-xs" onClick={() => applyRowPercentage('addon', addon.id, 10)}>+10%</Button>
                           </div>
                         </td>
                       </tr>

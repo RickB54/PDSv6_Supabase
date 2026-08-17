@@ -2904,9 +2904,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <TableRow className="hover:bg-transparent border-zinc-800">
                                     <TableHead className="w-[120px]">Scheduled</TableHead>
                                     <TableHead>Customer</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Location</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Service</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Status</TableHead>
                                     <TableHead className="text-right">Est. Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -2924,7 +2924,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
                                             </TableCell>
                                             <TableCell className="font-medium text-zinc-300">{svc.customer}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="hidden sm:table-cell">
                                                 <Badge variant="outline" className={cn(
                                                     "text-[10px] h-5 px-1.5 font-bold uppercase",
                                                     svc.locationType === 'Shop' 
@@ -2934,8 +2934,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     {svc.locationType}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-zinc-400 text-sm">{svc.service}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="hidden sm:table-cell text-zinc-400 text-sm">{svc.service}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">
                                                 <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">
                                                     {svc.status}
                                                 </Badge>
@@ -3053,9 +3053,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <TableRow className="hover:bg-transparent border-zinc-800">
                                     <TableHead className="w-[120px]">Date</TableHead>
                                     <TableHead>Customer</TableHead>
-                                    <TableHead>Location</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Location</TableHead>
                                     <TableHead className="hidden md:table-cell">Address</TableHead>
-                                    <TableHead>Service Package</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Service Package</TableHead>
                                     <TableHead className="text-right">Revenue</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -3073,7 +3073,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 {format(parseISO(svc.date), "MMM d, yyyy")}
                                             </TableCell>
                                             <TableCell className="font-semibold text-zinc-200">{svc.customer}</TableCell>
-                                            <TableCell>
+                                            <TableCell className="hidden sm:table-cell">
                                                 <Badge variant="outline" className={cn(
                                                     "text-[10px] h-5 px-1.5 font-bold uppercase",
                                                     svc.locationType === 'Shop' 
@@ -3086,7 +3086,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <TableCell className="hidden md:table-cell text-xs text-zinc-500 max-w-[180px] truncate" title={svc.address}>
                                                 {svc.address}
                                             </TableCell>
-                                            <TableCell className="text-zinc-300 font-medium">{svc.service}</TableCell>
+                                            <TableCell className="hidden sm:table-cell text-zinc-300 font-medium">{svc.service}</TableCell>
                                             <TableCell className="text-right">
                                                 <span className="text-emerald-400 font-bold font-mono">
                                                     ${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -3201,9 +3201,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     <TableRow className="hover:bg-transparent border-zinc-800">
                                         <TableHead>Date</TableHead>
                                         <TableHead>Customer</TableHead>
-                                        <TableHead>Vehicle</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead className="text-center">Delivery</TableHead>
+                                        <TableHead className="hidden sm:table-cell text-center">Delivery</TableHead>
                                         <TableHead className="text-right">Outcome</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -3235,11 +3235,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         {inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}
                                                     </TableCell>
                                                     <TableCell className="font-semibold text-zinc-200">{inv.customerName}</TableCell>
-                                                    <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
+                                                    <TableCell className="hidden sm:table-cell text-zinc-500 text-xs">{inv.vehicle}</TableCell>
                                                     <TableCell className="font-bold text-zinc-300">
                                                         ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </TableCell>
-                                                    <TableCell className="text-center">
+                                                    <TableCell className="hidden sm:table-cell text-center">
                                                         <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
                                                             {isSent ? 'Sent' : 'Not Sent'}
                                                         </Badge>

@@ -3854,6 +3854,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                {isAdmin && (
+                  <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDuplicate(selectedBooking); }} 
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-8 w-8 shrink-0"
+                    title="Duplicate Booking"
+                  >
+                    <Copy className="h-3.5 w-3.5 opacity-50" />
+                  </Button>
+                )}
+
                 {formData.status !== 'cancelled' && isAdmin && (
                   <Button 
                     variant="secondary" 
@@ -3885,17 +3897,6 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   <Wrench className="mr-1.5 h-3.5 w-3.5 text-purple-400" /> Start Job
                 </Button>
 
-                {isAdmin && (
-                  <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDuplicate(selectedBooking); }} 
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 h-8 w-8 shrink-0"
-                    title="Duplicate Booking"
-                  >
-                    <Copy className="h-3.5 w-3.5 opacity-50" />
-                  </Button>
-                )}
               </div>
             </DialogFooter>
           </DialogContent>

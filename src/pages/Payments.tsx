@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getSupabaseInvoices, getSupabasePayments } from "@/lib/supa-data";
 import { getReceivables, Receivable } from "@/lib/receivables";
-import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity, ArrowLeft } from "lucide-react";
+import { DollarSign, FileText, ArrowRight, ArrowDownRight, CreditCard, Activity, ArrowLeft, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
@@ -319,7 +319,31 @@ const Payments = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-black text-emerald-400">
-                        ${p.amount.toFixed(2)}
+                        <div className="flex items-center justify-end gap-2">
+                          <span>${p.amount.toFixed(2)}</span>
+                          {(p.source === 'Manual Income' || p.source === 'Quick Pay') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-red-500 hover:text-red-400 hover:bg-red-500/20 md:opacity-0 md:group-hover:opacity-100 transition-opacity" 
+                              onClick={async (e) => { 
+                                e.stopPropagation(); 
+                                if (window.confirm("Are you sure you want to delete this payment record? This action cannot be undone.")) {
+                                  try {
+                                    const { deleteReceivable } = await import('@/lib/receivables');
+                                    await deleteReceivable(p.id);
+                                    setPayments(prev => prev.filter(payment => payment.id !== p.id));
+                                  } catch (err) {
+                                    console.error("Failed to delete payment", err);
+                                  }
+                                }
+                              }}
+                              title="Delete Payment"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
