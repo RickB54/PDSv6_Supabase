@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface UnifiedPayment {
   id: string;
@@ -190,6 +191,22 @@ const Payments = () => {
                 <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                   Universal Payment Ledger
                   <PaymentWorkflowHelp variant="payments-dashboard" />
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="rounded-full p-1 hover:bg-zinc-800/50 transition-colors cursor-help">
+                          <HelpCircle className="w-5 h-5 text-zinc-500 hover:text-rose-400" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[320px] bg-zinc-950 border-zinc-800 p-4 shadow-xl text-zinc-300 font-medium">
+                        <p className="text-white font-bold mb-2">How to Delete Payments</p>
+                        <ul className="space-y-2 text-sm">
+                          <li><strong className="text-emerald-400">Invoices:</strong> To delete an Invoice payment, click the invoice to open the editor, then remove it from the "Payments Log" at the bottom.</li>
+                          <li><strong className="text-blue-400">Quick Pay / Manual:</strong> Click the red trash icon directly in this ledger to permanently delete them.</li>
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </h2>
                 <p className="text-zinc-400 text-sm">Every payment tracked across the application.</p>
               </div>

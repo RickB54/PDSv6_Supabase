@@ -1427,6 +1427,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [filteredQualBookings, customers, invoices]);
 
     const doneServices = useMemo(() => {
+        return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
+    }, [serviceDetailsData]);
+
+    const qualDoneServices = useMemo(() => {
         return qualServiceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
     }, [qualServiceDetailsData]);
 
@@ -2951,23 +2955,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="md:hidden flex flex-col gap-3 p-4">
+                    <div className="md:hidden flex flex-col gap-2 p-3">
                         {toDoServices.length === 0 ? (
                             <div className="text-center text-zinc-500 py-10 italic">No upcoming services scheduled.</div>
                         ) : (
                             toDoServices.map((svc) => (
-                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{format(parseISO(svc.date), "MMM d, yyyy")}</div>
-                                        <div className="text-zinc-300 font-mono text-sm">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-md p-3 flex flex-col gap-1.5">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-400 text-[10px] font-mono">{format(parseISO(svc.date), "MMM d, yyyy")}</span>
+                                        <span className="text-zinc-300 font-mono text-xs font-bold">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="font-medium text-zinc-200 text-base">{svc.customer}</div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <div className="text-zinc-400 text-sm">{svc.service}</div>
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="font-semibold text-zinc-200 text-sm truncate pr-2">{svc.customer}</span>
+                                        <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 font-bold uppercase shrink-0 leading-none", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
                                     </div>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[10px]">{svc.status}</Badge>
-                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
+                                    <div className="flex justify-between items-center">
+                                        <div className="text-zinc-400 text-xs truncate max-w-[75%]">{svc.service}</div>
+                                        <Badge className="bg-zinc-800 text-zinc-400 border-none capitalize text-[8px] h-3.5 px-1.5 leading-none shrink-0">{svc.status}</Badge>
                                     </div>
                                 </div>
                             ))
@@ -3116,24 +3120,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="md:hidden flex flex-col gap-3 p-4">
+                    <div className="md:hidden flex flex-col gap-2 p-3">
                         {doneServices.length === 0 ? (
                             <div className="text-center text-zinc-500 py-10 italic">No completed services recorded yet.</div>
                         ) : (
                             doneServices.map((svc) => (
-                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 flex flex-col gap-2">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div className="text-zinc-400 text-xs font-mono bg-zinc-950 px-2 py-1 rounded">{format(parseISO(svc.date), "MMM d, yyyy")}</div>
-                                        <div className="text-emerald-400 font-bold font-mono text-sm">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                <div key={svc.id} className="bg-zinc-900/50 border border-zinc-800 rounded-md p-3 flex flex-col gap-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-zinc-400 text-[10px] font-mono">{format(parseISO(svc.date), "MMM d, yyyy")}</span>
+                                        <span className="text-emerald-400 font-mono text-xs font-bold">${(svc.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="font-medium text-zinc-200 text-base">{svc.customer}</div>
-                                    <div className="flex flex-col mt-1 gap-1">
-                                        <div className="text-zinc-300 font-medium text-sm">{svc.service}</div>
-                                        <div className="text-zinc-500 text-xs">{svc.address}</div>
+                                    <div className="flex justify-between items-baseline mt-0.5">
+                                        <span className="font-semibold text-zinc-200 text-sm truncate pr-2">{svc.customer}</span>
+                                        <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1 py-0 font-bold uppercase shrink-0 leading-none", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
                                     </div>
-                                    <div className="flex justify-between items-center mt-2">
-                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", svc.locationType === 'Shop' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>{svc.locationType}</Badge>
-                                    </div>
+                                    <div className="text-zinc-300 text-xs leading-tight truncate">{svc.service}</div>
+                                    <div className="text-zinc-500 text-[10px] leading-tight mt-0.5 truncate">{svc.address}</div>
                                 </div>
                             ))
                         )}
@@ -4454,14 +4456,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {doneServices.length === 0 ? (
+                                {qualDoneServices.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
                                             No completed jobs available for review yet.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    doneServices.slice(0, 15).map((svc) => {
+                                    qualDoneServices.slice(0, 15).map((svc) => {
                                         const review = bookingReviews[svc.id];
                                         return (
                                             <TableRow key={svc.id} className="hover:bg-zinc-800/20 border-zinc-800 group/row">
