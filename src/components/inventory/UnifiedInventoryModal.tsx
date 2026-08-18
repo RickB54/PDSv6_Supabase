@@ -375,8 +375,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     localStorage.setItem('inventory_preferred_locations', JSON.stringify(newList));
   };
 
+  const safeDeleteOption = (type: string, action: () => void) => {
+    if (window.confirm(`Are you sure you want to delete this ${type}? Any items assigned to this ${type} will lose their assignment.`)) {
+      action();
+    }
+  };
+
   const handleDeleteLocation = async (e: React.MouseEvent, loc: string) => {
     e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete the location "${loc}"? Any items assigned to this location will lose their assignment.`)) return;
     const newLocs = availableLocations.filter(l => l !== loc);
     updateLocations(newLocs);
     
@@ -402,6 +409,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const handleDeleteContainerLocation = async (e: React.MouseEvent, loc: string) => {
     e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete the container "${loc}"? Any items assigned to this container will lose their assignment.`)) return;
     const newLocs = availableContainerLocations.filter(l => l !== loc);
     updateContainerLocations(newLocs);
     
@@ -1312,7 +1320,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) });
+                                  safeDeleteOption("category", () => updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) }));
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                 title="Remove from presets"
@@ -1400,7 +1408,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateSubtypes(availableSubtypes.filter(s => s !== sub));
+                                  safeDeleteOption("subtype", () => updateSubtypes(availableSubtypes.filter(s => s !== sub)));
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                 title="Remove from presets"
@@ -1493,7 +1501,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) });
+                                  safeDeleteOption("category", () => updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) }));
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
                                 title="Remove from presets"
@@ -1804,7 +1812,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   <div key={shelf} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = shelf; setChemicalSizes(ns); }}>{shelf}</span>
                                     {size.shelf === shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); updateShelves(availableShelves.filter(s => s !== shelf)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); safeDeleteOption("shelf", () => updateShelves(availableShelves.filter(s => s !== shelf))); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
                                   </div>
                                 ))}
                                 <div className="h-px bg-zinc-800 my-1" />
@@ -1843,7 +1851,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   <div key={section} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].section = section; setChemicalSizes(ns); }}>{section}</span>
                                     {size.section === section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); updateSections(availableSections.filter(s => s !== section)); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); safeDeleteOption("section", () => updateSections(availableSections.filter(s => s !== section))); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
                                   </div>
                                 ))}
                                 <div className="h-px bg-zinc-800 my-1" />
