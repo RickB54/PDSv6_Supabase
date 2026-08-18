@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { HeroSection } from "@/components/HeroSection";
-import { ExternalLink, Car, Calendar, Phone, ArrowRight, ShieldCheck, Zap, Droplets, CheckCircle2, ChevronRight, Star, ArrowUpRight, MessageSquare, CalendarRange, Info } from "lucide-react";
+import { ExternalLink, Car, Calendar, Phone, ArrowRight, ShieldCheck, Zap, Droplets, CheckCircle2, ChevronRight, Star, ArrowUpRight, MessageSquare, CalendarRange, Info, Sparkles, Clock, MapPin } from "lucide-react";
 
 const ExpandableTestimonial = ({ t }: { t: any }) => {
   const [expanded, setExpanded] = useState(false);
