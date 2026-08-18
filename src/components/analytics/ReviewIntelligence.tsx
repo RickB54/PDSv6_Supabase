@@ -181,12 +181,10 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
   // Staff sentiment notes (satisfied/loved without googleReview=true) are NOT a real review.
   const isCustomerReallyReviewed = (c: Customer) => {
     if (c.has_google_review) return true;
-    
-    const custBookings = bookings.filter(b => 
-      (b.customerId && b.customerId === c.id) || 
+    const custBookings = bookings.filter(b =>
+      (b.customerId && b.customerId === c.id) ||
       (b.customer && c.name && b.customer.trim().toLowerCase() === c.name.trim().toLowerCase())
     );
-    
     // ONLY count as reviewed if googleReview flag is explicitly true
     return custBookings.some(b => {
       const rev = bookingReviews[b.id];
@@ -194,24 +192,30 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
     });
   };
 
-  // Has ANY staff note (for showing in VIP list as staff-note-only)
-  const hasStaffNote = (c: Customer) => {
-    const custBookings = bookings.filter(b => 
-      (b.customerId && b.customerId === c.id) || 
+  // Has a meaningful staff note — requires actual written text, NOT just the default sentinel sentiment value.
+  // A record saved with only the default {sentiment:"satisfied", performance:"", mistakes:""} is NOT a staff note.
+  const hasActualStaffNote = (c: Customer) => {
+    const custBookings = bookings.filter(b =>
+      (b.customerId && b.customerId === c.id) ||
       (b.customer && c.name && b.customer.trim().toLowerCase() === c.name.trim().toLowerCase())
     );
     return custBookings.some(b => {
       const rev = bookingReviews[b.id];
-      return rev && !rev.googleReview && (rev.sentiment || rev.performance || rev.mistakes);
+      // Only count if there is actual written content — NOT the default empty save
+      return rev && !rev.googleReview && (
+        (rev.performance && rev.performance.trim().length > 0) ||
+        (rev.mistakes && rev.mistakes.trim().length > 0) ||
+        (rev.googleReviewText && rev.googleReviewText.trim().length > 0)
+      );
     });
   };
 
-  // Real reviews only (for stats + Action Required filtering)
+  // Real reviews only — this is the SINGLE source of truth for stats and all list memberships.
   const reviewed = customersWithCompletedJobs.filter(c => isCustomerReallyReviewed(c));
   const unreviewed = customersWithCompletedJobs.filter(c => !isCustomerReallyReviewed(c));
 
-  // VIP list = real reviews + staff-noted customers (staff notes shown with distinct badge)
-  const vipListCustomers = customersWithCompletedJobs.filter(c => isCustomerReallyReviewed(c) || hasStaffNote(c));
+  // VIP list = ONLY customers with a real Google review. No staff-note-only customers ever appear here.
+  const vipListCustomers = reviewed;
 
   const reviewRate = customersWithCompletedJobs.length > 0 
     ? Math.round((reviewed.length / customersWithCompletedJobs.length) * 100) 
@@ -306,6 +310,12 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 const lastJobDate = customerBookings.length > 0 ? new Date(customerBookings[0].date).toLocaleDateString() : 'Unknown';
                 const lastJobTitle = customerBookings.length > 0 ? customerBookings[0].title : 'Service';
                 const lastBooking = customerBookings.find(b => b.status === 'done' || b.status === 'completed');
+                // Show staff note indicator in Action Required if they have actual written notes (not default sentinel)
+                const staffNoteForCustomer = lastBooking ? bookingReviews[lastBooking.id] : null;
+                const hasWrittenNote = staffNoteForCustomer && !staffNoteForCustomer.googleReview && (
+                    (staffNoteForCustomer.performance && staffNoteForCustomer.performance.trim().length > 0) ||
+                    (staffNoteForCustomer.mistakes && staffNoteForCustomer.mistakes.trim().length > 0)
+                );
 
                 return (
                     <div key={customer.id} className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-zinc-700 transition-colors group">
@@ -316,6 +326,9 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[9px] px-1.5 py-0 h-4 uppercase font-black">Email Available</Badge>
                         ) : (
                             <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 text-[9px] px-1.5 py-0 h-4 uppercase font-black">No Email</Badge>
+                        )}
+                        {hasWrittenNote && (
+                            <Badge variant="outline" className="bg-violet-500/10 text-violet-400 border-violet-500/30 text-[9px] px-1.5 py-0 h-4 uppercase font-black">Staff Note</Badge>
                         )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
@@ -384,7 +397,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 <h3 className="text-lg font-black text-white flex items-center gap-2 uppercase tracking-tighter">
                 <CheckCircle className="w-4 h-4 text-emerald-400" /> Logged VIP Reviews
                 </h3>
-                <p className="text-xs text-zinc-500 font-medium">Real Google reviews + staff notes. <span className="text-amber-500/70">Only ✦ Google Review customers count toward your review rate.</span></p>
+                <p className="text-xs text-zinc-500 font-medium">Customers who have submitted a real Google review. <span className="text-amber-500/70">Only these count toward your review rate.</span></p>
             </div>
             <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -410,46 +423,31 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                 const lastJobDate = lastBooking ? new Date(lastBooking.date).toLocaleDateString() : 'Unknown';
                 const lastJobTitle = lastBooking ? lastBooking.title : 'Service';
                 const review = lastBooking ? bookingReviews[lastBooking.id] : null;
-
-                const isRealReview = isCustomerReallyReviewed(customer);
-                const isStaffNoteOnly = !isRealReview && hasStaffNote(customer);
-
+                // Only real-review customers appear here — no staff-note-only path
                 return (
-                    <div key={customer.id} className={cn(
-                        "bg-zinc-950 border p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-zinc-700 transition-colors group",
-                        isStaffNoteOnly ? "border-zinc-700/60 opacity-80" : "border-zinc-800"
-                    )}>
+                    <div key={customer.id} className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-zinc-700 transition-colors group">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h4 className="font-bold text-zinc-200 truncate">{customer.name}</h4>
-                        {isStaffNoteOnly ? (
-                            // Staff note only — clearly labeled as internal note, NOT a real review
-                            <Badge variant="outline" className="bg-zinc-700/30 text-zinc-400 border-zinc-600/50 text-[10px] uppercase font-black">
-                                Staff Note Only
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] uppercase font-black flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5 fill-current" /> Google Review
+                        </Badge>
+                        {review?.sentiment && (
+                            <Badge variant="outline" className={cn(
+                                "text-[10px] h-5 px-2 font-black tracking-tighter",
+                                review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                "bg-red-500/10 text-red-400 border-red-500/20"
+                            )}>
+                                {review.sentiment.toUpperCase()}
                             </Badge>
-                        ) : review ? (
-                            <>
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] uppercase font-black flex items-center gap-1">
-                                <Sparkles className="w-2.5 h-2.5 fill-current" /> Google Review
-                            </Badge>
-                            {review.sentiment && (
-                                <Badge variant="outline" className={cn(
-                                    "text-[10px] h-5 px-2 font-black tracking-tighter",
-                                    review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                                    review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                                    "bg-red-500/10 text-red-400 border-red-500/20"
-                                )}>
-                                    {review.sentiment.toUpperCase()}
-                                </Badge>
-                            )}
-                            </>
-                        ) : <Badge variant="outline" className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] uppercase">No Notes</Badge>}
+                        )}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
                         <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {lastJobTitle}</span>
                         <span>&bull;</span>
                         <span>Last Job: {lastJobDate}</span>
-                        {review?.googleReview && (
+                        {review?.googleStars && (
                             <>
                             <span>&bull;</span>
                             <span className="flex items-center gap-1 text-amber-500">
@@ -458,9 +456,6 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                             </>
                         )}
                         </div>
-                        {isStaffNoteOnly && (
-                            <p className="text-[10px] text-zinc-600 mt-1 italic">Internal staff sentiment only. No Google Review on file — remains in Action Required.</p>
-                        )}
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
                         {lastBooking && (
@@ -470,7 +465,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                             className="h-8 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 text-xs px-3"
                             onClick={() => openReview(lastBooking)}
                         >
-                            {review ? <><Edit className="w-3 h-3 mr-1"/>Edit</> : <><Edit className="w-3 h-3 mr-1"/>Log Notes</>}
+                            <Edit className="w-3 h-3 mr-1"/>Edit
                         </Button>
                         )}
                         {lastBooking && (
