@@ -118,7 +118,42 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
 
   const saveReview = async () => {
       if (!selectedBookingForReview) return;
+
+      // Build the updated local state for this specific booking
       const updated = { ...bookingReviews, [selectedBookingForReview.id]: reviewForm };
+
+      // CRITICAL: If turning googleReview OFF, we must also clear it on every OTHER
+      // booking record for this customer. isCustomerReallyReviewed scans ALL bookings,
+      // so leaving an older booking with googleReview:true causes the customer to
+      // stay stuck in the VIP list even after the user explicitly toggles it OFF.
+      if (!reviewForm.googleReview) {
+          const customerBookingIds = bookings
+              .filter(b =>
+                  (selectedBookingForReview.customerId && b.customerId === selectedBookingForReview.customerId) ||
+                  (b.customer && selectedBookingForReview.customer &&
+                   b.customer.trim().toLowerCase() === selectedBookingForReview.customer.trim().toLowerCase())
+              )
+              .map(b => b.id);
+
+          for (const bid of customerBookingIds) {
+              if (bid === selectedBookingForReview.id) continue; // already handled above
+              const existingRev = updated[bid];
+              if (existingRev && existingRev.googleReview) {
+                  // Clear googleReview on this sibling booking record
+                  updated[bid] = { ...existingRev, googleReview: false, googleStars: 0 };
+                  // Persist to Supabase too
+                  if (!isDemoActive()) {
+                      try {
+                          const { upsertPrimeBookingReview } = await import('@/lib/supa-data');
+                          await upsertPrimeBookingReview(bid, { ...existingRev, googleReview: false, googleStars: 0 });
+                      } catch (e) {
+                          console.warn('[saveReview] Failed to clear sibling review for booking', bid, e);
+                      }
+                  }
+              }
+          }
+      }
+
       setBookingReviews(updated);
       
       if (isDemoActive()) {
@@ -132,6 +167,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
           }
       }
       
+      // Sync has_google_review on the customer record
       const customerToUpdate = customers.find(c => 
           (selectedBookingForReview.customerId && c.id === selectedBookingForReview.customerId) ||
           (c.name && selectedBookingForReview.customer && c.name.trim().toLowerCase() === selectedBookingForReview.customer.trim().toLowerCase())
@@ -154,6 +190,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       setIsReviewModalOpen(false);
       toast.success("Operational review saved.");
   };
+
   
   const clearReview = async (booking: any) => {
       if (!confirm("Clear this operational review? This will reset the sentiment and Google Star rating.")) return;
