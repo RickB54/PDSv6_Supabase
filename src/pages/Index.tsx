@@ -13,12 +13,25 @@ const ExpandableTestimonial = ({ t }: { t: any }) => {
   
   return (
     <Card className="bg-white border-zinc-100 p-8 hover:shadow-xl transition-shadow text-left flex flex-col h-full">
+      <div className="flex items-center justify-between border-b pb-6 border-zinc-100 mb-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-inner">
+            {t.name.charAt(0)}
+          </div>
+          <div>
+            <h4 className="font-black text-zinc-900 uppercase tracking-wide text-sm">{t.name}</h4>
+            <div className="flex items-center gap-1 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+              Verified Client
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="flex gap-1 mb-4">
         {[1, 2, 3, 4, 5].map((s) => (
           <Star key={s} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
         ))}
       </div>
-      <div className="flex-grow mb-6">
+      <div className="flex-grow">
         <p className="text-zinc-600 italic font-serif text-lg leading-relaxed transition-all duration-300">
           "{expanded ? t.quote : (isLong ? t.quote.substring(0, 120) + '...' : t.quote)}"
         </p>
@@ -27,17 +40,6 @@ const ExpandableTestimonial = ({ t }: { t: any }) => {
             {expanded ? "Show Less" : "Read More"}
           </button>
         )}
-      </div>
-      <div className="flex items-center gap-4 border-t pt-6 border-zinc-100 mt-auto">
-        <div className="w-12 h-12 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-inner">
-          {t.name.charAt(0)}
-        </div>
-        <div>
-          <h4 className="font-black text-zinc-900 uppercase tracking-wide text-sm">{t.name}</h4>
-          <div className="flex items-center gap-1 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-            Verified Client
-          </div>
-        </div>
       </div>
     </Card>
   );
