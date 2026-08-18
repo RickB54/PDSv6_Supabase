@@ -1395,7 +1395,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 <div key={groupName} className="space-y-4">
                   {groupName !== 'All Chemicals' && (
                     <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest border-b border-purple-500/20 pb-1 mt-4">
-                      {groupName}
+                      {groupName} ({groupItems.length})
                     </h3>
                   )}
                   {groupItems.map(c => {
@@ -1655,7 +1655,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               {activeTab !== 'chemicals' && groupedNonChemicals.map(([loc, items]) => (
                 <div key={loc} className="mb-6">
                   <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
-                    {loc}
+                    {loc} ({items.length})
                   </h3>
                   <div className="space-y-3">
                     {items.map((item: any) => {
