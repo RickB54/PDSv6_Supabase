@@ -49,13 +49,52 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
     loadReviews();
   }, []);
 
+  // Part C: One-time data migration — fix stale default-save records.
+  // Any record with sentiment='satisfied', empty notes, googleReview=false
+  // is a false save from the old default. Migrate to sentiment='no_response'.
+  useEffect(() => {
+    const migrateStaleRecords = async () => {
+      if (isDemoActive()) return; // skip demo mode
+      try {
+        const { upsertPrimeBookingReview: upsert } = await import('@/lib/supa-data');
+        const { data } = await supabase
+          .from('prime_booking_reviews')
+          .select('booking_id, sentiment, performance, mistakes, google_review')
+          .eq('sentiment', 'satisfied')
+          .eq('google_review', false);
+        if (!data) return;
+        const falseDefaults = data.filter((r: any) =>
+          (!r.performance || r.performance.trim() === '') &&
+          (!r.mistakes || r.mistakes.trim() === '')
+        );
+        for (const rec of falseDefaults) {
+          await supabase
+            .from('prime_booking_reviews')
+            .update({ sentiment: 'no_response' })
+            .eq('booking_id', rec.booking_id);
+          console.log('[Migration] Fixed false-default record for booking_id:', rec.booking_id);
+        }
+        if (falseDefaults.length > 0) {
+          // Reload reviews after migration
+          const { fetchPrimeBookingReviews } = await import('@/lib/supa-data');
+          const remote = await fetchPrimeBookingReviews();
+          setBookingReviews(remote);
+          console.log(`[Migration] Corrected ${falseDefaults.length} stale default-save record(s) to 'no_response'.`);
+        }
+      } catch (e) {
+        console.warn('[Migration] Failed to migrate stale review records:', e);
+      }
+    };
+    migrateStaleRecords();
+  }, []);
+
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
   
   const [reviewForm, setReviewForm] = useState({
       performance: "",
       mistakes: "",
-      sentiment: "satisfied",
+      sentiment: "no_response",
       googleReview: false,
       googleStars: 5,
       googleReviewText: ""
@@ -159,7 +198,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
       const existing = bookingReviews[booking.id] || {
           performance: "",
           mistakes: "",
-          sentiment: "satisfied",
+          sentiment: "no_response",
           googleReview: false,
           googleStars: 5,
           googleReviewText: ""
@@ -177,15 +216,17 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
     );
   });
 
-  // A customer is ONLY considered truly reviewed if they have a real Google review.
-  // Staff sentiment notes (satisfied/loved without googleReview=true) are NOT a real review.
+  // A customer is ONLY considered truly reviewed if they have a real Google review
+  // at the BOOKING RECORD level (google_review = true in prime_booking_reviews).
+  // The has_google_review field on the customer record is treated as a mirror — but we
+  // always ALSO require a booking-level record to confirm, to prevent stale customer flags
+  // (e.g. Ann Burns) from causing false positives.
   const isCustomerReallyReviewed = (c: Customer) => {
-    if (c.has_google_review) return true;
     const custBookings = bookings.filter(b =>
       (b.customerId && b.customerId === c.id) ||
       (b.customer && c.name && b.customer.trim().toLowerCase() === c.name.trim().toLowerCase())
     );
-    // ONLY count as reviewed if googleReview flag is explicitly true
+    // ONLY count as reviewed if a booking review record has googleReview strictly === true
     return custBookings.some(b => {
       const rev = bookingReviews[b.id];
       return rev && rev.googleReview === true;
@@ -535,6 +576,7 @@ export default function ReviewIntelligence({ customers, bookings }: ReviewIntell
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-800">
+                        <SelectItem value="no_response" className="text-zinc-400">No Response / Not Given</SelectItem>
                                 <SelectItem value="loved" className="text-emerald-400">Loved it! (Stellar)</SelectItem>
                                 <SelectItem value="satisfied" className="text-blue-400">Satisfied (Good)</SelectItem>
                                 <SelectItem value="disappointed" className="text-red-400">Disappointed (Poor)</SelectItem>
