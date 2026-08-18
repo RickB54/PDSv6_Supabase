@@ -70,8 +70,8 @@ export default function FollowUpCenter() {
       const activeAll = all.filter(c => !c.is_archived);
       setAllCustomers(activeAll);
       
-      setProspects(activeAll.filter(c => c.type === 'prospect'));
-      setLostProspects(all.filter(c => c.type === 'lost_prospect' || (c.type === 'prospect' && c.is_archived)));
+      setProspects(activeAll.filter(c => c.type === 'prospect' && !c.is_lost));
+      setLostProspects(all.filter(c => c.is_lost === true || c.type === 'lost_prospect' || (c.type === 'prospect' && c.is_archived)));
     } catch (err) {
       console.error(err);
     }
@@ -153,7 +153,7 @@ export default function FollowUpCenter() {
     try {
       const prospect = allCustomers.find(c => c.id === customerId);
       if (prospect) {
-        await upsertSupabaseCustomer({ ...prospect, type: 'lost_prospect' });
+        await upsertSupabaseCustomer({ ...prospect, type: 'prospect', is_lost: true });
         toast.success("Prospect marked as lost.");
         loadData();
       }
@@ -166,7 +166,7 @@ export default function FollowUpCenter() {
     try {
       const prospect = lostProspects.find(c => c.id === customerId);
       if (prospect) {
-        await upsertSupabaseCustomer({ ...prospect, type: 'prospect', is_archived: false });
+        await upsertSupabaseCustomer({ ...prospect, type: 'prospect', is_archived: false, is_lost: false });
         toast.success("Prospect restored.");
         loadData();
       }

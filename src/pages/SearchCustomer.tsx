@@ -13,7 +13,7 @@ import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS } from "@/lib/demoMockData";
-import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, MessagesSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft, PenTool } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Save, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, FileBarChart, MapPin, CalendarPlus, History, Calendar, CalendarDays, CalendarRange, Users, Archive, RotateCcw, RefreshCw, Image as ImageIcon, Video, SidebarOpen, Star, Send, Zap, TicketPercent, MessageSquare, MessagesSquare, ExternalLink, ShieldCheck, Clock, HelpCircle, Car, Activity, Mail, PhoneIncoming, PhoneOutgoing, AlertCircle, StickyNote, FileDown, FileText, Eye, EyeOff, Loader2, X, Check, Bell, Package, Play, Sun, CalendarCheck, ArrowLeft, PenTool } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { getYouTubeThumbnail } from "@/lib/youtube";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -301,6 +301,17 @@ const SearchCustomer = () => {
       await upsertSupabaseCustomer({ ...c, is_archived: newVal });
       await refresh();
       toast({ title: newVal ? "Archived" : "Restored", description: `${c.name} has been ${newVal ? 'archived' : 'restored'}.` });
+    } catch (e) {
+      toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
+    }
+  };
+
+  const handleLostId = async (c: Customer) => {
+    const newVal = !c.is_lost;
+    try {
+      await upsertSupabaseCustomer({ ...c, is_lost: newVal });
+      await refresh();
+      toast({ title: newVal ? "Marked as Lost" : "Restored", description: `${c.name} has been ${newVal ? 'marked as lost' : 'restored'}.` });
     } catch (e) {
       toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
     }
@@ -1000,6 +1011,12 @@ const SearchCustomer = () => {
                                <span className="text-[9px] font-black uppercase tracking-tight">ARCHIVED</span>
                              </Badge>
                            )}
+                           {customer.is_lost && (
+                             <Badge variant="outline" className="h-5 bg-red-500/10 text-red-500 border-red-500/20 gap-1 px-1.5 ml-2">
+                               <EyeOff className="h-3 w-3" />
+                               <span className="text-[9px] font-black uppercase tracking-tight">LOST</span>
+                             </Badge>
+                           )}
                            {customer.has_google_review && (
                              <Badge variant="outline" className="h-5 bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-1.5 ml-2">
                                <Star className="h-3 w-3 fill-amber-500" />
@@ -1140,6 +1157,15 @@ const SearchCustomer = () => {
                           title={customer.is_archived ? "Restore" : "Archive"}
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async (e) => { e.stopPropagation(); handleLostId(customer); }}
+                          className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_lost ? "text-red-500 bg-red-500/10 hover:bg-red-500/20" : "text-zinc-400 hover:text-red-400")}
+                          title={customer.is_lost ? "Restore" : "Mark as Lost"}
+                        >
+                          {customer.is_lost ? <><RotateCcw className="h-4 w-4" /> Restore</> : <EyeOff className="h-4 w-4" />}
                         </Button>
                          <Button variant="ghost" size="sm" onClick={async (e) => { e.stopPropagation(); openEdit(customer, 'crm'); }} className="h-8 w-8 p-0 text-cyan-400 hover:text-cyan-300" title="CRM Hub">
                            <MessagesSquare className="h-4 w-4" />

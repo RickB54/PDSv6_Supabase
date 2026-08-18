@@ -97,6 +97,7 @@ export interface Customer {
     updated_at?: string;
     type?: string;
     is_archived?: boolean; // New field
+    is_lost?: boolean; // Unified lost status
     generalPhotos?: string[];
     beforePhotos?: string[];
     afterPhotos?: string[];
@@ -446,6 +447,7 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
                 companyName: c.company_name,
                 type: c.type || 'customer',
                 is_archived: c.is_archived || false,
+                is_lost: c.is_lost || false,
                 generalPhotos: c.general_photos || [],
                 beforePhotos: c.before_photos || [],
                 afterPhotos: c.after_photos || [],
@@ -851,6 +853,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         notes: customer.notes || '',
         type: customer.type || 'customer',
         is_archived: customer.is_archived || false,
+        is_lost: customer.is_lost || false,
         general_photos: customer.generalPhotos,
         before_photos: customer.beforePhotos,
         after_photos: customer.afterPhotos,

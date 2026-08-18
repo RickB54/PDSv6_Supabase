@@ -302,6 +302,10 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
   };
 
   const handleSendOutreach = async () => {
+    if (customer.is_lost) {
+      toast.error("Outreach Blocked", { description: "Cannot send active outreach to a lost record." });
+      return;
+    }
     setIsSending(true);
     try {
       const activeCoupons = allCoupons.filter(c => c.active);
@@ -805,7 +809,7 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
             <div className="pt-2">
               {outreachType === "estimate" ? (
                 <Button 
-                  disabled={isSending || !customer.email || !selectedEstimateId}
+                  disabled={isSending || !customer.email || !selectedEstimateId || customer.is_lost}
                   onClick={handleSendOutreach}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest h-10 rounded-xl"
                 >
@@ -813,7 +817,7 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
                 </Button>
               ) : (
                 <Button 
-                  disabled={isSending || !customer.email || !outreachNote.trim()}
+                  disabled={isSending || !customer.email || !outreachNote.trim() || customer.is_lost}
                   onClick={() => setShowPreview(true)}
                   className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black text-[10px] uppercase tracking-widest h-10 rounded-xl"
                 >
@@ -825,7 +829,13 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
         </div>
       </Tabs>
 
-      {!customer.email && (
+      {customer.is_lost && (
+        <div className="p-3 bg-red-500/10 border-t border-red-500/20 flex items-center gap-2">
+           <Info className="h-4 w-4 text-red-500 shrink-0" />
+           <span className="text-[10px] font-bold text-red-500">Record is marked as Lost. Active outreach is disabled.</span>
+        </div>
+      )}
+      {!customer.email && !customer.is_lost && (
         <div className="p-3 bg-amber-500/5 border-t border-amber-500/10 flex items-center gap-2">
            <Info className="h-4 w-4 text-amber-500 shrink-0" />
            <p className="text-[9px] text-amber-400 font-bold uppercase leading-normal">

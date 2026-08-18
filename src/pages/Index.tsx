@@ -5,18 +5,43 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { HeroSection } from "@/components/HeroSection";
-import {
-  ArrowRight,
-  ShieldCheck,
-  Clock,
-  MapPin,
-  Car,
-  Sparkles,
-  CheckCircle2,
-  Droplets,
-  Zap,
-  Star
-} from "lucide-react";
+import { ExternalLink, Car, Calendar, Phone, ArrowRight, ShieldCheck, Zap, Droplets, CheckCircle2, ChevronRight, Star, ArrowUpRight, MessageSquare, CalendarRange, Info } from "lucide-react";
+
+const ExpandableTestimonial = ({ t }: { t: any }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = t.quote.length > 120;
+  
+  return (
+    <Card className="bg-white border-zinc-100 p-8 hover:shadow-xl transition-shadow text-left flex flex-col h-full">
+      <div className="flex gap-1 mb-4">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <Star key={s} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+        ))}
+      </div>
+      <div className="flex-grow mb-6">
+        <p className="text-zinc-600 italic font-serif text-lg leading-relaxed transition-all duration-300">
+          "{expanded ? t.quote : (isLong ? t.quote.substring(0, 120) + '...' : t.quote)}"
+        </p>
+        {isLong && (
+          <button onClick={() => setExpanded(!expanded)} className="text-blue-600 hover:text-blue-800 text-xs font-bold mt-3 uppercase tracking-widest transition-colors">
+            {expanded ? "Show Less" : "Read More"}
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-4 border-t pt-6 border-zinc-100 mt-auto">
+        <div className="w-12 h-12 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xl shrink-0 shadow-inner">
+          {t.name.charAt(0)}
+        </div>
+        <div>
+          <h4 className="font-black text-zinc-900 uppercase tracking-wide text-sm">{t.name}</h4>
+          <div className="flex items-center gap-1 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+            Verified Client
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
 import {
   HoverCard,
   HoverCardContent,
@@ -354,27 +379,7 @@ const Index = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {displayTestimonials.map((t, i) => (
-                  <Card key={i} className="bg-white border-zinc-100 p-8 hover:shadow-xl transition-shadow text-left">
-                    <div className="flex gap-1 mb-4">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                      ))}
-                    </div>
-                    <p className="text-zinc-600 italic font-serif text-lg leading-relaxed mb-6">
-                      "{t.quote}"
-                    </p>
-                    <div className="flex items-center gap-4 border-t pt-6 border-zinc-100">
-                      <div className="w-12 h-12 rounded-full bg-blue-700 text-white flex items-center justify-center font-black text-xl">
-                        {t.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h4 className="font-black text-zinc-900 uppercase tracking-wide">{t.name}</h4>
-                        <div className="flex items-center gap-1 text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                          Verified Client
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                  <ExpandableTestimonial key={i} t={t} />
                 ))}
               </div>
             </div>

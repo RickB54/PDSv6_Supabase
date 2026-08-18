@@ -26,7 +26,7 @@ import {
   Image as ImageIcon, Video, ChevronUp, ChevronDown, ChevronsUp, 
   ChevronsDown, MapPin, CalendarPlus, FileBarChart, ExternalLink, 
   HelpCircle, History, Clock, ShieldCheck, Calendar, CalendarDays, CalendarRange, Car, Activity, FileDown, FileText,
-  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, MessagesSquare, AlertCircle, StickyNote, Eye, X, Wrench, Loader2,
+  Mail, PhoneIncoming, PhoneOutgoing, MessageSquare, MessagesSquare, AlertCircle, StickyNote, Eye, EyeOff, X, Wrench, Loader2,
   Zap, Check, Bell, Package, Play, Send, Sun, CalendarCheck, ArrowLeft, PenTool
 } from "lucide-react";
 import PDFViewer from "@/components/FileManager/PDFViewer";
@@ -429,6 +429,23 @@ export default function Prospects() {
       await upsertSupabaseCustomer({ ...c, is_archived: newVal });
       await refresh();
       toast({ title: newVal ? "Archived" : "Restored", description: `${c.name} has been ${newVal ? 'archived' : 'restored'}.` });
+    } catch (e) {
+      toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
+    }
+  };
+
+  const handleLostId = async (c: Customer) => {
+    if (isDemoMode) {
+      toast({ title: "Simulation Mode", description: "Status updated locally." });
+      await upsertCustomer({ ...c, is_lost: !c.is_lost } as any);
+      await refresh();
+      return;
+    }
+    const newVal = !c.is_lost;
+    try {
+      await upsertSupabaseCustomer({ ...c, is_lost: newVal });
+      await refresh();
+      toast({ title: newVal ? "Marked as Lost" : "Restored", description: `${c.name} has been ${newVal ? 'marked as lost' : 'restored'}.` });
     } catch (e) {
       toast({ title: "Error", description: "Could not update status.", variant: "destructive" });
     }
@@ -1016,6 +1033,12 @@ export default function Prospects() {
                               <span className="text-[9px] font-black uppercase tracking-tight">ARCHIVED</span>
                             </Badge>
                           )}
+                          {customer.is_lost && (
+                            <Badge variant="outline" className="h-5 bg-red-500/10 text-red-500 border-red-500/20 gap-1 px-1.5 ml-1">
+                              <EyeOff className="h-3 w-3" />
+                              <span className="text-[9px] font-black uppercase tracking-tight">LOST</span>
+                            </Badge>
+                          )}
                            {/* Dynamic Status Badge */}
                            {(() => {
                              const custBookings = allBookings.filter(b => 
@@ -1088,6 +1111,15 @@ export default function Prospects() {
                           title={customer.is_archived ? "Restore" : "Archive"}
                         >
                           {customer.is_archived ? <><RotateCcw className="h-4 w-4" /> Restore</> : <Archive className="h-4 w-4" />}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { e.stopPropagation(); handleLostId(customer); }} 
+                          className={cn("h-8 px-2 text-xs gap-1 transition-all", customer.is_lost ? "text-red-500 bg-red-500/10 hover:bg-red-500/20" : "text-zinc-400 hover:text-red-400")} 
+                          title={customer.is_lost ? "Restore" : "Mark as Lost"}
+                        >
+                          {customer.is_lost ? <><RotateCcw className="h-4 w-4" /> Restore</> : <EyeOff className="h-4 w-4" />}
                         </Button>
                         <Button 
                           variant="ghost" 

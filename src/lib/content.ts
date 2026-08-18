@@ -113,7 +113,7 @@ export const contentService = {
 
     // TESTIMONIALS
     getTestimonials: async (): Promise<SupaTestimonial[]> => {
-        const { data, error } = await supabase.from('content_testimonials').select('*').order('created_at', { ascending: false });
+        const { data, error } = await supabase.from('content_testimonials').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
         if (error) { console.error('contentService.getTestimonials', error); return []; }
         return data || [];
     },

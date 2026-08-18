@@ -55,6 +55,52 @@ const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
 };
 import * as bookingsSvc from "@/services/supabase/bookings";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
+
+function SortableTestimonialRow({ t, onEdit, onDelete }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style} className="border-zinc-800 hover:bg-zinc-900/20 group">
+      <TableCell className="w-10 px-2">
+        <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-zinc-600 active:cursor-grabbing p-1">
+          <GripVertical className="h-4 w-4" />
+        </div>
+      </TableCell>
+      <TableCell className="text-white font-bold text-xs max-w-[150px] truncate">{t.name}</TableCell>
+      <TableCell className="text-zinc-400 text-xs italic max-w-[300px] truncate">{t.quote}</TableCell>
+      <TableCell className="text-right flex justify-end gap-1">
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => onEdit(t)}>
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-red-500 hover:bg-red-950/20" onClick={() => onDelete(t)}>
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+}
 
 const DEFAULT_PROMO_OPTIONS = [
   {
@@ -171,6 +217,32 @@ export default function WebsiteAdministration() {
   const [aboutSections, setAboutSections] = useState<any[]>([]);
   const [aboutFeatures, setAboutFeatures] = useState<{ expertTeam: string; ecoFriendly: string; satisfactionGuarantee: string }>({ expertTeam: '', ecoFriendly: '', satisfactionGuarantee: '' });
   const [testimonials, setTestimonials] = useState<any[]>([]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEndTestimonial = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      if (!ensureNotDemo("reordering")) return;
+      const oldIndex = testimonials.findIndex((t: any) => t.id === active.id);
+      const newIndex = testimonials.findIndex((t: any) => t.id === over.id);
+      
+      const newTestimonials = arrayMove(testimonials, oldIndex, newIndex);
+      setTestimonials(newTestimonials);
+      
+      // Update sort_order in database for all items that moved
+      await Promise.all(newTestimonials.map((t: any, i: number) => 
+        contentService.upsertTestimonial({ id: t.id, name: t.name, quote: t.quote, role: t.role, sort_order: i })
+      ));
+      notifyChange('home');
+      toast({ title: 'Order saved', description: 'Testimonials reordered.' });
+    }
+  };
   const [servicesDisclaimer, setServicesDisclaimer] = useState<string>('');
   const [contractualDisclosure, setContractualDisclosure] = useState<string>('Precision paint decontamination, high-level interior sanitation, and hydrophobic surface sealing. Premium tiers focus on long-term ceramic preservation.');
   const [valuationDisclaimer, setValuationDisclaimer] = useState<string>('Automated digital quotations serve as initial estimates based on standard vehicle metadata. Prime Auto Detail reserves the right to adjust final invoicing on-site upon verification of actual vehicle dimensions, surface contamination levels, and overall condition.');
@@ -1792,33 +1864,24 @@ export default function WebsiteAdministration() {
                       </div>
                     ) : (
                       <div className="w-full overflow-hidden border border-zinc-800 rounded-xl">
-                        <Table>
-                          <TableHeader className="bg-zinc-950">
-                            <TableRow className="border-zinc-800 hover:bg-transparent">
-                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Customer Name</TableHead>
-                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Review / Quote</TableHead>
-                              <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest w-20 text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody className="bg-zinc-950/40">
-                            {testimonials.map((t: any) => (
-                              <TableRow key={t.id} className="border-zinc-800 hover:bg-zinc-900/20">
-                                <TableCell className="text-white font-bold text-xs max-w-[150px] truncate">{t.name}</TableCell>
-                                <TableCell className="text-zinc-400 text-xs italic max-w-[300px] truncate">{t.quote}</TableCell>
-                                <TableCell className="text-right flex justify-end gap-1">
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 text-zinc-500 hover:text-white hover:bg-zinc-800" 
-                                    onClick={() => setEditTestimonial(t)}
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </Button>
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 text-zinc-500 hover:text-red-500 hover:bg-red-950/20" 
-                                    onClick={async () => {
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEndTestimonial}>
+                          <Table>
+                            <TableHeader className="bg-zinc-950">
+                              <TableRow className="border-zinc-800 hover:bg-transparent">
+                                <TableHead className="w-10 px-2"></TableHead>
+                                <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Customer Name</TableHead>
+                                <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Review / Quote</TableHead>
+                                <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest w-20 text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody className="bg-zinc-950/40">
+                              <SortableContext items={testimonials.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                                {testimonials.map((t: any) => (
+                                  <SortableTestimonialRow 
+                                    key={t.id} 
+                                    t={t} 
+                                    onEdit={(t: any) => setEditTestimonial(t)}
+                                    onDelete={async (t: any) => {
                                       if (!ensureNotDemo("deletion")) return;
                                       if (!confirm(`Delete testimonial from ${t.name}?`)) return;
                                       await contentService.deleteTestimonial(t.id);
@@ -1827,14 +1890,12 @@ export default function WebsiteAdministration() {
                                       notifyChange('home');
                                       toast({ title: 'Testimonial deleted' });
                                     }}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                                  />
+                                ))}
+                              </SortableContext>
+                            </TableBody>
+                          </Table>
+                        </DndContext>
                       </div>
                     )}
                   </div>
