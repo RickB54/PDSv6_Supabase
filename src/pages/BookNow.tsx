@@ -68,7 +68,8 @@ const BookNow = () => {
     color: urlParams.get('color') || "", condition: urlParams.get('condition') || "",
     datetime: "", package: urlPackage || "", message: urlTimeStr ? `Preferred Time: ${urlTimeStr}` : "",
     conditionInside: "", conditionOutside: "",
-    placeOfService: "Customer's address"
+    placeOfService: "Customer's address",
+    howFound: ""
   });
   const [businessStatus, setBusinessStatus] = useState<any>(null);
   const [vehicleType, setVehicleType] = useState<string>(urlVehicle || 'compact');
@@ -1520,6 +1521,24 @@ const BookNow = () => {
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       className="min-h-[120px] bg-white border-blue-200 focus:border-blue-500"
                     />
+                  </div>
+                  
+                  <div className="space-y-2 pt-2 border-t border-blue-100">
+                    <Label htmlFor="howFound" className="font-bold text-zinc-600 uppercase text-xs tracking-wider">How did you hear about us? (Optional)</Label>
+                    <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
+                      <SelectTrigger className="h-12 bg-white border-blue-200 focus:border-blue-500">
+                        <SelectValue placeholder="Select an option" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Google Search">Google Search</SelectItem>
+                        <SelectItem value="Google Reviews">Google Reviews</SelectItem>
+                        <SelectItem value="Facebook / Instagram">Facebook / Instagram</SelectItem>
+                        <SelectItem value="Friend / Family Referral">Friend / Family Referral</SelectItem>
+                        <SelectItem value="Saw the Prime Truck">Saw the Prime Truck</SelectItem>
+                        <SelectItem value="Drove by the Shop">Drove by the Shop</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

@@ -41,6 +41,7 @@ export interface Booking {
   isArchived?: boolean;
   vehicleId?: string;
   source?: string;
+  howFound?: string;
   last_email_sent_at?: string;
   discountCode?: string;
   discountAmount?: number;
