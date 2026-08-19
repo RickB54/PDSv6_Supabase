@@ -3444,6 +3444,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         >
                                             This Month
                                         </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                setSnapshotDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                            }}
+                                        >
+                                            This Year
+                                        </Button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -3651,6 +3661,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             }}
                                         >
                                             This Month
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                setPerfDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                            }}
+                                        >
+                                            This Year
                                         </Button>
                                     </div>
                                 </div>
@@ -3919,6 +3939,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             }}
                                         >
                                             This Month
+                                        </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                setQuotesDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                            }}
+                                        >
+                                            This Year
                                         </Button>
                                     </div>
                                 </div>
@@ -4309,6 +4339,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                                 onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                onClick={() => { setQualDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setProbonoFilterOpen(false); }}>This Year</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -4611,6 +4643,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         >
                                             This Month
                                         </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                setInsDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                            }}
+                                        >
+                                            This Year
+                                        </Button>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -4842,6 +4884,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         >
                                             This Month
                                         </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                            onClick={() => {
+                                                setAcqDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                            }}
+                                        >
+                                            This Year
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -5023,6 +5075,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setQualFilterOpen(false); }}>Today</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Month</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setQualFilterOpen(false); }}>This Year</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
