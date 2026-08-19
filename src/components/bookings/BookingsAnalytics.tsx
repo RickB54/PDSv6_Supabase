@@ -982,6 +982,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [reportExportType, setReportExportType] = useState<'pdf' | 'print' | null>(null);
     const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
     const [customReportDateFilter, setCustomReportDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
+    const [isVisualExportMode, setIsVisualExportMode] = useState(false);
 
     const filteredAcquisitionBookings = useMemo(() => {
         return bookings.filter(b => {
@@ -2272,28 +2273,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setAcqDateFilter({ start, end });
         
         toast.loading(`Preparing visual ${type}...`, { id: "visual-export" });
+        setIsVisualExportMode(true);
         
-        // Wait for states to settle and react to re-render
+        // Wait for states to settle and react to re-render the print layout
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        const element = document.getElementById('analytics-report-container');
+        const element = document.getElementById('analytics-print-container');
         if (!element) {
-            toast.error("Could not find the report container.", { id: "visual-export" });
+            toast.error("Could not find the print container.", { id: "visual-export" });
+            setIsVisualExportMode(false);
             return;
         }
-        
-        element.classList.add('printing-mode'); // optional css helper
         
         if (type === 'print') {
             toast.success("Ready for printing", { id: "visual-export" });
             window.print();
-            element.classList.remove('printing-mode');
+            setIsVisualExportMode(false);
         } else {
             try {
-                toast.loading("Generating Visual PDF (this may take a moment)...", { id: "visual-export" });
+                toast.loading("Generating PDF...", { id: "visual-export" });
                 const canvas = await html2canvas(element, { 
                     scale: 2, 
-                    backgroundColor: '#09090b',
+                    backgroundColor: '#ffffff',
                     useCORS: true,
                     logging: false,
                     windowWidth: element.scrollWidth,
@@ -2328,7 +2329,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 console.error(e);
                 toast.error("Failed to generate PDF.", { id: "visual-export" });
             } finally {
-                element.classList.remove('printing-mode');
+                setIsVisualExportMode(false);
             }
         }
     };
@@ -2597,6 +2598,141 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </div>
         </div>
     );
+
+    const PrintTemplate = () => {
+        const totalRevenue = filteredPerfBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
+        const totalOutstanding = filteredSnapshotInvoices.filter(i => {
+            const status = (i.status || '').toLowerCase();
+            const isDraft = status === 'draft';
+            const isPaid = status === 'paid' || i.total === 0 || (i.paidAmount !== undefined && i.total !== undefined && i.paidAmount >= i.total);
+            return !isPaid && !isDraft;
+        }).reduce((sum, i) => sum + ((Number(i.total) || 0) - (Number(i.paidAmount) || 0)), 0);
+        
+        const averageTicket = stats.completed > 0 ? (totalRevenue / stats.completed) : 0;
+        const totalJobs = stats.totalBookings;
+
+        return (
+            <div id="analytics-print-container" className="w-full bg-white text-black p-10 max-w-[1000px] mx-auto font-sans" style={{ minHeight: '1056px' }}>
+                {/* Header Section */}
+                <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black uppercase tracking-widest text-black mb-1">Prime Auto Detail</h1>
+                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">Operational & Business Analytics Report</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[11px] font-black uppercase tracking-widest text-black">Date Range</p>
+                        <p className="text-sm font-medium text-zinc-800">
+                            {perfDateFilter.start ? format(perfDateFilter.start, 'MMM d, yyyy') : 'All Time'} 
+                            {' - '} 
+                            {perfDateFilter.end ? format(perfDateFilter.end, 'MMM d, yyyy') : 'All Time'}
+                        </p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-2">Generated: {format(new Date(), 'MMM d, yyyy h:mm a')}</p>
+                    </div>
+                </div>
+
+                {/* Executive Summary Grid */}
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Executive Summary</h2>
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
+                            <p className="text-2xl font-black text-black">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Jobs</p>
+                            <p className="text-2xl font-black text-black">{totalJobs}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Avg Ticket</p>
+                            <p className="text-2xl font-black text-black">${averageTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Outstanding Balances</p>
+                            <p className="text-2xl font-black text-black">${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Health Metrics */}
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Health Metrics & KPIs</h2>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="p-4 border-l-4 border-rose-500 bg-zinc-50 rounded-r-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Cancellation / No-Show Rate</p>
+                            <p className="text-xl font-black text-black">{businessHealthData.cancellationRate.toFixed(1)}%</p>
+                        </div>
+                        <div className="p-4 border-l-4 border-emerald-500 bg-zinc-50 rounded-r-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Repeat Customer Rate</p>
+                            <p className="text-xl font-black text-black">{businessHealthData.repeatRate.toFixed(1)}%</p>
+                        </div>
+                        <div className="p-4 border-l-4 border-indigo-500 bg-zinc-50 rounded-r-xl">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Upsell / Attach Rate</p>
+                            <p className="text-xl font-black text-black">{businessHealthData.upsellRate.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Pipeline & Acquisition */}
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pipeline & Acquisition</h2>
+                    <div className="grid grid-cols-2 gap-8">
+                        <div className="h-[250px]">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Service Breakdown</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />)}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="h-[250px]">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Quote Outcomes</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                                        {outcomePieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Detailed Logs */}
+                <div className="mb-4 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Service Logs (Top 30)</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredPerfBookings.slice(0, 30).map((b, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{b.title}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold">${(Number(b.price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {filteredPerfBookings.length > 30 && <p className="text-[10px] font-bold text-zinc-400 mt-4 text-center uppercase tracking-widest">... and {filteredPerfBookings.length - 30} more records omitted for brevity.</p>}
+                </div>
+            </div>
+        );
+    };
+
+    if (isVisualExportMode) {
+        return <PrintTemplate />;
+    }
 
     return (
         <div id="analytics-report-container" className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2 bg-[#09090b]">
