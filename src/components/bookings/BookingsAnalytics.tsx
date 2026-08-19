@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
-import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target, X, FileDown } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -1962,6 +1962,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setQuotesDateFilter({ start: undefined, end: undefined });
         setQualShowArchived(false);
         setQualDateFilter({ start: undefined, end: undefined });
+        setAcqShowArchived(false);
+        setAcqDateFilter({ start: undefined, end: undefined });
+        setSearchQuery("");
 
         const keysToRemove = [
             'analytics_snap_showArchived', 'analytics_snap_dateFilter',
@@ -1969,7 +1972,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             'analytics_ins_showArchived', 'analytics_ins_dateFilter',
             'analytics_inv_showArchived', 'analytics_inv_dateFilter',
             'analytics_quotes_showArchived', 'analytics_quotes_dateFilter',
-            'analytics_qual_showArchived', 'analytics_qual_dateFilter'
+            'analytics_qual_showArchived', 'analytics_qual_dateFilter',
+            'analytics_acq_showArchived', 'analytics_acq_dateFilter'
         ];
         keysToRemove.forEach(key => localStorage.removeItem(key));
 
@@ -2690,9 +2694,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Service Breakdown</p>
                             <div className="w-[300px] h-[220px]">
                                 <PieChart width={300} height={220}>
-                                    <Pie data={pieData} dataKey="value" nameKey="name" cx={150} cy={110} outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                                    <Pie data={pieData} dataKey="value" nameKey="name" cx={150} cy={100} outerRadius={70} isAnimationActive={false} labelLine={false} label={false}>
                                         {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />)}
                                     </Pie>
+                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
                                 </PieChart>
                             </div>
                         </div>
@@ -2700,9 +2705,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Quote Outcomes</p>
                             <div className="w-[300px] h-[220px]">
                                 <PieChart width={300} height={220}>
-                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx={150} cy={110} outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx={150} cy={100} outerRadius={70} isAnimationActive={false} labelLine={false} label={false}>
                                         {outcomePieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                     </Pie>
+                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
                                 </PieChart>
                             </div>
                         </div>
