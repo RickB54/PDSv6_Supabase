@@ -2616,8 +2616,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <style>{`
                     @page { size: landscape; margin: 15mm; }
                     @media print {
+                        body * { visibility: hidden; }
+                        #analytics-print-container, #analytics-print-container * { visibility: visible; }
+                        #analytics-print-container {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
                         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
-                        #analytics-print-container { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
                     }
                 `}</style>
                 {/* Header Section */}
@@ -2662,27 +2672,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Visual Data Trends */}
                 <div className="grid grid-cols-2 gap-6 mb-8 page-break-inside-avoid">
-                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
+                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm h-[200px] flex flex-col">
                         <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Booking Volume (Last 6 Mos)</h2>
-                        <div className="h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={barData}>
-                                    <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                                    <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={barData}>
+                                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                                <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
-                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
+                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm h-[200px] flex flex-col">
                         <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Revenue Trend (Last 6 Mos)</h2>
-                        <div className="h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={businessHealthData.revenueTrend}>
-                                    <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                                    <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399', strokeWidth: 2 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={businessHealthData.revenueTrend}>
+                                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                                <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399', strokeWidth: 2 }} isAnimationActive={false} />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
 
@@ -2692,7 +2698,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={locationPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none">
+                                    <Pie data={locationPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none" isAnimationActive={false}>
                                         {locationPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981'][index % 2]} />)}
                                     </Pie>
                                     <Legend verticalAlign="bottom" height={30} iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#666' }} />
