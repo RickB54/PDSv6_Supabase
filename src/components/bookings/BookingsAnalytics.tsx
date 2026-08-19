@@ -2242,6 +2242,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }
 
     const handleVisualReport = async (type: 'pdf' | 'print', rangeName: string) => {
+        if (rangeName === 'current') {
+            await executeVisualReport(type, undefined, undefined, true);
+            return;
+        }
+
         let start: Date | undefined;
         let end: Date | undefined;
         
@@ -2260,18 +2265,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             return;
         }
 
-        await executeVisualReport(type, start, end);
+        await executeVisualReport(type, start, end, false);
     };
 
-    const executeVisualReport = async (type: 'pdf' | 'print', start: Date | undefined, end: Date | undefined) => {
-        setPerfDateFilter({ start, end });
-        setSnapshotDateFilter({ start, end });
-        setInsDateFilter({ start, end });
-        setInvDateFilter({ start, end });
-        setQuotesDateFilter({ start, end });
-        setQualDateFilter({ start, end });
-        setAcqDateFilter({ start, end });
-        setSearchQuery(""); // Reset any customer/text search filter
+    const executeVisualReport = async (type: 'pdf' | 'print', start: Date | undefined, end: Date | undefined, preserveFilters = false) => {
+        if (!preserveFilters) {
+            setPerfDateFilter({ start, end });
+            setSnapshotDateFilter({ start, end });
+            setInsDateFilter({ start, end });
+            setInvDateFilter({ start, end });
+            setQuotesDateFilter({ start, end });
+            setQualDateFilter({ start, end });
+            setAcqDateFilter({ start, end });
+            setSearchQuery(""); // Reset any customer/text search filter
+        }
         
         toast.loading(`Preparing visual ${type}...`, { id: "visual-export" });
         setIsVisualExportMode(true);
@@ -2539,7 +2546,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'weekly')} className="cursor-pointer hover:bg-zinc-800">Weekly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'current')} className="cursor-pointer font-bold text-indigo-400 hover:bg-zinc-800">Current Dashboard View</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'weekly')} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800">Weekly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('print', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('print', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('print', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
@@ -2554,7 +2562,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'weekly')} className="cursor-pointer hover:bg-zinc-800">Weekly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'current')} className="cursor-pointer font-bold text-rose-400 hover:bg-zinc-800">Current Dashboard View</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'weekly')} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800">Weekly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
@@ -2613,7 +2622,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const totalJobs = stats.totalBookings;
 
         return (
-            <div id="analytics-print-container" className="w-full bg-white text-black p-10 max-w-[1000px] mx-auto font-sans" style={{ minHeight: '1056px' }}>
+            <div id="analytics-print-container" className="w-[794px] bg-white text-black p-10 mx-auto font-sans" style={{ minHeight: '1056px', boxSizing: 'border-box' }}>
                 {/* Header Section */}
                 <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-8">
                     <div>
@@ -2635,21 +2644,21 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Executive Summary</h2>
                     <div className="grid grid-cols-4 gap-4">
-                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Revenue</p>
-                            <p className="text-2xl font-black text-black">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Total Revenue</p>
+                            <p className="text-xl font-black text-black">${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
-                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Total Jobs</p>
-                            <p className="text-2xl font-black text-black">{totalJobs}</p>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Total Jobs</p>
+                            <p className="text-xl font-black text-black">{totalJobs}</p>
                         </div>
-                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Avg Ticket</p>
-                            <p className="text-2xl font-black text-black">${averageTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Avg Ticket</p>
+                            <p className="text-xl font-black text-black">${averageTicket.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
-                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Outstanding Balances</p>
-                            <p className="text-2xl font-black text-black">${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Outstanding</p>
+                            <p className="text-xl font-black text-black">${totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 </div>
@@ -2677,27 +2686,25 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pipeline & Acquisition</h2>
                     <div className="grid grid-cols-2 gap-8">
-                        <div className="h-[250px]">
+                        <div className="h-[250px] flex flex-col items-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Service Breakdown</p>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                            <div className="w-[300px] h-[220px]">
+                                <PieChart width={300} height={220}>
+                                    <Pie data={pieData} dataKey="value" nameKey="name" cx={150} cy={110} outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
                                         {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />)}
                                     </Pie>
-                                    <Tooltip />
                                 </PieChart>
-                            </ResponsiveContainer>
+                            </div>
                         </div>
-                        <div className="h-[250px]">
+                        <div className="h-[250px] flex flex-col items-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Quote Outcomes</p>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
+                            <div className="w-[300px] h-[220px]">
+                                <PieChart width={300} height={220}>
+                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx={150} cy={110} outerRadius={80} isAnimationActive={false} label={{fill: '#000', fontSize: 10, fontWeight: 'bold'}}>
                                         {outcomePieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                     </Pie>
-                                    <Tooltip />
                                 </PieChart>
-                            </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
                 </div>
