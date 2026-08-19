@@ -175,6 +175,7 @@ const Payments = () => {
   });
 
   const totalFilteredAmount = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  const averagePaymentPerDetail = filteredPayments.length > 0 ? totalFilteredAmount / filteredPayments.length : 0;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -211,9 +212,17 @@ const Payments = () => {
                 <p className="text-zinc-400 text-sm">Every payment tracked across the application.</p>
               </div>
             </div>
+            <div className="text-center md:text-right flex gap-6 items-end justify-end">
+              <div>
+                <p className="text-blue-500/70 text-xs uppercase tracking-wider font-black mb-1">Avg per Detail</p>
+                <p className="text-4xl font-black text-blue-400 mb-2">${averagePaymentPerDetail.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-emerald-500/70 text-xs uppercase tracking-wider font-black mb-1">Total Filtered Amount</p>
+                <p className="text-4xl font-black text-emerald-400 mb-2">${totalFilteredAmount.toFixed(2)}</p>
+              </div>
+            </div>
             <div className="text-center md:text-right">
-              <p className="text-emerald-500/70 text-xs uppercase tracking-wider font-black mb-1">Total Filtered Amount</p>
-              <p className="text-4xl font-black text-emerald-400 mb-2">${totalFilteredAmount.toFixed(2)}</p>
               <Button variant="outline" size="sm" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 w-full font-black uppercase tracking-widest text-[10px]" onClick={() => navigate('/payroll')}>
                   <ArrowRight className="w-4 h-4 mr-2" /> Payroll
               </Button>

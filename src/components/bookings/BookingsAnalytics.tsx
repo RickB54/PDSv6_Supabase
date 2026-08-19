@@ -1435,6 +1435,59 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
     }, [serviceDetailsData]);
 
+    const businessHealthData = useMemo(() => {
+        // 1. Month-over-month revenue trend (line graph)
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = subMonths(new Date(), i);
+            months.push(d);
+        }
+        const revenueTrend = months.map(date => {
+            const name = format(date, "MMM");
+            const rev = doneServices
+                .filter(b => isSameMonth(parseISO(b.date), date))
+                .reduce((sum, b) => sum + (b.revenue || 0), 0);
+            return { name, revenue: rev };
+        });
+
+        // 2. Cancellation/no-show rate
+        const totalPastBookings = filteredPerfBookings.filter(b => new Date(b.date) <= new Date());
+        const canceledBookings = totalPastBookings.filter(b => b.status === 'canceled' || b.status === 'cancelled' || b.status === 'no-show');
+        const cancellationRate = totalPastBookings.length > 0 ? (canceledBookings.length / totalPastBookings.length) * 100 : 0;
+
+        // 3. Repeat customer rate
+        const customerCounts: Record<string, number> = {};
+        doneServices.forEach(s => {
+            if (s.customerId || s.customer) {
+                const key = s.customerId || s.customer;
+                customerCounts[key] = (customerCounts[key] || 0) + 1;
+            }
+        });
+        const totalUniqueCustomers = Object.keys(customerCounts).length;
+        const repeatCustomers = Object.values(customerCounts).filter(count => count > 1).length;
+        const repeatRate = totalUniqueCustomers > 0 ? (repeatCustomers / totalUniqueCustomers) * 100 : 0;
+
+        // 4. Upsell/add-on attach rate
+        let upsellCount = 0;
+        let invoiceCount = 0;
+        
+        doneServices.forEach(s => {
+            if (s.invoiceId) {
+                const inv = invoices.find(i => i.id === s.invoiceId);
+                if (inv && inv.services) {
+                    const validServices = inv.services.filter((vs: any) => !vs.name?.startsWith('VIRTUAL_') && !vs.name?.toLowerCase().includes('discount') && (vs.price || 0) > 0);
+                    invoiceCount++;
+                    if (validServices.length > 1) {
+                        upsellCount++;
+                    }
+                }
+            }
+        });
+        const upsellRate = invoiceCount > 0 ? (upsellCount / invoiceCount) * 100 : 0;
+
+        return { revenueTrend, cancellationRate, repeatRate, upsellRate };
+    }, [doneServices, filteredPerfBookings, invoices]);
+
     const qualDoneServices = useMemo(() => {
         return qualServiceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
     }, [qualServiceDetailsData]);
@@ -2814,6 +2867,67 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
             </div>
 
+            {/* Business Health / Trends */}
+            <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest mt-8 mb-4 border-b border-zinc-800 pb-2">Business Health / Trends</h3>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8 scroll-mt-24">
+                {/* Revenue Trend */}
+                <Card className="bg-zinc-900/50 border-zinc-800 xl:col-span-2 overflow-hidden shadow-xl">
+                    <CardHeader>
+                        <CardTitle className="text-zinc-100 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-emerald-400" />
+                            Revenue Trend
+                        </CardTitle>
+                        <CardDescription>Month-over-month revenue (completed jobs)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[250px] pb-4 px-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={businessHealthData.revenueTrend}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                <XAxis dataKey="name" stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                                <YAxis stroke="#666" fontSize={11} tickLine={false} axisLine={false} />
+                                <Tooltip 
+                                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px' }}
+                                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                                />
+                                <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                {/* Health Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 xl:col-span-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:h-[250px] items-center">
+                        {/* Cancellation Rate */}
+                        <Card className="bg-zinc-900/50 border-zinc-800 shadow-xl h-full flex flex-col justify-center text-center p-4">
+                            <h4 className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-2">Cancel / No-Show</h4>
+                            <div className="text-3xl font-black text-rose-400">
+                                {businessHealthData.cancellationRate.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-2">of all past bookings</p>
+                        </Card>
+
+                        {/* Repeat Customer Rate */}
+                        <Card className="bg-zinc-900/50 border-zinc-800 shadow-xl h-full flex flex-col justify-center text-center p-4">
+                            <h4 className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-2">Repeat Customers</h4>
+                            <div className="text-3xl font-black text-blue-400">
+                                {businessHealthData.repeatRate.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-2">booked &gt;1 service</p>
+                        </Card>
+
+                        {/* Upsell/Attach Rate */}
+                        <Card className="bg-zinc-900/50 border-zinc-800 shadow-xl h-full flex flex-col justify-center text-center p-4">
+                            <h4 className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-2">Upsell / Attach</h4>
+                            <div className="text-3xl font-black text-amber-400">
+                                {businessHealthData.upsellRate.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-zinc-500 mt-2">invoices with add-ons</p>
+                        </Card>
+                    </div>
+                </div>
+            </div>
+
             {/* Active Reminders List */}
             <Card className="bg-zinc-950/20 border-zinc-800 shadow-sm">
                 <Accordion type="single" collapsible defaultValue={defaultOpenAccordion} className="w-full">
@@ -2996,7 +3110,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>History of all completed services</CardDescription>
                         </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-4">
+                        <div className="hidden md:block text-right pr-4 border-r border-zinc-800">
+                            <div className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Avg Payment per Detail</div>
+                            <div className="text-lg font-black text-emerald-400">
+                                ${doneServices.length > 0 ? (doneServices.reduce((sum, svc) => sum + (svc.revenue || 0), 0) / doneServices.length).toFixed(2) : "0.00"}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1">
                     <Popover open={perfFilterOpen} onOpenChange={setPerfFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white")}>
@@ -3078,6 +3199,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </Button>
                     )}
                     </div>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="overflow-x-auto hidden md:block">
@@ -3151,6 +3273,46 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             ))
                         )}
                     </div>
+                    {/* SUMMARY STRIP */}
+                    {doneServices.length > 0 && (() => {
+                        const tableDataForStats = profitabilityData.tableData;
+                        const avgProfit = tableDataForStats.length > 0 ? tableDataForStats.reduce((sum, item) => sum + (item.revenue - item.cost), 0) / tableDataForStats.length : 0;
+                        const avgDuration = tableDataForStats.length > 0 ? (profitabilityData.totalHours / tableDataForStats.length) : 0;
+                        
+                        const packageMix: Record<string, number> = {};
+                        doneServices.forEach(s => {
+                            if (s.service) {
+                                packageMix[s.service] = (packageMix[s.service] || 0) + 1;
+                            }
+                        });
+                        const topPackages = Object.entries(packageMix)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 3);
+
+                        return (
+                            <div className="bg-zinc-950/80 border-t border-zinc-800 p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="flex flex-col items-center md:items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800/50">
+                                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Avg Profit / Detail</span>
+                                    <span className="text-2xl font-black text-emerald-400 mt-1">${avgProfit.toFixed(2)}</span>
+                                </div>
+                                <div className="flex flex-col items-center md:items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800/50">
+                                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Avg Job Duration</span>
+                                    <span className="text-2xl font-black text-blue-400 mt-1">{avgDuration.toFixed(1)} <span className="text-sm font-medium text-blue-400/50">hrs</span></span>
+                                </div>
+                                <div className="flex flex-col items-center md:items-start bg-zinc-900/50 p-3 rounded-lg border border-zinc-800/50">
+                                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-2">Package Mix</span>
+                                    <div className="flex flex-col gap-1 w-full">
+                                        {topPackages.map(([pkg, count], i) => (
+                                            <div key={i} className="flex justify-between items-center text-xs">
+                                                <span className="text-zinc-300 truncate max-w-[200px]" title={pkg}>{pkg}</span>
+                                                <Badge variant="outline" className="h-4 px-1 text-[9px] bg-zinc-800 text-zinc-400 border-none">{count}</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </CardContent>
             </Card>
             {/* Invoices Tracker */}
