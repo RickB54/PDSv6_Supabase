@@ -2271,6 +2271,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setQuotesDateFilter({ start, end });
         setQualDateFilter({ start, end });
         setAcqDateFilter({ start, end });
+        setSearchQuery(""); // Reset any customer/text search filter
         
         toast.loading(`Preparing visual ${type}...`, { id: "visual-export" });
         setIsVisualExportMode(true);
@@ -2601,7 +2602,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const PrintTemplate = () => {
         const totalRevenue = filteredPerfBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
-        const totalOutstanding = filteredSnapshotInvoices.filter(i => {
+        const totalOutstanding = filteredInvoices.filter(i => {
             const status = (i.status || '').toLowerCase();
             const isDraft = status === 'draft';
             const isPaid = status === 'paid' || i.total === 0 || (i.paidAmount !== undefined && i.total !== undefined && i.paidAmount >= i.total);

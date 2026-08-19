@@ -754,17 +754,19 @@ const Contact = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="howFound" className="font-bold">How Did You Hear About Us?</Label>
+                    <Label htmlFor="howFound" className="font-bold">How did you hear about us? (Optional)</Label>
                     <Select value={formData.howFound} onValueChange={(v) => setFormData({ ...formData, howFound: v })}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Referral source" />
+                      <SelectTrigger className="h-12 bg-white border-blue-200 focus:border-blue-500">
+                        <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="facebook">Facebook</SelectItem>
-                        <SelectItem value="google">Google Search</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="referral">Word of Mouth / Referral</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="Google Search">Google Search</SelectItem>
+                        <SelectItem value="Google Reviews">Google Reviews</SelectItem>
+                        <SelectItem value="Facebook / Instagram">Facebook / Instagram</SelectItem>
+                        <SelectItem value="Friend / Family Referral">Friend / Family Referral</SelectItem>
+                        <SelectItem value="Saw the Prime Truck">Saw the Prime Truck</SelectItem>
+                        <SelectItem value="Drove by the Shop">Drove by the Shop</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
