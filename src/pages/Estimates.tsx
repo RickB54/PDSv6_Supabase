@@ -2123,6 +2123,31 @@ Precision. Protection. Perfection.`;
                                             </Button>
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 items-center justify-end w-full sm:w-auto" onClick={e => e.stopPropagation()}>
+                                            {(() => {
+                                                const daysPending = est.isSent && est.sentDate && est.status !== 'accepted' && est.status !== 'declined' && est.status !== 'denied' ? Math.floor((new Date().getTime() - new Date(est.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
+                                                return daysPending !== null && (
+                                                    <Button 
+                                                        size="sm" 
+                                                        className="h-9 bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 shadow-md border border-amber-400/20 uppercase tracking-wider text-[10px]"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const cust = customers.find(c => c.id === est.customerId);
+                                                            const firstName = cust?.name?.split(' ')[0] || 'Customer';
+                                                            const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${est.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
+                                                            navigator.clipboard.writeText(msg).then(() => {
+                                                                toast({ title: "Follow-Up Copied!", description: "Message copied to clipboard." });
+                                                                if (cust?.phone) {
+                                                                    window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
+                                                                } else if (cust?.email) {
+                                                                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
+                                                                }
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Clock className="w-3.5 h-3.5 mr-1.5" /> Follow Up ({daysPending}d)
+                                                    </Button>
+                                                );
+                                            })()}
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-zinc-800" onClick={() => handleModify(est)} title="Edit Estimate">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
@@ -2371,7 +2396,32 @@ Precision. Protection. Perfection.`;
                                         );
                                     })()}
                                 </div>
-                                <div className="flex gap-3 items-center">
+                                <div className="flex gap-3 items-center flex-wrap justify-end">
+                                    {(() => {
+                                        const daysPending = selectedEstimate.isSent && selectedEstimate.sentDate && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' && selectedEstimate.status !== 'denied' ? Math.floor((new Date().getTime() - new Date(selectedEstimate.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
+                                        return daysPending !== null && (
+                                            <Button 
+                                                size="sm" 
+                                                className="bg-amber-500 hover:bg-amber-600 text-white h-9 font-bold px-4 uppercase tracking-wider text-xs shadow-md border border-amber-400/20"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const cust = customers.find(c => c.id === selectedEstimate.customerId);
+                                                    const firstName = cust?.name?.split(' ')[0] || 'Customer';
+                                                    const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
+                                                    navigator.clipboard.writeText(msg).then(() => {
+                                                        toast({ title: "Follow-Up Copied!", description: "Message copied to clipboard." });
+                                                        if (cust?.phone) {
+                                                            window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
+                                                        } else if (cust?.email) {
+                                                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
+                                                        }
+                                                    });
+                                                }}
+                                            >
+                                                <Clock className="w-4 h-4 mr-2" /> Follow Up ({daysPending}d)
+                                            </Button>
+                                        );
+                                    })()}
                                     <Button 
                                         variant="outline" 
                                         size="sm" 

@@ -558,7 +558,7 @@ const Invoicing = () => {
     const updated = { 
       ...invoice, 
       isSent: !invoice.isSent,
-      sentDate: !invoice.isSent ? new Date().toISOString() : invoice.sentDate
+      sentDate: (!invoice.isSent && !invoice.sentDate) ? new Date().toISOString() : invoice.sentDate
     };
     try {
       await upsertSupabaseInvoice(updated);
@@ -2086,11 +2086,18 @@ Precision. Protection. Perfection.`;
 
                           return (
                             <span className="text-zinc-500 text-xs flex flex-wrap items-center gap-1.5 ml-2 border-l border-zinc-800 pl-2 font-semibold">
-                              <span>Inv Date:</span>
+                              <span>Invoice Date:</span>
                               <span className="text-zinc-300 font-medium">{formattedInvoice}</span>
                               <span className="text-zinc-700 font-normal ml-0.5">•</span>
-                              <span>Serv Date:</span>
+                              <span>Service Date:</span>
                               <span className="text-emerald-400 font-medium">{formattedService}</span>
+                              <span className="text-zinc-700 font-normal ml-0.5">•</span>
+                              <span>Date Sent:</span>
+                              <span className="text-blue-400 font-medium">{
+                                invoice.isSent 
+                                  ? (invoice.sentDate ? new Date(invoice.sentDate).toLocaleDateString() : 'Unknown')
+                                  : 'Not sent'
+                              }</span>
                             </span>
                           );
                         })()}

@@ -3917,7 +3917,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
                                                     <span className="font-semibold text-zinc-100 text-sm block truncate">{inv.customerName}</span>
-                                                    <span className="text-zinc-500 text-xs block">{inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yy") : "N/A")}</span>
+                                                    <div className="flex flex-col gap-0.5 mt-1">
+                                                        <span className="text-zinc-500 text-xs flex items-center gap-1.5"><span className="w-14 font-semibold">Inv Date:</span> <span className="text-zinc-300">{inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yy") : "N/A")}</span></span>
+                                                        <span className="text-zinc-500 text-xs flex items-center gap-1.5"><span className="w-14 font-semibold">Serv Date:</span> <span className="text-emerald-400/80">{inv.serviceDate || inv.date || "N/A"}</span></span>
+                                                        <span className="text-zinc-500 text-xs flex items-center gap-1.5"><span className="w-14 font-semibold">Sent Date:</span> <span className="text-blue-400/80">{isSent ? (inv.sentDate ? new Date(inv.sentDate).toLocaleDateString() : 'Unknown') : 'Not sent'}</span></span>
+                                                    </div>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
                                                     <span className="text-emerald-400 font-mono text-sm font-bold block">${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -3944,11 +3948,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <Table>
                                 <TableHeader className="bg-zinc-950/50">
                                     <TableRow className="hover:bg-transparent border-zinc-800">
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>Inv Date</TableHead>
+                                        <TableHead>Serv Date</TableHead>
+                                        <TableHead>Sent Date</TableHead>
                                         <TableHead>Customer</TableHead>
                                         <TableHead>Vehicle</TableHead>
                                         <TableHead>Amount</TableHead>
-                                        <TableHead className="text-center">Delivery</TableHead>
                                         <TableHead className="text-right">Outcome</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -3979,15 +3984,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                     <TableCell className="text-zinc-400 text-xs font-mono">
                                                         {inv.date || (inv.createdAt ? format(parseISO(inv.createdAt), "MMM d, yyyy") : "N/A")}
                                                     </TableCell>
+                                                    <TableCell className="text-emerald-400/80 text-xs font-mono">
+                                                        {inv.serviceDate || inv.date || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell className="text-blue-400/80 text-xs font-mono">
+                                                        {isSent ? (inv.sentDate ? new Date(inv.sentDate).toLocaleDateString() : 'Unknown') : 'Not sent'}
+                                                    </TableCell>
                                                     <TableCell className="font-semibold text-zinc-200">{inv.customerName}</TableCell>
                                                     <TableCell className="text-zinc-500 text-xs">{inv.vehicle}</TableCell>
                                                     <TableCell className="font-bold text-zinc-300">
                                                         ${(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                    </TableCell>
-                                                    <TableCell className="text-center">
-                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", isSent ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20")}>
-                                                            {isSent ? 'Sent' : 'Not Sent'}
-                                                        </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">
                                                         <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
@@ -4209,9 +4215,34 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                 <div className="text-zinc-300 line-clamp-2 text-xs flex-1">
                                                     {Array.isArray(q.services) ? q.services.map((s)=>s.name).join(', ') : (q.service || 'N/A')}
                                                 </div>
-                                                <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase shrink-0", outcomeClass)}>
-                                                    {outcomeDisplay}
-                                                </Badge>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {isSent && outcomeDisplay === 'No Answer' && q.sentDate && (
+                                                        <Button 
+                                                            size="sm" 
+                                                            className="h-5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 px-1.5 font-bold uppercase tracking-wider text-[9px]"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const cust = customers.find(c => c.id === q.customerId) || customers.find(c => c.name === (q.customerName || q.customer));
+                                                                const firstName = cust?.name?.split(' ')[0] || 'Customer';
+                                                                const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${q.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
+                                                                navigator.clipboard.writeText(msg).then(() => {
+                                                                    if (cust?.phone) {
+                                                                        window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
+                                                                    } else if (cust?.email) {
+                                                                        window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
+                                                                    } else {
+                                                                        alert("Follow-Up copied to clipboard!");
+                                                                    }
+                                                                });
+                                                            }}
+                                                        >
+                                                            Follow Up ({Math.floor((new Date().getTime() - new Date(q.sentDate).getTime()) / (1000 * 3600 * 24))}d)
+                                                        </Button>
+                                                    )}
+                                                    <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase shrink-0", outcomeClass)}>
+                                                        {outcomeDisplay}
+                                                    </Badge>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -4274,9 +4305,34 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
-                                                            {outcomeDisplay}
-                                                        </Badge>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {isSent && outcomeDisplay === 'No Answer' && q.sentDate && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="h-5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 px-1.5 font-bold uppercase tracking-wider text-[9px]"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const cust = customers.find(c => c.id === q.customerId) || customers.find(c => c.name === (q.customerName || q.customer));
+                                                                        const firstName = cust?.name?.split(' ')[0] || 'Customer';
+                                                                        const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${q.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
+                                                                        navigator.clipboard.writeText(msg).then(() => {
+                                                                            if (cust?.phone) {
+                                                                                window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
+                                                                            } else if (cust?.email) {
+                                                                                window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
+                                                                            } else {
+                                                                                alert("Follow-Up copied to clipboard!");
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    Follow Up ({Math.floor((new Date().getTime() - new Date(q.sentDate).getTime()) / (1000 * 3600 * 24))}d)
+                                                                </Button>
+                                                            )}
+                                                            <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 font-bold uppercase", outcomeClass)}>
+                                                                {outcomeDisplay}
+                                                            </Badge>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             );
