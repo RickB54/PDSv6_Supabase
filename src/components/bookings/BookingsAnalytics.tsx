@@ -2630,6 +2630,48 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </div>
 
+                {/* Visual Data Trends */}
+                <div className="grid grid-cols-2 gap-6 mb-8 page-break-inside-avoid">
+                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
+                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Booking Volume (Last 6 Mos)</h2>
+                        <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={barData}>
+                                    <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                                    <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
+                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Revenue Trend (Last 6 Mos)</h2>
+                        <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={businessHealthData.revenueTrend}>
+                                    <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                                    <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399', strokeWidth: 2 }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mb-10 page-break-inside-avoid">
+                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
+                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Location Distribution</h2>
+                        <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={locationPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none">
+                                        {locationPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981'][index % 2]} />)}
+                                    </Pie>
+                                    <Legend verticalAlign="bottom" height={30} iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#666' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Health Metrics */}
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Health Metrics & KPIs</h2>
@@ -2703,6 +2745,33 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </table>
                     {filteredPerfBookings.length > 30 && <p className="text-[10px] font-bold text-zinc-400 mt-4 text-center uppercase tracking-widest">... and {filteredPerfBookings.length - 30} more records omitted for brevity.</p>}
                 </div>
+
+                {/* Services To Be Done */}
+                {toDoServices.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Services To Be Done</h2>
+                    <table className="w-full text-sm text-left table-fixed break-words whitespace-normal">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Est. Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {toDoServices.slice(0, 20).map((b, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), 'MMM d, yyyy') : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customerName}</td>
+                                    <td className="p-2 text-zinc-600 text-xs truncate">{b.serviceTitle}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold">${(Number(b.price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
 
                 {/* Outstanding Invoices */}
                 {filteredInvoices.length > 0 && (
