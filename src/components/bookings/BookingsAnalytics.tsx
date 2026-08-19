@@ -2305,7 +2305,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
 
             const opt = {
-                margin: [15, 15, 15, 15],
+                margin: 15 as any,
                 filename: `Prime_${label}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
@@ -2762,7 +2762,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 )}
 
                 {/* Probono & Liability Jobs */}
-                {filteredProbono.length > 0 && (
+                {probonoJobs.length > 0 && (
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pro-Bono & Liability Events</h2>
                     <table className="w-full text-sm text-left">
@@ -2775,7 +2775,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredProbono.slice(0, 20).map((b, i) => (
+                            {probonoJobs.slice(0, 20).map((b, i) => (
                                 <tr key={i} className="border-b border-zinc-100">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
                                     <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
@@ -2789,7 +2789,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 )}
 
                 {/* Customer Insights */}
-                {filteredInsBookings.length > 0 && (
+                {customerStats.length > 0 && (
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Customer Insights & Follow-ups</h2>
                     <table className="w-full text-sm text-left">
@@ -2801,11 +2801,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredInsBookings.slice(0, 20).map((b, i) => (
+                            {customerStats.slice(0, 20).map((b, i) => (
                                 <tr key={i} className="border-b border-zinc-100">
-                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
-                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
-                                    <td className="p-2 text-zinc-600 text-xs">{b.title}</td>
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.lastService ? format(parseISO(b.lastService), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.name}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{b.service}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -2814,7 +2814,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 )}
 
                 {/* Quality Review */}
-                {filteredQualBookings.length > 0 && (
+                {qualDoneServices.length > 0 && (
                 <div className="mb-10 page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Operational Quality Review</h2>
                     <table className="w-full text-sm text-left">
@@ -2827,7 +2827,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredQualBookings.filter(b => (b as any).sentiment || (b as any).googleStars).slice(0, 20).map((b: any, i) => (
+                            {qualDoneServices.filter(b => (b as any).sentiment || (b as any).googleStars).slice(0, 20).map((b: any, i) => (
                                 <tr key={i} className="border-b border-zinc-100">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
                                     <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
@@ -2846,7 +2846,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Labor Revenue Generated</p>
-                            <p className="text-xl font-black text-black">${(profitabilityData.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-xl font-black text-black">${(profitabilityData.tableData.reduce((sum, item) => sum + ((item as any).revenue || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Total Labor Hours</p>
@@ -2854,7 +2854,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </div>
                         <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Gross Labor Profit</p>
-                            <p className="text-xl font-black text-black">${((profitabilityData.totalRevenue || 0) - ((profitabilityData as any).totalCost || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-xl font-black text-black">${(profitabilityData.tableData.reduce((sum, item) => sum + (((item as any).revenue || 0) - ((item as any).cost || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 </div>
