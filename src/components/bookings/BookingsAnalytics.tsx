@@ -2761,32 +2761,103 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
                 )}
 
-                {/* Acquisition Sources */}
-                {acquisitionData.howFoundList.length > 0 && (
+                {/* Probono & Liability Jobs */}
+                {filteredProbono.length > 0 && (
                 <div className="mb-10 page-break-inside-avoid">
-                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Customer Acquisition Sources</h2>
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pro-Bono & Liability Events</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
                             <tr>
-                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Source / Channel</th>
-                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Customers</th>
-                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Bookings</th>
-                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Revenue Generated</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service/Issue</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Associated Cost</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {acquisitionData.howFoundList.map((src, i) => (
+                            {filteredProbono.slice(0, 20).map((b, i) => (
                                 <tr key={i} className="border-b border-zinc-100">
-                                    <td className="p-2 text-zinc-900 font-bold text-xs">{src.name}</td>
-                                    <td className="p-2 text-zinc-600 text-xs text-center font-bold">{src.customerCount}</td>
-                                    <td className="p-2 text-zinc-600 text-xs text-center">{src.count}</td>
-                                    <td className="p-2 text-right font-mono text-xs font-bold">${src.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{b.title}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold text-red-500">${(Number(b.price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
                 )}
+
+                {/* Customer Insights */}
+                {filteredInsBookings.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Customer Insights & Follow-ups</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Last Service</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service Title</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredInsBookings.slice(0, 20).map((b, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{b.title}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
+
+                {/* Quality Review */}
+                {filteredQualBookings.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Operational Quality Review</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Sentiment</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Google Stars</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredQualBookings.filter(b => (b as any).sentiment || (b as any).googleStars).slice(0, 20).map((b: any, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
+                                    <td className="p-2 text-zinc-600 text-xs text-center uppercase font-bold">{b.sentiment || 'N/A'}</td>
+                                    <td className="p-2 text-zinc-600 text-xs text-center font-bold text-amber-500">{b.googleStars ? `${b.googleStars} / 5` : 'N/A'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
+
+                {/* Profitability & Compensation Summary */}
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Profitability & Compensation Summary</h2>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Labor Revenue Generated</p>
+                            <p className="text-xl font-black text-black">${(profitabilityData.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Total Labor Hours</p>
+                            <p className="text-xl font-black text-black">{(profitabilityData.totalHours || 0).toFixed(1)} hrs</p>
+                        </div>
+                        <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Gross Labor Profit</p>
+                            <p className="text-xl font-black text-black">${((profitabilityData.totalRevenue || 0) - ((profitabilityData as any).totalCost || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     };
