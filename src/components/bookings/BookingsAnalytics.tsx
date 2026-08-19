@@ -2613,28 +2613,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         return (
             <div id="analytics-print-container" className="w-[1056px] bg-white text-black p-10 mx-auto font-sans" style={{ boxSizing: 'border-box' }}>
-                <style>{`
-                    @page { size: landscape; margin: 15mm; }
-                    @media print {
-                        body * { visibility: hidden; }
-                        #analytics-print-container, #analytics-print-container * { visibility: visible; }
-                        #analytics-print-container {
-                            position: absolute;
-                            left: 0;
-                            top: 0;
-                            width: 100% !important;
-                            max-width: 100% !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                        }
-                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
-                    }
-                `}</style>
                 {/* Header Section */}
                 <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-black uppercase tracking-widest text-black mb-1">Prime Auto Detail</h1>
-                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">Operational & Business Analytics Report</p>
+                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">Comprehensive Analytics Report</p>
                     </div>
                     <div className="text-right">
                         <p className="text-[11px] font-black uppercase tracking-widest text-black">Date Range</p>
@@ -2648,7 +2631,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </div>
 
                 {/* Executive Summary Grid */}
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Executive Summary</h2>
                     <div className="grid grid-cols-4 gap-4">
                         <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
@@ -2670,46 +2653,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </div>
 
-                {/* Visual Data Trends */}
-                <div className="grid grid-cols-2 gap-6 mb-8 page-break-inside-avoid">
-                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm h-[200px] flex flex-col">
-                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Booking Volume (Last 6 Mos)</h2>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={barData}>
-                                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                                <Bar dataKey="bookings" fill="#8b5cf6" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm h-[200px] flex flex-col">
-                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Revenue Trend (Last 6 Mos)</h2>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={businessHealthData.revenueTrend}>
-                                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                                <Line type="monotone" dataKey="revenue" stroke="#34d399" strokeWidth={3} dot={{ fill: '#34d399', strokeWidth: 2 }} isAnimationActive={false} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                <div className="mb-10 page-break-inside-avoid">
-                    <div className="border border-zinc-200 p-4 rounded-xl bg-zinc-50 shadow-sm">
-                        <h2 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Location Distribution</h2>
-                        <div className="h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={locationPieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" stroke="none" isAnimationActive={false}>
-                                        {locationPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981'][index % 2]} />)}
-                                    </Pie>
-                                    <Legend verticalAlign="bottom" height={30} iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#666' }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-
                 {/* Health Metrics */}
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Health Metrics & KPIs</h2>
                     <div className="grid grid-cols-3 gap-4">
                         <div className="p-4 border-l-4 border-rose-500 bg-zinc-50 rounded-r-xl">
@@ -2727,37 +2672,114 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </div>
                 </div>
 
-                {/* Pipeline & Acquisition */}
-                <div className="mb-10 page-break-inside-avoid">
-                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pipeline & Acquisition</h2>
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="h-[250px] flex flex-col items-center">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Service Breakdown</p>
-                            <div className="w-[300px] h-[220px]">
-                                <PieChart width={300} height={220}>
-                                    <Pie data={pieData} dataKey="value" nameKey="name" cx={150} cy={100} outerRadius={70} isAnimationActive={false} labelLine={false} label={false}>
-                                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />)}
-                                    </Pie>
-                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
-                                </PieChart>
-                            </div>
-                        </div>
-                        <div className="h-[250px] flex flex-col items-center">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest text-center mb-2">Quote Outcomes</p>
-                            <div className="w-[300px] h-[220px]">
-                                <PieChart width={300} height={220}>
-                                    <Pie data={outcomePieData} dataKey="value" nameKey="name" cx={150} cy={100} outerRadius={70} isAnimationActive={false} labelLine={false} label={false}>
-                                        {outcomePieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                    </Pie>
-                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
-                                </PieChart>
-                            </div>
-                        </div>
+                {/* Booking Volume Data */}
+                <div className="mb-10 avoid-break page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Booking Volume & Revenue Trend</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Month</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Bookings</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {businessHealthData.volumeTrend.map((v, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
+                                    <td className="p-2 text-zinc-800 text-xs text-center font-bold">{v.bookings}</td>
+                                    <td className="p-2 text-zinc-800 text-xs text-right font-bold">${(businessHealthData.revenueTrend.find(r => r.name === v.name)?.revenue || 0).toLocaleString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Service Data Tables */}
+                <div className="grid grid-cols-2 gap-8 mb-10 avoid-break page-break-inside-avoid">
+                    <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Service Breakdown</h2>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-zinc-100 border-b border-zinc-300">
+                                <tr>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service Category</th>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Jobs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pieData.map((v, i) => (
+                                    <tr key={i} className="border-b border-zinc-100">
+                                        <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
+                                        <td className="p-2 text-zinc-800 text-xs text-right font-bold">{v.value}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Quote Outcomes</h2>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-zinc-100 border-b border-zinc-300">
+                                <tr>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Status</th>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Quotes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {outcomePieData.map((v, i) => (
+                                    <tr key={i} className="border-b border-zinc-100">
+                                        <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
+                                        <td className="p-2 text-zinc-800 text-xs text-right font-bold">{v.value}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-8 mb-10 avoid-break page-break-inside-avoid">
+                    <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Location Distribution</h2>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-zinc-100 border-b border-zinc-300">
+                                <tr>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Location</th>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Jobs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {locationPieData.map((v, i) => (
+                                    <tr key={i} className="border-b border-zinc-100">
+                                        <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
+                                        <td className="p-2 text-zinc-800 text-xs text-right font-bold">{v.value}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Acquisition Channels</h2>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-zinc-100 border-b border-zinc-300">
+                                <tr>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Source</th>
+                                    <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {acquisitionData.howFoundList.map((v, i) => (
+                                    <tr key={i} className="border-b border-zinc-100">
+                                        <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
+                                        <td className="p-2 text-zinc-800 text-xs text-right font-bold">{v.count}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
                 {/* Detailed Logs */}
-                <div className="mb-4 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Service Logs (Top 30)</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2784,7 +2806,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Services To Be Done */}
                 {toDoServices.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Services To Be Done</h2>
                     <table className="w-full text-sm text-left table-fixed break-words whitespace-normal">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2797,7 +2819,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </thead>
                         <tbody>
                             {toDoServices.slice(0, 20).map((b, i) => (
-                                <tr key={i} className="border-b border-zinc-100 page-break-inside-avoid">
+                                <tr key={i} className="border-b border-zinc-100">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), 'MMM d, yyyy') : 'N/A'}</td>
                                     <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
                                     <td className="p-2 text-zinc-600 text-xs truncate">{b.service}</td>
@@ -2811,7 +2833,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Outstanding Invoices */}
                 {filteredInvoices.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Unpaid & Outstanding Invoices</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2841,7 +2863,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Pipeline Quotes */}
                 {filteredQuotes.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Active Pipeline Quotes</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2868,7 +2890,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Probono & Liability Jobs */}
                 {probonoJobs.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Pro-Bono & Liability Events</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2881,7 +2903,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </thead>
                         <tbody>
                             {probonoJobs.slice(0, 20).map((b, i) => (
-                                <tr key={i} className="border-b border-zinc-100 page-break-inside-avoid">
+                                <tr key={i} className="border-b border-zinc-100">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
                                     <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
                                     <td className="p-2 text-zinc-600 text-xs">{b.service}</td>
@@ -2895,7 +2917,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Customer Insights */}
                 {customerStats.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Customer Insights & Follow-ups</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2920,7 +2942,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
                 {/* Quality Review */}
                 {qualDoneServices.length > 0 && (
-                <div className="mb-10 page-break-inside-avoid">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
                     <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Operational Quality Review</h2>
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-100 border-b border-zinc-300">
@@ -2946,9 +2968,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 )}
 
                 {/* Profitability & Compensation Summary */}
-                <div className="mb-10 page-break-inside-avoid">
-                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Profitability & Compensation Summary</h2>
-                    <div className="grid grid-cols-3 gap-4">
+                <div className="mb-10 avoid-break page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Profitability & Labor Breakdown</h2>
+                    <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="p-4 bg-zinc-50 border border-zinc-200 rounded-xl flex flex-col justify-center">
                             <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 truncate">Labor Revenue Generated</p>
                             <p className="text-xl font-black text-black">${(profitabilityData.tableData.reduce((sum, item) => sum + ((item as any).revenue || 0), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -2962,10 +2984,33 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <p className="text-xl font-black text-black">${(profitabilityData.tableData.reduce((sum, item) => sum + (((item as any).revenue || 0) - ((item as any).cost || 0)), 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Employee</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Service</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Labor Cost</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {profitabilityData.tableData.slice(0, 20).map((p: any, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{p.date ? format(parseISO(p.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{p.employee}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{p.service}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold text-red-500">${(Number(p.cost) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold text-emerald-600">${(Number(p.revenue) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         );
     };
+
 
     if (isVisualExportMode) {
         return <PrintTemplate />;
