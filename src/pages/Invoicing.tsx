@@ -2315,7 +2315,7 @@ Precision. Protection. Perfection.`;
                                   <button 
                                       onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(`/follow-up-center?search=${encodeURIComponent(selectedInvoice.customerName)}`);
+                                          navigate(`/follow-up-center?customerId=${cust.id}`);
                                       }}
                                       className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1.5 rounded-md border border-emerald-500/20"
                                   >

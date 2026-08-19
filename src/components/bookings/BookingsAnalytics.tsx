@@ -1208,7 +1208,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredPerfBookings = useMemo(() => getFiltered(bookings, perfShowArchived, perfDateFilter), [bookings, perfShowArchived, perfDateFilter]);
     const filteredSnapshotBookings = useMemo(() => getFiltered(bookings, snapshotShowArchived, snapshotDateFilter), [bookings, snapshotShowArchived, snapshotDateFilter]);
     const filteredInsBookings = useMemo(() => getFiltered(bookings, insShowArchived, insDateFilter), [bookings, insShowArchived, insDateFilter]);
-    const filteredQuotes = useMemo(() => getFiltered(estimates, quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
+    const sanitizeStatus = (status: string) => {
+        if (!status) return status;
+        return status.replace(/А/g, 'A')
+                   .replace(/С/g, 'C')
+                   .replace(/Е/g, 'E')
+                   .replace(/Р/g, 'P')
+                   .replace(/Т/g, 'T')
+                   .replace(/О/g, 'O')
+                   .replace(/а/g, 'a')
+                   .replace(/с/g, 'c')
+                   .replace(/е/g, 'e')
+                   .replace(/р/g, 'p')
+                   .replace(/т/g, 't')
+                   .replace(/о/g, 'o');
+    };
+
+    const filteredQuotes = useMemo(() => getFiltered(estimates.map((e: any) => ({...e, status: sanitizeStatus(e.status)})), quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
     const filteredInvoices = useMemo(() => getFiltered(invoices, invShowArchived, invDateFilter, 'createdAt'), [invoices, invShowArchived, invDateFilter]);
 
@@ -2306,47 +2322,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             setAcqDateFilter({ start: config.start, end: config.end });
             setSearchQuery("");
         }
-        
         setIsVisualExportMode(true);
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        if (config.type === 'print') {
-            window.print();
-            setIsVisualExportMode(false);
-            return;
-        }
-
-        const element = document.getElementById('analytics-print-container');
-        if (!element) {
-            toast.error("Could not find the print container.", { id: "visual-export" });
-            setIsVisualExportMode(false);
-            return;
+        let label = "Analytics";
+        if (config.start && config.end) {
+            label += `_${format(config.start, 'MMM_d')}_to_${format(config.end, 'MMM_d_yyyy')}`;
         }
         
+        const oldTitle = document.title;
+        document.title = `Prime_${label}`;
+        
         try {
-            toast.loading("Generating PDF Document...", { id: "visual-export" });
-            const html2pdf = (await import('html2pdf.js')).default;
-            
-            let label = "Analytics";
-            if (config.start && config.end) {
-                label += `_${format(config.start, 'MMM_d')}_to_${format(config.end, 'MMM_d_yyyy')}`;
+            window.print();
+            if (config.type === 'pdf') {
+                toast.success("Please select 'Save as PDF' in the print dialog.", { id: "visual-export" });
             }
-
-            const opt = {
-                margin: 15 as any,
-                filename: `Prime_${label}.pdf`,
-                image: { type: 'jpeg' as const, quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-                pagebreak: { mode: 'css', avoid: 'tr, .page-break-inside-avoid' }
-            };
-
-            await html2pdf().set(opt).from(element).save();
-            toast.success("Professional PDF Downloaded!", { id: "visual-export" });
-        } catch(e) {
-            console.error(e);
-            toast.error("Failed to generate PDF.", { id: "visual-export" });
         } finally {
+            document.title = oldTitle;
             setIsVisualExportMode(false);
         }
     };
@@ -2619,7 +2612,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         const totalJobs = stats.totalBookings;
 
         return (
-            <div id="analytics-print-container" className="w-[794px] bg-white text-black p-10 mx-auto font-sans" style={{ minHeight: '1056px', boxSizing: 'border-box' }}>
+            <div id="analytics-print-container" className="w-[1056px] bg-white text-black p-10 mx-auto font-sans" style={{ boxSizing: 'border-box' }}>
+                <style>{`
+                    @page { size: landscape; margin: 15mm; }
+                    @media print {
+                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }
+                        #analytics-print-container { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+                    }
+                `}</style>
                 {/* Header Section */}
                 <div className="flex justify-between items-end border-b-2 border-black pb-4 mb-8">
                     <div>
@@ -4253,17 +4253,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const cust = customers.find(c => c.id === q.customerId) || customers.find(c => c.name === (q.customerName || q.customer));
-                                                                const firstName = cust?.name?.split(' ')[0] || 'Customer';
-                                                                const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${q.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
-                                                                navigator.clipboard.writeText(msg).then(() => {
-                                                                    if (cust?.phone) {
-                                                                        window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
-                                                                    } else if (cust?.email) {
-                                                                        window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
-                                                                    } else {
-                                                                        alert("Follow-Up copied to clipboard!");
-                                                                    }
-                                                                });
+                                                                if (cust?.id) {
+                                                                    navigate(`/follow-up-center?customerId=${cust.id}`);
+                                                                } else {
+                                                                    navigate(`/follow-up-center?search=${encodeURIComponent(q.customerName || q.customer || '')}`);
+                                                                }
                                                             }}
                                                         >
                                                             Follow Up ({Math.floor((new Date().getTime() - new Date(q.sentDate).getTime()) / (1000 * 3600 * 24))}d)
@@ -4343,17 +4337,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         const cust = customers.find(c => c.id === q.customerId) || customers.find(c => c.name === (q.customerName || q.customer));
-                                                                        const firstName = cust?.name?.split(' ')[0] || 'Customer';
-                                                                        const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${q.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
-                                                                        navigator.clipboard.writeText(msg).then(() => {
-                                                                            if (cust?.phone) {
-                                                                                window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
-                                                                            } else if (cust?.email) {
-                                                                                window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
-                                                                            } else {
-                                                                                alert("Follow-Up copied to clipboard!");
-                                                                            }
-                                                                        });
+                                                                        if (cust?.id) {
+                                                                            navigate(`/follow-up-center?customerId=${cust.id}`);
+                                                                        } else {
+                                                                            navigate(`/follow-up-center?search=${encodeURIComponent(q.customerName || q.customer || '')}`);
+                                                                        }
                                                                     }}
                                                                 >
                                                                     Follow Up ({Math.floor((new Date().getTime() - new Date(q.sentDate).getTime()) / (1000 * 3600 * 24))}d)

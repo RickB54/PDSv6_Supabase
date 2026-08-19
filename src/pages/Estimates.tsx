@@ -2132,16 +2132,11 @@ Precision. Protection. Perfection.`;
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             const cust = customers.find(c => c.id === est.customerId);
-                                                            const firstName = cust?.name?.split(' ')[0] || 'Customer';
-                                                            const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${est.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
-                                                            navigator.clipboard.writeText(msg).then(() => {
-                                                                toast({ title: "Follow-Up Copied!", description: "Message copied to clipboard." });
-                                                                if (cust?.phone) {
-                                                                    window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
-                                                                } else if (cust?.email) {
-                                                                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
-                                                                }
-                                                            });
+                                                            if (cust) {
+                                                                navigate(`/follow-up-center?customerId=${cust.id}`);
+                                                            } else {
+                                                                navigate(`/follow-up-center?search=${encodeURIComponent(est.customerName || '')}`);
+                                                            }
                                                         }}
                                                     >
                                                         <Clock className="w-3.5 h-3.5 mr-1.5" /> Follow Up ({daysPending}d)
@@ -2406,16 +2401,11 @@ Precision. Protection. Perfection.`;
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     const cust = customers.find(c => c.id === selectedEstimate.customerId);
-                                                    const firstName = cust?.name?.split(' ')[0] || 'Customer';
-                                                    const msg = `Hi ${firstName},\n\nJust following up on the estimate I sent over for your vehicle. Please let me know if you have any questions or if you'd like to move forward!\n\nView Estimate: https://primeautodetail.net/estimate/${selectedEstimate.id}\n\nThanks,\nRick Berube\nPrime Auto Detail\n(978) 566-1008`;
-                                                    navigator.clipboard.writeText(msg).then(() => {
-                                                        toast({ title: "Follow-Up Copied!", description: "Message copied to clipboard." });
-                                                        if (cust?.phone) {
-                                                            window.open(`https://voice.google.com/u/0/messages?recipient=${cust.phone.replace(/[^0-9+]/g, '')}`, '_blank');
-                                                        } else if (cust?.email) {
-                                                            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${encodeURIComponent(`Following up on your Estimate - Prime Auto Detail`)}&body=${encodeURIComponent(msg)}`, '_blank');
-                                                        }
-                                                    });
+                                                    if (cust) {
+                                                        navigate(`/follow-up-center?customerId=${cust.id}`);
+                                                    } else {
+                                                        navigate(`/follow-up-center?search=${encodeURIComponent(selectedEstimate.customerName || '')}`);
+                                                    }
                                                 }}
                                             >
                                                 <Clock className="w-4 h-4 mr-2" /> Follow Up ({daysPending}d)

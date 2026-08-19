@@ -82,6 +82,20 @@ export default function FollowUpCenter() {
     refreshCoupons();
   }, []);
 
+  useEffect(() => {
+    const cid = searchParams.get('customerId');
+    if (cid && allCustomers.length > 0 && !isDialogOpen) {
+      const cust = allCustomers.find(c => c.id === cid);
+      if (cust) {
+        setSelectedCustomer(cust);
+        setIsDialogOpen(true);
+        // Clean URL to prevent reopening
+        searchParams.delete('customerId');
+        navigate({ search: searchParams.toString() }, { replace: true });
+      }
+    }
+  }, [searchParams, allCustomers, isDialogOpen, navigate]);
+
   const openFollowUpDialog = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsDialogOpen(true);
