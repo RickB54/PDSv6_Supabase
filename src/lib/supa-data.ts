@@ -3368,3 +3368,40 @@ export const deleteInventoryAuditHistory = async (id: string) => {
         }
     }
 };
+
+/**
+ * Logs an engagement to the database, preventing exact duplicates
+ * for standard automated correspondence logs (like Estimate/Invoice Sent).
+ */
+export const logUniqueEngagement = async (payload: {
+    customer_id: string;
+    customer_name: string;
+    type: string;
+    note: string;
+}) => {
+    try {
+        const prefixMatch = payload.note.match(/^(Estimate Sent: #[0-9]+|Invoice Sent: #[0-9]+)/);
+        if (prefixMatch) {
+            const uniquePrefix = prefixMatch[1];
+            const { data: existing } = await supabase
+                .from('engagements')
+                .select('id')
+                .eq('customer_id', payload.customer_id)
+                .ilike('note', `${uniquePrefix}%`)
+                .limit(1);
+            
+            if (existing && existing.length > 0) {
+                console.log(`[logUniqueEngagement] Skipping duplicate engagement log for: ${uniquePrefix}`);
+                return { success: true, duplicate: true };
+            }
+        }
+
+        const { error } = await supabase.from('engagements').insert(payload);
+        if (error) throw error;
+        return { success: true, duplicate: false };
+    } catch (err) {
+        console.error('[logUniqueEngagement] Error:', err);
+        return { success: false, error: err };
+    }
+};
+

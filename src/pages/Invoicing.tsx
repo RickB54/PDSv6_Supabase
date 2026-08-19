@@ -13,7 +13,8 @@ import {
   getSupabaseCustomers,
   upsertSupabaseCustomer,
   getSupabaseEmployees,
-  Customer
+  Customer,
+  logUniqueEngagement
 } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
@@ -564,7 +565,7 @@ const Invoicing = () => {
 
       if (updated.isSent && invoice.customerId) {
         try {
-          await supabase.from('engagements').insert({
+          await logUniqueEngagement({
             customer_id: invoice.customerId,
             customer_name: invoice.customerName,
             type: 'correspondence',
@@ -829,7 +830,7 @@ const Invoicing = () => {
       
       if (updated.isSent && !selectedInvoice.isSent && updated.customerId) {
         try {
-          await supabase.from('engagements').insert({
+          await logUniqueEngagement({
             customer_id: updated.customerId,
             customer_name: updated.customerName,
             type: 'correspondence',

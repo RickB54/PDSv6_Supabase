@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone } from "lucide-react";
-import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer, resolvePlaceOfService } from "@/lib/supa-data";
+import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer, resolvePlaceOfService, logUniqueEngagement } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
 import { getUnifiedCustomers } from "@/lib/customers";
@@ -422,7 +422,7 @@ const Estimates = () => {
             
             if (editIsSent && !wasSentBefore && selectedCustomer) {
                 try {
-                    await supabase.from('engagements').insert({
+                    await logUniqueEngagement({
                         customer_id: selectedCustomer,
                         customer_name: customer.name,
                         type: 'correspondence',
@@ -560,7 +560,7 @@ const Estimates = () => {
 
             if (newStatus && estimate.customerId) {
                 try {
-                    await supabase.from('engagements').insert({
+                    await logUniqueEngagement({
                         customer_id: estimate.customerId,
                         customer_name: estimate.customerName,
                         type: 'correspondence',
@@ -2418,7 +2418,7 @@ Precision. Protection. Perfection.`;
                                             
                                             if (newIsSent && updated.customerId) {
                                                 try {
-                                                    await supabase.from('engagements').insert({
+                                                    await logUniqueEngagement({
                                                         customer_id: updated.customerId,
                                                         customer_name: updated.customerName,
                                                         type: 'correspondence',
