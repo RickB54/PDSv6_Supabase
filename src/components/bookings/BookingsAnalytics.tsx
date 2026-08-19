@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Booking, useBookingsStore } from "@/store/bookings";
 import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth } from "date-fns";
-import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target, X } from "lucide-react";
+import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target, X, FileDown } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import localforage from "localforage";
 
 import { CustomerIntelligence360Modal } from "./CustomerIntelligence360Modal";
 import { EmployeeCompensationAnalytics } from "../compensation/EmployeeCompensationAnalytics";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface BookingsAnalyticsProps {
     bookings: Booking[];
@@ -976,6 +977,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_acq_showArchived', String(acqShowArchived));
         localStorage.setItem('analytics_acq_dateFilter', JSON.stringify(acqDateFilter));
     }, [acqShowArchived, acqDateFilter]);
+
+    // Visual Report Export State
+    const [reportExportType, setReportExportType] = useState<'pdf' | 'print' | null>(null);
+    const [customReportModalOpen, setCustomReportModalOpen] = useState(false);
+    const [customReportDateFilter, setCustomReportDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>({ start: undefined, end: undefined });
 
     const filteredAcquisitionBookings = useMemo(() => {
         return bookings.filter(b => {
@@ -2234,6 +2240,99 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         );
     }
 
+    const handleVisualReport = async (type: 'pdf' | 'print', rangeName: string) => {
+        let start: Date | undefined;
+        let end: Date | undefined;
+        
+        if (rangeName === 'weekly') {
+            start = startOfWeek(new Date(), { weekStartsOn: 1 });
+            end = endOfWeek(new Date(), { weekStartsOn: 1 });
+        } else if (rangeName === 'monthly') {
+            start = startOfMonth(new Date());
+            end = endOfMonth(new Date());
+        } else if (rangeName === 'yearly') {
+            start = startOfYear(new Date());
+            end = endOfYear(new Date());
+        } else if (rangeName === 'custom') {
+            setReportExportType(type);
+            setCustomReportModalOpen(true);
+            return;
+        }
+
+        await executeVisualReport(type, start, end);
+    };
+
+    const executeVisualReport = async (type: 'pdf' | 'print', start: Date | undefined, end: Date | undefined) => {
+        setPerfDateFilter({ start, end });
+        setSnapshotDateFilter({ start, end });
+        setInsDateFilter({ start, end });
+        setInvDateFilter({ start, end });
+        setQuotesDateFilter({ start, end });
+        setQualDateFilter({ start, end });
+        setAcqDateFilter({ start, end });
+        
+        toast.loading(`Preparing visual ${type}...`, { id: "visual-export" });
+        
+        // Wait for states to settle and react to re-render
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const element = document.getElementById('analytics-report-container');
+        if (!element) {
+            toast.error("Could not find the report container.", { id: "visual-export" });
+            return;
+        }
+        
+        element.classList.add('printing-mode'); // optional css helper
+        
+        if (type === 'print') {
+            toast.success("Ready for printing", { id: "visual-export" });
+            window.print();
+            element.classList.remove('printing-mode');
+        } else {
+            try {
+                toast.loading("Generating Visual PDF (this may take a moment)...", { id: "visual-export" });
+                const canvas = await html2canvas(element, { 
+                    scale: 2, 
+                    backgroundColor: '#09090b',
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: element.scrollWidth,
+                    windowHeight: element.scrollHeight
+                });
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                let heightLeft = pdfHeight;
+                let position = 0;
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+                
+                while (heightLeft >= 0) {
+                    position -= pageHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                let label = "Analytics";
+                if (start && end) {
+                    label += `_${format(start, 'MMM_d')}_to_${format(end, 'MMM_d_yyyy')}`;
+                }
+                pdf.save(`Prime_${label}.pdf`);
+                toast.success("Visual PDF Downloaded!", { id: "visual-export" });
+            } catch(e) {
+                console.error(e);
+                toast.error("Failed to generate PDF.", { id: "visual-export" });
+            } finally {
+                element.classList.remove('printing-mode');
+            }
+        }
+    };
+
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
         <div className="flex flex-col gap-2 p-3 bg-zinc-950/40 transition-all duration-300">
@@ -2431,9 +2530,34 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Button>
                         } 
                     />
-                    <Button variant="ghost" size="icon" onClick={generateAnalyticsPDF} className="h-6 w-6 text-indigo-500/80 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Print Report">
-                        <Printer className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-indigo-500/80 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Print Full Report">
+                                <Printer className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'weekly')} className="cursor-pointer hover:bg-zinc-800">Weekly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
+                            <DropdownMenuItem onClick={generateAnalyticsPDF} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800 mt-1 pt-1 text-zinc-400 text-xs">Legacy Data Export</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Save to PDF">
+                                <FileDown className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'weekly')} className="cursor-pointer hover:bg-zinc-800">Weekly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button variant="ghost" size="icon" onClick={generatePriceHistoryPDF} className="h-6 w-6 text-purple-500/80 hover:text-purple-400 hover:bg-purple-500/10 transition-colors" title="Price Audit">
                         <FileBarChart className="h-4 w-4" />
                     </Button>
@@ -2475,7 +2599,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2">
+        <div id="analytics-report-container" className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2 bg-[#09090b]">
             {portalTarget ? createPortal(businessIntelligenceHeader, portalTarget) : businessIntelligenceHeader}
 
             <div className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl">
@@ -2896,8 +3020,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </Card>
 
                 {/* Health Metrics */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 xl:col-span-2 gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:h-[250px] items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 xl:col-span-2 gap-4 xl:h-[250px] items-center">
                         {/* Cancellation Rate */}
                         <Card className="bg-zinc-900/50 border-zinc-800 shadow-xl h-full flex flex-col justify-center text-center p-4">
                             <h4 className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider mb-2">Cancel / No-Show</h4>
@@ -2925,7 +3048,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <p className="text-xs text-zinc-500 mt-2">invoices with add-ons</p>
                         </Card>
                     </div>
-                </div>
             </div>
 
             {/* Active Reminders List */}
@@ -5277,6 +5399,45 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </div>
                             ))
                         )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        {/* Custom Visual Report Modal */}
+            <Dialog open={customReportModalOpen} onOpenChange={setCustomReportModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">Custom Report Range</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                            <Label>Start Date</Label>
+                            <Input 
+                                type="date" 
+                                value={customReportDateFilter.start ? format(customReportDateFilter.start, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => setCustomReportDateFilter(prev => ({ ...prev, start: e.target.value ? new Date(e.target.value) : undefined }))}
+                                className="bg-zinc-900 border-zinc-800 text-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Input 
+                                type="date" 
+                                value={customReportDateFilter.end ? format(customReportDateFilter.end, 'yyyy-MM-dd') : ''}
+                                onChange={(e) => setCustomReportDateFilter(prev => ({ ...prev, end: e.target.value ? new Date(e.target.value) : undefined }))}
+                                className="bg-zinc-900 border-zinc-800 text-white"
+                            />
+                        </div>
+                        <Button 
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                            onClick={() => {
+                                setCustomReportModalOpen(false);
+                                if (reportExportType) {
+                                    executeVisualReport(reportExportType, customReportDateFilter.start, customReportDateFilter.end);
+                                }
+                            }}
+                        >
+                            Generate Report
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
