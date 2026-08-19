@@ -2284,9 +2284,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             setSearchQuery(""); // Reset any customer/text search filter
         }
         
-        toast.loading(`Preparing visual ${type}...`, { id: "visual-export" });
         setIsVisualExportMode(true);
-        
         // Wait for states to settle and react to re-render the print layout
         await new Promise(resolve => setTimeout(resolve, 1500));
         
@@ -2297,52 +2295,31 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             return;
         }
         
-        if (type === 'print') {
-            toast.success("Ready for printing", { id: "visual-export" });
-            window.print();
-            setIsVisualExportMode(false);
-        } else {
-            try {
-                toast.loading("Generating PDF...", { id: "visual-export" });
-                const canvas = await html2canvas(element, { 
-                    scale: 2, 
-                    backgroundColor: '#ffffff',
-                    useCORS: true,
-                    logging: false,
-                    windowWidth: element.scrollWidth,
-                    windowHeight: element.scrollHeight
-                });
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                
-                let heightLeft = pdfHeight;
-                let position = 0;
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                heightLeft -= pageHeight;
-                
-                while (heightLeft >= 0) {
-                    position -= pageHeight;
-                    pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                    heightLeft -= pageHeight;
-                }
-                
-                let label = "Analytics";
-                if (start && end) {
-                    label += `_${format(start, 'MMM_d')}_to_${format(end, 'MMM_d_yyyy')}`;
-                }
-                pdf.save(`Prime_${label}.pdf`);
-                toast.success("Visual PDF Downloaded!", { id: "visual-export" });
-            } catch(e) {
-                console.error(e);
-                toast.error("Failed to generate PDF.", { id: "visual-export" });
-            } finally {
-                setIsVisualExportMode(false);
+        try {
+            toast.loading("Generating PDF Document...", { id: "visual-export" });
+            const html2pdf = (await import('html2pdf.js')).default;
+            
+            let label = "Analytics";
+            if (start && end) {
+                label += `_${format(start, 'MMM_d')}_to_${format(end, 'MMM_d_yyyy')}`;
             }
+
+            const opt = {
+                margin: [15, 15, 15, 15],
+                filename: `Prime_${label}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: 'css', avoid: 'tr' }
+            };
+
+            await html2pdf().set(opt).from(element).save();
+            toast.success("Professional PDF Downloaded!", { id: "visual-export" });
+        } catch(e) {
+            console.error(e);
+            toast.error("Failed to generate PDF.", { id: "visual-export" });
+        } finally {
+            setIsVisualExportMode(false);
         }
     };
 
@@ -2543,21 +2520,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </Button>
                         } 
                     />
-                    <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-indigo-500/80 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Print Full Report">
-                                <Printer className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'current')} className="cursor-pointer font-bold text-indigo-400 hover:bg-zinc-800">Current Dashboard View</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'weekly')} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800">Weekly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('print', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
-                            <DropdownMenuItem onClick={generateAnalyticsPDF} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800 mt-1 pt-1 text-zinc-400 text-xs">Legacy Data Export</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+
 
                     <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
@@ -2740,6 +2703,90 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </table>
                     {filteredPerfBookings.length > 30 && <p className="text-[10px] font-bold text-zinc-400 mt-4 text-center uppercase tracking-widest">... and {filteredPerfBookings.length - 30} more records omitted for brevity.</p>}
                 </div>
+
+                {/* Outstanding Invoices */}
+                {filteredInvoices.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Unpaid & Outstanding Invoices</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Invoice #</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Balance Due</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredInvoices.filter(i => {
+                                const status = (i.status || '').toLowerCase();
+                                return status !== 'paid' && status !== 'draft' && (Number(i.total) || 0) > (Number(i.paidAmount) || 0);
+                            }).slice(0, 20).map((inv, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{inv.date ? format(parseISO(inv.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{inv.customerName}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{inv.number}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold text-red-600">${((Number(inv.total) || 0) - (Number(inv.paidAmount) || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
+
+                {/* Pipeline Quotes */}
+                {filteredQuotes.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Active Pipeline Quotes</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Date</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Customer</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Status</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredQuotes.filter(q => q.status === 'pending' || q.status === 'accepted').slice(0, 20).map((q, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-800 text-xs font-medium">{q.date ? format(parseISO(q.date), "MMM d, yyyy") : 'N/A'}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{q.customerName}</td>
+                                    <td className="p-2 text-zinc-600 text-xs font-bold uppercase">{q.status}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold">${(Number(q.total) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
+
+                {/* Acquisition Sources */}
+                {acquisitionData.howFoundList.length > 0 && (
+                <div className="mb-10 page-break-inside-avoid">
+                    <h2 className="text-sm font-black uppercase tracking-widest border-b border-zinc-200 pb-2 mb-4 text-black">Customer Acquisition Sources</h2>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-zinc-100 border-b border-zinc-300">
+                            <tr>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600">Source / Channel</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Customers</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Bookings</th>
+                                <th className="p-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-right">Revenue Generated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {acquisitionData.howFoundList.map((src, i) => (
+                                <tr key={i} className="border-b border-zinc-100">
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{src.name}</td>
+                                    <td className="p-2 text-zinc-600 text-xs text-center font-bold">{src.customerCount}</td>
+                                    <td className="p-2 text-zinc-600 text-xs text-center">{src.count}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold">${src.revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                )}
             </div>
         );
     };
