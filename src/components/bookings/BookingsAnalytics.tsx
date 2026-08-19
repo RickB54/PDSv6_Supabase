@@ -11,7 +11,7 @@ import { useFollowUpStatus } from "@/hooks/useFollowUpStatus";
 import { format, parseISO, subMonths, isSameMonth, isWithinInterval, startOfDay, endOfDay, isSameDay, startOfWeek, endOfWeek, isToday, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { Calendar as CalendarIcon, Phone, Mail, Clock, Bell, ChevronDown, ChevronUp, Repeat, Filter, FilterX, Archive, Sparkles, Package, BarChart3, FileBarChart, FileText, FilePlus, AlertTriangle, Printer, Save, Send, RotateCcw, Edit, Trash2, BookOpen, ArrowUp, Gift, ClipboardCheck, Users, DollarSign, ArrowRight, ArrowLeft, HelpCircle, Loader2, GitBranch, LineChart as LineChartIcon, Target, X, FileDown } from "lucide-react";
 import { getConsumptionHistory, ConsumptionRecord } from "@/lib/consumptionTracker";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
@@ -76,6 +76,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [probonoFilterOpen, setProbonoFilterOpen] = useState(false);
     const [insFilterOpen, setInsFilterOpen] = useState(false);
     const [acqFilterOpen, setAcqFilterOpen] = useState(false);
+    
+    const [reportSelectionModalOpen, setReportSelectionModalOpen] = useState(false);
+    const [pendingReportConfig, setPendingReportConfig] = useState<{type: 'pdf' | 'print', start?: Date, end?: Date, preserveFilters: boolean} | null>(null);
+    const [selectedSections, setSelectedSections] = useState({
+        executiveSummary: true,
+        visualDataTrends: true,
+        locationDistribution: true,
+        healthMetrics: true,
+        pipelineAcquisition: true,
+        serviceLogs: true,
+        servicesToBeDone: true,
+        unpaidInvoices: true,
+        pipelineQuotes: true,
+        probonoLiability: true,
+        customerInsights: true,
+        qualityReview: true,
+        profitabilityCompensation: true
+    });
 
     const followUpStatus = useFollowUpStatus(customers, bookings);
 
@@ -2269,25 +2287,35 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             return;
         }
 
-        await executeVisualReport(type, start, end, false);
+        setPendingReportConfig({ type, start, end, preserveFilters: false });
+        setReportSelectionModalOpen(true);
     };
 
-    const executeVisualReport = async (type: 'pdf' | 'print', start: Date | undefined, end: Date | undefined, preserveFilters = false) => {
-        if (!preserveFilters) {
-            setPerfDateFilter({ start, end });
-            setSnapshotDateFilter({ start, end });
-            setInsDateFilter({ start, end });
-            setInvDateFilter({ start, end });
-            setQuotesDateFilter({ start, end });
-            setQualDateFilter({ start, end });
-            setAcqDateFilter({ start, end });
-            setSearchQuery(""); // Reset any customer/text search filter
+    const confirmAndExecuteVisualReport = async () => {
+        const config = pendingReportConfig;
+        if (!config) return;
+        setReportSelectionModalOpen(false);
+
+        if (!config.preserveFilters) {
+            setPerfDateFilter({ start: config.start, end: config.end });
+            setSnapshotDateFilter({ start: config.start, end: config.end });
+            setInsDateFilter({ start: config.start, end: config.end });
+            setInvDateFilter({ start: config.start, end: config.end });
+            setQuotesDateFilter({ start: config.start, end: config.end });
+            setQualDateFilter({ start: config.start, end: config.end });
+            setAcqDateFilter({ start: config.start, end: config.end });
+            setSearchQuery("");
         }
         
         setIsVisualExportMode(true);
-        // Wait for states to settle and react to re-render the print layout
         await new Promise(resolve => setTimeout(resolve, 1500));
         
+        if (config.type === 'print') {
+            window.print();
+            setIsVisualExportMode(false);
+            return;
+        }
+
         const element = document.getElementById('analytics-print-container');
         if (!element) {
             toast.error("Could not find the print container.", { id: "visual-export" });
@@ -2300,17 +2328,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             const html2pdf = (await import('html2pdf.js')).default;
             
             let label = "Analytics";
-            if (start && end) {
-                label += `_${format(start, 'MMM_d')}_to_${format(end, 'MMM_d_yyyy')}`;
+            if (config.start && config.end) {
+                label += `_${format(config.start, 'MMM_d')}_to_${format(config.end, 'MMM_d_yyyy')}`;
             }
 
             const opt = {
                 margin: 15 as any,
                 filename: `Prime_${label}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
+                image: { type: 'jpeg' as const, quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
-                jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-                pagebreak: { mode: 'css', avoid: 'tr' }
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: 'css', avoid: 'tr, .page-break-inside-avoid' }
             };
 
             await html2pdf().set(opt).from(element).save();
@@ -2322,6 +2350,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             setIsVisualExportMode(false);
         }
     };
+
+
 
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
@@ -2761,11 +2791,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </thead>
                         <tbody>
                             {toDoServices.slice(0, 20).map((b, i) => (
-                                <tr key={i} className="border-b border-zinc-100">
+                                <tr key={i} className="border-b border-zinc-100 page-break-inside-avoid">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), 'MMM d, yyyy') : 'N/A'}</td>
-                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customerName}</td>
-                                    <td className="p-2 text-zinc-600 text-xs truncate">{b.serviceTitle}</td>
-                                    <td className="p-2 text-right font-mono text-xs font-bold">${(Number(b.price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                    <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
+                                    <td className="p-2 text-zinc-600 text-xs truncate">{b.service}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold">${(Number(b.revenue) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -2845,11 +2875,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </thead>
                         <tbody>
                             {probonoJobs.slice(0, 20).map((b, i) => (
-                                <tr key={i} className="border-b border-zinc-100">
+                                <tr key={i} className="border-b border-zinc-100 page-break-inside-avoid">
                                     <td className="p-2 text-zinc-800 text-xs font-medium">{b.date ? format(parseISO(b.date), "MMM d, yyyy") : 'N/A'}</td>
                                     <td className="p-2 text-zinc-900 font-bold text-xs">{b.customer}</td>
-                                    <td className="p-2 text-zinc-600 text-xs">{b.title}</td>
-                                    <td className="p-2 text-right font-mono text-xs font-bold text-red-500">${(Number(b.price) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                    <td className="p-2 text-zinc-600 text-xs">{b.service}</td>
+                                    <td className="p-2 text-right font-mono text-xs font-bold text-red-500">${(Number(b.value) || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -5882,6 +5912,50 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 }
                             }}
                         >
+                            Generate Report
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={reportSelectionModalOpen} onOpenChange={setReportSelectionModalOpen}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">{pendingReportConfig?.type === 'pdf' ? 'Generate PDF Report' : 'Print Report'}</DialogTitle>
+                        <DialogDescription className="text-zinc-400">Select which sections to include in the generated report. Full data will be included without truncation.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {Object.entries({
+                            executiveSummary: 'Executive Summary',
+                            visualDataTrends: 'Visual Data Trends',
+                            locationDistribution: 'Location Distribution',
+                            healthMetrics: 'Health Metrics & KPIs',
+                            pipelineAcquisition: 'Pipeline & Acquisition',
+                            serviceLogs: 'Service Logs (Complete)',
+                            servicesToBeDone: 'Services To Be Done',
+                            unpaidInvoices: 'Unpaid & Outstanding Invoices',
+                            pipelineQuotes: 'Active Pipeline Quotes',
+                            probonoLiability: 'Pro-Bono & Liability Events',
+                            customerInsights: 'Customer Insights & Follow-ups',
+                            qualityReview: 'Operational Quality Review',
+                            profitabilityCompensation: 'Profitability & Compensation Summary'
+                        }).map(([key, label]) => (
+                            <div key={key} className="flex items-center space-x-3">
+                                <Checkbox 
+                                    id={`section-${key}`}
+                                    checked={(selectedSections as any)[key]}
+                                    onCheckedChange={(checked) => setSelectedSections(prev => ({ ...prev, [key]: !!checked }))}
+                                    className="border-zinc-700 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                                />
+                                <label htmlFor={`section-${key}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-300 cursor-pointer">
+                                    {label}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex justify-end gap-3 mt-2">
+                        <Button variant="ghost" onClick={() => setReportSelectionModalOpen(false)} className="text-zinc-400 hover:text-white">Cancel</Button>
+                        <Button onClick={confirmAndExecuteVisualReport} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
                             Generate Report
                         </Button>
                     </div>

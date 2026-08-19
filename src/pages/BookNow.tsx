@@ -944,7 +944,8 @@ const BookNow = () => {
         message: "",
         conditionInside: "",
         conditionOutside: "",
-        placeOfService: "Customer's address"
+        placeOfService: "Customer's address",
+        howFound: ""
       });
       setAddOns([]);
       setErrors({});

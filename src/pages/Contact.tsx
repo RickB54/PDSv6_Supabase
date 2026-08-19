@@ -253,7 +253,6 @@ const Contact = () => {
               make: formData.vehicleMake,
               model: formData.vehicleModel,
               year: formData.vehicleYear,
-              placeOfService: formData.placeOfService,
               type: formData.vehicleType,
               color: formData.vehicleColor || 'Black',
               conditionOutside: formData.vehicleCondition,
