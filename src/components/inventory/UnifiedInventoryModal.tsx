@@ -205,7 +205,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
           // Item Locations (Shelves, Vans, etc.)
           const itemLocs = Array.from(new Set([...materials, ...tools].map(i => (i as any).location).filter(Boolean))) as string[];
-          setAvailableLocations(itemLocs.sort());
+          setAvailableLocations(prev => Array.from(new Set([...prev, ...itemLocs])).sort());
+
+          // Container Locations (Sub-drawers, specific spots)
+          const contLocs = Array.from(new Set([...materials, ...tools].map(i => (i as any).containerLocation).filter(Boolean))) as string[];
+          setAvailableContainerLocations(prev => Array.from(new Set([...prev, ...contLocs])).sort());
 
           // Units (merged with existing presets)
           const chemUnits = Array.from(new Set(chems.map(c => (c as any).unitOfMeasure || (c as any).unit_of_measure).filter(Boolean))) as string[];
@@ -284,11 +288,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     "Small Extractor Bag",
     "Medium Steamer/Drill Bag",
     "Large Buffer Bag",
-    // Drawer towers
-    "D1", "D1-1", "D1-2", "D1-3", "D1-4",
-    "D2", "D2-1", "D2-2", "D2-3", "D2-4",
-    "D3", "D3-1", "D3-2", "D3-3", "D3-4",
-    "D4", "D4-1", "D4-2", "D4-3", "D4-4",
+    // Drawer towers (Parent Locations)
+    "D1", "D2", "D3", "D4",
     // Brown shelf (bottom-up: B1=bottom, B3=top enclosed, B-Top=flat surface)
     "B1", "B2", "B3", "B-Top",
     // Wall shelf above mixing bench
@@ -296,7 +297,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     // General shop locations (existing)
     "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet",
   ];
-  const DEFAULT_CONTAINER_LOCATIONS: string[] = [];
+  const DEFAULT_CONTAINER_LOCATIONS: string[] = [
+    // Sub-drawers for towers
+    "D1-1", "D1-2", "D1-3", "D1-4",
+    "D2-1", "D2-2", "D2-3", "D2-4",
+    "D3-1", "D3-2", "D3-3", "D3-4",
+    "D4-1", "D4-2", "D4-3", "D4-4"
+  ];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -335,12 +342,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [availableLocations, setAvailableLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_locations');
-    return saved ? JSON.parse(saved) : DEFAULT_LOCATIONS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge defaults so new locations appear even for users with saved prefs
+      return Array.from(new Set([...DEFAULT_LOCATIONS, ...parsed]));
+    }
+    return DEFAULT_LOCATIONS;
   });
 
   const [availableContainerLocations, setAvailableContainerLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_container_locations');
-    return saved ? JSON.parse(saved) : DEFAULT_CONTAINER_LOCATIONS;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge defaults so new locations appear even for users with saved prefs
+      return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...parsed]));
+    }
+    return DEFAULT_CONTAINER_LOCATIONS;
   });
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
