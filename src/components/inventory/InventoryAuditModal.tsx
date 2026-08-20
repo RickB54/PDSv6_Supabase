@@ -719,6 +719,142 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     doc.save(`Inventory_Audit_${targetTab}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const handleExportFullReport = (snapshot?: AuditSnapshot) => {
+    const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
+    const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
+    const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
+
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text(`Full Inventory Audit Report`, 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
+    doc.setTextColor(0, 0, 0);
+
+    let currentY = 40;
+
+    const renderCategory = (categoryName: string, items: any[], auditState: any) => {
+      if (items.length === 0) return;
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 20;
+      }
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`${categoryName} Section`, 14, currentY);
+      currentY += 10;
+
+      const pdfGroups: Record<string, any[]> = {};
+      items.forEach(item => {
+        let loc = 'Unassigned';
+        if (categoryName === 'Chemicals') {
+          const rawShelf = (item as any).shelf;
+          const rawSection = (item as any).section;
+          const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
+          const section = (typeof rawSection === 'string' && rawSection.trim()) ? rawSection.trim() : 'Unassigned';
+          loc = `${shelf} - ${section}`;
+        } else {
+          const baseLoc = item.location || 'Unassigned';
+          const containerLoc = item.containerLocation || '';
+          loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
+        }
+        if (!pdfGroups[loc]) pdfGroups[loc] = [];
+        pdfGroups[loc].push(item);
+      });
+
+      const sortedLocs = Object.keys(pdfGroups).sort();
+      let totalItems = items.length;
+      let totalCounted = 0;
+
+      sortedLocs.forEach(loc => {
+        const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
+        if (groupItems.length === 0) return;
+
+        if (currentY > 260) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        let head: string[][];
+        let columnStyles: any;
+        if (categoryName === 'Chemicals') {
+          head = [[`Location: ${loc}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+        } else if (categoryName === 'Supplies') {
+          head = [[`Location: ${loc}`, 'Condition', 'Last Used', 'DB Qty', 'Actual Count']];
+          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+        } else {
+          head = [[`Location: ${loc}`, 'DB Qty', 'Actual Count']];
+          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30, halign: 'center' }, 2: { cellWidth: 40 } };
+        }
+
+        autoTable(doc, {
+          startY: currentY,
+          head,
+          body: groupItems.map(item => {
+            if (categoryName === 'Chemicals') {
+              const countedStr = isChemCounted(item.id, auditState) ? getChemTotalStock(item.id, item, auditState).toFixed(2) : '';
+              if (isChemCounted(item.id, auditState)) totalCounted++;
+              const containerType = item.containerType || '';
+              const percent = auditState[item.id] ? `${auditState[item.id].percentRemaining || 0}%` : '';
+              return [
+                `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                containerType,
+                percent,
+                item.currentStock?.toFixed(2) || '0',
+                countedStr
+              ];
+            } else if (categoryName === 'Supplies') {
+              const counted = auditState[item.id]?.counted;
+              const isCounted = auditState[item.id]?.isCounted;
+              if (isCounted) totalCounted++;
+              const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
+              const meta = metaStr ? JSON.parse(metaStr) : {};
+              const condition = meta.conditionStatus || 'N/A';
+              const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
+              return [
+                item.name,
+                condition,
+                lastUsed,
+                item.quantity || 1,
+                isCounted ? String(counted) : ''
+              ];
+            } else {
+              const counted = auditState[item.id]?.counted;
+              const isCounted = auditState[item.id]?.isCounted;
+              if (isCounted) totalCounted++;
+              return [
+                item.name,
+                item.quantity || 1,
+                isCounted ? String(counted) : ''
+              ];
+            }
+          }),
+          theme: 'grid',
+          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+          styles: { textColor: [0, 0, 0] },
+          columnStyles,
+          margin: { top: 10 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 10;
+      });
+
+      if (currentY > 270) { doc.addPage(); currentY = 20; }
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'italic');
+      doc.text(`${categoryName} Subtotal: ${totalCounted} of ${totalItems} items counted`, 14, currentY);
+      doc.setFont('helvetica', 'normal');
+      currentY += 20;
+    };
+
+    renderCategory('Chemicals', normalizedChemicals, targetChemAudit);
+    renderCategory('Supplies', supplies, targetSupplyAudit);
+    renderCategory('Equipment', equipment, targetEquipAudit);
+
+    doc.save(`Full_IAC_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const handleConfirmUpdate = async () => {
     setIsSubmitting(true);
     const user = getCurrentUser();
@@ -942,6 +1078,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <li><strong>&quot;X of Y counted&quot; Badge:</strong> Tracks your live progress. It updates dynamically to reflect only the items visible in your current filter.</li>
                           <li><strong>Global Sort Dropdown:</strong> Quickly sort the entire list by Name, Brand, Location, Last Updated, etc.</li>
                           <li><strong>Hide Counted & Collapse All:</strong> Toggle &quot;Hide Counted&quot; to make completed items disappear. Use &quot;Collapse All&quot; to shrink cards and save screen space.</li>
+                          <li><strong>Note:</strong> The broken header Print button has been removed. Use the PDF and Full IAC Report buttons in the footer instead.</li>
                         </ul>
                       </div>
 
@@ -949,7 +1086,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <h4 className="font-semibold text-purple-400 flex items-center gap-2"><Edit className="h-4 w-4" /> Organization & Assignment</h4>
                         <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
                           <li><strong>Chemicals (Shelf, Section, Category):</strong> Assigned via the edit modal. You can filter the audit list by these values to count one section at a time.</li>
-                          <li><strong>Supplies & Equipment (Location, Container Location):</strong> Uses a preset system to standardize where items live. You can add custom entries directly in the edit modal, and filter the audit list by these locations.</li>
+                          <li><strong>Supplies & Equipment (Location, Container Location):</strong> Uses a preset system to standardize where items live. For Supplies, the full set of locations (Detail Cart, bags, D1-D4 drawer towers, B1/B2/B3/B-Top, Wall Shelves) is available. You can filter the audit list by these locations.</li>
+                          <li><strong>Supplies Details:</strong> Supplies feature expand-cards showing Condition/Wear Status, Last Used Date, and Compatible/Companion Items (which link bidirectionally to other items).</li>
                           <li><strong>hideFromIac:</strong> In any item's edit modal, check &quot;Do NOT Show in IAC&quot; to permanently exclude it from all audits and PDF reports.</li>
                         </ul>
                       </div>
@@ -959,7 +1097,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
                           <li><strong>Save Progress:</strong> Pause your audit at any time without submitting. Resume later from the History tab.</li>
                           <li><strong>Audit History:</strong> View past snapshots of your inventory, archive old audits, or permanently delete them (with confirmation).</li>
-                          <li><strong>Save PDF (Main Toolbar):</strong> Generates a printable PDF of your current live audit view and counts.</li>
+                          <li><strong>Save PDF (Main Toolbar):</strong> Generates a printable PDF of your current live audit view and counts for a single tab.</li>
+                          <li><strong>Full IAC Report (Footer):</strong> Generates one combined PDF across all 3 categories (Chemicals, Supplies, Equipment) as separate sections, available from any tab.</li>
                           <li><strong>PDF Save/Print (Review Modal):</strong> When finishing an audit, use this button on the final Review Changes modal to save or print a verified record of the actual updates being committed to the database.</li>
                         </ul>
                       </div>
@@ -1294,9 +1433,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       </div>
                     </PopoverContent>
                     </Popover>
-                  <Button variant="outline" size="sm" className="h-9 border-zinc-800 bg-zinc-950 text-zinc-300" onClick={() => window.print()} title="Print">
-                    <Printer className="h-4 w-4" />
-                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-orange-500/50 bg-orange-950/20 text-orange-400 hover:bg-orange-900/40" title={`Reset ${activeTab === 'chemicals' ? 'Chemicals' : activeTab === 'supplies' ? 'Supplies' : 'Equipment'}`}>
@@ -2125,14 +2261,25 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </Button>
             
             {!showHistory && (
-              <Button
-                variant="outline"
-                className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center"
-                onClick={() => handleExportPDF(viewingSnapshot || undefined)}
-                title="Save PDF"
-              >
-                <Download className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">PDF</span>
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center"
+                  onClick={() => handleExportPDF(viewingSnapshot || undefined)}
+                  title="Save PDF"
+                >
+                  <Download className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">PDF</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-blue-500/50 bg-blue-900/20 text-blue-300 hover:bg-blue-800/40 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+                  onClick={() => handleExportFullReport(viewingSnapshot || undefined)}
+                  title="Export Combined PDF Report"
+                >
+                  <FileText className="h-4 w-4" /> 
+                  <span className="hidden sm:inline">Full IAC Report</span>
+                </Button>
+              </>
             )}
           </div>
           
