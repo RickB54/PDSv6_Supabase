@@ -2328,7 +2328,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         
         let label = "Analytics";
         if (config.start && config.end) {
-            label += `_${format(config.start, 'MMM_d')}_to_${format(config.end, 'MMM_d_yyyy')}`;
+            label += `_${format(config.start, 'MMM_d_yyyy')}_to_${format(config.end, 'MMM_d_yyyy')}`;
         }
         
         const oldTitle = document.title;
@@ -5805,15 +5805,17 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Customer Sentiment</Label>
-                                <Select value={reviewForm.sentiment} onValueChange={v => setReviewForm(prev => ({ ...prev, sentiment: v }))}>
+                                <Select value={reviewForm.sentiment || "no_response"} onValueChange={v => setReviewForm(prev => ({ ...prev, sentiment: v }))}>
                                     <SelectTrigger className={cn(
                                         "bg-zinc-900 border-zinc-800 text-zinc-100",
                                         reviewForm.sentiment === 'loved' && "border-emerald-500/30 text-emerald-400",
-                                        reviewForm.sentiment === 'disappointed' && "border-red-500/30 text-red-400"
+                                        reviewForm.sentiment === 'disappointed' && "border-red-500/30 text-red-400",
+                                        (!reviewForm.sentiment || reviewForm.sentiment === 'no_response') && "text-zinc-500"
                                     )}>
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        <SelectItem value="no_response" className="text-zinc-500">No Response / Not Given</SelectItem>
                                         <SelectItem value="loved" className="text-emerald-400">Loved it! (Stellar)</SelectItem>
                                         <SelectItem value="satisfied" className="text-blue-400">Satisfied (Good)</SelectItem>
                                         <SelectItem value="disappointed" className="text-red-400">Disappointed (Poor)</SelectItem>
