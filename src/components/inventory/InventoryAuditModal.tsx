@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive, FileText } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive, FileText, Calendar, Heart, Link2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +58,22 @@ interface SupplyEquipAuditState {
   counted: number;
   isCounted: boolean;
 }
+
+// Per-item supply metadata (stored in localStorage, not DB)
+interface SupplyItemMeta {
+  conditionStatus?: 'new' | 'good' | 'worn' | 'needs_replacement';
+  conditionNote?: string;
+  lastUsedDate?: string; // YYYY-MM-DD
+  companionItems?: string[]; // item IDs
+}
+
+const SUPPLY_META_KEY = 'supply_item_meta';
+const loadSupplyMeta = (): Record<string, SupplyItemMeta> => {
+  try { return JSON.parse(localStorage.getItem(SUPPLY_META_KEY) || '{}'); } catch { return {}; }
+};
+const saveSupplyMetaToStorage = (meta: Record<string, SupplyItemMeta>) => {
+  localStorage.setItem(SUPPLY_META_KEY, JSON.stringify(meta));
+};
 
 interface JugEntry {
   fillLevel: number; // 1, 0.75, 0.5, 0.25, 0
@@ -191,6 +207,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
   // Expanded items in accordion
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+  // Supply item metadata (condition, last used, companions)
+  const [supplyMeta, setSupplyMeta] = useState<Record<string, SupplyItemMeta>>(loadSupplyMeta);
+
+  const updateSupplyMeta = (id: string, updates: Partial<SupplyItemMeta>) => {
+    setSupplyMeta(prev => {
+      const next = { ...prev, [id]: { ...(prev[id] || {}), ...updates } };
+      saveSupplyMetaToStorage(next);
+      return next;
+    });
+  };
 
   // Audit state per item ID
   const [supplyAudit, setSupplyAudit] = useState<Record<string, SupplyEquipAuditState>>({});
@@ -1664,92 +1691,278 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       const state = auditMap[item.id] || { counted: 0, isCounted: false };
                       const counted = state.counted;
                       const isCounted = state.isCounted;
+                      const isExpanded = !!expandedItems[item.id];
+                      const meta = supplyMeta[item.id] || {};
+
+                      // Companion Items: reverse-lookup (who else links to this item?)
+                      const allSupplyItems = supplies as Material[];
+                      const linkedByOthers = activeTab === 'supplies'
+                        ? allSupplyItems.filter(s => s.id !== item.id && (supplyMeta[s.id]?.companionItems || []).includes(item.id))
+                        : [];
+
+                      // All possible companion targets (supplies + chemicals shown by name)
+                      const companionPool = [...supplies.map(s => ({ id: s.id, name: s.name, type: 'Supply' }))];
+
+                      const conditionConfig = {
+                        new: { label: 'New', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+                        good: { label: 'Good', color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' },
+                        worn: { label: 'Worn', color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+                        needs_replacement: { label: 'Needs Replacement', color: 'text-red-400 bg-red-500/10 border-red-500/30' },
+                      };
 
                       return (
-                        <div key={item.id} className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg transition-colors gap-3 ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
-                          <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => updateCount(item.id, 0, !isCounted)}>
-                            {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
-                            <div className="min-w-0">
-                              <div className="font-bold text-zinc-200 flex items-center gap-2">
-                                <span className="truncate">{item.name}</span>
-                                {item.notes && (
-                                  <Popover modal={true}>
-                                    <PopoverTrigger asChild>
-                                      <button onClick={e => e.stopPropagation()} className="cursor-pointer text-amber-500/70 hover:text-amber-400 focus:outline-none shrink-0" title="View Notes">
-                                        <FileText className="h-4 w-4" />
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 p-4 max-w-[300px] sm:max-w-[400px] text-sm break-words whitespace-pre-wrap max-h-[50vh] overflow-y-auto" side="bottom" align="start">
-                                      <div className="font-bold text-amber-500 mb-2 border-b border-zinc-700 pb-1">Notes for {item.name}</div>
-                                      {item.notes}
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
-                              </div>
-                              <div className="text-xs text-zinc-500 flex items-center gap-2">
-                                <span>DB Qty: {item.quantity || 1}</span>
-                                {((item as any).location || (item as any).containerLocation) && (
-                                  <>
-                                    <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
-                                    <span className={`truncate ${activeTab === 'supplies' ? 'text-blue-400/80' : 'text-amber-400/80'}`}>
-                                      {(item as any).location || 'No Location'} / {(item as any).containerLocation || 'No Container'}
+                        <div key={item.id} className={`border rounded-lg overflow-hidden transition-colors ${isCounted ? 'bg-blue-950/20 border-blue-500/50' : 'bg-zinc-900 border-zinc-800'}`}>
+                          {/* Card Header Row */}
+                          <div className="group flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-3">
+                            {/* Left: checkbox + name info — clicking toggles expand for supplies */}
+                            <div
+                              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none"
+                              onClick={() => activeTab === 'supplies' ? toggleExpand(item.id) : updateCount(item.id, 0, !isCounted)}
+                            >
+                              {isCounted ? <CheckCircle className="h-5 w-5 text-blue-400 shrink-0" /> : <div className="h-5 w-5 rounded-full border border-zinc-600 shrink-0" />}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-zinc-200 flex items-center gap-2 flex-wrap">
+                                  <span className="truncate">{item.name}</span>
+                                  {item.notes && (
+                                    <Popover modal={true}>
+                                      <PopoverTrigger asChild>
+                                        <button onClick={e => e.stopPropagation()} className="cursor-pointer text-amber-500/70 hover:text-amber-400 focus:outline-none shrink-0" title="View Notes">
+                                          <FileText className="h-4 w-4" />
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="z-[99999] bg-zinc-800 text-white border-zinc-700 p-4 max-w-[300px] sm:max-w-[400px] text-sm break-words whitespace-pre-wrap max-h-[50vh] overflow-y-auto" side="bottom" align="start">
+                                        <div className="font-bold text-amber-500 mb-2 border-b border-zinc-700 pb-1">Notes for {item.name}</div>
+                                        {item.notes}
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                  {/* Condition badge (collapsed preview) */}
+                                  {activeTab === 'supplies' && meta.conditionStatus && (
+                                    <span className={`text-[10px] font-black px-1.5 py-0 border rounded ${conditionConfig[meta.conditionStatus as keyof typeof conditionConfig]?.color || ''}`}>
+                                      {conditionConfig[meta.conditionStatus as keyof typeof conditionConfig]?.label}
                                     </span>
-                                  </>
-                                )}
+                                  )}
+                                  {activeTab === 'supplies' && (meta.companionItems?.length || 0) > 0 && (
+                                    <span className="text-[10px] text-violet-400 flex items-center gap-0.5"><Link2 className="h-3 w-3" />{meta.companionItems!.length}</span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-zinc-500 flex items-center gap-2">
+                                  <span>DB Qty: {item.quantity || 1}</span>
+                                  {((item as any).location || (item as any).containerLocation) && (
+                                    <>
+                                      <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
+                                      <span className={`truncate ${activeTab === 'supplies' ? 'text-blue-400/80' : 'text-amber-400/80'}`}>
+                                        {(item as any).location || 'No Location'}{(item as any).containerLocation ? ` / ${(item as any).containerLocation}` : ''}
+                                      </span>
+                                    </>
+                                  )}
+                                  {activeTab === 'supplies' && meta.lastUsedDate && (
+                                    <span className="text-zinc-600 flex items-center gap-0.5"><Calendar className="h-3 w-3" /> {meta.lastUsedDate}</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            {onEditItem && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-10 w-10 text-zinc-400 hover:text-white"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEditItem(item, activeTab === 'equipment' ? 'equipment' : 'supply');
-                                }}
-                                title="Edit Item"
+
+                            {/* Right: controls */}
+                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              {/* Checkbox toggle for supplies (clicking left area does expand; this does count-toggle) */}
+                              {activeTab === 'supplies' && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 text-xs font-bold ${isCounted ? 'text-blue-400' : 'text-zinc-500 hover:text-blue-400'}`}
+                                  onClick={() => updateCount(item.id, 0, !isCounted)}
+                                  title={isCounted ? 'Mark uncounted' : 'Mark counted'}
+                                >
+                                  {isCounted ? <CheckCircle className="h-4 w-4" /> : <div className="h-4 w-4 rounded-full border border-zinc-600" />}
+                                </Button>
+                              )}
+                              {onEditItem && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-10 w-10 text-zinc-400 hover:text-white"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditItem(item, activeTab === 'equipment' ? 'equipment' : 'supply');
+                                  }}
+                                  title="Edit Item"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 w-10 p-0 border-blue-500/30 text-blue-400"
+                                onClick={() => updateCount(item.id, -1, true)}
+                                disabled={counted === 0}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Minus className="h-5 w-5" />
                               </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400" 
-                              onClick={() => updateCount(item.id, -1, true)} 
-                              disabled={counted === 0}
-                            >
-                              <Minus className="h-5 w-5" />
-                            </Button>
-                            <div className="w-12 text-center">
-                              <div className="font-black text-2xl text-white">{isCounted ? counted : '-'}</div>
+                              <div className="w-12 text-center">
+                                <div className="font-black text-2xl text-white">{isCounted ? counted : '-'}</div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white"
+                                onClick={() => updateCount(item.id, 1, true)}
+                              >
+                                <Plus className="h-5 w-5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 w-10 p-0 border-orange-500/30 text-orange-400 bg-orange-500/10 hover:bg-orange-500 hover:text-white ml-1 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                onClick={() => {
+                                  if (activeTab === 'supplies') {
+                                    setSupplyAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                  } else {
+                                    setEquipAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
+                                  }
+                                }}
+                                title="Reset item"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              {/* Expand chevron for supplies only */}
+                              {activeTab === 'supplies' && (
+                                <button className="text-zinc-500 hover:text-zinc-300 ml-1" onClick={() => toggleExpand(item.id)}>
+                                  {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                                </button>
+                              )}
                             </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-10 w-10 p-0 border-blue-500/30 text-blue-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white" 
-                              onClick={() => updateCount(item.id, 1, true)}
-                            >
-                              <Plus className="h-5 w-5" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-10 w-10 p-0 border-orange-500/30 text-orange-400 bg-orange-500/10 hover:bg-orange-500 hover:text-white ml-2 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100" 
-                              onClick={() => {
-                                if (activeTab === 'supplies') {
-                                  setSupplyAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
-                                } else {
-                                  setEquipAudit(prev => { const n = {...prev}; delete n[item.id]; return n; });
-                                }
-                              }}
-                              title="Reset item"
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
                           </div>
+
+                          {/* Expand Card — Supplies only */}
+                          {activeTab === 'supplies' && isExpanded && (
+                            <div className="p-4 bg-zinc-950 border-t border-zinc-800 space-y-4">
+
+                              {/* Row 1: Condition / Wear Status */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-zinc-400 uppercase flex items-center gap-1.5">
+                                    <Heart className="h-3.5 w-3.5 text-rose-400" /> Condition / Wear Status
+                                  </Label>
+                                  <Select
+                                    value={meta.conditionStatus || ''}
+                                    onValueChange={v => updateSupplyMeta(item.id, { conditionStatus: (v || undefined) as SupplyItemMeta['conditionStatus'] })}
+                                  >
+                                    <SelectTrigger className={`bg-zinc-900 border-zinc-700 text-zinc-100 h-9 text-sm ${
+                                      meta.conditionStatus === 'new' ? 'border-emerald-500/40 text-emerald-400' :
+                                      meta.conditionStatus === 'good' ? 'border-blue-500/40 text-blue-400' :
+                                      meta.conditionStatus === 'worn' ? 'border-amber-500/40 text-amber-400' :
+                                      meta.conditionStatus === 'needs_replacement' ? 'border-red-500/40 text-red-400' : ''
+                                    }`}>
+                                      <SelectValue placeholder="Select condition..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                      <SelectItem value="new" className="text-emerald-400">New</SelectItem>
+                                      <SelectItem value="good" className="text-blue-400">Good</SelectItem>
+                                      <SelectItem value="worn" className="text-amber-400">Worn</SelectItem>
+                                      <SelectItem value="needs_replacement" className="text-red-400">Needs Replacement</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Row 1b: Last Used Date */}
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-zinc-400 uppercase flex items-center gap-1.5">
+                                    <Calendar className="h-3.5 w-3.5 text-blue-400" /> Last Used Date
+                                  </Label>
+                                  <Input
+                                    type="date"
+                                    value={meta.lastUsedDate || ''}
+                                    onChange={e => updateSupplyMeta(item.id, { lastUsedDate: e.target.value || undefined })}
+                                    className="bg-zinc-900 border-zinc-700 text-zinc-100 h-9 text-sm [color-scheme:dark]"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Condition Note */}
+                              {meta.conditionStatus && meta.conditionStatus !== 'new' && (
+                                <div className="space-y-2">
+                                  <Label className="text-xs text-zinc-400 uppercase">Condition Note (optional)</Label>
+                                  <Input
+                                    placeholder={`E.g. ${meta.conditionStatus === 'worn' ? 'pad edges fraying' : meta.conditionStatus === 'needs_replacement' ? 'torn, unusable' : 'minor wear'}`}
+                                    value={meta.conditionNote || ''}
+                                    onChange={e => updateSupplyMeta(item.id, { conditionNote: e.target.value || undefined })}
+                                    className="bg-zinc-900 border-zinc-700 text-zinc-100 h-9 text-sm"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Companion Items */}
+                              <div className="space-y-2 pt-2 border-t border-zinc-800">
+                                <Label className="text-xs text-zinc-400 uppercase flex items-center gap-1.5">
+                                  <Link2 className="h-3.5 w-3.5 text-violet-400" /> Compatible / Companion Items
+                                </Label>
+                                {/* Picker: select items to link */}
+                                <Select
+                                  value=""
+                                  onValueChange={v => {
+                                    if (!v) return;
+                                    const current = meta.companionItems || [];
+                                    if (!current.includes(v)) {
+                                      updateSupplyMeta(item.id, { companionItems: [...current, v] });
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="bg-zinc-900 border-zinc-700 text-zinc-500 h-9 text-sm">
+                                    <SelectValue placeholder="Link an item..." />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-zinc-900 border-zinc-800 max-h-60">
+                                    {companionPool
+                                      .filter(p => p.id !== item.id && !(meta.companionItems || []).includes(p.id))
+                                      .sort((a, b) => a.name.localeCompare(b.name))
+                                      .map(p => (
+                                        <SelectItem key={p.id} value={p.id} className="text-zinc-300">
+                                          {p.name} <span className="text-[10px] text-zinc-500 ml-1">({p.type})</span>
+                                        </SelectItem>
+                                      ))
+                                    }
+                                  </SelectContent>
+                                </Select>
+
+                                {/* Linked items display */}
+                                {(meta.companionItems || []).length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-1">
+                                    {(meta.companionItems || []).map(cid => {
+                                      const linked = companionPool.find(p => p.id === cid);
+                                      if (!linked) return null;
+                                      return (
+                                        <span key={cid} className="flex items-center gap-1 text-xs bg-violet-500/10 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full">
+                                          {linked.name}
+                                          <button
+                                            className="text-violet-500 hover:text-red-400 ml-0.5"
+                                            onClick={() => updateSupplyMeta(item.id, { companionItems: (meta.companionItems || []).filter(id => id !== cid) })}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                {/* Reverse-lookup: who links to this item */}
+                                {linkedByOthers.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-zinc-800/60">
+                                    <p className="text-[10px] text-zinc-600 uppercase font-bold mb-1">Also linked from:</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {linkedByOthers.map(s => (
+                                        <span key={s.id} className="text-xs bg-zinc-800 text-zinc-400 border border-zinc-700 px-2 py-0.5 rounded-full">
+                                          {s.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1763,6 +1976,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         {/* HISTORY VIEW */}
         {showHistory && !reviewMode && !viewingSnapshot && (
           <div className="flex-1 flex flex-col min-h-0">
+
             {/* Filters */}
             <div className="p-4 bg-zinc-900 border-b border-zinc-800 shrink-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">

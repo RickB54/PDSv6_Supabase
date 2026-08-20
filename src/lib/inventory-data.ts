@@ -98,6 +98,11 @@ export interface Material {
     location?: string;
     containerLocation?: string;
     hideFromIac?: boolean;
+    // Supply expand-card fields (stored in localStorage by item ID)
+    conditionStatus?: 'new' | 'good' | 'worn' | 'needs_replacement';
+    conditionNote?: string;
+    lastUsedDate?: string; // ISO date string YYYY-MM-DD
+    companionItems?: string[]; // array of inventory item IDs (Material or Chemical)
 }
 
 export interface Tool {

@@ -277,7 +277,25 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
   const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
   const DEFAULT_SECTIONS = ["Left Side", "Middle", "Right Side"];
-  const DEFAULT_LOCATIONS = ["Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet", "Detail Cart"];
+  const DEFAULT_LOCATIONS = [
+    // Bags & portable storage
+    "Detail Cart",
+    "Mobile Detail Bag",
+    "Small Extractor Bag",
+    "Medium Steamer/Drill Bag",
+    "Large Buffer Bag",
+    // Drawer towers
+    "D1", "D1-1", "D1-2", "D1-3", "D1-4",
+    "D2", "D2-1", "D2-2", "D2-3", "D2-4",
+    "D3", "D3-1", "D3-2", "D3-3", "D3-4",
+    "D4", "D4-1", "D4-2", "D4-3", "D4-4",
+    // Brown shelf (bottom-up: B1=bottom, B3=top enclosed, B-Top=flat surface)
+    "B1", "B2", "B3", "B-Top",
+    // Wall shelf above mixing bench
+    "Wall Shelf (Top)", "Wall Shelf (Bottom)",
+    // General shop locations (existing)
+    "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet",
+  ];
   const DEFAULT_CONTAINER_LOCATIONS: string[] = [];
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
