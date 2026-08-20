@@ -2684,7 +2684,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             </tr>
                         </thead>
                         <tbody>
-                            {businessHealthData.volumeTrend.map((v, i) => (
+                            {barData.map((v, i) => (
                                 <tr key={i} className="border-b border-zinc-100">
                                     <td className="p-2 text-zinc-800 text-xs font-bold">{v.name}</td>
                                     <td className="p-2 text-zinc-800 text-xs text-center font-bold">{v.bookings}</td>
