@@ -2281,7 +2281,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const handleVisualReport = async (type: 'pdf' | 'print', rangeName: string) => {
         if (rangeName === 'current') {
-            await executeVisualReport(type, undefined, undefined, true);
+            setPendingReportConfig({ type, start: undefined, end: undefined, preserveFilters: true });
+            setReportSelectionModalOpen(true);
             return;
         }
 
@@ -5947,7 +5948,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             onClick={() => {
                                 setCustomReportModalOpen(false);
                                 if (reportExportType) {
-                                    executeVisualReport(reportExportType, customReportDateFilter.start, customReportDateFilter.end);
+                                    setPendingReportConfig({ type: reportExportType, start: customReportDateFilter.start, end: customReportDateFilter.end, preserveFilters: false });
+                                    setReportSelectionModalOpen(true);
                                 }
                             }}
                         >
