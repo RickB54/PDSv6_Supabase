@@ -1276,15 +1276,30 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       size="sm" 
                       className="h-6 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 px-2" 
                       onClick={() => {
-                        if (Object.values(expandedItems).some(Boolean)) {
-                          setExpandedItems({});
+                        let hasExpandedInCurrentTab = false;
+                        if (activeTab === 'chemicals') {
+                          hasExpandedInCurrentTab = filteredChemicals.some(c => expandedItems[c.id]);
+                        } else if (activeTab === 'supplies') {
+                          hasExpandedInCurrentTab = filteredSupplies.some(s => expandedItems[s.id]);
                         } else {
-                          const allExpanded: Record<string, boolean> = {};
-                          if (activeTab === 'chemicals') filteredChemicals.forEach(c => allExpanded[c.id] = true);
-                          else if (activeTab === 'supplies') filteredSupplies.forEach(s => allExpanded[s.id] = true);
-                          else filteredEquip.forEach(e => allExpanded[e.id] = true);
-                          setExpandedItems(allExpanded);
+                          hasExpandedInCurrentTab = filteredEquip.some(e => expandedItems[e.id]);
                         }
+
+                        setExpandedItems(prev => {
+                          const next = { ...prev };
+                          if (hasExpandedInCurrentTab) {
+                            // Collapse all in current tab
+                            if (activeTab === 'chemicals') filteredChemicals.forEach(c => delete next[c.id]);
+                            else if (activeTab === 'supplies') filteredSupplies.forEach(s => delete next[s.id]);
+                            else filteredEquip.forEach(e => delete next[e.id]);
+                          } else {
+                            // Expand all in current tab
+                            if (activeTab === 'chemicals') filteredChemicals.forEach(c => next[c.id] = true);
+                            else if (activeTab === 'supplies') filteredSupplies.forEach(s => next[s.id] = true);
+                            else filteredEquip.forEach(e => next[e.id] = true);
+                          }
+                          return next;
+                        });
                       }}
                     >
                       <ArrowDownUp className="h-4 w-4" />
