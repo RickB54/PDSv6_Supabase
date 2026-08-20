@@ -499,8 +499,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       return true;
     });
   }, [equipment, equipAudit, search, hideCounted, filterLocations]);
-  const groupedNonChemicals = useMemo(() => {
-    const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
+  const groupItemsLogic = (items: any[]) => {
     const groups: Record<string, any[]> = {};
     const primarySort = sortBy[0] || 'location';
     
@@ -532,7 +531,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
 
     return sortedGroups;
-  }, [activeTab, filteredSupplies, filteredEquip, sortBy]);
+  };
+
+  const groupedSupplies = useMemo(() => groupItemsLogic(filteredSupplies), [filteredSupplies, sortBy]);
+  const groupedEquip = useMemo(() => groupItemsLogic(filteredEquip), [filteredEquip, sortBy]);
 
   const numCountedChems = filteredChemicals.filter(c => isChemCounted(c.id)).length;
   const numCountedSupplies = filteredSupplies.filter(s => supplyAudit[s.id]?.isCounted).length;
@@ -1834,7 +1836,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             ))}
 
               {/* Supplies & Equipment Generic Tally */}
-              {activeTab !== 'chemicals' && groupedNonChemicals.map(([loc, items]) => (
+              {activeTab !== 'chemicals' && (activeTab === 'supplies' ? groupedSupplies : groupedEquip).map(([loc, items]) => (
                 <div key={loc} className="mb-6">
                   <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
                     {loc} ({items.length})
@@ -2369,7 +2371,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </div>
           ))}
           
-          {activeTab !== 'chemicals' && groupedNonChemicals.map(([groupName, groupItems]) => (
+          {activeTab !== 'chemicals' && (activeTab === 'supplies' ? groupedSupplies : groupedEquip).map(([groupName, groupItems]) => (
             <div key={groupName} className="mb-8 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
               <h2 className="text-xl font-bold bg-gray-200 p-2 mb-4 border border-black">
                 {activeTab === 'supplies' ? 'Supplies' : 'Equipment'} - Location: {groupName}
