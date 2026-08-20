@@ -1289,7 +1289,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <ArrowDownUp className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-56 bg-zinc-950 border-zinc-800 text-zinc-300 max-h-[60vh] overflow-y-auto" align="end">
+                      <DropdownMenuContent className="w-56 bg-zinc-950 border-zinc-800 text-zinc-300 max-h-[60vh] overflow-y-auto z-[250]" align="end">
                         <div className="px-2 py-1.5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Expand / Collapse</div>
                         <DropdownMenuItem
                           className="flex items-center justify-between hover:bg-zinc-800 cursor-pointer text-xs font-semibold text-blue-400 focus:bg-zinc-800 focus:text-blue-300"
