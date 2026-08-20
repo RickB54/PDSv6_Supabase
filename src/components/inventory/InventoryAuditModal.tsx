@@ -437,34 +437,34 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     });
   };
 
-  const filteredChemicals = getFilteredItems(normalizedChemicals, chemAudit, isChemCounted).filter(c => {
-    if (filterTags.length > 0 && !filterTags.some(t => c.tags?.includes(t))) return false;
-    if (filterBrands.length > 0 && (!c.brand || !filterBrands.includes(c.brand))) return false;
-    if (filterShelves.length > 0 && (!c.shelf || !filterShelves.includes(c.shelf))) return false;
-    if (filterSections.length > 0 && (!c.section || !filterSections.includes(c.section))) return false;
-    if (filterSizes.length > 0 && (!c.bottleSize || !filterSizes.includes(c.bottleSize))) return false;
-    return true;
-  }).sort((a, b) => {
-    for (const field of sortBy) {
-      if (field === 'updated_at') {
-        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-        if (dateA !== dateB) return dateB - dateA; // Descending
-        continue;
+  const filteredChemicals = useMemo(() => {
+    return getFilteredItems(normalizedChemicals, chemAudit, isChemCounted).filter(c => {
+      if (filterTags.length > 0 && !filterTags.some(t => c.tags?.includes(t))) return false;
+      if (filterBrands.length > 0 && (!c.brand || !filterBrands.includes(c.brand))) return false;
+      if (filterShelves.length > 0 && (!c.shelf || !filterShelves.includes(c.shelf))) return false;
+      if (filterSections.length > 0 && (!c.section || !filterSections.includes(c.section))) return false;
+      if (filterSizes.length > 0 && (!c.bottleSize || !filterSizes.includes(c.bottleSize))) return false;
+      return true;
+    }).sort((a, b) => {
+      for (const field of sortBy) {
+        if (field === 'updated_at') {
+          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          if (dateA !== dateB) return dateB - dateA; // Descending
+          continue;
+        }
+        let valA = (a as any)[field] || '';
+        let valB = (b as any)[field] || '';
+        if (field === 'tags') {
+          valA = (a.tags || []).join(',');
+          valB = (b.tags || []).join(',');
+        }
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
       }
-      let valA = (a as any)[field] || '';
-      let valB = (b as any)[field] || '';
-      // tags is an array, let's join it for sorting
-      if (field === 'tags') {
-        valA = (a.tags || []).join(',');
-        valB = (b.tags || []).join(',');
-      }
-      if (valA < valB) return -1;
-      if (valA > valB) return 1;
-    }
-    // Fallback to name
-    return a.name.localeCompare(b.name);
-  });
+      return a.name.localeCompare(b.name);
+    });
+  }, [normalizedChemicals, chemAudit, search, hideCounted, filterTags, filterBrands, filterShelves, filterSections, filterSizes, sortBy]);
 
   const groupedChemicals = useMemo(() => {
     const groups: Record<string, typeof filteredChemicals> = {};
@@ -484,17 +484,21 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredChemicals, sortBy]);
 
-  const filteredSupplies = getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted).filter(s => {
-    if (s.hideFromIac) return false;
-    if (filterLocations.length > 0 && (!s.location || !filterLocations.includes(s.location))) return false;
-    return true;
-  });
-  const filteredEquip = getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted).filter(e => {
-    if (e.hideFromIac) return false;
-    if (filterLocations.length > 0 && (!e.location || !filterLocations.includes(e.location))) return false;
-    return true;
-  });
+  const filteredSupplies = useMemo(() => {
+    return getFilteredItems(supplies, supplyAudit, id => supplyAudit[id]?.isCounted).filter(s => {
+      if (s.hideFromIac) return false;
+      if (filterLocations.length > 0 && (!s.location || !filterLocations.includes(s.location))) return false;
+      return true;
+    });
+  }, [supplies, supplyAudit, search, hideCounted, filterLocations]);
 
+  const filteredEquip = useMemo(() => {
+    return getFilteredItems(equipment, equipAudit, id => equipAudit[id]?.isCounted).filter(e => {
+      if (e.hideFromIac) return false;
+      if (filterLocations.length > 0 && (!e.location || !filterLocations.includes(e.location))) return false;
+      return true;
+    });
+  }, [equipment, equipAudit, search, hideCounted, filterLocations]);
   const groupedNonChemicals = useMemo(() => {
     const items = activeTab === 'supplies' ? filteredSupplies : filteredEquip;
     const groups: Record<string, any[]> = {};
