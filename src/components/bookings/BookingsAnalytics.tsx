@@ -5436,8 +5436,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         "text-[10px] px-1.5 py-0 h-4 font-black",
                                                         review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                                                         review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                        review.sentiment === 'no_response' ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" :
                                                         "bg-red-500/10 text-red-400 border-red-500/20"
-                                                    )}>{review.sentiment.toUpperCase()}</Badge>
+                                                    )}>{review.sentiment.replace("_", " ").toUpperCase()}</Badge>
                                                 ) : (
                                                     <span className="text-[10px] text-zinc-600 italic">Pending</span>
                                                 )}
@@ -5489,9 +5490,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                             "text-[10px] h-5 px-2 font-black tracking-tighter",
                                                             review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                                                             review.sentiment === 'satisfied' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                        review.sentiment === 'no_response' ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" :
                                                             "bg-red-500/10 text-red-400 border-red-500/20"
                                                         )}>
-                                                            {review.sentiment.toUpperCase()}
+                                                            {review.sentiment.replace("_", " ").toUpperCase()}
                                                         </Badge>
                                                     ) : <span className="text-[10px] text-zinc-600 italic uppercase font-bold tracking-widest opacity-40">Pending Review</span>}
                                                 </TableCell>
