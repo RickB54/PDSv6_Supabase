@@ -31,6 +31,16 @@ interface InventoryAuditModalProps {
 
 type TabType = 'chemicals' | 'supplies' | 'equipment';
 
+const LOCATION_RANK_ORDER = [
+  "Detail Cart", "Mobile Detail Bag", "Small Extractor Bag", "Medium Steamer/Drill Bag", "Large Buffer Bag",
+  "D1", "D2", "D3", "D4",
+  "B-Top", "B3", "B2", "B1",
+  "Wall Shelf (Top)", "Wall Shelf (Bottom)",
+  "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet"
+];
+
+const SHELF_RANK_ORDER = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
+
 // Audit snapshot for save-progress / history
 interface AuditSnapshot {
   id: string;
@@ -482,7 +492,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       groups[key].push(c);
     });
     
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    return Object.entries(groups).sort(([a], [b]) => {
+      if (primarySort === 'shelfLocation') {
+        let rankA = SHELF_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
+        let rankB = SHELF_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
+        if (rankA === -1) rankA = 999;
+        if (rankB === -1) rankB = 999;
+        if (rankA !== rankB) return rankA - rankB;
+      }
+      return a.localeCompare(b);
+    });
   }, [filteredChemicals, sortBy]);
 
   const filteredSupplies = useMemo(() => {
@@ -517,7 +536,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       groups[loc].push(item);
     });
     
-    const sortedGroups = Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+    const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
+      if (primarySort === 'location') {
+        let rankA = LOCATION_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
+        let rankB = LOCATION_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
+        if (rankA === -1) rankA = 999;
+        if (rankB === -1) rankB = 999;
+        if (rankA !== rankB) return rankA - rankB;
+      }
+      return a.localeCompare(b);
+    });
     
     sortedGroups.forEach(([_, groupItems]) => {
       groupItems.sort((a, b) => {
@@ -1293,7 +1321,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <div className="px-2 py-1.5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Expand / Collapse</div>
                         <DropdownMenuItem
                           className="flex items-center justify-between hover:bg-zinc-800 cursor-pointer text-xs font-semibold text-blue-400 focus:bg-zinc-800 focus:text-blue-300"
-                          onClick={() => {
+                          onSelect={(e) => {
+                            e.preventDefault();
                             let hasExpandedInCurrentTab = false;
                             if (activeTab === 'chemicals') {
                               hasExpandedInCurrentTab = filteredChemicals.some(c => expandedItems[c.id]);
@@ -1333,22 +1362,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           return (
                             <DropdownMenuItem 
                               key={groupName}
-                              className="flex items-center justify-between hover:bg-zinc-800 cursor-pointer text-xs focus:bg-zinc-800 focus:text-white"
-                              onClick={(e) => {
+                              className={`flex items-center justify-between hover:bg-zinc-800 cursor-pointer text-xs focus:bg-zinc-800 focus:text-white ${isSomeExpanded ? 'bg-zinc-900' : ''}`}
+                              onSelect={(e) => {
                                  e.preventDefault();
+                                 const currentTabItems = activeTab === 'chemicals' ? filteredChemicals : activeTab === 'supplies' ? filteredSupplies : filteredEquip;
+
                                  setExpandedItems(prev => {
                                     const next = { ...prev };
-                                    if (isSomeExpanded) {
-                                      groupItems.forEach((item: any) => delete next[item.id]);
-                                    } else {
+                                    currentTabItems.forEach((item: any) => delete next[item.id]);
+                                    if (!isSomeExpanded) {
                                       groupItems.forEach((item: any) => next[item.id] = true);
                                     }
                                     return next;
                                  });
+                                 
+                                 if (!isSomeExpanded) {
+                                    setTimeout(() => {
+                                      const el = document.getElementById(`group-${groupName.replace(/\s+/g, '-')}`);
+                                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }, 100);
+                                 }
                               }}
                             >
-                              <span className="truncate pr-2">{groupName}</span>
-                              <span className="text-zinc-500 text-[10px] whitespace-nowrap">({groupItems.length})</span>
+                              <div className="flex items-center min-w-0 pr-2">
+                                <span className="truncate flex-1">{groupName}</span>
+                                {isSomeExpanded && <Check className="h-3.5 w-3.5 text-blue-400 ml-1.5 shrink-0" />}
+                              </div>
+                              <span className="text-zinc-500 text-[10px] whitespace-nowrap ml-2">({groupItems.length})</span>
                             </DropdownMenuItem>
                           );
                         })}
@@ -1619,11 +1659,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </div>
 
             <div className="flex-1 overflow-auto p-4 space-y-4 print:hidden">
-              {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => (
-                <div key={groupName} className="space-y-4">
+              {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => {
+                const isGroupExpanded = groupItems.some(c => expandedItems[c.id]);
+                return (
+                <div key={groupName} id={`group-${groupName.replace(/\s+/g, '-')}`} className="space-y-4">
                   {groupName !== 'All Chemicals' && (
-                    <h3 className="text-sm font-black text-purple-400 uppercase tracking-widest border-b border-purple-500/20 pb-1 mt-4">
-                      {groupName} ({groupItems.length})
+                    <h3 className={`text-sm font-black uppercase tracking-widest border-b pb-1 mt-4 flex items-center gap-2 ${isGroupExpanded ? 'text-purple-300 border-purple-400/50 bg-purple-500/10 px-2 pt-1 -mx-2 rounded-t' : 'text-purple-400/60 border-purple-500/20'}`}>
+                      {groupName} <span className="text-xs font-normal opacity-70">({groupItems.length})</span>
+                      {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
                     </h3>
                   )}
                   {groupItems.map(c => {
@@ -1876,16 +1919,23 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </div>
                 );
               })}
-              </div>
-            ))}
-
-              {/* Supplies & Equipment Generic Tally */}
-              {activeTab !== 'chemicals' && (activeTab === 'supplies' ? groupedSupplies : groupedEquip).map(([loc, items]) => (
-                <div key={loc} className="mb-6">
-                  <h3 className="text-sm font-black text-blue-400 uppercase tracking-widest border-b border-blue-500/20 pb-1 mt-4 mb-2">
-                    {loc} ({items.length})
-                  </h3>
-                  <div className="space-y-3">
+                </div>
+              );
+            })}
+            
+            {activeTab === 'chemicals' && filteredChemicals.length === 0 && (
+              <div className="p-8 text-center text-zinc-500 italic">No chemicals found.</div>
+            )}
+              
+              {activeTab !== 'chemicals' && (activeTab === 'supplies' ? groupedSupplies : groupedEquip).map(([loc, items]) => {
+                const isGroupExpanded = items.some((item: any) => expandedItems[item.id]);
+                return (
+                  <div key={loc} id={`group-${loc.replace(/\s+/g, '-')}`} className="mb-6">
+                    <h3 className={`text-sm font-black uppercase tracking-widest border-b pb-1 mt-4 mb-2 flex items-center gap-2 ${isGroupExpanded ? 'text-blue-300 border-blue-400/50 bg-blue-500/10 px-2 pt-1 -mx-2 rounded-t' : 'text-blue-400/60 border-blue-500/20'}`}>
+                      {loc} <span className="text-xs font-normal opacity-70">({items.length})</span>
+                      {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
+                    </h3>
+                    <div className="space-y-3">
                     {items.map((item: any) => {
                       const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
                       const updateCount = activeTab === 'supplies' ? updateSupplyCount : updateEquipCount;
@@ -2169,7 +2219,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     })}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : null}
