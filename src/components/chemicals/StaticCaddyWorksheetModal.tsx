@@ -160,7 +160,8 @@ export function StaticCaddyWorksheetModal({
         if (window.confirm("Are you sure you want to reset to the default seed data? All custom edits will be lost and overwritten in the database.")) {
             setIsLoading(true);
             try {
-                const { error } = await supabase
+                console.log("Attempting reset in Supabase...");
+                const { data: resetData, error } = await supabase
                     .from('static_caddy_worksheet')
                     .upsert({
                         id: 1,
@@ -168,9 +169,13 @@ export function StaticCaddyWorksheetModal({
                         exterior: DEFAULT_EXTERIOR,
                         show_extra_slots: false,
                         updated_at: new Date().toISOString()
-                    });
+                    }).select();
                 
-                if (error) throw error;
+                console.log("Reset response:", { resetData, error });
+                if (error) {
+                    console.error("Supabase Reset Error:", error);
+                    throw error;
+                }
 
                 setData(DEFAULT_DATA);
                 setShowExtraSlots(false);
