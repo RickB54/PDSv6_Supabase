@@ -505,6 +505,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
     
     if (url.startsWith('#')) {
       e.preventDefault();
+      e.stopPropagation();
       if (url === '#call-assistant') {
         window.dispatchEvent(new Event('open-call-assistant'));
       } else if (url === '#pre-vehicle-checklist') {

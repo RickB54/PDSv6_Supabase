@@ -254,6 +254,31 @@ export const chemicalDocsV3Topic: HelpTopic = {
   section: 'chemicals',
 };
 
+export const staticCaddyWorksheetTopic: HelpTopic = {
+  id: 'static-caddy-worksheet',
+  title: 'Static Caddy Worksheet',
+  summary: 'A standalone offline-capable printable worksheet for managing your detailing caddies.',
+  content: [
+    "**The Static Caddy Worksheet** is a specialized module designed specifically for printing a quick-reference guide of your interior and exterior detailing caddies.",
+    "",
+    "🧰 **1. Standalone Architecture**",
+    "This tool runs completely independent of your main inventory database. It uses local storage to maintain its state, meaning it is **100% offline-capable**. If your internet goes down or the main inventory is offline, you can still access and print your caddy setup.",
+    "",
+    "✏️ **2. Editing the Setup**",
+    "You can manually type the chemical name, dilution ratio, and purpose directly into the tables for both the Interior and Exterior caddies. These edits are saved automatically to your device.",
+    "",
+    "🔄 **3. Reset to Defaults**",
+    "If you want to restore the recommended factory default setup for both caddies, click the **Reset Defaults** button. This will overwrite any manual changes you have made.",
+    "",
+    "🖨️ **4. Single-Page Printing**",
+    "The PDF export engine has been strictly optimized to condense the headers and adjust column widths so that **both the Interior and Exterior caddies fit perfectly onto a single printed page**. This saves paper and makes it easy to laminate and hang in the shop.",
+    "",
+    "➕ **5. Extra Item Slots**",
+    "If you carry extra tools (like brushes or picks), use the **Show Extra Slots** toggle. This adds dedicated space for two extra unassigned slots per caddy, which will append neatly to the bottom of the printed PDF as compact notes without taking up too much room.",
+  ],
+  section: 'chemicals',
+};
+
 export const unifiedInventoryModalHelpTopic: HelpTopic = {
   id: 'chemical-inventory-modal',
   title: 'Chemical Inventory Modal',
@@ -787,6 +812,7 @@ export const adminMenuTopics: HelpTopic[] = [
   checklistToolsGuide,
   ricksTipsTopic,
   chemicalDocsV3Topic,
+  staticCaddyWorksheetTopic,
   contactMediaUploadTopic,
   mobileSetupTopic,
   chemicalAiTopic,

@@ -138,6 +138,7 @@ export default function SectionLanding() {
                                         if (item.url === '#quick-pay' || item.key === 'quick-pay') {
                                             window.dispatchEvent(new Event('open-quick-pay'));
                                         }
+                                        if (item.url === '#static-caddy') window.dispatchEvent(new Event('open-static-caddy'));
                                         if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
                                         if (item.url === '#help' || item.url === '#help-admin') {
                                             window.dispatchEvent(new CustomEvent('open-help', { detail: { role: item.url === '#help-admin' ? 'admin' : (isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')) } }));
