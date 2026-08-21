@@ -72,13 +72,18 @@ export function StaticCaddyWorksheetModal({
     const loadData = async () => {
         setIsLoading(true);
         try {
+            console.log("Attempting load from Supabase...");
             const { data: dbData, error } = await supabase
                 .from('static_caddy_worksheet')
                 .select('*')
                 .eq('id', 1)
                 .maybeSingle();
 
-            if (error) throw error;
+            console.log("Load response:", { dbData, error });
+            if (error) {
+                console.error("Supabase Load Error:", error);
+                throw error;
+            }
 
             if (dbData) {
                 const parsed = {
@@ -117,7 +122,8 @@ export function StaticCaddyWorksheetModal({
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            const { error } = await supabase
+            console.log("Attempting save to Supabase with data:", { interior: data.interior.length, exterior: data.exterior.length });
+            const { data: savedData, error } = await supabase
                 .from('static_caddy_worksheet')
                 .upsert({
                     id: 1,
@@ -125,9 +131,13 @@ export function StaticCaddyWorksheetModal({
                     exterior: data.exterior,
                     show_extra_slots: showExtraSlots,
                     updated_at: new Date().toISOString()
-                });
+                }).select();
 
-            if (error) throw error;
+            console.log("Save response:", { savedData, error });
+            if (error) {
+                console.error("Supabase Save Error:", error);
+                throw error;
+            }
 
             toast({
                 title: "Worksheet Saved",
