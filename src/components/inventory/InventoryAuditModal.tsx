@@ -36,10 +36,46 @@ const LOCATION_RANK_ORDER = [
   "D1", "D2", "D3", "D4",
   "B-Top", "B3", "B2", "B1",
   "Wall Shelf (Top)", "Wall Shelf (Bottom)",
-  "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet"
+  "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet", "Unassigned"
 ];
 
-const SHELF_RANK_ORDER = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
+const SHELF_RANK_ORDER = [
+  "Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"
+];
+
+const SECTION_RANK_ORDER = [
+  "Left Side", "Middle", "Right Side", "Unassigned"
+];
+
+const sortChemicalGroups = (a: string, b: string) => {
+  const [shelfA = 'Unassigned', sectionA = 'Unassigned'] = a.split(' / ').map(s => s.trim());
+  const [shelfB = 'Unassigned', sectionB = 'Unassigned'] = b.split(' / ').map(s => s.trim());
+  
+  let rankShelfA = SHELF_RANK_ORDER.indexOf(shelfA);
+  let rankShelfB = SHELF_RANK_ORDER.indexOf(shelfB);
+  if (rankShelfA === -1) rankShelfA = 999;
+  if (rankShelfB === -1) rankShelfB = 999;
+  
+  if (rankShelfA !== rankShelfB) return rankShelfA - rankShelfB;
+  
+  let rankSectionA = SECTION_RANK_ORDER.indexOf(sectionA);
+  let rankSectionB = SECTION_RANK_ORDER.indexOf(sectionB);
+  if (rankSectionA === -1) rankSectionA = 999;
+  if (rankSectionB === -1) rankSectionB = 999;
+  
+  if (rankSectionA !== rankSectionB) return rankSectionA - rankSectionB;
+  
+  return a.localeCompare(b);
+};
+
+const sortLocationGroups = (a: string, b: string) => {
+  let rankA = LOCATION_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
+  let rankB = LOCATION_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
+  if (rankA === -1) rankA = 999;
+  if (rankB === -1) rankB = 999;
+  if (rankA !== rankB) return rankA - rankB;
+  return a.localeCompare(b);
+};
 
 // Audit snapshot for save-progress / history
 interface AuditSnapshot {
@@ -494,11 +530,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     
     return Object.entries(groups).sort(([a], [b]) => {
       if (primarySort === 'shelfLocation') {
-        let rankA = SHELF_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
-        let rankB = SHELF_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
-        if (rankA === -1) rankA = 999;
-        if (rankB === -1) rankB = 999;
-        if (rankA !== rankB) return rankA - rankB;
+        return sortChemicalGroups(a, b);
       }
       return a.localeCompare(b);
     });
@@ -538,11 +570,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     
     const sortedGroups = Object.entries(groups).sort(([a], [b]) => {
       if (primarySort === 'location') {
-        let rankA = LOCATION_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
-        let rankB = LOCATION_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
-        if (rankA === -1) rankA = 999;
-        if (rankB === -1) rankB = 999;
-        if (rankA !== rankB) return rankA - rankB;
+        return sortLocationGroups(a, b);
       }
       return a.localeCompare(b);
     });
@@ -631,8 +659,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     }
 
     if (targetTab === 'chemicals') {
-      const shelfOrder = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"];
-      const sectionOrder = ["Left Side", "Middle", "Right Side", "Unassigned"];
+
 
       const pdfGroups: Record<string, Chemical[]> = {};
       
@@ -643,25 +670,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         : filteredChemicals;
 
       itemsToPrint.forEach(chem => {
-        const rawShelf = (chem as any).shelf;
-        const rawSection = (chem as any).section;
-        const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
-        const section = (typeof rawSection === 'string' && rawSection.trim()) ? rawSection.trim() : 'Unassigned';
-        const key = `${shelf} - ${section}`;
+        const key = chem.shelfLocation || 'Unassigned / Unassigned';
         if (!pdfGroups[key]) pdfGroups[key] = [];
         pdfGroups[key].push(chem as Chemical);
       });
 
-      // Sort groups logically by shelf then section
-      const sortedGroupKeys = Object.keys(pdfGroups).sort((a, b) => {
-        const [shelfA, sectionA] = a.split(' - ');
-        const [shelfB, sectionB] = b.split(' - ');
-        
-        const shelfDiff = shelfOrder.indexOf(shelfA) - shelfOrder.indexOf(shelfB);
-        if (shelfDiff !== 0) return shelfDiff;
-        
-        return sectionOrder.indexOf(sectionA) - sectionOrder.indexOf(sectionB);
-      });
+      // Sort groups logically by shelf then section using the single source of truth
+      const sortedGroupKeys = Object.keys(pdfGroups).sort(sortChemicalGroups);
 
       sortedGroupKeys.forEach(groupName => {
         const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
@@ -715,7 +730,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         pdfGroups[loc].push(item);
       });
 
-      const sortedLocs = Object.keys(pdfGroups).sort();
+      const sortedLocs = Object.keys(pdfGroups).sort(sortLocationGroups);
 
       sortedLocs.forEach(loc => {
         const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
@@ -798,7 +813,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         pdfGroups[loc].push(item);
       });
 
-      const sortedLocs = Object.keys(pdfGroups).sort();
+      const sortedLocs = Object.keys(pdfGroups).sort(sortLocationGroups);
       let totalItems = items.length;
       let totalCounted = 0;
 
