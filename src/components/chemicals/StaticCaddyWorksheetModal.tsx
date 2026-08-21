@@ -153,7 +153,7 @@ export function StaticCaddyWorksheetModal({
             columnStyles: {
                 0: { cellWidth: 20, halign: 'center' },
                 1: { cellWidth: 70 },
-                2: { cellWidth: 35 },
+                2: { cellWidth: 20, halign: 'center' },
                 3: { cellWidth: 'auto' }
             },
             styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
@@ -199,7 +199,7 @@ export function StaticCaddyWorksheetModal({
             columnStyles: {
                 0: { cellWidth: 20, halign: 'center' },
                 1: { cellWidth: 70 },
-                2: { cellWidth: 35 },
+                2: { cellWidth: 20, halign: 'center' },
                 3: { cellWidth: 'auto' }
             },
             styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
