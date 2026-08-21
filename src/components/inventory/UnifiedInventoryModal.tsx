@@ -1686,7 +1686,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 <SelectValue placeholder="Select size..." />
                               </SelectTrigger>
                               <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-[300px]">
-                                {availableSizes.map(sz => (
+                                {Array.from(new Set([...availableSizes, ...(size.bottleSize ? [size.bottleSize] : [])])).map(sz => (
                                   <SelectItem key={sz} value={sz}>{sz}</SelectItem>
                                 ))}
                                 <SelectItem value="custom" className="text-blue-400 font-medium">+ Add Custom</SelectItem>

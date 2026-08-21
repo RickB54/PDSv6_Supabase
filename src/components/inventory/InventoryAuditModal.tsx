@@ -669,12 +669,22 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
     let currentY = 35;
 
-    // Filter for caddies
-    const caddyChems = normalizedChemicals.filter(c => c.shelf?.toLowerCase().includes('caddy'));
+    // Filter for caddies (checking both shelf and section)
+    const caddyChems = normalizedChemicals.filter(c => 
+      (c.shelf || '').toLowerCase().includes('caddy') || 
+      (c.section || '').toLowerCase().includes('caddy')
+    );
 
     const caddies: Record<string, typeof caddyChems> = {};
     caddyChems.forEach(c => {
-      const shelf = c.shelf || 'Unknown Caddy';
+      let shelf = c.shelf || '';
+      if (!shelf.toLowerCase().includes('caddy')) {
+        const sec = (c.section || '').toLowerCase();
+        if (sec.includes('interior caddy')) shelf = 'Interior Caddy';
+        else if (sec.includes('exterior caddy')) shelf = 'Exterior Caddy';
+        else if (sec.includes('specialty caddy')) shelf = 'Specialty Caddy';
+        else shelf = 'Unknown Caddy';
+      }
       if (!caddies[shelf]) caddies[shelf] = [];
       caddies[shelf].push(c);
     });
@@ -1289,7 +1299,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <li><strong>Audit History:</strong> View past snapshots of your inventory, archive old audits, or permanently delete them (with confirmation).</li>
                           <li><strong className="text-zinc-300">PDF:</strong> Generates a printable PDF of your current live audit view and counts for a single tab. Includes a dedicated <strong>Size</strong> column for chemicals.</li>
                           <li><strong className="text-blue-300">Full IAC Report:</strong> Generates one combined PDF across all 3 categories (Chemicals, Supplies, Equipment) as separate sections, available from any tab.</li>
-                          <li><strong className="text-fuchsia-300">Caddy Report:</strong> Generates a specialized quick-reference sheet for Caddy locations. <strong>Tip:</strong> In the Edit Chemical modal, use the checkboxes next to each Dilution Ratio to select exactly which ratios print on this report.</li>
+                          <li><strong className="text-fuchsia-300">Caddy Report:</strong> Generates a specialized quick-reference sheet for Caddy locations. <strong>Requirements:</strong> The item must be assigned to an "Interior Caddy", "Exterior Caddy", or "Specialty Caddy" location (either in the Shelf or Section fields), AND specific Dilution Ratios must be toggled on using the checkboxes in the Edit Chemical modal.</li>
                           <li><strong className="text-purple-400">Review:</strong> When finishing an audit, use this button to review and commit your changes. (You can also save/print a verified record here).</li>
                         </ul>
                       </div>
