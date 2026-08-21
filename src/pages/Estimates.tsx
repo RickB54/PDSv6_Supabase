@@ -48,6 +48,7 @@ import { getCustomPackages } from "@/lib/servicesMeta";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { useCouponsStore } from "@/store/coupons";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 
 interface Estimate {
     id?: string;
@@ -209,6 +210,9 @@ const Estimates = () => {
 
     const [estimateDate, setEstimateDate] = useState(getLocalDateString());
     const [selectedPlaceOfService, setSelectedPlaceOfService] = useState<string>("To Be Confirmed");
+    const [destinationFee, setDestinationFee] = useState(0);
+    const [destinationMiles, setDestinationMiles] = useState(0);
+    const [editSentDate, setEditSentDate] = useState(new Date().toISOString());
     const [notes, setNotes] = useState("");
     const [isRefiningNotes, setIsRefiningNotes] = useState(false);
     
@@ -337,7 +341,7 @@ const Estimates = () => {
     }, [searchParams, customers, estimates]);
 
     const calculateTotal = () => {
-        const subtotal = services.reduce((sum, s) => sum + s.price, 0);
+        const subtotal = services.reduce((sum, s) => sum + s.price, 0) + destinationFee;
         return applyDiscount(subtotal, discount, discountType);
     };
 
@@ -396,7 +400,7 @@ const Estimates = () => {
                 customerId: selectedCustomer,
                 customerName: customer.name,
                 vehicle: vehicleStr,
-                services,
+                services: [...services, ...(destinationFee > 0 ? [{ name: `Destination Fee (${destinationMiles.toFixed(1)} miles)`, price: destinationFee }] : [])],
                 total: calculateTotal(),
                 date: estimateDate,
                 estimateDate: estimateDate,
@@ -410,7 +414,7 @@ const Estimates = () => {
                 placeOfService: selectedPlaceOfService,
                 notes: finalNotes,
                 isSent: editIsSent,
-                sentDate: editIsSent ? (isEditing ? estimates.find(e => e.id === editingEstimateId)?.sentDate || new Date().toISOString() : new Date().toISOString()) : undefined,
+                sentDate: editIsSent ? editSentDate : undefined,
                 created_at: isEditing ? estimates.find(e => e.id === editingEstimateId)?.created_at : new Date().toISOString(),
             };
 
@@ -461,8 +465,11 @@ const Estimates = () => {
             setDiscount(0);
             setNotes("");
             setEditIsSent(false);
+            setEditSentDate(new Date().toISOString());
             setEstimateDate(getLocalDateString());
             setSelectedPlaceOfService("To Be Confirmed");
+            setDestinationFee(0);
+            setDestinationMiles(0);
             setIsMenuMode(false);
             setCustomVehicleName("");
 
@@ -505,6 +512,7 @@ const Estimates = () => {
             .replace('[SHOW_CATEGORY_SUBTOTALS]\n', '').replace('[SHOW_CATEGORY_SUBTOTALS]', '');
         setNotes(cleanNotes);
         setEditIsSent(est.isSent || false);
+        setEditSentDate(est.sentDate || new Date().toISOString());
         setEstimateDate(toInputDateFormat(est.estimateDate || est.date));
         const resolvedPos = resolvePlaceOfService(est.placeOfService, customers.find(c => c.id === est.customerId)?.address, undefined, est.notes);
         setSelectedPlaceOfService(resolvedPos);
@@ -628,20 +636,20 @@ const Estimates = () => {
 
         const contentStartY = 45;
         doc.setFontSize(10);
-        const targetDateStr = estimate.estimateDate || estimate.date;
+        const targetDateStr = estimate.isSent && estimate.sentDate ? estimate.sentDate : null;
         
         // Left side header: Estimate Date & Quote Valid Until (bold labels, normal values)
         doc.setFont("helvetica", "bold");
         doc.text("Estimate Date:", 20, contentStartY);
         const estDateLabelWidth = doc.getTextWidth("Estimate Date:");
         doc.setFont("helvetica", "normal");
-        doc.text(` ${formatDisplayDate(targetDateStr)}`, 20 + estDateLabelWidth, contentStartY);
+        doc.text(` ${formatDisplayDate(estimate.estimateDate || estimate.date)}`, 20 + estDateLabelWidth, contentStartY);
 
         doc.setFont("helvetica", "bold");
         doc.text("Quote Valid Until:", 20, contentStartY + 6);
         const validUntilLabelWidth = doc.getTextWidth("Quote Valid Until:");
         doc.setFont("helvetica", "normal");
-        doc.text(` ${getValidUntilDate(targetDateStr)}`, 20 + validUntilLabelWidth, contentStartY + 6);
+        doc.text(` ${targetDateStr ? getValidUntilDate(targetDateStr) : "Pending Send"}`, 20 + validUntilLabelWidth, contentStartY + 6);
         
         // Right side header: Customer, Vehicle, Place of Service (bold labels, normal values, wrapped at 75mm)
         const posText = resolvePlaceOfService(
@@ -1251,12 +1259,17 @@ Precision. Protection. Perfection.`;
                                         const total = calculateTotal();
                                         return (
                                             <>
-                                                {subtotal !== total && (
-                                                    <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
-                                                        ${subtotal.toFixed(2)}
+                                                {destinationFee > 0 && (
+                                                    <div className="text-[10px] text-amber-500 font-bold uppercase mt-1 mb-0.5 text-right flex justify-end">
+                                                        + ${destinationFee} DESTINATION FEE
                                                     </div>
                                                 )}
-                                                <div className="text-emerald-400 font-bold text-xl drop-shadow-md">
+                                                {subtotal + destinationFee !== total && (
+                                                    <div className="text-zinc-500 font-bold text-sm line-through drop-shadow-md">
+                                                        ${(subtotal + destinationFee).toFixed(2)}
+                                                    </div>
+                                                )}
+                                                <div className="text-emerald-400 font-bold text-xl drop-shadow-md flex justify-end">
                                                     ${total.toFixed(2)}
                                                 </div>
                                                 {discount > 0 && (
@@ -1463,7 +1476,13 @@ Precision. Protection. Perfection.`;
                                 </div>
                                 <div>
                                     <Label className="text-zinc-400">Place of Service</Label>
-                                    <Select value={selectedPlaceOfService} onValueChange={(val) => setSelectedPlaceOfService(val)}>
+                                    <Select value={selectedPlaceOfService} onValueChange={(val) => {
+                                        setSelectedPlaceOfService(val);
+                                        if (val === "To Be Confirmed" || val === "At Shop – 54 Boston Street, Methuen MA 01844") {
+                                            setDestinationFee(0);
+                                            setDestinationMiles(0);
+                                        }
+                                    }}>
                                         <SelectTrigger className="bg-zinc-950 border-zinc-800 mt-1 text-white">
                                             <SelectValue placeholder="Select Place of Service" />
                                         </SelectTrigger>
@@ -1485,6 +1504,43 @@ Precision. Protection. Perfection.`;
                                             })()}
                                         </SelectContent>
                                     </Select>
+                                    {selectedPlaceOfService !== "To Be Confirmed" && selectedPlaceOfService !== "At Shop – 54 Boston Street, Methuen MA 01844" && (
+                                        <div className="mt-2">
+                                            <DestinationFeeInline 
+                                                address={selectedPlaceOfService === "On-Site (Customer Address)" ? "" : selectedPlaceOfService}
+                                                onFeeCalculated={(miles, fee) => {
+                                                    setDestinationMiles(miles);
+                                                    setDestinationFee(fee);
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div className="flex flex-col gap-2 p-3 border border-zinc-800/50 rounded-lg bg-zinc-950/30">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox 
+                                            id="editIsSent" 
+                                            checked={editIsSent} 
+                                            onCheckedChange={(checked) => setEditIsSent(checked === true)} 
+                                        />
+                                        <label htmlFor="editIsSent" className="text-sm font-medium text-emerald-400 leading-none cursor-pointer">
+                                            Mark as Sent to Customer
+                                        </label>
+                                    </div>
+                                    {editIsSent && (
+                                        <div className="mt-2">
+                                            <Label className="text-zinc-400 text-xs">Sent Date</Label>
+                                            <Input 
+                                                type="date"
+                                                value={toInputDateFormat(editSentDate)}
+                                                onChange={(e) => setEditSentDate(new Date(e.target.value).toISOString())}
+                                                className="bg-zinc-950 border-zinc-800 mt-1 h-8 text-white"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1693,15 +1749,7 @@ Precision. Protection. Perfection.`;
                                           </div>
                                       </div>
                                  </div>
-                                 <div>
-                                     <Label className="text-zinc-400">Estimate Date</Label>
-                                     <Input 
-                                         type="date" 
-                                         className="bg-zinc-950 border-zinc-800 mt-1"
-                                         value={estimateDate}
-                                         onChange={(e) => setEstimateDate(e.target.value)}
-                                     />
-                                 </div>
+
                              </div>
 
                              <div>
