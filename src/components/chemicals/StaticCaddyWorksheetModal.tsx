@@ -133,7 +133,7 @@ export function StaticCaddyWorksheetModal({
         let currentY = 35;
 
         // Interior Caddy
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setTextColor(147, 51, 234);
         doc.text("Interior Caddy", 14, currentY);
         
@@ -160,11 +160,10 @@ export function StaticCaddyWorksheetModal({
             alternateRowStyles: { fillColor: [249, 250, 251] },
         });
 
-        // Exterior Caddy on a new page
-        doc.addPage();
-        currentY = 20;
+        // Exterior Caddy on the same page
+        currentY = (doc as any).lastAutoTable.finalY + 12;
 
-        doc.setFontSize(14);
+        doc.setFontSize(13);
         doc.setTextColor(59, 130, 246);
         doc.text("Exterior Caddy", 14, currentY);
 
