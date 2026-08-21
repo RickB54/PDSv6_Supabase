@@ -703,12 +703,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         body: groupItems.map(c => {
           const slotNum = (c.section || '').replace(/[^0-9]/g, '') || c.section || 'N/A';
           // Use DilutionRatio info for Ratio and Purpose
-          let ratioStr = 'N/A';
-          let purposeStr = 'N/A';
+          let ratioStr = '';
+          let purposeStr = '';
           
           if (c.dilutionRatios && c.dilutionRatios.length > 0) {
-            ratioStr = c.dilutionRatios.map((d: any) => d.ratio || 'RTU').join('\n');
-            purposeStr = c.dilutionRatios.map((d: any) => d.notes || d.soil_level || d.method || 'General').join('\n');
+            const printableRatios = c.dilutionRatios.filter((d: any) => d.print_on_caddy_report);
+            if (printableRatios.length > 0) {
+              ratioStr = printableRatios.map((d: any) => d.ratio || 'RTU').join('\n');
+              purposeStr = printableRatios.map((d: any) => d.notes || d.soil_level || d.method || 'General').join('\n');
+            }
           }
 
           return [
