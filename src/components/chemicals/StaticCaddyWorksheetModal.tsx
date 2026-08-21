@@ -8,7 +8,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface CaddySlot {
-    slot: number;
+    slot: number | string;
     name: string;
     ratio: string;
     purpose: string;
@@ -27,7 +27,9 @@ const DEFAULT_INTERIOR: CaddySlot[] = [
     { slot: 5, name: "P&S Xpress", ratio: "3:1", purpose: "Light Satin Finish" },
     { slot: 6, name: "P&S Xpress", ratio: "1:1", purpose: "Strong Satin Finish" },
     { slot: 7, name: "Terminator", ratio: "RTU", purpose: "Odors & Stains" },
-    { slot: 8, name: "Dirt Buster", ratio: "10:1", purpose: "General Interior Cleaner" }
+    { slot: 8, name: "Dirt Buster", ratio: "10:1", purpose: "General Interior Cleaner" },
+    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
 ];
 
 const DEFAULT_EXTERIOR: CaddySlot[] = [
@@ -38,7 +40,9 @@ const DEFAULT_EXTERIOR: CaddySlot[] = [
     { slot: 5, name: "Aqua Gloss", ratio: "4:1", purpose: "Standard Tire Dressing" },
     { slot: 6, name: "Meguiar's APC", ratio: "4:1", purpose: "Heavy Degreaser (Engine Bay)" },
     { slot: 7, name: "Dirt Buster", ratio: "7:1", purpose: "Exterior General Cleaner" },
-    { slot: 8, name: "Cover All", ratio: "RTU", purpose: "Tire Dressing (Aerosol)" }
+    { slot: 8, name: "Cover All", ratio: "RTU", purpose: "Tire Dressing (Aerosol)" },
+    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
 ];
 
 const DEFAULT_DATA: CaddyData = {
@@ -55,13 +59,28 @@ export function StaticCaddyWorksheetModal({
 }) {
     const [data, setData] = useState<CaddyData>(DEFAULT_DATA);
     const [isSaving, setIsSaving] = useState(false);
+    const [showExtraSlots, setShowExtraSlots] = useState(false);
 
     useEffect(() => {
         if (open) {
             const saved = localStorage.getItem('static-caddy-worksheet-data');
             if (saved) {
                 try {
-                    setData(JSON.parse(saved));
+                    const parsed = JSON.parse(saved);
+                    // Legacy migration: if they have 8 slots, add the 2 extra blanks
+                    if (parsed.interior.length === 8) {
+                        parsed.interior.push(
+                            { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+                            { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                        );
+                    }
+                    if (parsed.exterior.length === 8) {
+                        parsed.exterior.push(
+                            { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+                            { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                        );
+                    }
+                    setData(parsed);
                 } catch (e) {
                     console.error("Failed to parse saved caddy worksheet data:", e);
                     setData(DEFAULT_DATA);
@@ -114,11 +133,16 @@ export function StaticCaddyWorksheetModal({
         let currentY = 35;
 
         // Interior Caddy
+        doc.setFontSize(14);
+        doc.setTextColor(147, 51, 234);
+        doc.text("Interior Caddy", 14, currentY);
+        
+        const interiorDataToPrint = showExtraSlots ? data.interior : data.interior.slice(0, 8);
+
         autoTable(doc, {
-            startY: currentY,
-            head: [['Interior Caddy', 'Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
-            body: data.interior.map(item => [
-                '',
+            startY: currentY + 5,
+            head: [['Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
+            body: interiorDataToPrint.map(item => [
                 item.slot.toString(),
                 item.name,
                 item.ratio,
@@ -127,24 +151,29 @@ export function StaticCaddyWorksheetModal({
             theme: 'grid',
             headStyles: { fillColor: [147, 51, 234], textColor: [255, 255, 255], fontStyle: 'bold' },
             columnStyles: {
-                0: { cellWidth: 2 }, // hide column effectively
-                1: { cellWidth: 15, halign: 'center' },
-                2: { cellWidth: 60 },
-                3: { cellWidth: 35 },
-                4: { cellWidth: 'auto' }
+                0: { cellWidth: 20, halign: 'center' },
+                1: { cellWidth: 70 },
+                2: { cellWidth: 35 },
+                3: { cellWidth: 'auto' }
             },
             styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
             alternateRowStyles: { fillColor: [249, 250, 251] },
         });
 
-        currentY = (doc as any).lastAutoTable.finalY + 15;
+        // Exterior Caddy on a new page
+        doc.addPage();
+        currentY = 20;
 
-        // Exterior Caddy
+        doc.setFontSize(14);
+        doc.setTextColor(59, 130, 246);
+        doc.text("Exterior Caddy", 14, currentY);
+
+        const exteriorDataToPrint = showExtraSlots ? data.exterior : data.exterior.slice(0, 8);
+
         autoTable(doc, {
-            startY: currentY,
-            head: [['Exterior Caddy', 'Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
-            body: data.exterior.map(item => [
-                '',
+            startY: currentY + 5,
+            head: [['Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
+            body: exteriorDataToPrint.map(item => [
                 item.slot.toString(),
                 item.name,
                 item.ratio,
@@ -153,11 +182,10 @@ export function StaticCaddyWorksheetModal({
             theme: 'grid',
             headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
             columnStyles: {
-                0: { cellWidth: 2 },
-                1: { cellWidth: 15, halign: 'center' },
-                2: { cellWidth: 60 },
-                3: { cellWidth: 35 },
-                4: { cellWidth: 'auto' }
+                0: { cellWidth: 20, halign: 'center' },
+                1: { cellWidth: 70 },
+                2: { cellWidth: 35 },
+                3: { cellWidth: 'auto' }
             },
             styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
             alternateRowStyles: { fillColor: [249, 250, 251] },
@@ -180,7 +208,7 @@ export function StaticCaddyWorksheetModal({
     };
 
     const renderTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
-        const items = data[caddy];
+        const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2`}>
@@ -246,6 +274,13 @@ export function StaticCaddyWorksheetModal({
                             </p>
                         </div>
                         <div className="flex gap-2 shrink-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowExtraSlots(!showExtraSlots)}
+                                className={`h-9 px-3 border-zinc-700 ${showExtraSlots ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+                            >
+                                {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
+                            </Button>
                             <Button
                                 variant="outline"
                                 onClick={handleReset}
