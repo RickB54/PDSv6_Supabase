@@ -2536,8 +2536,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             </div>
           </div>
         )}
-        <DialogFooter className="p-3 sm:p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex flex-row flex-wrap items-center justify-between gap-y-3 gap-x-2 print:hidden w-full !space-x-0">
-          <div className="flex flex-wrap gap-2">
+        <DialogFooter className="p-3 sm:p-4 border-t border-purple-500/20 bg-zinc-900 shrink-0 flex flex-row items-center justify-between gap-2 print:hidden w-full overflow-x-auto scrollbar-none !space-x-0">
+          <div className="flex gap-2">
             <Button 
               variant="outline" 
               className="border-cyan-500/40 text-cyan-400 bg-cyan-950/30 hover:bg-cyan-900/50 hover:text-cyan-300 px-3 sm:px-4" 
@@ -2550,7 +2550,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               <>
                 <Button
                   variant="outline"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center"
+                  className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-none justify-center"
                   onClick={() => handleExportPDF(viewingSnapshot || undefined)}
                   title="Save PDF"
                 >
@@ -2558,7 +2558,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 </Button>
                 <Button
                   variant="outline"
-                  className="border-blue-500/50 bg-blue-900/20 text-blue-300 hover:bg-blue-800/40 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+                  className="border-blue-500/50 bg-blue-900/20 text-blue-300 hover:bg-blue-800/40 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1.5"
                   onClick={() => handleExportFullReport(viewingSnapshot || undefined)}
                   title="Export Combined PDF Report"
                 >
@@ -2568,7 +2568,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 {activeTab === 'chemicals' && (
                   <Button
                     variant="outline"
-                    className="border-fuchsia-500/50 bg-fuchsia-900/20 text-fuchsia-300 hover:bg-fuchsia-800/40 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+                    className="border-fuchsia-500/50 bg-fuchsia-900/20 text-fuchsia-300 hover:bg-fuchsia-800/40 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1.5"
                     onClick={() => exportCaddyReport()}
                     title="Export Caddies PDF"
                   >
@@ -2580,26 +2580,25 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             )}
           </div>
           
-          <div className="flex flex-wrap gap-2 ml-auto">
+          <div className="flex gap-2 ml-auto">
             {!showHistory && !viewingSnapshot && !reviewMode && (
               <Button
                 variant="outline"
-                className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+                className="border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500 hover:text-white w-9 sm:w-10 px-0 flex-none justify-center"
                 onClick={handleSaveProgress}
+                title="Save Progress"
               >
                 <Save className="h-4 w-4" /> 
-                <span className="hidden sm:inline">Save Progress</span>
-                <span className="sm:hidden">Save</span>
               </Button>
             )}
 
             {!showHistory && !viewingSnapshot && (
               !reviewMode ? (
                 <Button 
-                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 sm:px-4 flex-1 sm:flex-none justify-center whitespace-nowrap" 
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 sm:px-4 flex-none justify-center whitespace-nowrap" 
                   onClick={() => setReviewMode(true)}
                 >
-                  Review Changes
+                  Review
                 </Button>
               ) : (
                 <Button 
