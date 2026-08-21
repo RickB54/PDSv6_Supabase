@@ -42,7 +42,8 @@ import {
     Globe,
     Truck,
     GraduationCap,
-    UserCircle
+    UserCircle,
+    Briefcase
 } from "lucide-react";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { getCurrentUser } from "@/lib/auth";
@@ -206,6 +207,11 @@ const renderSidebarContent = (
                 <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dilution-calculator')} title="Dilution Calculator" className={collapsed ? "" : "w-full justify-start gap-2"}>
                     <Beaker className="w-5 h-5 text-green-400" />
                     {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Calc</span>}
+                </Button>
+
+                <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.dispatchEvent(new Event('open-static-caddy'))} title="Static Caddy Worksheet" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <Briefcase className="w-5 h-5 text-indigo-400" />
+                    {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase truncate">Static Caddy</span>}
                 </Button>
 
                 <div className="w-[70%] h-[1px] bg-zinc-600/80 self-center shrink-0" style={{ margin: '-2.5px 0' }} />
@@ -453,6 +459,11 @@ const renderSidebarContent = (
             <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => navigate('/dilution-calculator')} title="Dilution Calculator" className={collapsed ? "" : "w-full justify-start gap-2"}>
                 <Beaker className="w-5 h-5 text-green-400" />
                 {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Calc</span>}
+            </Button>
+
+            <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => window.dispatchEvent(new Event('open-static-caddy'))} title="Static Caddy Worksheet" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                <Briefcase className="w-5 h-5 text-indigo-400" />
+                {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Static Caddy</span>}
             </Button>
         </>
     );

@@ -513,6 +513,8 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
         window.dispatchEvent(new Event('open-quick-pay'));
       } else if (url === '#notify-admin') {
         window.dispatchEvent(new Event('open-notify-admin'));
+      } else if (url === '#static-caddy') {
+        window.dispatchEvent(new Event('open-static-caddy'));
       } else if (url.startsWith('#help')) {
         const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
         window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));

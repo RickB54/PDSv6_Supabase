@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
 import { PreVehicleChecklistModal } from "@/components/modals/PreVehicleChecklistModal";
+import { StaticCaddyWorksheetModal } from "@/components/chemicals/StaticCaddyWorksheetModal";
 
 export const GlobalModals: React.FC = () => {
     const [noteOpen, setNoteOpen] = useState(false);
@@ -18,6 +19,7 @@ export const GlobalModals: React.FC = () => {
     const [ricksTipsOpen, setRicksTipsOpen] = useState(false);
     const [showPreVehicle, setShowPreVehicle] = useState(false);
     const [ricksTipsTab, setRicksTipsTab] = useState<'package' | 'description' | 'prep'>('package');
+    const [staticCaddyOpen, setStaticCaddyOpen] = useState(false);
 
     // Note State
     const [noteTitle, setNoteTitle] = useState('');
@@ -49,17 +51,20 @@ export const GlobalModals: React.FC = () => {
             setRicksTipsOpen(true);
         };
         const handlePreVehicle = () => setShowPreVehicle(true);
+        const handleStaticCaddy = () => setStaticCaddyOpen(true);
 
         window.addEventListener('open-quick-note', handleNote);
         window.addEventListener('open-quick-task', handleTask);
         window.addEventListener('open-ricks-tips', handleRicksTips);
         window.addEventListener('open-pre-vehicle-checklist', handlePreVehicle);
+        window.addEventListener('open-static-caddy', handleStaticCaddy);
 
         return () => {
             window.removeEventListener('open-quick-note', handleNote);
             window.removeEventListener('open-quick-task', handleTask);
             window.removeEventListener('open-ricks-tips', handleRicksTips);
             window.removeEventListener('open-pre-vehicle-checklist', handlePreVehicle);
+            window.removeEventListener('open-static-caddy', handleStaticCaddy);
         };
     }, []);
 
@@ -195,6 +200,7 @@ export const GlobalModals: React.FC = () => {
 
             <CustomerCommunicationGuide showTrigger={false} />
             <PreVehicleChecklistModal open={showPreVehicle} onOpenChange={setShowPreVehicle} />
+            <StaticCaddyWorksheetModal open={staticCaddyOpen} onOpenChange={setStaticCaddyOpen} />
         </>
     );
 };

@@ -32,7 +32,8 @@ import {
     FlaskConical,
     Zap,
     Mail,
-    Target
+    Target,
+    Briefcase
 } from "lucide-react";
 
 export type MenuItem = {
@@ -145,6 +146,7 @@ export const getMenuGroups = (counts: {
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker, helpTopicId: 'chemical-workflow' },
                 { title: "Rick's Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-tips' },
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc-chem", icon: Calculator, helpTopicId: 'dilution-calc' },
+                { title: "Static Caddy Worksheet", url: "#static-caddy", key: "static-caddy", icon: Briefcase, helpTopicId: 'chemical-cards' },
                 { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
             ]
         },

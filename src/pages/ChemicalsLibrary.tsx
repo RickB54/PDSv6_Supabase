@@ -22,7 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CHEMICAL_LIBRARY } from "@/lib/demoMockData";
 import RicksTipsModal from "@/components/chemicals/RicksTipsModal";
-import { StaticCaddyWorksheetModal } from "@/components/chemicals/StaticCaddyWorksheetModal";
 
 export default function ChemicalsLibrary() {
     const navigate = useNavigate();
@@ -39,7 +38,6 @@ export default function ChemicalsLibrary() {
     const [editingChemical, setEditingChemical] = useState<Partial<Chemical> | null>(null);
     const [sort, setSort] = useState<string>("brand");
     const [showRicksTips, setShowRicksTips] = useState(false);
-    const [staticCaddyOpen, setStaticCaddyOpen] = useState(false);
 
     const [isAdmin, setIsAdmin] = useState(false);
     const [isCleaning, setIsCleaning] = useState(false);
@@ -257,7 +255,7 @@ export default function ChemicalsLibrary() {
                             </Button>
                             <Button 
                                 variant="outline" 
-                                onClick={() => setStaticCaddyOpen(true)} 
+                                onClick={() => window.dispatchEvent(new Event('open-static-caddy'))} 
                                 className="flex-1 min-w-[90px] h-9 px-2 sm:px-3 sm:h-10 border-fuchsia-500/30 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 text-fuchsia-400 font-bold text-[11px] sm:text-xs"
                             >
                                 <Sparkles className="w-3.5 h-3.5 mr-1 sm:mr-2 shrink-0" /> <span className="truncate">Static Caddy</span>
@@ -481,11 +479,6 @@ export default function ChemicalsLibrary() {
                     )}
                 </DialogContent>
             </Dialog>
-
-            <StaticCaddyWorksheetModal 
-                open={staticCaddyOpen}
-                onOpenChange={setStaticCaddyOpen}
-            />
         </div>
     );
 }
