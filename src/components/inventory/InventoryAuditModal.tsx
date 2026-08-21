@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,6 +76,47 @@ const sortLocationGroups = (a: string, b: string) => {
   if (rankA !== rankB) return rankA - rankB;
   return a.localeCompare(b);
 };
+
+function LazyItemList<T>({ items, renderItem, batchSize = 15 }: { items: T[], renderItem: (item: T) => React.ReactNode, batchSize?: number }) {
+  const [visibleCount, setVisibleCount] = useState(batchSize);
+  const observerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setVisibleCount(batchSize);
+  }, [items, batchSize]);
+
+  useEffect(() => {
+    if (visibleCount >= items.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          requestAnimationFrame(() => {
+            setVisibleCount(prev => Math.min(prev + batchSize, items.length));
+          });
+        }
+      },
+      { rootMargin: '400px' }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [visibleCount, items.length, batchSize]);
+
+  return (
+    <>
+      {items.slice(0, visibleCount).map(renderItem)}
+      {visibleCount < items.length && (
+        <div ref={observerRef} className="h-10 flex items-center justify-center opacity-50 py-4">
+           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping" />
+        </div>
+      )}
+    </>
+  );
+}
 
 // Audit snapshot for save-progress / history
 interface AuditSnapshot {
@@ -1684,7 +1725,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
                     </h3>
                   )}
-                  {groupItems.map(c => {
+                  <LazyItemList items={groupItems} renderItem={(c: any) => {
                     const s = getChemState(c.id);
                     const isCounted = isChemCounted(c.id);
                     const isExpanded = expandedItems[c.id];
@@ -1933,7 +1974,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                     )}
                   </div>
                 );
-              })}
+              }} />
                 </div>
               );
             })}
@@ -1951,7 +1992,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
                     </h3>
                     <div className="space-y-3">
-                    {items.map((item: any) => {
+                    <LazyItemList items={items} renderItem={(item: any) => {
                       const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
                       const updateCount = activeTab === 'supplies' ? updateSupplyCount : updateEquipCount;
                       const state = auditMap[item.id] || { counted: 0, isCounted: false };
@@ -2231,7 +2272,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           )}
                         </div>
                       );
-                    })}
+                    }} />
                   </div>
                 </div>
                 );
