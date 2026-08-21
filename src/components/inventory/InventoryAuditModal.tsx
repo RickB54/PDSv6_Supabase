@@ -296,6 +296,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   // Expanded items in accordion
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  // Collapsed sections (groups)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const toggleSectionCollapse = (sectionName: string) => {
+    setCollapsedSections(prev => ({ ...prev, [sectionName]: !prev[sectionName] }));
+  };
+
   // Supply item metadata (condition, last used, companions)
   const [supplyMeta, setSupplyMeta] = useState<Record<string, SupplyItemMeta>>(loadSupplyMeta);
 
@@ -1717,15 +1723,22 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             <div className="flex-1 overflow-auto p-4 space-y-4 print:hidden">
               {activeTab === 'chemicals' && groupedChemicals.map(([groupName, groupItems]) => {
                 const isGroupExpanded = groupItems.some(c => expandedItems[c.id]);
+                const isSectionCollapsed = !!collapsedSections[groupName];
                 return (
                 <div key={groupName} id={`group-${groupName.replace(/\s+/g, '-')}`} className="space-y-4">
                   {groupName !== 'All Chemicals' && (
                     <h3 className={`text-sm font-black uppercase tracking-widest border-b pb-1 mt-4 flex items-center gap-2 ${isGroupExpanded ? 'text-purple-300 border-purple-400/50 bg-purple-500/10 px-2 pt-1 -mx-2 rounded-t' : 'text-purple-400/60 border-purple-500/20'}`}>
                       {groupName} <span className="text-xs font-normal opacity-70">({groupItems.length})</span>
-                      {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
+                      <div className="ml-auto flex items-center gap-2">
+                        {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 opacity-70" />}
+                        <button onClick={() => toggleSectionCollapse(groupName)} className="flex items-center justify-center h-6 w-6 rounded hover:bg-purple-500/20 text-purple-400/70 hover:text-purple-300 transition-colors">
+                          {isSectionCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </h3>
                   )}
-                  <LazyItemList items={groupItems} renderItem={(c: any) => {
+                  {!isSectionCollapsed && (
+                    <LazyItemList items={groupItems} renderItem={(c: any) => {
                     const s = getChemState(c.id);
                     const isCounted = isChemCounted(c.id);
                     const isExpanded = expandedItems[c.id];
@@ -1975,6 +1988,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   </div>
                 );
               }} />
+                  )}
                 </div>
               );
             })}
@@ -1985,14 +1999,21 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               
               {activeTab !== 'chemicals' && (activeTab === 'supplies' ? groupedSupplies : groupedEquip).map(([loc, items]) => {
                 const isGroupExpanded = items.some((item: any) => expandedItems[item.id]);
+                const isSectionCollapsed = !!collapsedSections[loc];
                 return (
                   <div key={loc} id={`group-${loc.replace(/\s+/g, '-')}`} className="mb-6">
                     <h3 className={`text-sm font-black uppercase tracking-widest border-b pb-1 mt-4 mb-2 flex items-center gap-2 ${isGroupExpanded ? 'text-blue-300 border-blue-400/50 bg-blue-500/10 px-2 pt-1 -mx-2 rounded-t' : 'text-blue-400/60 border-blue-500/20'}`}>
                       {loc} <span className="text-xs font-normal opacity-70">({items.length})</span>
-                      {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 ml-auto opacity-70" />}
+                      <div className="ml-auto flex items-center gap-2">
+                        {isGroupExpanded && <CheckCircle className="h-3.5 w-3.5 opacity-70" />}
+                        <button onClick={() => toggleSectionCollapse(loc)} className="flex items-center justify-center h-6 w-6 rounded hover:bg-blue-500/20 text-blue-400/70 hover:text-blue-300 transition-colors">
+                          {isSectionCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </h3>
-                    <div className="space-y-3">
-                    <LazyItemList items={items} renderItem={(item: any) => {
+                    {!isSectionCollapsed && (
+                      <div className="space-y-3">
+                      <LazyItemList items={items} renderItem={(item: any) => {
                       const auditMap = activeTab === 'supplies' ? supplyAudit : equipAudit;
                       const updateCount = activeTab === 'supplies' ? updateSupplyCount : updateEquipCount;
                       const state = auditMap[item.id] || { counted: 0, isCounted: false };
@@ -2274,6 +2295,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       );
                     }} />
                   </div>
+                  )}
                 </div>
                 );
               })}
