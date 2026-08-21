@@ -40,7 +40,7 @@ const LOCATION_RANK_ORDER = [
 ];
 
 const SHELF_RANK_ORDER = [
-  "Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Unassigned"
+  "Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy", "Unassigned"
 ];
 
 const SECTION_RANK_ORDER = [
@@ -215,11 +215,15 @@ const normalizeSize = (size?: string) => {
 export default function InventoryAuditModal({ open, onOpenChange, chemicals, supplies, equipment, onRefresh, onEditItem }: InventoryAuditModalProps) {
   const { toast } = useToast();
   
-  const normalizedChemicals = useMemo(() => chemicals.filter(c => !c.hideFromIac).map(c => ({
-    ...c,
-    shelfLocation: c.shelfLocation || ((c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined),
-    bottleSize: normalizeSize(c.bottleSize)
-  })), [chemicals]);
+  const normalizedChemicals = useMemo(() => chemicals.filter(c => !c.hideFromIac).map(c => {
+    const isCaddy = (c.shelf || '').toLowerCase().includes('caddy');
+    const defaultShelfLoc = (c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined;
+    return {
+      ...c,
+      shelfLocation: c.shelfLocation || (isCaddy ? c.shelf : defaultShelfLoc),
+      bottleSize: normalizeSize(c.bottleSize)
+    };
+  }), [chemicals]);
 
   const [activeTab, setActiveTab] = useState<TabType>('chemicals');
   const [search, setSearch] = useState('');
@@ -656,6 +660,89 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Array.from(locs).sort();
   }, [supplies, equipment]);
 
+  const exportCaddyReport = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Caddy Quick-Reference Report", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 22);
+
+    let currentY = 35;
+
+    // Filter for caddies
+    const caddyChems = normalizedChemicals.filter(c => c.shelf?.toLowerCase().includes('caddy'));
+
+    const caddies: Record<string, typeof caddyChems> = {};
+    caddyChems.forEach(c => {
+      const shelf = c.shelf || 'Unknown Caddy';
+      if (!caddies[shelf]) caddies[shelf] = [];
+      caddies[shelf].push(c);
+    });
+
+    const sortedCaddies = Object.keys(caddies).sort();
+
+    sortedCaddies.forEach(caddyName => {
+      const groupItems = caddies[caddyName].sort((a, b) => {
+        // extract slot number if possible
+        const slotA = parseInt((a.section || '').replace(/[^0-9]/g, '')) || 999;
+        const slotB = parseInt((b.section || '').replace(/[^0-9]/g, '')) || 999;
+        if (slotA !== slotB) return slotA - slotB;
+        return a.name.localeCompare(b.name);
+      });
+
+      if (groupItems.length === 0) return;
+
+      if (currentY > 260) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [[caddyName, 'Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
+        body: groupItems.map(c => {
+          const slotNum = (c.section || '').replace(/[^0-9]/g, '') || c.section || 'N/A';
+          // Use DilutionRatio info for Ratio and Purpose
+          let ratioStr = 'N/A';
+          let purposeStr = 'N/A';
+          
+          if (c.dilutionRatios && c.dilutionRatios.length > 0) {
+            ratioStr = c.dilutionRatios.map((d: any) => d.ratio || 'RTU').join('\n');
+            purposeStr = c.dilutionRatios.map((d: any) => d.notes || d.soil_level || d.method || 'General').join('\n');
+          }
+
+          return [
+            '', // Group column empty since it's in the header
+            slotNum,
+            `${c.brand ? c.brand + ' / ' : ''}${c.name}`,
+            ratioStr,
+            purposeStr
+          ];
+        }),
+        theme: 'grid',
+        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+        styles: { textColor: [0, 0, 0] },
+        columnStyles: {
+          0: { cellWidth: 0 }, // Hide group column content, handled by head
+          1: { cellWidth: 15, halign: 'center' },
+          2: { cellWidth: 60 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 'auto' }
+        },
+        margin: { top: 10 }
+      });
+      
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+    });
+
+    if (sortedCaddies.length === 0) {
+      doc.setFontSize(12);
+      doc.text("No caddy locations found in the current inventory.", 14, 40);
+    }
+
+    doc.save(`Caddy_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const handleExportPDF = (snapshot?: AuditSnapshot) => {
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
     const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
@@ -736,12 +823,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
         autoTable(doc, {
           startY: currentY,
-          head: [[groupName, 'Container Type', 'DB Qty', 'Actual Count']],
+          head: [[groupName, 'Size', 'Container Type', 'DB Qty', 'Actual Count']],
           body: groupItems.map(c => {
             const countedStr = isChemCounted(c.id, targetChemAudit) ? getChemTotalStock(c.id, c, targetChemAudit).toFixed(2) : '';
             const containerType = (c as any).containerType || '';
             return [
-              `${c.brand ? c.brand + ' / ' : ''}${c.name} (${c.bottleSize || 'N/A'})`,
+              `${c.brand ? c.brand + ' / ' : ''}${c.name}`,
+              c.bottleSize || 'N/A',
               containerType,
               c.currentStock,
               countedStr || (snapshot ? '0' : '')
@@ -752,9 +840,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           styles: { textColor: [0, 0, 0] },
           columnStyles: {
             0: { cellWidth: 'auto' },
-            1: { cellWidth: 35 },
-            2: { cellWidth: 20, halign: 'center' },
-            3: { cellWidth: 30 }
+            1: { cellWidth: 25 },
+            2: { cellWidth: 35 },
+            3: { cellWidth: 20, halign: 'center' },
+            4: { cellWidth: 30 }
           },
           margin: { top: 10 }
         });
@@ -2473,6 +2562,17 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   <FileText className="h-4 w-4" /> 
                   <span className="hidden sm:inline">Full IAC Report</span>
                 </Button>
+                {activeTab === 'chemicals' && (
+                  <Button
+                    variant="outline"
+                    className="border-fuchsia-500/50 bg-fuchsia-900/20 text-fuchsia-300 hover:bg-fuchsia-800/40 hover:text-white px-3 sm:px-4 flex-1 sm:flex-none justify-center gap-1.5"
+                    onClick={() => exportCaddyReport()}
+                    title="Export Caddies PDF"
+                  >
+                    <Download className="h-4 w-4" /> 
+                    <span className="hidden sm:inline">Caddy Report</span>
+                  </Button>
+                )}
               </>
             )}
           </div>

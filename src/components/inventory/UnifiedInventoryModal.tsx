@@ -279,8 +279,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other"]
   };
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
-  const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf"];
-  const DEFAULT_SECTIONS = ["Left Side", "Middle", "Right Side"];
+  const DEFAULT_SHELVES = ["Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
+  const DEFAULT_SECTIONS = [
+    "Left Side", "Middle", "Right Side",
+    ...Array.from({ length: 8 }, (_, i) => `Interior Caddy ${i + 1}`),
+    ...Array.from({ length: 8 }, (_, i) => `Exterior Caddy ${i + 1}`),
+    ...Array.from({ length: 8 }, (_, i) => `Specialty Caddy ${i + 1}`)
+  ];
   const DEFAULT_LOCATIONS = [
     // Bags & portable storage
     "Detail Cart",
