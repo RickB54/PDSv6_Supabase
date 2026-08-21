@@ -41,6 +41,7 @@ const getMockDataForTable = (table: string) => {
     case 'tools': return (mockData as any).MOCK_INVENTORY?.tools || [];
     case 'chemical_library': return (mockData as any).MOCK_CHEMICAL_LIBRARY || [];
     case 'manual_income': return (mockData as any).MOCK_ACCOUNTING?.transactions?.filter((t: any) => t.type === 'income' || t.type === 'Income') || [];
+    case 'static_caddy_worksheet': return [{ id: 1, interior: [], exterior: [], show_extra_slots: false, updated_at: new Date().toISOString() }];
     case 'tax_reports': return [];
     case 'payments': return [];
     default: return [];

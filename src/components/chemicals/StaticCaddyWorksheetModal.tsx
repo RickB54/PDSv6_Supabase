@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '@/lib/supabase';
 
 interface CaddySlot {
     slot: number | string;
@@ -50,32 +51,6 @@ const DEFAULT_DATA: CaddyData = {
     exterior: DEFAULT_EXTERIOR
 };
 
-const getInitialData = (): CaddyData => {
-    const saved = localStorage.getItem('static-caddy-worksheet-data');
-    if (saved) {
-        try {
-            const parsed = JSON.parse(saved);
-            if (parsed.interior.length === 8) {
-                parsed.interior.push(
-                    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-                    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
-                );
-            }
-            if (parsed.exterior.length === 8) {
-                parsed.exterior.push(
-                    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-                    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
-                );
-            }
-            return parsed;
-        } catch (e) {
-            console.error("Failed to parse saved caddy worksheet data:", e);
-            return DEFAULT_DATA;
-        }
-    }
-    return DEFAULT_DATA;
-};
-
 export function StaticCaddyWorksheetModal({
     open,
     onOpenChange
@@ -83,27 +58,87 @@ export function StaticCaddyWorksheetModal({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [data, setData] = useState<CaddyData>(getInitialData);
+    const [data, setData] = useState<CaddyData>(DEFAULT_DATA);
     const [isSaving, setIsSaving] = useState(false);
-    const [showExtraSlots, setShowExtraSlots] = useState(() => {
-        return localStorage.getItem('static-caddy-show-extra') === 'true';
-    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [showExtraSlots, setShowExtraSlots] = useState(false);
 
-    const handleSave = () => {
+    useEffect(() => {
+        if (open) {
+            loadData();
+        }
+    }, [open]);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            const { data: dbData, error } = await supabase
+                .from('static_caddy_worksheet')
+                .select('*')
+                .eq('id', 1)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            if (dbData) {
+                const parsed = {
+                    interior: dbData.interior || DEFAULT_INTERIOR,
+                    exterior: dbData.exterior || DEFAULT_EXTERIOR
+                };
+                
+                // Legacy migration
+                if (parsed.interior.length === 8) {
+                    parsed.interior.push(
+                        { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+                        { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                    );
+                }
+                if (parsed.exterior.length === 8) {
+                    parsed.exterior.push(
+                        { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
+                        { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                    );
+                }
+                
+                setData(parsed);
+                setShowExtraSlots(dbData.show_extra_slots || false);
+            } else {
+                setData(DEFAULT_DATA);
+                setShowExtraSlots(false);
+            }
+        } catch (e) {
+            console.error("Failed to fetch caddy worksheet data:", e);
+            setData(DEFAULT_DATA);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
         setIsSaving(true);
         try {
-            localStorage.setItem('static-caddy-worksheet-data', JSON.stringify(data));
-            localStorage.setItem('static-caddy-show-extra', showExtraSlots.toString());
+            const { error } = await supabase
+                .from('static_caddy_worksheet')
+                .upsert({
+                    id: 1,
+                    interior: data.interior,
+                    exterior: data.exterior,
+                    show_extra_slots: showExtraSlots,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (error) throw error;
+
             toast({
                 title: "Worksheet Saved",
-                description: "Your caddy worksheet has been saved successfully.",
+                description: "Your caddy worksheet has been securely saved to the database.",
                 className: "bg-green-600 text-white"
             });
         } catch (e) {
             console.error("Failed to save:", e);
             toast({
                 title: "Save Failed",
-                description: "Failed to save the worksheet data.",
+                description: "Failed to save the worksheet data to the database.",
                 variant: "destructive"
             });
         } finally {
@@ -111,16 +146,38 @@ export function StaticCaddyWorksheetModal({
         }
     };
 
-    const handleReset = () => {
-        if (window.confirm("Are you sure you want to reset to the default seed data? All custom edits will be lost.")) {
-            setData(DEFAULT_DATA);
-            setShowExtraSlots(false);
-            localStorage.setItem('static-caddy-worksheet-data', JSON.stringify(DEFAULT_DATA));
-            localStorage.setItem('static-caddy-show-extra', 'false');
-            toast({
-                title: "Reset Complete",
-                description: "Worksheet has been restored to default values.",
-            });
+    const handleReset = async () => {
+        if (window.confirm("Are you sure you want to reset to the default seed data? All custom edits will be lost and overwritten in the database.")) {
+            setIsLoading(true);
+            try {
+                const { error } = await supabase
+                    .from('static_caddy_worksheet')
+                    .upsert({
+                        id: 1,
+                        interior: DEFAULT_INTERIOR,
+                        exterior: DEFAULT_EXTERIOR,
+                        show_extra_slots: false,
+                        updated_at: new Date().toISOString()
+                    });
+                
+                if (error) throw error;
+
+                setData(DEFAULT_DATA);
+                setShowExtraSlots(false);
+                toast({
+                    title: "Reset Complete",
+                    description: "Worksheet has been restored to default values.",
+                });
+            } catch (e) {
+                console.error("Failed to reset:", e);
+                toast({
+                    title: "Reset Failed",
+                    description: "Could not reset data in the database.",
+                    variant: "destructive"
+                });
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
