@@ -137,7 +137,7 @@ export function StaticCaddyWorksheetModal({
         doc.setTextColor(147, 51, 234);
         doc.text("Interior Caddy", 14, currentY);
         
-        const interiorDataToPrint = showExtraSlots ? data.interior : data.interior.slice(0, 8);
+        const interiorDataToPrint = data.interior.slice(0, 8);
 
         autoTable(doc, {
             startY: currentY + 5,
@@ -160,14 +160,30 @@ export function StaticCaddyWorksheetModal({
             alternateRowStyles: { fillColor: [249, 250, 251] },
         });
 
+        let finalY = (doc as any).lastAutoTable.finalY;
+        if (showExtraSlots) {
+            const ex1 = data.interior[8];
+            const ex2 = data.interior[9];
+            const parts = [];
+            if (ex1.name) parts.push(`[Extra 1] ${ex1.name} ${ex1.ratio ? `(${ex1.ratio})` : ''} ${ex1.purpose ? `- ${ex1.purpose}` : ''}`);
+            if (ex2.name) parts.push(`[Extra 2] ${ex2.name} ${ex2.ratio ? `(${ex2.ratio})` : ''} ${ex2.purpose ? `- ${ex2.purpose}` : ''}`);
+            
+            if (parts.length > 0) {
+                finalY += 6;
+                doc.setFontSize(8);
+                doc.setTextColor(120, 120, 120);
+                doc.text(`* Additional Items: ${parts.join('  |  ')}`, 14, finalY);
+            }
+        }
+
         // Exterior Caddy on the same page
-        currentY = (doc as any).lastAutoTable.finalY + 12;
+        currentY = finalY + 15;
 
         doc.setFontSize(13);
         doc.setTextColor(59, 130, 246);
         doc.text("Exterior Caddy", 14, currentY);
 
-        const exteriorDataToPrint = showExtraSlots ? data.exterior : data.exterior.slice(0, 8);
+        const exteriorDataToPrint = data.exterior.slice(0, 8);
 
         autoTable(doc, {
             startY: currentY + 5,
@@ -189,6 +205,22 @@ export function StaticCaddyWorksheetModal({
             styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
             alternateRowStyles: { fillColor: [249, 250, 251] },
         });
+
+        let extFinalY = (doc as any).lastAutoTable.finalY;
+        if (showExtraSlots) {
+            const ex1 = data.exterior[8];
+            const ex2 = data.exterior[9];
+            const parts = [];
+            if (ex1.name) parts.push(`[Extra 1] ${ex1.name} ${ex1.ratio ? `(${ex1.ratio})` : ''} ${ex1.purpose ? `- ${ex1.purpose}` : ''}`);
+            if (ex2.name) parts.push(`[Extra 2] ${ex2.name} ${ex2.ratio ? `(${ex2.ratio})` : ''} ${ex2.purpose ? `- ${ex2.purpose}` : ''}`);
+            
+            if (parts.length > 0) {
+                extFinalY += 6;
+                doc.setFontSize(8);
+                doc.setTextColor(120, 120, 120);
+                doc.text(`* Additional Items: ${parts.join('  |  ')}`, 14, extFinalY);
+            }
+        }
 
         doc.save(`Static_Caddy_Worksheet_${new Date().toISOString().split('T')[0]}.pdf`);
         toast({
