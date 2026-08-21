@@ -140,7 +140,7 @@ export function StaticCaddyWorksheetModal({
         const interiorDataToPrint = data.interior.slice(0, 8);
 
         autoTable(doc, {
-            startY: currentY + 5,
+            startY: currentY + 3,
             head: [['Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
             body: interiorDataToPrint.map(item => [
                 item.slot.toString(),
@@ -169,15 +169,15 @@ export function StaticCaddyWorksheetModal({
             if (ex2.name) parts.push(`[Extra 2] ${ex2.name} ${ex2.ratio ? `(${ex2.ratio})` : ''} ${ex2.purpose ? `- ${ex2.purpose}` : ''}`);
             
             if (parts.length > 0) {
-                finalY += 6;
-                doc.setFontSize(8);
-                doc.setTextColor(120, 120, 120);
+                finalY += 5;
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
                 doc.text(`* Additional Items: ${parts.join('  |  ')}`, 14, finalY);
             }
         }
 
         // Exterior Caddy on the same page
-        currentY = finalY + 15;
+        currentY = finalY + 12;
 
         doc.setFontSize(13);
         doc.setTextColor(59, 130, 246);
@@ -186,7 +186,7 @@ export function StaticCaddyWorksheetModal({
         const exteriorDataToPrint = data.exterior.slice(0, 8);
 
         autoTable(doc, {
-            startY: currentY + 5,
+            startY: currentY + 3,
             head: [['Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
             body: exteriorDataToPrint.map(item => [
                 item.slot.toString(),
@@ -215,9 +215,9 @@ export function StaticCaddyWorksheetModal({
             if (ex2.name) parts.push(`[Extra 2] ${ex2.name} ${ex2.ratio ? `(${ex2.ratio})` : ''} ${ex2.purpose ? `- ${ex2.purpose}` : ''}`);
             
             if (parts.length > 0) {
-                extFinalY += 6;
-                doc.setFontSize(8);
-                doc.setTextColor(120, 120, 120);
+                extFinalY += 5;
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
                 doc.text(`* Additional Items: ${parts.join('  |  ')}`, 14, extFinalY);
             }
         }
