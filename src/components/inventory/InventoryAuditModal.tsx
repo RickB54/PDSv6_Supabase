@@ -1266,8 +1266,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <li><strong>Filter & Sort Panel:</strong> Combine filters like Brand, Size, Shelf, Section, and Location to narrow down exactly what you are counting.</li>
                           <li><strong>&quot;X of Y counted&quot; Badge:</strong> Tracks your live progress. It updates dynamically to reflect only the items visible in your current filter.</li>
                           <li><strong>Global Sort Dropdown:</strong> Quickly sort the entire list by Name, Brand, Location, Last Updated, etc.</li>
-                          <li><strong>Hide Counted & Collapse All:</strong> Toggle &quot;Hide Counted&quot; to make completed items disappear. Use &quot;Collapse All&quot; to shrink cards and save screen space.</li>
-                          <li><strong>Note:</strong> The broken header Print button has been removed. Use the PDF and Full IAC Report buttons in the footer instead.</li>
+                          <li><strong>Hide Counted:</strong> Toggle to make completed items disappear to keep your list clean.</li>
+                          <li><strong>Section Collapse/Expand:</strong> Use the dropdown icon on any location header (e.g. &quot;Top Shelf / Left Side&quot;) to collapse/expand that specific section.</li>
+                          <li><strong>Caddy Locations:</strong> Items assigned to the Interior, Exterior, or Specialty Caddies (slots 1-8) are intelligently grouped together under a single &quot;Caddy&quot; header so you can view all 8 slots simultaneously.</li>
                         </ul>
                       </div>
 
@@ -1284,11 +1285,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <div className="space-y-2">
                         <h4 className="font-semibold text-purple-400 flex items-center gap-2"><History className="h-4 w-4" /> Saving, History, & Exports</h4>
                         <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
-                          <li><strong>Save Progress:</strong> Pause your audit at any time without submitting. Resume later from the History tab.</li>
+                          <li><strong className="text-amber-300">Save Progress:</strong> Pause your audit at any time without submitting. Resume later from the History tab.</li>
                           <li><strong>Audit History:</strong> View past snapshots of your inventory, archive old audits, or permanently delete them (with confirmation).</li>
-                          <li><strong>Save PDF (Main Toolbar):</strong> Generates a printable PDF of your current live audit view and counts for a single tab.</li>
-                          <li><strong>Full IAC Report (Footer):</strong> Generates one combined PDF across all 3 categories (Chemicals, Supplies, Equipment) as separate sections, available from any tab.</li>
-                          <li><strong>PDF Save/Print (Review Modal):</strong> When finishing an audit, use this button on the final Review Changes modal to save or print a verified record of the actual updates being committed to the database.</li>
+                          <li><strong className="text-zinc-300">PDF:</strong> Generates a printable PDF of your current live audit view and counts for a single tab. Includes a dedicated <strong>Size</strong> column for chemicals.</li>
+                          <li><strong className="text-blue-300">Full IAC Report:</strong> Generates one combined PDF across all 3 categories (Chemicals, Supplies, Equipment) as separate sections, available from any tab.</li>
+                          <li><strong className="text-fuchsia-300">Caddy Report:</strong> Generates a specialized quick-reference sheet for Caddy locations. <strong>Tip:</strong> In the Edit Chemical modal, use the checkboxes next to each Dilution Ratio to select exactly which ratios print on this report.</li>
+                          <li><strong className="text-purple-400">Review:</strong> When finishing an audit, use this button to review and commit your changes. (You can also save/print a verified record here).</li>
                         </ul>
                       </div>
                     </div>
