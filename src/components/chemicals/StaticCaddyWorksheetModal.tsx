@@ -157,42 +157,12 @@ export function StaticCaddyWorksheetModal({
     };
 
     const handleReset = async () => {
-        if (window.confirm("Are you sure you want to reset to the default seed data? All custom edits will be lost and overwritten in the database.")) {
-            setIsLoading(true);
-            try {
-                console.log("Attempting reset in Supabase...");
-                const { data: resetData, error } = await supabase
-                    .from('static_caddy_worksheet')
-                    .upsert({
-                        id: 1,
-                        interior: DEFAULT_INTERIOR,
-                        exterior: DEFAULT_EXTERIOR,
-                        show_extra_slots: false,
-                        updated_at: new Date().toISOString()
-                    }).select();
-                
-                console.log("Reset response:", { resetData, error });
-                if (error) {
-                    console.error("Supabase Reset Error:", error);
-                    throw error;
-                }
-
-                setData(DEFAULT_DATA);
-                setShowExtraSlots(false);
-                toast({
-                    title: "Reset Complete",
-                    description: "Worksheet has been restored to default values.",
-                });
-            } catch (e) {
-                console.error("Failed to reset:", e);
-                toast({
-                    title: "Reset Failed",
-                    description: "Could not reset data in the database.",
-                    variant: "destructive"
-                });
-            } finally {
-                setIsLoading(false);
-            }
+        if (window.confirm("Are you sure you want to discard your unsaved changes and reload your last saved data?")) {
+            await loadData();
+            toast({
+                title: "Changes Discarded",
+                description: "Worksheet has been restored to your last saved values.",
+            });
         }
     };
 
