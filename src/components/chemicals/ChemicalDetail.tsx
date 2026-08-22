@@ -79,9 +79,9 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     };
 
     // Helper to flip ratios (1:4 -> 4:1) for display consistency with calculator
-    const transformRatio = (r: string) => {
-        if (!r) return r;
-        const normalized = r.trim();
+    const transformRatio = (r: any) => {
+        if (!r) return "-";
+        const normalized = String(r).trim();
         if (normalized.toLowerCase() === 'rtu' || normalized.toLowerCase().includes('direct')) return normalized;
         const match = normalized.match(/^1[:/](\d+)$/);
         if (match) return `${match[1]}:1`;

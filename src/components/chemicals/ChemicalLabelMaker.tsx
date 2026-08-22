@@ -347,9 +347,9 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                return pA - pB;
             });
             
-            const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard')) || sorted[0];
-            const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
-            const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
+            const standard = sorted.find(r => (r.soil_level || '').toLowerCase().includes('standard')) || sorted[0];
+            const heavy = sorted.find(r => (r.soil_level || '').toLowerCase().includes('heavy')) || (sorted.length > 1 ? sorted[sorted.length - 1] : sorted[0]);
+            const maintenance = sorted.find(r => (r.soil_level || '').toLowerCase().includes('maintenance') || (r.soil_level || '').toLowerCase().includes('light')) || (sorted.length > 2 ? sorted[1] : sorted[0]);
 
             setLabelContent({
                 name: selectedChemical.name,
@@ -364,8 +364,8 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                     standard: standard?.ratio || "RTU",
                     heavy: heavy?.ratio || (standard?.ratio || "RTU"),
                     light: maintenance?.ratio || (standard?.ratio || "RTU"),
-                    interior: ratios.find(r => r.soil_level.toLowerCase().includes('interior'))?.ratio || (standard?.ratio || "RTU"),
-                    exterior: ratios.find(r => r.soil_level.toLowerCase().includes('exterior'))?.ratio || (standard?.ratio || "RTU")
+                    interior: ratios.find(r => (r.soil_level || '').toLowerCase().includes('interior'))?.ratio || (standard?.ratio || "RTU"),
+                    exterior: ratios.find(r => (r.soil_level || '').toLowerCase().includes('exterior'))?.ratio || (standard?.ratio || "RTU")
                 }
             });
             setLabelStyle(prev => ({
@@ -388,7 +388,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
     const handleAiGenerate = () => {
         if (!selectedChemical) return;
         
-        const condensedDesc = `${selectedChemical.name} is a professional ${selectedChemical.category.toLowerCase()} detailing solution. Optimized for ${(selectedChemical.used_for || []).slice(0, 3).join(', ')}.`;
+        const condensedDesc = `${selectedChemical.name} is a professional ${(selectedChemical.category || '').toLowerCase()} detailing solution. Optimized for ${(selectedChemical.used_for || []).slice(0, 3).join(', ')}.`;
         
         let condensedInst = selectedChemical.application_guide?.notes || 'Apply following standard procedures.';
         
@@ -448,7 +448,7 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                 exterior: findBestRatio('Exterior', selectedChemical, ''),
                 heavy: findBestRatio('Very Dirty', selectedChemical, ''),
                 light: findBestRatio('Slightly Dirty', selectedChemical, ''),
-                standard: (selectedChemical.dilution_ratios || []).find(r => r.soil_level.toLowerCase().includes('standard'))?.ratio || ''
+                standard: (selectedChemical.dilution_ratios || []).find(r => (r.soil_level || '').toLowerCase().includes('standard'))?.ratio || ''
             }
         });
         toast({ title: "Content Reset", description: "Labels restored to original chemical specs." });
@@ -1494,9 +1494,9 @@ export function ChemicalLabelMaker({ open, onOpenChange, initialChemical, onOpen
                                                                     const pB = (b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))?.[1] ? parseInt((b.ratio.match(/(\d+)[:\/]1/) || b.ratio.match(/1[:\/](\d+)/))![1]) : 0;
                                                                     return pA - pB;
                                                                 });
-                                                                const standard = sorted.find(r => r.soil_level.toLowerCase().includes('standard'));
-                                                                const heavy = sorted.find(r => r.soil_level.toLowerCase().includes('heavy duty') || r.soil_level.toLowerCase().includes('heavy'));
-                                                                const maintenance = sorted.find(r => r.soil_level.toLowerCase().includes('maintenance') || r.soil_level.toLowerCase().includes('light'));
+                                                                const standard = sorted.find(r => (r.soil_level || '').toLowerCase().includes('standard'));
+                                                                const heavy = sorted.find(r => (r.soil_level || '').toLowerCase().includes('heavy duty') || (r.soil_level || '').toLowerCase().includes('heavy'));
+                                                                const maintenance = sorted.find(r => (r.soil_level || '').toLowerCase().includes('maintenance') || (r.soil_level || '').toLowerCase().includes('light'));
 
                                                                 return [
                                                                     { 

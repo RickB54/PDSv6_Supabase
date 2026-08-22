@@ -50,9 +50,9 @@ type Tool = Equipment;
 type MaterialItem = Supply;
 
 // Display Helper for Dilution Ratios (Reverses 1:X to X:1 per user request)
-const transformRatio = (r: string) => {
-  if (!r) return r;
-  const normalized = r.trim();
+const transformRatio = (r: any) => {
+  if (!r) return "-";
+  const normalized = String(r).trim();
   if (normalized.toLowerCase() === 'rtu' || normalized.toLowerCase().includes('direct')) return normalized;
   const match = normalized.match(/^1[:/](\d+)$/);
   if (match) return `${match[1]}:1`;

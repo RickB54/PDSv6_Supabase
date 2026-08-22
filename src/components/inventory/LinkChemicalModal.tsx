@@ -32,7 +32,7 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
     // Auto-select if name matches exactly?
     useEffect(() => {
         if (open && inventoryItem && libraryOptions.length > 0) {
-            const match = libraryOptions.find(opt => opt.name.toLowerCase() === inventoryItem.name.toLowerCase());
+            const match = libraryOptions.find(opt => (opt.name || '').toLowerCase() === (inventoryItem.name || '').toLowerCase());
             if (match) setSelectedId(match.id);
         }
     }, [open, inventoryItem, libraryOptions]);
@@ -104,7 +104,7 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
     };
 
     const noMatchFound = !selectedId && inventoryItem && libraryOptions.length > 0 &&
-        !libraryOptions.some(opt => opt.name.toLowerCase() === inventoryItem.name.toLowerCase());
+        !libraryOptions.some(opt => (opt.name || '').toLowerCase() === (inventoryItem.name || '').toLowerCase());
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
