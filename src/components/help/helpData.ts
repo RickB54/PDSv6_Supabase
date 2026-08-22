@@ -139,6 +139,30 @@ export const masterSourceOfTruthItem: HelpTopic = {
   section: 'chemicals',
 };
 
+export const linksVsCardsTopic: HelpTopic = {
+  id: 'links-vs-cards',
+  title: 'Understanding Links vs. Cards',
+  summary: 'Why some inventory items have a "Link" button while others have "Card" and "Label" buttons.',
+  content: [
+    '**The Difference Between Inventory and the Library:**',
+    'Your system has two distinct halves that work together:',
+    '1. **The Inventory (Stock)**: This tracks how many bottles you have, how much they cost, and when you need to reorder.',
+    '2. **The Chemicals Library (Knowledge Base)**: This is the encyclopedia. It stores the safety data, AI-generated descriptions, dilution ratios, and instructions for how to use the chemical.',
+    '',
+    '🔗 **The "Link" Button (Yellow)**',
+    'If you see a yellow **Link** button next to an inventory item, it means the item exists on your shelf (Inventory), but it is **NOT** connected to an encyclopedia entry (Library).',
+    '• Click **Link** to search the Library and connect it to an existing Card, or easily create a brand new Card for it.',
+    '',
+    '📄 **The "Card" & "Label" Buttons (Blue/Purple)**',
+    'Once an item is successfully linked, the Link button vanishes and is replaced by **Card** and **Label** buttons.',
+    '• **Card**: Opens the full encyclopedia entry containing instructions, safety data, and technical info.',
+    '• **Label**: Allows you to instantly generate and print OSHA-compliant secondary bottle labels complete with QR codes.',
+    '',
+    '💡 **Pro Tip**: To get the most out of your system (especially printing labels and viewing dilution charts), you want to make sure every item in your inventory is Linked!'
+  ],
+  section: 'chemicals',
+};
+
 export const inventoryCleanupTopic: HelpTopic = {
   id: 'inventory-cleanup-tool',
   title: 'Smart Sync: Fix Duplicates',
@@ -808,6 +832,7 @@ export const adminMenuTopics: HelpTopic[] = [
   netProfitExplanationTopic,
   demoModeHelpTopic,
   masterSourceOfTruthItem,
+  linksVsCardsTopic,
   inventoryCleanupTopic,
   checklistToolsGuide,
   ricksTipsTopic,

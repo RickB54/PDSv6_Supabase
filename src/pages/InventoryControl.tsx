@@ -2617,6 +2617,11 @@ const InventoryControl = () => {
                         <li><strong className="text-zinc-300">Alphabetical (A-Z List)</strong>: A simple flat list of all items from A to Z, regardless of brand.</li>
                         <li><strong className="text-zinc-300">Low Threshold</strong>: Prioritizes items that are running low and need restocking.</li>
                       </ul>
+                      <p className="pt-2"><strong className="text-zinc-300">Links vs. Cards:</strong></p>
+                      <ul className="list-disc list-inside space-y-0.5 ml-2">
+                        <li><strong className="text-zinc-300">Card & Label Buttons</strong>: Appear when an item is linked to the "Chemicals Library". This connects your inventory item to safety data, dilution ratios, and usage instructions, allowing you to print labels.</li>
+                        <li><strong className="text-yellow-500">Link Button</strong>: Appears when an item is NOT connected to the Chemicals Library. Click this to match the item to a library profile, which will unlock its "Card" and "Label" capabilities.</li>
+                      </ul>
                     </div>
                   </div>
                 </PopoverContent>
