@@ -29,13 +29,24 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
         }
     }, [open]);
 
+    const [searchQuery, setSearchQuery] = useState("");
+
     // Auto-select if name matches exactly?
     useEffect(() => {
         if (open && inventoryItem && libraryOptions.length > 0) {
+            setSearchQuery("");
             const match = libraryOptions.find(opt => (opt.name || '').toLowerCase() === (inventoryItem.name || '').toLowerCase());
             if (match) setSelectedId(match.id);
         }
     }, [open, inventoryItem, libraryOptions]);
+
+    const filteredOptions = libraryOptions
+        .filter(opt => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (opt.name || '').toLowerCase().includes(q) || (opt.brand || '').toLowerCase().includes(q);
+        })
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     const handleLink = async () => {
         if (!inventoryItem || !selectedId) return;
@@ -119,19 +130,30 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
                     </p>
 
                     <div className="space-y-2">
-                        <Label>Chemical Library</Label>
-                        <select
-                            className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                            value={selectedId}
-                            onChange={(e) => setSelectedId(e.target.value)}
-                        >
-                            <option value="">Select a card...</option>
-                            {libraryOptions.map(opt => (
-                                <option key={opt.id} value={opt.id}>
-                                    {opt.name} {opt.brand ? `(${opt.brand})` : ''}
-                                </option>
-                            ))}
-                        </select>
+                        <Label>Search Chemical Library</Label>
+                        <input
+                            type="text"
+                            placeholder="Type to search library..."
+                            className="flex h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 mb-2"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        <div className="max-h-48 overflow-y-auto border border-zinc-700 rounded-md bg-zinc-950">
+                            {filteredOptions.length === 0 ? (
+                                <div className="p-3 text-sm text-zinc-500 text-center">No matches found.</div>
+                            ) : (
+                                filteredOptions.map(opt => (
+                                    <div
+                                        key={opt.id}
+                                        onClick={() => setSelectedId(opt.id)}
+                                        className={`p-2 cursor-pointer text-sm border-b border-zinc-800 last:border-0 hover:bg-zinc-800 flex justify-between items-center ${selectedId === opt.id ? 'bg-yellow-900/30 text-yellow-400' : 'text-zinc-300'}`}
+                                    >
+                                        <span>{opt.name}</span>
+                                        {opt.brand && <span className="text-xs text-zinc-500">{opt.brand}</span>}
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
 
                     {/* Option to Create New (Always available) */}
