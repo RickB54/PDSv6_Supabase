@@ -2854,15 +2854,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
                           <Label className="text-[10px] text-zinc-500 uppercase">Method</Label>
-                          <label className="flex items-center gap-1.5 text-[9px] text-fuchsia-400/80 cursor-pointer hover:text-fuchsia-300">
-                            <input 
-                              type="checkbox"
-                              checked={!!ratio.print_on_caddy_report}
-                              onChange={e => updateDilution(idx, 'print_on_caddy_report', e.target.checked as any)}
-                              className="rounded border-zinc-700 bg-zinc-900 w-2.5 h-2.5 accent-fuchsia-500"
-                            />
-                            Print on Caddy Report
-                          </label>
                         </div>
                         <Input 
                           value={ratio.method} 

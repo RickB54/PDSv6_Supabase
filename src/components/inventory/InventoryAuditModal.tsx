@@ -660,101 +660,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return Array.from(locs).sort();
   }, [supplies, equipment]);
 
-  const exportCaddyReport = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Caddy Quick-Reference Report", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 22);
 
-    let currentY = 35;
-
-    // Filter for caddies (checking both shelf and section)
-    const caddyChems = normalizedChemicals.filter(c => 
-      (c.shelf || '').toLowerCase().includes('caddy') || 
-      (c.section || '').toLowerCase().includes('caddy')
-    );
-
-    const caddies: Record<string, typeof caddyChems> = {};
-    caddyChems.forEach(c => {
-      let shelf = c.shelf || '';
-      if (!shelf.toLowerCase().includes('caddy')) {
-        const sec = (c.section || '').toLowerCase();
-        if (sec.includes('interior caddy')) shelf = 'Interior Caddy';
-        else if (sec.includes('exterior caddy')) shelf = 'Exterior Caddy';
-        else if (sec.includes('specialty caddy')) shelf = 'Specialty Caddy';
-        else shelf = 'Unknown Caddy';
-      }
-      if (!caddies[shelf]) caddies[shelf] = [];
-      caddies[shelf].push(c);
-    });
-
-    const sortedCaddies = Object.keys(caddies).sort();
-
-    sortedCaddies.forEach(caddyName => {
-      const groupItems = caddies[caddyName].sort((a, b) => {
-        // extract slot number if possible
-        const slotA = parseInt((a.section || '').replace(/[^0-9]/g, '')) || 999;
-        const slotB = parseInt((b.section || '').replace(/[^0-9]/g, '')) || 999;
-        if (slotA !== slotB) return slotA - slotB;
-        return a.name.localeCompare(b.name);
-      });
-
-      if (groupItems.length === 0) return;
-
-      if (currentY > 260) {
-        doc.addPage();
-        currentY = 20;
-      }
-
-      autoTable(doc, {
-        startY: currentY,
-        head: [[caddyName, 'Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
-        body: groupItems.map(c => {
-          const slotNum = (c.section || '').replace(/[^0-9]/g, '') || c.section || 'N/A';
-          // Use DilutionRatio info for Ratio and Purpose
-          let ratioStr = '';
-          let purposeStr = '';
-          
-          if (c.dilutionRatios && c.dilutionRatios.length > 0) {
-            const printableRatios = c.dilutionRatios.filter((d: any) => d.print_on_caddy_report);
-            if (printableRatios.length > 0) {
-              ratioStr = printableRatios.map((d: any) => d.ratio || 'RTU').join('\n');
-              purposeStr = printableRatios.map((d: any) => d.notes || d.soil_level || d.method || 'General').join('\n');
-            }
-          }
-
-          return [
-            '', // Group column empty since it's in the header
-            slotNum,
-            `${c.brand ? c.brand + ' / ' : ''}${c.name}`,
-            ratioStr,
-            purposeStr
-          ];
-        }),
-        theme: 'grid',
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-        styles: { textColor: [0, 0, 0] },
-        columnStyles: {
-          0: { cellWidth: 0 }, // Hide group column content, handled by head
-          1: { cellWidth: 15, halign: 'center' },
-          2: { cellWidth: 60 },
-          3: { cellWidth: 30 },
-          4: { cellWidth: 'auto' }
-        },
-        margin: { top: 10 }
-      });
-      
-      currentY = (doc as any).lastAutoTable.finalY + 10;
-    });
-
-    if (sortedCaddies.length === 0) {
-      doc.setFontSize(12);
-      doc.text("No caddy locations found in the current inventory.", 14, 40);
-    }
-
-    doc.save(`Caddy_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
 
   const handleExportPDF = (snapshot?: AuditSnapshot) => {
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
@@ -1299,7 +1205,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <li><strong>Audit History:</strong> View past snapshots of your inventory, archive old audits, or permanently delete them (with confirmation).</li>
                           <li><strong className="text-zinc-300">PDF:</strong> Generates a printable PDF of your current live audit view and counts for a single tab. Includes a dedicated <strong>Size</strong> column for chemicals.</li>
                           <li><strong className="text-blue-300">Full IAC Report:</strong> Generates one combined PDF across all 3 categories (Chemicals, Supplies, Equipment) as separate sections, available from any tab.</li>
-                          <li><strong className="text-fuchsia-300">Caddy Report:</strong> Generates a specialized quick-reference sheet for Caddy locations. <strong>Requirements:</strong> The item must be assigned to an "Interior Caddy", "Exterior Caddy", or "Specialty Caddy" location (either in the Shelf or Section fields), AND specific Dilution Ratios must be toggled on using the checkboxes in the Edit Chemical modal.</li>
+
                           <li><strong className="text-purple-400">Review:</strong> When finishing an audit, use this button to review and commit your changes. (You can also save/print a verified record here).</li>
                         </ul>
                       </div>
@@ -2577,17 +2483,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   <FileText className="h-4 w-4" /> 
                   <span className="hidden sm:inline">Full IAC Report</span>
                 </Button>
-                {activeTab === 'chemicals' && (
-                  <Button
-                    variant="outline"
-                    className="border-fuchsia-500/50 bg-fuchsia-900/20 text-fuchsia-300 hover:bg-fuchsia-800/40 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1.5"
-                    onClick={() => exportCaddyReport()}
-                    title="Export Caddies PDF"
-                  >
-                    <Download className="h-4 w-4" /> 
-                    <span className="hidden sm:inline">Caddy Report</span>
-                  </Button>
-                )}
               </>
             )}
           </div>

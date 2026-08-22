@@ -65,7 +65,6 @@ export interface DilutionRatio {
     ratio: string;
     soil_level: string;
     notes?: string;
-    print_on_caddy_report?: boolean;
 }
 
 /**

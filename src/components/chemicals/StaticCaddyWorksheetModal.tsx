@@ -2,11 +2,19 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw, Loader2 } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/lib/supabase';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+interface CaddyHistoryEntry {
+    id: string;
+    name: string;
+    timestamp: string;
+    data: CaddyData;
+}
 
 interface CaddySlot {
     slot: number | string;
@@ -62,10 +70,20 @@ export function StaticCaddyWorksheetModal({
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showExtraSlots, setShowExtraSlots] = useState(false);
+    
+    // History State
+    const [history, setHistory] = useState<CaddyHistoryEntry[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
+    const [editingHistoryName, setEditingHistoryName] = useState("");
 
     useEffect(() => {
         if (open) {
             loadData();
+            const savedHistory = localStorage.getItem('static_caddy_history');
+            if (savedHistory) {
+                try { setHistory(JSON.parse(savedHistory)); } catch (e) { }
+            }
         }
     }, [open]);
 
@@ -138,6 +156,16 @@ export function StaticCaddyWorksheetModal({
                 console.error("Supabase Save Error:", error);
                 throw error;
             }
+
+            const newHistoryEntry: CaddyHistoryEntry = {
+                id: Date.now().toString(),
+                name: `Save ${new Date().toLocaleString()}`,
+                timestamp: new Date().toISOString(),
+                data: { interior: [...data.interior], exterior: [...data.exterior] }
+            };
+            const newHistory = [newHistoryEntry, ...history].slice(0, 50);
+            setHistory(newHistory);
+            localStorage.setItem('static_caddy_history', JSON.stringify(newHistory));
 
             toast({
                 title: "Worksheet Saved",
@@ -273,6 +301,31 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
+    const handleRestoreHistory = (entry: CaddyHistoryEntry) => {
+        if (window.confirm("Restore this version? This will overwrite your current unsaved changes.")) {
+            setData(entry.data);
+            setShowHistory(false);
+            toast({ title: "Version Restored", description: "You are now viewing a past version. Remember to save if you want to keep it." });
+        }
+    };
+
+    const handleDeleteHistory = (id: string) => {
+        if (window.confirm("Are you sure you want to delete this history record?")) {
+            const newHistory = history.filter(h => h.id !== id);
+            setHistory(newHistory);
+            localStorage.setItem('static_caddy_history', JSON.stringify(newHistory));
+            toast({ title: "Record Deleted" });
+        }
+    };
+
+    const saveHistoryName = (id: string) => {
+        if (!editingHistoryName.trim()) return;
+        const newHistory = history.map(h => h.id === id ? { ...h, name: editingHistoryName } : h);
+        setHistory(newHistory);
+        localStorage.setItem('static_caddy_history', JSON.stringify(newHistory));
+        setEditingHistoryId(null);
+    };
+
     const updateSlot = (caddy: 'interior' | 'exterior', index: number, field: keyof CaddySlot, value: string) => {
         setData(prev => {
             const arr = [...prev[caddy]];
@@ -340,14 +393,42 @@ export function StaticCaddyWorksheetModal({
                 <DialogHeader className="p-6 pb-4 border-b border-zinc-800 shrink-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <DialogTitle className="text-2xl font-black uppercase tracking-tight text-white">
-                                Static Caddy Worksheet
-                            </DialogTitle>
+                            <div className="flex items-center gap-2">
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tight text-white">
+                                    Static Caddy Worksheet
+                                </DialogTitle>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="text-zinc-400 hover:text-fuchsia-400 transition-colors focus:outline-none flex items-center justify-center">
+                                            <HelpCircle className="h-5 w-5" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="z-[99999] w-80 p-0 bg-zinc-900 border-zinc-700 shadow-2xl" side="bottom" align="start">
+                                        <div className="p-4 text-zinc-300">
+                                            <h3 className="font-bold text-white text-base mb-2 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
+                                            <ul className="space-y-3 text-sm">
+                                                <li><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
+                                                <li><strong className="text-blue-400">✏️ 2. Editing the Setup:</strong> Manually type chemical names, ratios, and purposes directly into the table.</li>
+                                                <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
+                                                <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
+                                                <li><strong className="text-purple-400">🖨️ 5. PDF Export:</strong> Both interior and exterior tables fit perfectly onto a single printed page.</li>
+                                            </ul>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                             <p className="text-sm text-zinc-400 mt-1">
                                 Independent fallback reference sheet. These edits are isolated from the main inventory.
                             </p>
                         </div>
                         <div className="flex gap-2 shrink-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowHistory(!showHistory)}
+                                className={`h-9 px-3 border-zinc-700 ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+                            >
+                                <HistoryIcon className="w-4 h-4 mr-2" /> {showHistory ? 'Back' : 'History'}
+                            </Button>
                             <Button
                                 variant="outline"
                                 onClick={() => setShowExtraSlots(!showExtraSlots)}
@@ -380,9 +461,80 @@ export function StaticCaddyWorksheetModal({
                     </div>
                 </DialogHeader>
 
-                <div className="p-6 overflow-y-auto space-y-8">
-                    {renderTable('interior', 'Interior Caddy', 'text-purple-400')}
-                    {renderTable('exterior', 'Exterior Caddy', 'text-blue-400')}
+                <div className="p-6 overflow-y-auto">
+                    {showHistory ? (
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-bold text-amber-400 border-b border-amber-500/20 pb-2">Worksheet History</h3>
+                            {history.length === 0 ? (
+                                <p className="text-zinc-500 italic">No history records found. Save your worksheet to create a snapshot.</p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {history.map(entry => (
+                                        <div key={entry.id} className="bg-zinc-900 border border-zinc-800 rounded p-4 flex items-center justify-between">
+                                            <div className="flex-1">
+                                                {editingHistoryId === entry.id ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Input 
+                                                            value={editingHistoryName}
+                                                            onChange={e => setEditingHistoryName(e.target.value)}
+                                                            className="h-8 bg-zinc-950 border-zinc-700 text-white w-64 text-sm"
+                                                            autoFocus
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') saveHistoryName(entry.id);
+                                                                if (e.key === 'Escape') setEditingHistoryId(null);
+                                                            }}
+                                                        />
+                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-400 hover:text-green-300" onClick={() => saveHistoryName(entry.id)}>
+                                                            <Check className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-zinc-400" onClick={() => setEditingHistoryId(null)}>
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-zinc-200">{entry.name}</h4>
+                                                        <button 
+                                                            onClick={() => { setEditingHistoryId(entry.id); setEditingHistoryName(entry.name); }}
+                                                            className="text-zinc-500 hover:text-blue-400 transition-colors"
+                                                            title="Edit Name"
+                                                        >
+                                                            <Edit2 className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <p className="text-xs text-zinc-500 mt-1">{new Date(entry.timestamp).toLocaleString()}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="bg-zinc-800 border-zinc-700 text-blue-400 hover:bg-zinc-700 hover:text-blue-300"
+                                                    onClick={() => handleRestoreHistory(entry)}
+                                                >
+                                                    Restore
+                                                </Button>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="bg-zinc-800 border-zinc-700 text-red-400 hover:bg-zinc-700 hover:text-red-300"
+                                                    onClick={() => handleDeleteHistory(entry.id)}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {renderTable('interior', 'Interior Caddy', 'text-purple-400')}
+                            {renderTable('exterior', 'Exterior Caddy', 'text-blue-400')}
+                        </div>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>

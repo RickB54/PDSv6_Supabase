@@ -268,7 +268,7 @@ export const staticCaddyWorksheetTopic: HelpTopic = {
     "You can manually type the chemical name, dilution ratio, and purpose directly into the tables for both the Interior and Exterior caddies. These edits are saved automatically to your device.",
     "",
     "🔄 **3. Reset to Defaults**",
-    "If you want to restore the recommended factory default setup for both caddies, click the **Reset Defaults** button. This will overwrite any manual changes you have made.",
+    "If you want to discard unsaved client-side changes and reload the last saved database state for both caddies, click the **Reset Defaults** button. This will overwrite any manual changes you have made since your last save.",
     "",
     "🖨️ **4. Single-Page Printing**",
     "The PDF export engine has been strictly optimized to condense the headers and adjust column widths so that **both the Interior and Exterior caddies fit perfectly onto a single printed page**. This saves paper and makes it easy to laminate and hang in the shop.",

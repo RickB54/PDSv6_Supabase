@@ -7,7 +7,6 @@ export interface DilutionRatio {
     ratio: string; // e.g., "1:10", "1oz/gal"
     soil_level: string; // e.g., "Maintenance", "Heavy Soil"
     notes?: string;
-    print_on_caddy_report?: boolean;
 }
 
 export interface ApplicationGuide {
