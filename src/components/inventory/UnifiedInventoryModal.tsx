@@ -1687,7 +1687,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </SelectTrigger>
                               <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-[300px]">
                                 {Array.from(new Set([...availableSizes, ...(size.bottleSize ? [size.bottleSize] : [])])).map(sz => (
-                                  <SelectItem key={sz} value={sz}>{sz}</SelectItem>
+                                  <SelectItem key={sz} value={sz} className="group">
+                                    <div className="flex items-center justify-between w-full min-w-[120px]">
+                                      <span>{sz}</span>
+                                      <div 
+                                        onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          safeDeleteOption("bottle size", () => updateSizes(availableSizes.filter(s => s !== sz)));
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all cursor-pointer ml-2"
+                                        title="Remove preset"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </div>
+                                    </div>
+                                  </SelectItem>
                                 ))}
                                 <SelectItem value="custom" className="text-blue-400 font-medium">+ Add Custom</SelectItem>
                               </SelectContent>
@@ -1744,7 +1759,22 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </SelectTrigger>
                               <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-64">
                                 {availableContainerTypes.map(t => (
-                                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                                  <SelectItem key={t} value={t} className="group">
+                                    <div className="flex items-center justify-between w-full min-w-[120px]">
+                                      <span>{t}</span>
+                                      <div 
+                                        onPointerDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          safeDeleteOption("container type", () => updateContainerTypes(availableContainerTypes.filter(s => s !== t)));
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all cursor-pointer ml-2"
+                                        title="Remove preset"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </div>
+                                    </div>
+                                  </SelectItem>
                                 ))}
                                 <SelectItem value="custom" className="text-purple-400 font-bold border-t border-zinc-800 mt-1 pt-1">
                                   + Custom Type...
