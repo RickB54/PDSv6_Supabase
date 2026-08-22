@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import localforage from "localforage";
-import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle } from "lucide-react";
+import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle, AlertTriangle } from "lucide-react";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { supabase } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
@@ -415,31 +416,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     localStorage.setItem('inventory_preferred_locations', JSON.stringify(newList));
   };
 
+  const [pendingDelete, setPendingDelete] = useState<{type: string, action: () => void} | null>(null);
+
   const safeDeleteOption = (type: string, action: () => void) => {
-    if (window.confirm(`Are you sure you want to delete this ${type}? Any items assigned to this ${type} will lose their assignment.`)) {
-      action();
-    }
+    setPendingDelete({ type, action });
   };
 
   const handleDeleteLocation = async (e: React.MouseEvent, loc: string) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete the location "${loc}"? Any items assigned to this location will lose their assignment.`)) return;
-    const newLocs = availableLocations.filter(l => l !== loc);
-    updateLocations(newLocs);
-    
-    if (mode === 'supply') {
-      setSupplyPurchases(prev => prev.map(p => p.location === loc ? { ...p, location: "" } : p));
-    } else if (mode === 'equipment' || mode === 'tool') {
-      setEquipmentPurchases(prev => prev.map(p => p.location === loc ? { ...p, location: "" } : p));
-    }
-
-    try {
-      const { clearMaterialLocation } = await import("@/lib/inventory-data");
-      await clearMaterialLocation(loc);
-      if (onRefresh) onRefresh();
-    } catch (err) {
-      console.error("Failed to sync location deletion", err);
-    }
+    setPendingDelete({
+      type: `location "${loc}"`,
+      action: async () => {
+        const newLocs = availableLocations.filter(l => l !== loc);
+        updateLocations(newLocs);
+        
+        if (mode === 'supply') {
+          try {
+            await api.patch(`/api/materials/location`, { location: loc, newLocation: '' });
+          } catch (err) {
+            console.error(err);
+          }
+        } else {
+          try {
+            await api.patch(`/api/equipment/location`, { location: loc, newLocation: '' });
+          } catch (err) {
+            console.error(err);
+          }
+        }
+      }
+    });
   };
 
   const updateContainerLocations = (newList: string[]) => {
@@ -449,15 +454,19 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const handleDeleteContainerLocation = async (e: React.MouseEvent, loc: string) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete the container "${loc}"? Any items assigned to this container will lose their assignment.`)) return;
-    const newLocs = availableContainerLocations.filter(l => l !== loc);
-    updateContainerLocations(newLocs);
-    
-    if (mode === 'supply') {
-      setSupplyPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
-    } else if (mode === 'equipment' || mode === 'tool') {
-      setEquipmentPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
-    }
+    setPendingDelete({
+      type: `container "${loc}"`,
+      action: async () => {
+        const newLocs = availableContainerLocations.filter(l => l !== loc);
+        updateContainerLocations(newLocs);
+        
+        if (mode === 'supply') {
+          setSupplyPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
+        } else if (mode === 'equipment' || mode === 'tool') {
+          setEquipmentPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
+        }
+      }
+    });
   };
 
   const updateCategories = (newList: {supply: string[], equipment: string[]}) => {
@@ -1653,7 +1662,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               />
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="icon"
                                 size="icon"
                                 className="h-9 w-9 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 shrink-0"
                                 onClick={() => {
@@ -1667,46 +1676,57 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </Button>
                             </div>
                           ) : (
-                            <Select
-                              value={size.bottleSize || ""}
-                              onValueChange={(val) => {
-                                if (val === 'custom') {
-                                  setCustomBottleSizeMap(prev => ({ ...prev, [index]: true }));
-                                  const newSizes = [...chemicalSizes];
-                                  newSizes[index].bottleSize = "";
-                                  setChemicalSizes(newSizes);
-                                } else {
-                                  const newSizes = [...chemicalSizes];
-                                  newSizes[index].bottleSize = val;
-                                  setChemicalSizes(newSizes);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm">
-                                <SelectValue placeholder="Select size..." />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-[300px]">
-                                {Array.from(new Set([...availableSizes, ...(size.bottleSize ? [size.bottleSize] : [])])).map(sz => (
-                                  <SelectItem key={sz} value={sz} className="group">
-                                    <div className="flex items-center justify-between w-full min-w-[120px]">
-                                      <span>{sz}</span>
-                                      <div 
-                                        onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          safeDeleteOption("bottle size", () => updateSizes(availableSizes.filter(s => s !== sz)));
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                                  <span className="truncate">{size.bottleSize || "Select size..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  {Array.from(new Set([...availableSizes, ...(size.bottleSize ? [size.bottleSize] : [])])).map(sz => (
+                                    <div key={sz} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newSizes = [...chemicalSizes];
+                                          newSizes[index].bottleSize = sz;
+                                          setChemicalSizes(newSizes);
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all cursor-pointer ml-2"
+                                      >
+                                        {sz}
+                                      </span>
+                                      {size.bottleSize === sz && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          safeDeleteOption("bottle size", () => updateSizes(availableSizes.filter(s => s !== sz))); 
+                                        }} 
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" 
                                         title="Remove preset"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
-                                      </div>
+                                      </button>
                                     </div>
-                                  </SelectItem>
-                                ))}
-                                <SelectItem value="custom" className="text-blue-400 font-medium">+ Add Custom</SelectItem>
-                              </SelectContent>
-                            </Select>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <div 
+                                    className="flex items-center group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors"
+                                    onClick={() => {
+                                      setCustomBottleSizeMap(prev => ({ ...prev, [index]: true }));
+                                      const newSizes = [...chemicalSizes];
+                                      newSizes[index].bottleSize = "";
+                                      setChemicalSizes(newSizes);
+                                    }}
+                                  >
+                                    <PlusIcon className="h-3.5 w-3.5 text-blue-400 mr-2" />
+                                    <span className="text-sm text-blue-400 font-medium">Add Custom</span>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           )}
                         </div>
                         <div>
@@ -1739,48 +1759,57 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </Button>
                             </div>
                           ) : (
-                            <Select
-                              value={size.containerType || ""}
-                              onValueChange={(val) => {
-                                if (val === 'custom') {
-                                  setCustomContainerType(prev => ({ ...prev, [index]: true }));
-                                  const newSizes = [...chemicalSizes];
-                                  newSizes[index].containerType = "";
-                                  setChemicalSizes(newSizes);
-                                } else {
-                                  const newSizes = [...chemicalSizes];
-                                  newSizes[index].containerType = val;
-                                  setChemicalSizes(newSizes);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-9 bg-zinc-900 border-zinc-700 text-white">
-                                <SelectValue placeholder="Select type..." />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-900 border-zinc-700 text-white max-h-64">
-                                {availableContainerTypes.map(t => (
-                                  <SelectItem key={t} value={t} className="group">
-                                    <div className="flex items-center justify-between w-full min-w-[120px]">
-                                      <span>{t}</span>
-                                      <div 
-                                        onPointerDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          safeDeleteOption("container type", () => updateContainerTypes(availableContainerTypes.filter(s => s !== t)));
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                                  <span className="truncate">{size.containerType || "Select type..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  {availableContainerTypes.map(t => (
+                                    <div key={t} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newSizes = [...chemicalSizes];
+                                          newSizes[index].containerType = t;
+                                          setChemicalSizes(newSizes);
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all cursor-pointer ml-2"
+                                      >
+                                        {t}
+                                      </span>
+                                      {size.containerType === t && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <button 
+                                        type="button" 
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          safeDeleteOption("container type", () => updateContainerTypes(availableContainerTypes.filter(s => s !== t))); 
+                                        }} 
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" 
                                         title="Remove preset"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
-                                      </div>
+                                      </button>
                                     </div>
-                                  </SelectItem>
-                                ))}
-                                <SelectItem value="custom" className="text-purple-400 font-bold border-t border-zinc-800 mt-1 pt-1">
-                                  + Custom Type...
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <div 
+                                    className="flex items-center group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors"
+                                    onClick={() => {
+                                      setCustomContainerType(prev => ({ ...prev, [index]: true }));
+                                      const newSizes = [...chemicalSizes];
+                                      newSizes[index].containerType = "";
+                                      setChemicalSizes(newSizes);
+                                    }}
+                                  >
+                                    <PlusIcon className="h-3.5 w-3.5 text-purple-400 mr-2" />
+                                    <span className="text-sm text-purple-400 font-bold">Add Custom Type</span>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           )}
                         </div>
                       </div>
@@ -3085,6 +3114,33 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           </Button>
         </DialogFooter>
       </DialogContent>
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-red-500/30">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Are you sure you want to delete this {pendingDelete?.type}? Any items assigned to this {pendingDelete?.type} will lose their assignment. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                if (pendingDelete) {
+                  pendingDelete.action();
+                  setPendingDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
     
     {isFullscreenImage && form.imageUrl && (
