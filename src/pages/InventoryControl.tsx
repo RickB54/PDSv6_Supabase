@@ -444,7 +444,7 @@ const InventoryControl = () => {
           const applyTo = (match: string, changes: any, maxCount: number = 1) => {
             let count = 0;
             for (const item of data) {
-              if (item.name.toLowerCase().includes(match.toLowerCase())) {
+            if ((item.name || '').toLowerCase().includes((match || '').toLowerCase())) {
                 if (count < maxCount && !updates.find(u => u.id === item.id)) {
                    updates.push({ id: item.id, name: item.name, ...changes });
                    count++;
@@ -621,7 +621,7 @@ const InventoryControl = () => {
       let count = 0;
       for (const group of updates) {
         for (const name of group.names) {
-          const match = chemicals.find(c => c.name.toLowerCase() === name.toLowerCase());
+          const match = chemicals.find(c => (c.name || '').toLowerCase() === (name || '').toLowerCase());
           if (match) {
             await supabase.from('chemicals').update({
               shelf: group.shelf,
