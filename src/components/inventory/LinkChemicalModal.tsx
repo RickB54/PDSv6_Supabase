@@ -69,7 +69,7 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
         try {
             // 1. Generate Template
             const category = inventoryItem.category || "Exterior"; // Fallback
-            const template = generateTemplate(inventoryItem.name, category as any);
+            const template = await generateTemplate(inventoryItem.name, category as any);
 
             // 2. Ensure critical fields
             const newChemical: Partial<Chemical> = {
