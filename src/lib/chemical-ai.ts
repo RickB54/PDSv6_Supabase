@@ -77,6 +77,20 @@ export async function generateTemplate(name: string, category: 'Interior' | 'Ext
     let description = `Professional grade detailing solution optimized for ${safeCategory.toLowerCase()} maintenance tasks.`;
     let usedFor = traits.isInterior ? ["Upholstery", "Carpets"] : ["Paintwork", "Clear Coat"];
 
+    if (traits.isTire) {
+        description = "Professional grade tire, wheel, and rubber detailing solution.";
+        usedFor = ["Tires", "Wheels", "Rubber", "Trim"];
+    } else if (traits.isGlass) {
+        description = "Professional grade glass and window detailing solution for streak-free clarity.";
+        usedFor = ["Windows", "Mirrors", "Glass"];
+    } else if (traits.isCoating) {
+        description = "Professional grade protective coating and sealant.";
+        usedFor = ["Paint Protection", "Clear Coat", "Exterior Plastics"];
+    } else if (traits.isPolish) {
+        description = "Professional grade abrasive polish and compound for paint correction.";
+        usedFor = ["Paint Correction", "Clear Coat", "Scratch Removal"];
+    }
+
     return {
         name,
         category: safeCategory as any,
