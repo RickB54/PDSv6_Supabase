@@ -70,6 +70,7 @@ export function StaticCaddyWorksheetModal({
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [showExtraSlots, setShowExtraSlots] = useState(false);
+    const [isRealMobile, setIsRealMobile] = useState(false);
     
     // History State
     const [history, setHistory] = useState<CaddyHistoryEntry[]>([]);
@@ -86,6 +87,14 @@ export function StaticCaddyWorksheetModal({
             }
         }
     }, [open]);
+
+    useEffect(() => {
+        const mql = window.matchMedia('(pointer: coarse) and (max-width: 768px)');
+        setIsRealMobile(mql.matches);
+        const handler = (e: MediaQueryListEvent) => setIsRealMobile(e.matches);
+        mql.addEventListener('change', handler);
+        return () => mql.removeEventListener('change', handler);
+    }, []);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -363,16 +372,85 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
+    const renderMobileCards = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
+        const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
+        return (
+            <div className="space-y-4">
+                <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-10 py-2 border-b border-zinc-800`}>
+                    {title}
+                </h3>
+                <div className="space-y-3">
+                    {items.map((item, idx) => (
+                        <div key={idx} className="bg-zinc-900/40 border border-zinc-800/80 rounded-lg p-3 flex gap-3 shadow-sm">
+                            <div className="flex flex-col items-center justify-start gap-2 w-14 shrink-0 border-r border-zinc-800/50 pr-3">
+                                <span className="font-black text-zinc-400 text-xs tracking-widest uppercase">Slot {item.slot}</span>
+                                <div className="flex flex-col gap-1 bg-zinc-950/80 p-1 rounded border border-zinc-800/80 w-full mt-1">
+                                    <button 
+                                        onClick={() => moveSlot(caddy, idx, 'up')}
+                                        disabled={idx === 0}
+                                        className="text-zinc-500 hover:text-white flex justify-center w-full py-1.5 disabled:opacity-20 hover:bg-zinc-800 rounded-sm transition-colors"
+                                    >
+                                        <ChevronUp className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => moveSlot(caddy, idx, 'down')}
+                                        disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
+                                        className="text-zinc-500 hover:text-white flex justify-center w-full py-1.5 disabled:opacity-20 hover:bg-zinc-800 rounded-sm transition-colors"
+                                    >
+                                        <ChevronDown className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 space-y-3">
+                                <div>
+                                    <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Chemical Name</label>
+                                    <Input
+                                        value={item.name}
+                                        onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
+                                        className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
+                                    />
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="w-[35%] shrink-0">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Ratio</label>
+                                        <Input
+                                            value={item.ratio}
+                                            maxLength={5}
+                                            onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
+                                            className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Purpose</label>
+                                        <Input
+                                            value={item.purpose}
+                                            onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
+                                            className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     const renderTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
+        if (isRealMobile) {
+            return renderMobileCards(caddy, title, colorClass);
+        }
+
         const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2`}>
                     {title}
                 </h3>
-                <div className="rounded-md border border-zinc-800 relative">
+                <div className="rounded-md border border-zinc-800 overflow-hidden">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 sticky top-[-1px] z-10 shadow-sm rounded-t-md">
+                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
                             <tr>
                                 <th className="px-4 py-2 font-medium w-28 text-center">Slot</th>
                                 <th className="px-4 py-2 font-medium w-[30%]">Chemical Name</th>
