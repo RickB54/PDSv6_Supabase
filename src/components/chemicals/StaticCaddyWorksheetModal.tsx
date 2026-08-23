@@ -509,7 +509,7 @@ export function StaticCaddyWorksheetModal({
                         ))}
                     </div>
                 </div>
-            {caddy !== 'interior' && caddy !== 'exterior' && (<div className="w-full flex justify-center pt-2"><Button variant="ghost" onClick={() => handleAddSlot(caddy)} className="text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 w-full rounded bg-zinc-900/50"><Plus className="w-3 h-3 mr-2" /> Add Additional Slot</Button></div>)}</div>
+            </div>
         );
     };
 
@@ -611,8 +611,8 @@ export function StaticCaddyWorksheetModal({
                                                 <li><strong className="text-blue-400">✏️ 2. Editing the Setup:</strong> Manually type chemical names, ratios, and purposes directly into the table.</li>
                                                 <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
                                                 <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
-                                                <li><strong className="text-purple-400">🖨️ 5. PDF Export:</strong> Both interior and exterior tables fit perfectly onto a single printed page.</li>
-                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Click the '+' button to add new caddies (e.g. Specialty). Use the gear icon to toggle their visibility without losing data.</li>
+                                                <li><strong className="text-purple-400">🖨️ 5. Selective PDF Export:</strong> Inside the Caddy Manager (gear icon), use the Print button to pick exactly which caddies export to PDF.</li>
+                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Inside the Caddy Manager, click 'Add New Custom Caddy'. You can toggle their visibility and add infinite extra slots to them using the 'Add Slot' button.</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>
@@ -746,6 +746,14 @@ export function StaticCaddyWorksheetModal({
                                                 className={`h-10 w-10 p-0 shrink-0 ${pdfSelection.includes(caddy.id) ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-zinc-800 text-zinc-500 border-zinc-700'}`}
                                             >
                                                 <Printer className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => handleAddSlot(caddy.id)}
+                                                title="Add Extra Slot to Caddy"
+                                                className="h-10 px-3 bg-zinc-800 text-zinc-400 hover:text-white border-zinc-700 shrink-0 flex items-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Add Slot</span>
                                             </Button>
                                             <Button
                                                 variant="outline"
