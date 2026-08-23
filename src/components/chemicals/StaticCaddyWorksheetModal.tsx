@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Settings2 } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Settings2, ArrowLeft } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -629,60 +629,76 @@ export function StaticCaddyWorksheetModal({
                             </p>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowHistory(!showHistory)}
-                                title={showHistory ? 'Back' : 'History'}
-                                className={`h-9 w-9 p-0 border-zinc-700 flex items-center justify-center ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
-                            >
-                                <HistoryIcon className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowExtraSlots(!showExtraSlots)}
-                                className={`h-9 px-3 border-zinc-700 ${showExtraSlots ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
-                            >
-                                {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
-                            </Button>
-                                                       <Button
-                                variant="outline"
-                                onClick={() => setShowManageCaddies(!showManageCaddies)}
-                                title="Manage Caddies"
-                                className={`h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 ${showManageCaddies ? 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
-                            >
-                                <Settings2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleReset}
-                                title="Reset"
-                                className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center"
-                            >
-                                <RotateCcw className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleGeneratePdf}
-                                title="Export PDF"
-                                className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
-                            >
-                                <Printer className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleAddCustomCaddy}
-                                title="Add Custom Caddy"
-                                className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
-                            >
-                                <Plus className="w-4 h-4" />
-                            </Button>
-                            <Button onClick={handleSave}
-                                disabled={isSaving}
-                                title="Save"
-                                className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0"
-                            >
-                                <Save className="w-4 h-4" />
-                            </Button>
+                            {(showHistory || showManageCaddies) ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowHistory(false);
+                                        setShowManageCaddies(false);
+                                    }}
+                                    title="Back to Worksheet"
+                                    className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 text-white hover:bg-zinc-800 flex items-center justify-center shrink-0"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-zinc-300" />
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowHistory(true)}
+                                        title="History"
+                                        className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center bg-zinc-900 text-zinc-400 hover:text-white"
+                                    >
+                                        <HistoryIcon className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowExtraSlots(!showExtraSlots)}
+                                        className={`h-9 px-3 border-zinc-700 ${showExtraSlots ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+                                    >
+                                        {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowManageCaddies(true)}
+                                        title="Manage Caddies"
+                                        className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 bg-zinc-900 text-zinc-400 hover:text-white"
+                                    >
+                                        <Settings2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleReset}
+                                        title="Reset"
+                                        className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center"
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleGeneratePdf}
+                                        title="Export PDF"
+                                        className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
+                                    >
+                                        <Printer className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleAddCustomCaddy}
+                                        title="Add Custom Caddy"
+                                        className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </Button>
+                                    <Button onClick={handleSave}
+                                        disabled={isSaving}
+                                        title="Save"
+                                        className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </DialogHeader>
