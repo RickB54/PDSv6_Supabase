@@ -2,7 +2,16 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Settings2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem
+} from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -23,9 +32,18 @@ interface CaddySlot {
     purpose: string;
 }
 
+export interface CustomCaddy {
+    id: string;
+    title: string;
+    colorClass: string;
+    visible: boolean;
+    slots: CaddySlot[];
+}
+
 interface CaddyData {
     interior: CaddySlot[];
     exterior: CaddySlot[];
+    custom_caddies: CustomCaddy[];
 }
 
 const DEFAULT_INTERIOR: CaddySlot[] = [
@@ -54,9 +72,21 @@ const DEFAULT_EXTERIOR: CaddySlot[] = [
     { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
 ];
 
+const DEFAULT_SPECIALTY: CustomCaddy = {
+    id: 'specialty-chemicals',
+    title: 'Specialty Chemicals',
+    colorClass: 'text-purple-400',
+    visible: true,
+    slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' })).concat([
+        { slot: 'Extra 1', name: '', ratio: '', purpose: '' },
+        { slot: 'Extra 2', name: '', ratio: '', purpose: '' }
+    ])
+};
+
 const DEFAULT_DATA: CaddyData = {
     interior: DEFAULT_INTERIOR,
-    exterior: DEFAULT_EXTERIOR
+    exterior: DEFAULT_EXTERIOR,
+    custom_caddies: [DEFAULT_SPECIALTY]
 };
 
 export function StaticCaddyWorksheetModal({
@@ -115,7 +145,8 @@ export function StaticCaddyWorksheetModal({
             if (dbData) {
                 const parsed = {
                     interior: dbData.interior || DEFAULT_INTERIOR,
-                    exterior: dbData.exterior || DEFAULT_EXTERIOR
+                    exterior: dbData.exterior || DEFAULT_EXTERIOR,
+                    custom_caddies: dbData.custom_caddies || DEFAULT_DATA.custom_caddies
                 };
                 
                 // Legacy migration
@@ -156,6 +187,7 @@ export function StaticCaddyWorksheetModal({
                     id: 1,
                     interior: data.interior,
                     exterior: data.exterior,
+                    custom_caddies: data.custom_caddies,
                     show_extra_slots: showExtraSlots,
                     updated_at: new Date().toISOString()
                 }).select();
@@ -170,7 +202,7 @@ export function StaticCaddyWorksheetModal({
                 id: Date.now().toString(),
                 name: `Save ${new Date().toLocaleString()}`,
                 timestamp: new Date().toISOString(),
-                data: { interior: [...data.interior], exterior: [...data.exterior] }
+                data: { interior: [...data.interior], exterior: [...data.exterior], custom_caddies: data.custom_caddies.map(c => ({...c, slots: [...c.slots]})) }
             };
             const newHistory = [newHistoryEntry, ...history].slice(0, 50);
             setHistory(newHistory);
@@ -191,6 +223,29 @@ export function StaticCaddyWorksheetModal({
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleAddCustomCaddy = () => {
+        const newId = `custom-${Date.now()}`;
+        const newData = { ...data };
+        newData.custom_caddies.push({
+            id: newId,
+            title: `New Caddy ${newData.custom_caddies.length + 1}`,
+            colorClass: 'text-fuchsia-400',
+            visible: true,
+            slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' })).concat([
+                { slot: 'Extra 1', name: '', ratio: '', purpose: '' },
+                { slot: 'Extra 2', name: '', ratio: '', purpose: '' }
+            ])
+        });
+        setData(newData);
+    };
+
+    const toggleCaddyVisibility = (id: string) => {
+        const newData = { ...data };
+        const c = newData.custom_caddies.find(c => c.id === id);
+        if (c) c.visible = !c.visible;
+        setData(newData);
     };
 
     const handleReset = async () => {
@@ -372,8 +427,10 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
-    const renderMobileTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
-        const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
+    const renderMobileTable = (caddy: string, title: string, colorClass: string) => {
+        const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
+        if (!sourceSlots) return null;
+        const items = showExtraSlots ? sourceSlots : sourceSlots.slice(0, 8);
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-20 py-2`}>
@@ -440,12 +497,14 @@ export function StaticCaddyWorksheetModal({
         );
     };
 
-    const renderTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
+    const renderTable = (caddy: string, title: string, colorClass: string) => {
         if (isRealMobile) {
             return renderMobileTable(caddy, title, colorClass);
         }
 
-        const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
+        const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
+        if (!sourceSlots) return null;
+        const items = showExtraSlots ? sourceSlots : sourceSlots.slice(0, 8);
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2`}>
@@ -543,6 +602,7 @@ export function StaticCaddyWorksheetModal({
                                                 <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
                                                 <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
                                                 <li><strong className="text-purple-400">🖨️ 5. PDF Export:</strong> Both interior and exterior tables fit perfectly onto a single printed page.</li>
+                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Click the '+' button to add new caddies (e.g. Specialty). Use the gear icon to toggle their visibility without losing data.</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>
@@ -568,6 +628,36 @@ export function StaticCaddyWorksheetModal({
                             >
                                 {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
                             </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" title="Manage Caddies" className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-white">
+                                        <Settings2 className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-700 text-white">
+                                    <DropdownMenuLabel>Caddy Visibility</DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="bg-zinc-700" />
+                                    <DropdownMenuItem disabled className="text-zinc-500">
+                                        <Check className="h-4 w-4 mr-2 opacity-50" /> Interior Caddy (Always)
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem disabled className="text-zinc-500">
+                                        <Check className="h-4 w-4 mr-2 opacity-50" /> Exterior Caddy (Always)
+                                    </DropdownMenuItem>
+                                    {data.custom_caddies.map(c => (
+                                        <DropdownMenuCheckboxItem
+                                            key={c.id}
+                                            checked={c.visible}
+                                            onCheckedChange={() => toggleCaddyVisibility(c.id)}
+                                        >
+                                            {c.title}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                    <DropdownMenuSeparator className="bg-zinc-700" />
+                                    <DropdownMenuItem onClick={handleAddCustomCaddy} className="text-fuchsia-400 focus:text-fuchsia-300">
+                                        <Plus className="h-4 w-4 mr-2" /> Add Custom Caddy
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <Button
                                 variant="outline"
                                 onClick={handleReset}
@@ -584,11 +674,19 @@ export function StaticCaddyWorksheetModal({
                                 <Printer className="w-4 h-4 mr-2" /> PDF
                             </Button>
                             <Button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className="h-9 px-4 bg-green-600 hover:bg-green-500 text-white"
+                                variant="outline"
+                                onClick={handleAddCustomCaddy}
+                                title="Add Custom Caddy"
+                                className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
                             >
-                                <Save className="w-4 h-4 mr-2" /> Save
+                                <Plus className="w-4 h-4" />
+                            </Button>
+                            <Button onClick={handleSave}
+                                disabled={isSaving}
+                                title="Save"
+                                className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0"
+                            >
+                                <Save className="w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -666,6 +764,11 @@ export function StaticCaddyWorksheetModal({
                         <div className="space-y-8">
                             {renderTable('interior', 'Interior Caddy', 'text-purple-400')}
                             {renderTable('exterior', 'Exterior Caddy', 'text-blue-400')}
+                            {data.custom_caddies.filter(c => c.visible).map(c => (
+                                <div key={c.id}>
+                                    {renderTable(c.id, c.title, c.colorClass)}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
