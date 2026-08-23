@@ -603,14 +603,26 @@ export function StaticCaddyWorksheetModal({
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tight text-white">
                                     Static Caddy Worksheet
                                 </DialogTitle>
-                                <Button
-                                variant="outline"
-                                onClick={() => setShowManageCaddies(!showManageCaddies)}
-                                className={`h-9 px-3 border-zinc-700 ${showManageCaddies ? 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
-                                title="Manage Caddies"
-                            >
-                                {showManageCaddies ? 'Back to Worksheet' : 'Manage Caddies'}
-                            </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <button className="text-zinc-400 hover:text-fuchsia-400 transition-colors focus:outline-none flex items-center justify-center">
+                                            <HelpCircle className="h-5 w-5" />
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="z-[99999] w-80 p-0 bg-zinc-900 border-zinc-700 shadow-2xl" side="bottom" align="start">
+                                        <div className="p-4 text-zinc-300">
+                                            <h3 className="font-bold text-white text-base mb-2 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
+                                            <ul className="space-y-3 text-sm">
+                                                <li><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
+                                                <li><strong className="text-blue-400">✏️ 2. Editing the Setup:</strong> Manually type chemical names, ratios, and purposes directly into the table.</li>
+                                                <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
+                                                <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
+                                                <li><strong className="text-purple-400">🖨️ 5. PDF Export:</strong> Both interior and exterior tables fit perfectly onto a single printed page.</li>
+                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Click the '+' button to add new caddies (e.g. Specialty). Use the gear icon to toggle their visibility without losing data.</li>
+                                            </ul>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <p className="text-sm text-zinc-400 mt-1">
                                 Independent fallback reference sheet. These edits are isolated from the main inventory.
@@ -632,71 +644,14 @@ export function StaticCaddyWorksheetModal({
                             >
                                 {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
                             </Button>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" title="Manage Caddies" className="h-9 px-3 border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-white">
-                                        Manage Caddies
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent align="end" className="w-80 bg-zinc-950 border-zinc-800 text-white p-4">
-                                    <h4 className="font-bold text-sm mb-3 text-fuchsia-400">Manage Caddies</h4>
-                                    <div className="space-y-3 max-h-64 overflow-y-auto styled-scrollbar pr-1">
-                                        <div className="flex items-center justify-between p-2 rounded bg-zinc-900/50 border border-zinc-800">
-                                            <span className="text-sm font-medium text-purple-400">Interior Caddy</span>
-                                            <span className="text-xs text-zinc-500">Always Visible</span>
-                                        </div>
-                                        <div className="flex items-center justify-between p-2 rounded bg-zinc-900/50 border border-zinc-800">
-                                            <span className="text-sm font-medium text-blue-400">Exterior Caddy</span>
-                                            <span className="text-xs text-zinc-500">Always Visible</span>
-                                        </div>
-                                        {data.custom_caddies.map(caddy => (
-                                            <div key={caddy.id} className="flex flex-col gap-2 p-2 rounded bg-zinc-900 border border-zinc-800">
-                                                <div className="flex items-center gap-2">
-                                                    <Input 
-                                                        value={caddy.title}
-                                                        onChange={(e) => {
-                                                            const newData = { ...data };
-                                                            const cIdx = newData.custom_caddies.findIndex(c => c.id === caddy.id);
-                                                            if (cIdx > -1) {
-                                                                newData.custom_caddies[cIdx].title = e.target.value;
-                                                                setData(newData);
-                                                            }
-                                                        }}
-                                                        className="h-8 bg-zinc-950 border-zinc-700 text-white flex-1 text-sm shadow-sm"
-                                                    />
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => toggleCaddyVisibility(caddy.id)}
-                                                        className={`h-8 px-2 ${caddy.visible ? 'text-green-400 bg-green-400/10' : 'text-zinc-500 bg-zinc-800'}`}
-                                                        title={caddy.visible ? "Visible" : "Hidden"}
-                                                    >
-                                                        {caddy.visible ? 'Show' : 'Hide'}
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            if (confirm('Are you sure you want to delete this custom caddy?')) {
-                                                                const newData = { ...data };
-                                                                newData.custom_caddies = newData.custom_caddies.filter(c => c.id !== caddy.id);
-                                                                setData(newData);
-                                                            }
-                                                        }}
-                                                        className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                                                        title="Delete Caddy"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <Button onClick={handleAddCustomCaddy} className="w-full mt-4 h-8 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs">
-                                        <Plus className="h-3 w-3 mr-2" /> Add Custom Caddy
-                                    </Button>
-                                </PopoverContent>
-                            </Popover>
+                                                       <Button
+                                variant="outline"
+                                onClick={() => setShowManageCaddies(!showManageCaddies)}
+                                title="Manage Caddies"
+                                className={`h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 ${showManageCaddies ? 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+                            >
+                                <Settings2 className="h-4 w-4" />
+                            </Button>
                             <Button
                                 variant="outline"
                                 onClick={handleReset}
