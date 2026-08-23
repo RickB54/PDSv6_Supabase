@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Settings2, ArrowLeft } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Settings2, ArrowLeft, Bookmark } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -669,10 +669,10 @@ export function StaticCaddyWorksheetModal({
                                     <Button
                                         variant="outline"
                                         onClick={handleReset}
-                                        title="Reset"
+                                        title="Set as Default"
                                         className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center"
                                     >
-                                        <RotateCcw className="w-4 h-4" />
+                                        <Bookmark className="w-4 h-4" />
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -682,14 +682,7 @@ export function StaticCaddyWorksheetModal({
                                     >
                                         <Printer className="w-4 h-4" />
                                     </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={handleAddCustomCaddy}
-                                        title="Add Custom Caddy"
-                                        className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </Button>
+                                    
                                     <Button onClick={handleSave}
                                         disabled={isSaving}
                                         title="Save"
