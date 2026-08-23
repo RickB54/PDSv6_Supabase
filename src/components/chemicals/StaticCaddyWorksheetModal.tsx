@@ -446,11 +446,12 @@ export function StaticCaddyWorksheetModal({
     const renderMobileTable = (caddy: string, title: string, colorClass: string) => {
         const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
         if (!sourceSlots) return null;
-        const items = showExtraSlots ? sourceSlots : sourceSlots.slice(0, 8);
+        const isBase = caddy === 'interior' || caddy === 'exterior';
+        const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-20 py-2`}>
-                    {title}
+                    {title} <span className="text-sm font-normal text-zinc-500">({items.length} slots)</span>
                 </h3>
                 <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
                     {/* Header Row */}
@@ -520,11 +521,12 @@ export function StaticCaddyWorksheetModal({
 
         const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
         if (!sourceSlots) return null;
-        const items = showExtraSlots ? sourceSlots : sourceSlots.slice(0, 8);
+        const isBase = caddy === 'interior' || caddy === 'exterior';
+        const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
         return (
             <div className="space-y-3">
                 <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2`}>
-                    {title}
+                    {title} <span className="text-sm font-normal text-zinc-500">({items.length} slots)</span>
                 </h3>
                 <div className="rounded-md border border-zinc-800 overflow-hidden">
                     <div className="flex flex-col w-full text-sm overflow-hidden">
@@ -624,6 +626,7 @@ export function StaticCaddyWorksheetModal({
                         </div>
                         <div className="flex gap-2 shrink-0">
                             {(showHistory || showManageCaddies) ? (
+                                <>
                                 <Button
                                     variant="outline"
                                     onClick={() => {
@@ -635,6 +638,16 @@ export function StaticCaddyWorksheetModal({
                                 >
                                     <ArrowLeft className="w-5 h-5 text-zinc-300" />
                                 </Button>
+                                {showManageCaddies && (
+                                    <Button onClick={handleSave}
+                                        disabled={isSaving}
+                                        title="Save"
+                                        className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0 ml-2"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                    </Button>
+                                )}
+                                </>
                             ) : (
                                 <>
                                     <Button
