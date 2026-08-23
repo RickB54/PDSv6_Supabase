@@ -390,17 +390,33 @@ export function StaticCaddyWorksheetModal({
         setEditingHistoryId(null);
     };
 
-    const updateSlot = (caddy: 'interior' | 'exterior', index: number, field: keyof CaddySlot, value: string) => {
+    const updateSlot = (caddy: string, index: number, field: keyof CaddySlot, value: string) => {
         setData(prev => {
-            const arr = [...prev[caddy]];
-            arr[index] = { ...arr[index], [field]: value };
-            return { ...prev, [caddy]: arr };
+            if (caddy === 'interior' || caddy === 'exterior') {
+                const arr = [...prev[caddy]];
+                arr[index] = { ...arr[index], [field]: value };
+                return { ...prev, [caddy]: arr };
+            } else {
+                const newCustom = prev.custom_caddies.map(c => {
+                    if (c.id === caddy) {
+                        const newSlots = [...c.slots];
+                        newSlots[index] = { ...newSlots[index], [field]: value };
+                        return { ...c, slots: newSlots };
+                    }
+                    return c;
+                });
+                return { ...prev, custom_caddies: newCustom };
+            }
         });
     };
 
-    const moveSlot = (caddy: 'interior' | 'exterior', index: number, direction: 'up' | 'down') => {
+    const moveSlot = (caddy: string, index: number, direction: 'up' | 'down') => {
         setData(prev => {
-            const arr = [...prev[caddy]];
+            const isBase = caddy === 'interior' || caddy === 'exterior';
+            const targetArray = isBase ? prev[caddy as 'interior'|'exterior'] : prev.custom_caddies.find(c => c.id === caddy)?.slots;
+            if (!targetArray) return prev;
+            
+            const arr = [...targetArray];
             const newIndex = direction === 'up' ? index - 1 : index + 1;
             
             const maxIndex = showExtraSlots ? arr.length - 1 : 7;
@@ -423,7 +439,12 @@ export function StaticCaddyWorksheetModal({
                 purpose: currentItem.purpose
             };
 
-            return { ...prev, [caddy]: arr };
+            if (isBase) {
+                return { ...prev, [caddy]: arr };
+            } else {
+                const newCustom = prev.custom_caddies.map(c => c.id === caddy ? { ...c, slots: arr } : c);
+                return { ...prev, custom_caddies: newCustom };
+            }
         });
     };
 
@@ -511,67 +532,61 @@ export function StaticCaddyWorksheetModal({
                     {title}
                 </h3>
                 <div className="rounded-md border border-zinc-800 overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
-                            <tr>
-                                <th className="px-4 py-2 font-medium w-28 text-center">Slot</th>
-                                <th className="px-4 py-2 font-medium w-[30%]">Chemical Name</th>
-                                <th className="px-4 py-2 font-medium w-[20%]">Dilution Ratio</th>
-                                <th className="px-4 py-2 font-medium">Purpose</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-800 bg-zinc-950/50">
+                    <div className="flex flex-col w-full text-sm overflow-hidden">
+                        <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-3">
+                            <div className="w-24 shrink-0 text-center px-4">Slot</div>
+                            <div className="flex-[4] min-w-0 px-2 truncate">Chemical Name</div>
+                            <div className="flex-[1] min-w-0 px-2 text-center truncate">Dilution Ratio</div>
+                            <div className="flex-[4] min-w-0 px-2 truncate">Purpose</div>
+                        </div>
+                        <div className="flex flex-col w-full divide-y divide-zinc-800 bg-zinc-950/50">
                             {items.map((item, idx) => (
-                                <tr key={idx} className="hover:bg-zinc-900/50 transition-colors">
-                                    <td className="px-4 py-2 text-center font-bold text-zinc-500">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
-                                                <button 
-                                                    onClick={() => moveSlot(caddy, idx, 'up')}
-                                                    disabled={idx === 0}
-                                                    className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                                    title="Move Up"
-                                                >
-                                                    <ChevronUp className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => moveSlot(caddy, idx, 'down')}
-                                                    disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
-                                                    className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                                    title="Move Down"
-                                                >
-                                                    <ChevronDown className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                            <span className="w-10 text-left truncate">{item.slot}</span>
+                                <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-2">
+                                    <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-4">
+                                        <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                            <button 
+                                                onClick={() => moveSlot(caddy, idx, 'up')}
+                                                disabled={idx === 0}
+                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                            >
+                                                <ChevronUp className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => moveSlot(caddy, idx, 'down')}
+                                                disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                            >
+                                                <ChevronDown className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
-                                    </td>
-                                    <td className="px-2 py-1">
+                                        <span className="w-10 text-left truncate">{item.slot}</span>
+                                    </div>
+                                    <div className="flex-[4] min-w-0 px-2">
                                         <Input
                                             value={item.name}
                                             onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                            className="h-8 bg-zinc-900/50 border-zinc-800 text-white"
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
                                         />
-                                    </td>
-                                    <td className="px-2 py-1">
+                                    </div>
+                                    <div className="flex-[1] min-w-0 px-2">
                                         <Input
                                             value={item.ratio}
                                             maxLength={5}
                                             onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                            className="h-8 bg-zinc-900/50 border-zinc-800 text-white"
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center shadow-sm"
                                         />
-                                    </td>
-                                    <td className="px-2 py-1">
+                                    </div>
+                                    <div className="flex-[4] min-w-0 px-2">
                                         <Input
                                             value={item.purpose}
                                             onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                            className="h-8 bg-zinc-900/50 border-zinc-800 text-white"
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
                                         />
-                                    </td>
-                                </tr>
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

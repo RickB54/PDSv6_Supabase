@@ -53,7 +53,7 @@ import { PreVehicleChecklistModal } from "@/components/modals/PreVehicleChecklis
 
 const renderSidebarContent = (
     collapsed: boolean, 
-    navigate: any, 
+    handleAction: (action: string | (() => void)) => void, 
     isAdmin: boolean, 
     pendingPayrollCount: number = 0, 
     isDemoMode: boolean = false, 
