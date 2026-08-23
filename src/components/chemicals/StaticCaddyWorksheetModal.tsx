@@ -480,7 +480,7 @@ export function StaticCaddyWorksheetModal({
                                         </button>
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'down')}
-                                            disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
+                                            disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
                                             className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                         >
                                             <ChevronDown className="w-3 h-3" />
@@ -643,36 +643,71 @@ export function StaticCaddyWorksheetModal({
                             >
                                 {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
                             </Button>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" title="Manage Caddies" className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-white">
-                                        <Settings2 className="h-4 w-4" />
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" title="Manage Caddies" className="h-9 px-3 border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-white">
+                                        Manage Caddies
                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-700 text-white">
-                                    <DropdownMenuLabel>Caddy Visibility</DropdownMenuLabel>
-                                    <DropdownMenuSeparator className="bg-zinc-700" />
-                                    <DropdownMenuItem disabled className="text-zinc-500">
-                                        <Check className="h-4 w-4 mr-2 opacity-50" /> Interior Caddy (Always)
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem disabled className="text-zinc-500">
-                                        <Check className="h-4 w-4 mr-2 opacity-50" /> Exterior Caddy (Always)
-                                    </DropdownMenuItem>
-                                    {data.custom_caddies.map(c => (
-                                        <DropdownMenuCheckboxItem
-                                            key={c.id}
-                                            checked={c.visible}
-                                            onCheckedChange={() => toggleCaddyVisibility(c.id)}
-                                        >
-                                            {c.title}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
-                                    <DropdownMenuSeparator className="bg-zinc-700" />
-                                    <DropdownMenuItem onClick={handleAddCustomCaddy} className="text-fuchsia-400 focus:text-fuchsia-300">
-                                        <Plus className="h-4 w-4 mr-2" /> Add Custom Caddy
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-80 bg-zinc-950 border-zinc-800 text-white p-4">
+                                    <h4 className="font-bold text-sm mb-3 text-fuchsia-400">Manage Caddies</h4>
+                                    <div className="space-y-3 max-h-64 overflow-y-auto styled-scrollbar pr-1">
+                                        <div className="flex items-center justify-between p-2 rounded bg-zinc-900/50 border border-zinc-800">
+                                            <span className="text-sm font-medium text-purple-400">Interior Caddy</span>
+                                            <span className="text-xs text-zinc-500">Always Visible</span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-2 rounded bg-zinc-900/50 border border-zinc-800">
+                                            <span className="text-sm font-medium text-blue-400">Exterior Caddy</span>
+                                            <span className="text-xs text-zinc-500">Always Visible</span>
+                                        </div>
+                                        {data.custom_caddies.map(caddy => (
+                                            <div key={caddy.id} className="flex flex-col gap-2 p-2 rounded bg-zinc-900 border border-zinc-800">
+                                                <div className="flex items-center gap-2">
+                                                    <Input 
+                                                        value={caddy.title}
+                                                        onChange={(e) => {
+                                                            const newData = { ...data };
+                                                            const cIdx = newData.custom_caddies.findIndex(c => c.id === caddy.id);
+                                                            if (cIdx > -1) {
+                                                                newData.custom_caddies[cIdx].title = e.target.value;
+                                                                setData(newData);
+                                                            }
+                                                        }}
+                                                        className="h-8 bg-zinc-950 border-zinc-700 text-white flex-1 text-sm shadow-sm"
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => toggleCaddyVisibility(caddy.id)}
+                                                        className={`h-8 px-2 ${caddy.visible ? 'text-green-400 bg-green-400/10' : 'text-zinc-500 bg-zinc-800'}`}
+                                                        title={caddy.visible ? "Visible" : "Hidden"}
+                                                    >
+                                                        {caddy.visible ? 'Show' : 'Hide'}
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            if (confirm('Are you sure you want to delete this custom caddy?')) {
+                                                                const newData = { ...data };
+                                                                newData.custom_caddies = newData.custom_caddies.filter(c => c.id !== caddy.id);
+                                                                setData(newData);
+                                                            }
+                                                        }}
+                                                        className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                                                        title="Delete Caddy"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <Button onClick={handleAddCustomCaddy} className="w-full mt-4 h-8 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs">
+                                        <Plus className="h-3 w-3 mr-2" /> Add Custom Caddy
+                                    </Button>
+                                </PopoverContent>
+                            </Popover>
                             <Button
                                 variant="outline"
                                 onClick={handleReset}
