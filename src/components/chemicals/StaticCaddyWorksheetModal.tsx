@@ -372,66 +372,69 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
-    const renderMobileCards = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
+    const renderMobileTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
         const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
         return (
-            <div className="space-y-4">
-                <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-10 py-2 border-b border-zinc-800`}>
+            <div className="space-y-3">
+                <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-20 py-2`}>
                     {title}
                 </h3>
-                <div className="space-y-3">
-                    {items.map((item, idx) => (
-                        <div key={idx} className="bg-zinc-900/40 border border-zinc-800/80 rounded-lg p-3 flex gap-3 shadow-sm">
-                            <div className="flex flex-col items-center justify-start gap-2 w-14 shrink-0 border-r border-zinc-800/50 pr-3">
-                                <span className="font-black text-zinc-400 text-xs tracking-widest uppercase">Slot {item.slot}</span>
-                                <div className="flex flex-col gap-1 bg-zinc-950/80 p-1 rounded border border-zinc-800/80 w-full mt-1">
-                                    <button 
-                                        onClick={() => moveSlot(caddy, idx, 'up')}
-                                        disabled={idx === 0}
-                                        className="text-zinc-500 hover:text-white flex justify-center w-full py-1.5 disabled:opacity-20 hover:bg-zinc-800 rounded-sm transition-colors"
-                                    >
-                                        <ChevronUp className="w-4 h-4" />
-                                    </button>
-                                    <button 
-                                        onClick={() => moveSlot(caddy, idx, 'down')}
-                                        disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
-                                        className="text-zinc-500 hover:text-white flex justify-center w-full py-1.5 disabled:opacity-20 hover:bg-zinc-800 rounded-sm transition-colors"
-                                    >
-                                        <ChevronDown className="w-4 h-4" />
-                                    </button>
+                <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
+                    {/* Header Row */}
+                    <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-2 sticky top-10 z-10">
+                        <div className="w-[45px] shrink-0 text-center px-1">Slot</div>
+                        <div className="flex-[4] min-w-0 px-1 truncate">Chemical Name</div>
+                        <div className="flex-[1] min-w-0 px-1 text-center truncate">Ratio</div>
+                        <div className="flex-[4] min-w-0 px-1 truncate">Purpose</div>
+                    </div>
+                    {/* Body Rows */}
+                    <div className="flex flex-col w-full divide-y divide-zinc-800">
+                        {items.map((item, idx) => (
+                            <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-1.5">
+                                <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-1">
+                                    <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                        <button 
+                                            onClick={() => moveSlot(caddy, idx, 'up')}
+                                            disabled={idx === 0}
+                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronUp className="w-3 h-3" />
+                                        </button>
+                                        <button 
+                                            onClick={() => moveSlot(caddy, idx, 'down')}
+                                            disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
+                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronDown className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    <span className="text-[10px] w-3 text-center">{item.slot}</span>
                                 </div>
-                            </div>
-                            <div className="flex-1 space-y-3">
-                                <div>
-                                    <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Chemical Name</label>
+                                <div className="flex-[4] min-w-0 px-1">
                                     <Input
                                         value={item.name}
                                         onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                        className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
                                     />
                                 </div>
-                                <div className="flex gap-3">
-                                    <div className="w-[35%] shrink-0">
-                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Ratio</label>
-                                        <Input
-                                            value={item.ratio}
-                                            maxLength={5}
-                                            onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                            className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <label className="text-[10px] uppercase font-black text-zinc-500 tracking-wider block mb-1">Purpose</label>
-                                        <Input
-                                            value={item.purpose}
-                                            onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                            className="h-9 bg-zinc-950/80 border-zinc-700/50 text-white w-full text-sm font-medium"
-                                        />
-                                    </div>
+                                <div className="flex-[1] min-w-0 px-1">
+                                    <Input
+                                        value={item.ratio}
+                                        maxLength={5}
+                                        onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1 text-center text-xs shadow-sm"
+                                    />
+                                </div>
+                                <div className="flex-[4] min-w-0 px-1">
+                                    <Input
+                                        value={item.purpose}
+                                        onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </div>
         );
@@ -439,7 +442,7 @@ export function StaticCaddyWorksheetModal({
 
     const renderTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
         if (isRealMobile) {
-            return renderMobileCards(caddy, title, colorClass);
+            return renderMobileTable(caddy, title, colorClass);
         }
 
         const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
