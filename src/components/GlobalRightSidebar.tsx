@@ -618,14 +618,19 @@ export function GlobalRightSidebar() {
     if (isPerspectiveMode) dynamicTop += 40;
     if (businessStatus?.isTopBannerActive) dynamicTop += 40;
 
-    const handleNavigate = (path: string) => {
-        if (location.pathname === '/service-checklist' && path !== '/service-checklist') {
-            window.dispatchEvent(new CustomEvent('request-checklist-save', { detail: path }));
+    const handleAction = (action: string | (() => void)) => {
+        if (typeof action === 'string') {
+            if (location.pathname === '/service-checklist' && action !== '/service-checklist') {
+                window.dispatchEvent(new CustomEvent('request-checklist-save', { detail: action }));
+                setOpenMobile(false);
+                return;
+            }
             setOpenMobile(false);
-            return;
+            navigate(action);
+        } else {
+            setOpenMobile(false);
+            action();
         }
-        setOpenMobile(false);
-        navigate(path);
     };
 
     const viewAsMode = localStorage.getItem('view_as_mode');
