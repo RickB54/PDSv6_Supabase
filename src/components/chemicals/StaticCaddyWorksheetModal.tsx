@@ -663,9 +663,10 @@ export function StaticCaddyWorksheetModal({
                             <Button
                                 variant="outline"
                                 onClick={handleGeneratePdf}
-                                className="h-9 px-3 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400"
+                                title="Export PDF"
+                                className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
                             >
-                                <Printer className="w-4 h-4 mr-2" /> PDF
+                                <Printer className="w-4 h-4" />
                             </Button>
                             <Button
                                 variant="outline"
