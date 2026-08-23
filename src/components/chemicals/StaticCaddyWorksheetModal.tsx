@@ -553,9 +553,10 @@ export function StaticCaddyWorksheetModal({
                             <Button
                                 variant="outline"
                                 onClick={() => setShowHistory(!showHistory)}
-                                className={`h-9 px-3 border-zinc-700 ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
+                                title={showHistory ? 'Back' : 'History'}
+                                className={`h-9 w-9 p-0 border-zinc-700 flex items-center justify-center ${showHistory ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
                             >
-                                <HistoryIcon className="w-4 h-4 mr-2" /> {showHistory ? 'Back' : 'History'}
+                                <HistoryIcon className="w-4 h-4" />
                             </Button>
                             <Button
                                 variant="outline"
@@ -567,9 +568,10 @@ export function StaticCaddyWorksheetModal({
                             <Button
                                 variant="outline"
                                 onClick={handleReset}
-                                className="h-9 px-3 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300"
+                                title="Reset"
+                                className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center"
                             >
-                                <RotateCcw className="w-4 h-4 mr-2" /> Reset
+                                <RotateCcw className="w-4 h-4" />
                             </Button>
                             <Button
                                 variant="outline"
