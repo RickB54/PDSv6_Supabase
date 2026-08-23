@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2 } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -334,6 +334,35 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
+    const moveSlot = (caddy: 'interior' | 'exterior', index: number, direction: 'up' | 'down') => {
+        setData(prev => {
+            const arr = [...prev[caddy]];
+            const newIndex = direction === 'up' ? index - 1 : index + 1;
+            
+            const maxIndex = showExtraSlots ? arr.length - 1 : 7;
+            if (newIndex < 0 || newIndex > maxIndex) return prev;
+
+            const currentItem = arr[index];
+            const targetItem = arr[newIndex];
+
+            arr[index] = {
+                ...currentItem,
+                name: targetItem.name,
+                ratio: targetItem.ratio,
+                purpose: targetItem.purpose
+            };
+
+            arr[newIndex] = {
+                ...targetItem,
+                name: currentItem.name,
+                ratio: currentItem.ratio,
+                purpose: currentItem.purpose
+            };
+
+            return { ...prev, [caddy]: arr };
+        });
+    };
+
     const renderTable = (caddy: 'interior' | 'exterior', title: string, colorClass: string) => {
         const items = showExtraSlots ? data[caddy] : data[caddy].slice(0, 8);
         return (
@@ -345,7 +374,7 @@ export function StaticCaddyWorksheetModal({
                     <table className="w-full text-sm text-left">
                         <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-400">
                             <tr>
-                                <th className="px-4 py-2 font-medium w-16 text-center">Slot</th>
+                                <th className="px-4 py-2 font-medium w-28 text-center">Slot</th>
                                 <th className="px-4 py-2 font-medium w-[30%]">Chemical Name</th>
                                 <th className="px-4 py-2 font-medium w-[20%]">Dilution Ratio</th>
                                 <th className="px-4 py-2 font-medium">Purpose</th>
@@ -355,7 +384,27 @@ export function StaticCaddyWorksheetModal({
                             {items.map((item, idx) => (
                                 <tr key={idx} className="hover:bg-zinc-900/50 transition-colors">
                                     <td className="px-4 py-2 text-center font-bold text-zinc-500">
-                                        {item.slot}
+                                        <div className="flex items-center justify-center gap-3">
+                                            <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                                <button 
+                                                    onClick={() => moveSlot(caddy, idx, 'up')}
+                                                    disabled={idx === 0}
+                                                    className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                                    title="Move Up"
+                                                >
+                                                    <ChevronUp className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => moveSlot(caddy, idx, 'down')}
+                                                    disabled={idx === (showExtraSlots ? data[caddy].length - 1 : 7)}
+                                                    className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                                    title="Move Down"
+                                                >
+                                                    <ChevronDown className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                            <span className="w-10 text-left truncate">{item.slot}</span>
+                                        </div>
                                     </td>
                                     <td className="px-2 py-1">
                                         <Input
