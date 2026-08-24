@@ -45,6 +45,14 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
         {
           title: "4. Verify Payment",
           desc: "Check this dashboard later. If they paid via Stripe, the webhook will automatically flip the status to 'Paid'. For cash/Zelle, you must manually log the payment here."
+        },
+        {
+          title: "5. Recording a Tip 🎁",
+          desc: "Open the invoice → click 'Record Payment' at the bottom of the right panel. Below the Payment Amount field you will see a separate Tip Amount field. Enter the tip there and save. The tip is stored privately — it is NEVER shown to the customer on their invoice."
+        },
+        {
+          title: "6. Viewing or Editing a Tip Later ✏️",
+          desc: "Already recorded the payment but forgot the tip? Open the invoice → scroll to the 'Amount Paid' line → hover over it → a small Pencil icon appears → click it to open both the Paid Amount and Tip Amount fields side by side. Edit and save. All tips also appear in the Time & Profitability page under 'Customer Tips'."
         }
       ]
     },
