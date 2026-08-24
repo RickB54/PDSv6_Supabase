@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { getSupabaseInvoices, upsertSupabaseInvoice } from "@/lib/supa-data";
-import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle, Database, Info } from "lucide-react";
+import { DollarSign, Clock, TrendingUp, AlertTriangle, Filter, CheckCircle, Database, Info, ArrowUpDown, ArrowUp, ArrowDown, Gift } from "lucide-react";
 import DateRangeFilter, { DateRangeValue } from "@/components/filters/DateRangeFilter";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ export default function TimeProfitabilityPage() {
   const [customerFilter, setCustomerFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [loading, setLoading] = useState(true);
+  const [costPerJobSort, setCostPerJobSort] = useState<'date' | 'high' | 'low'>('date');
 
   useEffect(() => {
     async function load() {
@@ -158,12 +159,36 @@ export default function TimeProfitabilityPage() {
     probonoByMonth[mStr].push(inv);
   });
 
-  // Calculate worst performing jobs (Drag List)
+  // Calculate worst performing jobs (Drag List) with sort
   const dragList = [...filtered].sort((a, b) => {
-    const aRevHr = (a.total || 0) / (a.hoursWorked || 1);
-    const bRevHr = (b.total || 0) / (b.hoursWorked || 1);
-    return aRevHr - bRevHr;
-  }).slice(0, 10);
+    if (costPerJobSort === 'high') {
+      return (b.total || 0) - (a.total || 0);
+    } else if (costPerJobSort === 'low') {
+      return (a.total || 0) - (b.total || 0);
+    } else {
+      // Default: sort by rev/hr ascending (drag list)
+      const aRevHr = (a.total || 0) / (a.hoursWorked || 1);
+      const bRevHr = (b.total || 0) / (b.hoursWorked || 1);
+      return aRevHr - bRevHr;
+    }
+  }).slice(0, 20);
+
+  // Tips — invoices where customer paid MORE than quoted (paidAmount > total) or tipAmount is set
+  const tipsData = invoices.filter(inv => {
+    const total = inv.total || 0;
+    const paid = inv.paidAmount || 0;
+    const tip = inv.tipAmount || 0;
+    if (total <= 0) return false;
+    return tip > 0 || paid > total;
+  }).map(inv => {
+    const total = inv.total || 0;
+    const paid = inv.paidAmount || 0;
+    const tip = inv.tipAmount || (paid > total ? paid - total : 0);
+    return { ...inv, computedTip: tip };
+  }).filter(inv => inv.computedTip > 0)
+    .sort((a, b) => b.computedTip - a.computedTip);
+
+  const totalTips = tipsData.reduce((acc, inv) => acc + inv.computedTip, 0);
 
   if (loading) {
     return <div className="p-8 text-center text-zinc-500">Loading Profitability Data...</div>;
@@ -490,12 +515,41 @@ export default function TimeProfitabilityPage() {
         {/* Drag List */}
         <div>
           <Card className="p-6 bg-red-900/5 border-red-500/10">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
-              <h3 className="text-lg font-bold text-white">Lowest $/Hour "Drag" List</h3>
+            <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <h3 className="text-lg font-bold text-white">Cost Per Job</h3>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Sort:</span>
+                <button
+                  onClick={() => setCostPerJobSort('date')}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold border transition-colors ${
+                    costPerJobSort === 'date' ? 'bg-zinc-700 border-zinc-600 text-white' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Lowest $/Hr
+                </button>
+                <button
+                  onClick={() => setCostPerJobSort('high')}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold border transition-colors flex items-center gap-1 ${
+                    costPerJobSort === 'high' ? 'bg-emerald-700/40 border-emerald-600 text-emerald-300' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <ArrowDown className="w-3 h-3" /> Highest $
+                </button>
+                <button
+                  onClick={() => setCostPerJobSort('low')}
+                  className={`px-2.5 py-1 rounded text-xs font-semibold border transition-colors flex items-center gap-1 ${
+                    costPerJobSort === 'low' ? 'bg-blue-700/40 border-blue-600 text-blue-300' : 'bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <ArrowUp className="w-3 h-3" /> Lowest $
+                </button>
+              </div>
             </div>
             <p className="text-sm text-zinc-400 mb-4">
-              These are the lowest performing jobs. Review these to identify services that are taking too long or not priced correctly.
+              {costPerJobSort === 'date' ? 'Sorted by lowest $/hr — review these to identify services that are taking too long or not priced correctly.' : `Sorted by revenue ${costPerJobSort === 'high' ? '(highest first)' : '(lowest first)'}.`}
             </p>
             <div className="space-y-3">
               {dragList.length === 0 ? (
@@ -579,6 +633,51 @@ export default function TimeProfitabilityPage() {
           )}
         </div>
       </Card>
+      {/* Tips Section */}
+      <div className="mt-12 space-y-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Gift className="h-6 w-6 text-amber-400" />
+          <h2 className="text-xl font-black text-white uppercase tracking-tight">Customer Tips</h2>
+          {totalTips > 0 && (
+            <span className="ml-2 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-2 py-0.5 rounded-full">
+              ${totalTips.toFixed(2)} total
+            </span>
+          )}
+        </div>
+        <Card className="p-6 bg-amber-900/10 border-amber-500/20">
+          <h3 className="text-lg font-bold text-white mb-2">Tips Received</h3>
+          <p className="text-sm text-zinc-400 mb-4">Customers who paid more than the quoted invoice amount.</p>
+          {tipsData.length === 0 ? (
+            <div className="text-zinc-500 italic text-sm py-8 text-center border border-dashed border-zinc-800 rounded-lg">No tips recorded yet.</div>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-4 gap-2 px-3 pb-2 border-b border-zinc-800 text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
+                <span>Date</span>
+                <span>Customer</span>
+                <span>Invoice Total</span>
+                <span className="text-right text-amber-400">Tip</span>
+              </div>
+              {tipsData.map(inv => (
+                <Link key={inv.id} to={`/invoicing?editId=${inv.id}`} className="block">
+                  <div className="group grid grid-cols-4 gap-2 px-3 py-2 rounded bg-zinc-950 border border-zinc-800/50 hover:border-amber-500/30 transition-colors items-center">
+                    <span className="text-xs text-zinc-500 font-mono">
+                      {new Date(inv.serviceDate || inv.date || inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    <span className="text-sm text-white font-medium group-hover:text-amber-400 transition-colors truncate">{inv.customerName}</span>
+                    <span className="text-sm text-zinc-400 font-mono">${(inv.total || 0).toFixed(2)}</span>
+                    <span className="text-right text-amber-400 font-mono font-bold">+${inv.computedTip.toFixed(2)}</span>
+                  </div>
+                </Link>
+              ))}
+              <div className="grid grid-cols-4 gap-2 px-3 pt-2 border-t border-zinc-800 mt-2">
+                <span className="col-span-3 text-sm font-bold text-zinc-300 text-right">Total Tips:</span>
+                <span className="text-right text-amber-300 font-mono font-black">${totalTips.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+
       {/* Probono Time Tracking Section */}
       <div className="mt-12 space-y-6">
         <div className="flex items-center gap-2 mb-4">

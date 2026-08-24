@@ -66,6 +66,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const [showProfitability, setShowProfitability] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'profitability');
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
+    const [profTableSort, setProfTableSort] = useState<'default' | 'high' | 'low'>('default');
     const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'employee-analytics');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
@@ -2174,13 +2175,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     </Popover>
                 </div>
                 
-                <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 rounded-lg text-xs font-medium flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                    <p>
-                        <strong>Data Freshness Note:</strong> Cost Per Job data is currently device-specific (stored in local storage via consumption-history) 
-                        and may not reflect costs logged on other devices.
-                    </p>
-                </div>
 
                 {/* Stat Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2237,8 +2231,29 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 {/* Table */}
                 <Card className="bg-zinc-900 border-zinc-800">
                     <CardHeader>
-                        <CardTitle className="text-zinc-200">Cost Per Job</CardTitle>
-                        <CardDescription>Breakdown of revenue, costs, and margins for each job</CardDescription>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                                <CardTitle className="text-zinc-200">Cost Per Job</CardTitle>
+                                <CardDescription>Breakdown of revenue, costs, and margins for each job</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Sort Revenue:</span>
+                                <button
+                                    onClick={() => setProfTableSort('high')}
+                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'high' ? 'bg-emerald-700/40 border-emerald-600 text-emerald-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
+                                    title="Sort highest revenue first"
+                                >
+                                    ↓ High
+                                </button>
+                                <button
+                                    onClick={() => setProfTableSort('low')}
+                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'low' ? 'bg-blue-700/40 border-blue-600 text-blue-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
+                                    title="Sort lowest revenue first"
+                                >
+                                    ↑ Low
+                                </button>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         <div className="overflow-x-auto">
@@ -2254,7 +2269,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {profitabilityData.tableData.map(row => (
+                                    {[...profitabilityData.tableData].sort((a, b) => {
+                                        if (profTableSort === 'high') return (b.revenue || 0) - (a.revenue || 0);
+                                        if (profTableSort === 'low') return (a.revenue || 0) - (b.revenue || 0);
+                                        return 0;
+                                    }).map(row => (
                                         <TableRow key={row.id} className="border-zinc-800 hover:bg-zinc-800/30">
                                             <TableCell className="text-xs text-zinc-400 font-mono">{row.date ? format(parseISO(row.date), "MMM d") : "N/A"}</TableCell>
                                             <TableCell className="text-zinc-200 font-medium">{row.customer}</TableCell>
