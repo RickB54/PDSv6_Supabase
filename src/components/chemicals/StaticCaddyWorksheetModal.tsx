@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Minus, Settings2, ArrowLeft, Bookmark } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ export interface CustomCaddy {
     colorClass: string;
     visible: boolean;
     slots: CaddySlot[];
+    collapsed?: boolean;
 }
 
 interface CaddyData {
@@ -77,6 +79,7 @@ const DEFAULT_SPECIALTY: CustomCaddy = {
     title: 'Specialty Chemicals',
     colorClass: 'text-purple-400',
     visible: true,
+    collapsed: true,
     slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' }))
 };
 
@@ -99,11 +102,18 @@ export function StaticCaddyWorksheetModal({
     const [showExtraSlots, setShowExtraSlots] = useState(false);
     const [isRealMobile, setIsRealMobile] = useState(false);
     
-    // History State
+    // Accordion collapse state (interior & exterior default expanded: false, custom caddies default collapsed: true)
+    const [collapsedMap, setCollapsedMap] = useState<Record<string, boolean>>({
+        interior: false,
+        exterior: false,
+        'specialty-chemicals': true
+    });
+
+    // History & PDF State
     const [history, setHistory] = useState<CaddyHistoryEntry[]>([]);
     const [showHistory, setShowHistory] = useState(false);
     const [showManageCaddies, setShowManageCaddies] = useState(false);
-    const [pdfSelection, setPdfSelection] = useState<string[]>(["interior", "exterior"]);
+    const [pdfSelection, setPdfSelection] = useState<string[]>(["interior", "exterior", "specialty-chemicals"]);
     const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
     const [editingHistoryName, setEditingHistoryName] = useState("");
 
@@ -128,27 +138,30 @@ export function StaticCaddyWorksheetModal({
     const loadData = async () => {
         setIsLoading(true);
         try {
-            console.log("Attempting load from Supabase...");
+            console.log("Loading static caddy worksheet from Supabase...");
             const { data: dbData, error } = await supabase
                 .from('static_caddy_worksheet')
                 .select('*')
                 .eq('id', 1)
                 .maybeSingle();
 
-            console.log("Load response:", { dbData, error });
             if (error) {
                 console.error("Supabase Load Error:", error);
                 throw error;
             }
 
             if (dbData) {
-                const parsed = {
+                const rawCustomList: any[] = dbData.custom_caddies || DEFAULT_DATA.custom_caddies;
+                const metaItem = rawCustomList.find((c: any) => c.id === '__caddy_meta__');
+                const validCustomCaddies = rawCustomList.filter((c: any) => c.id !== '__caddy_meta__');
+
+                const parsed: CaddyData = {
                     interior: dbData.interior || DEFAULT_INTERIOR,
                     exterior: dbData.exterior || DEFAULT_EXTERIOR,
-                    custom_caddies: dbData.custom_caddies || DEFAULT_DATA.custom_caddies
+                    custom_caddies: validCustomCaddies
                 };
                 
-                // Legacy migration
+                // Legacy slot migration fallback
                 if (parsed.interior.length === 8) {
                     parsed.interior.push(
                         { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
@@ -162,11 +175,30 @@ export function StaticCaddyWorksheetModal({
                     );
                 }
                 
+                const restoredMap: Record<string, boolean> = {
+                    interior: metaItem ? Boolean(metaItem.interiorCollapsed) : false,
+                    exterior: metaItem ? Boolean(metaItem.exteriorCollapsed) : false,
+                };
+
+                validCustomCaddies.forEach((c: CustomCaddy & { collapsed?: boolean }) => {
+                    restoredMap[c.id] = c.collapsed !== undefined ? Boolean(c.collapsed) : true;
+                });
+
+                setCollapsedMap(restoredMap);
                 setData(parsed);
                 setShowExtraSlots(dbData.show_extra_slots || false);
+
+                const initialSelected = ['interior', 'exterior', ...validCustomCaddies.filter(c => c.visible).map(c => c.id)];
+                setPdfSelection(initialSelected);
             } else {
                 setData(DEFAULT_DATA);
                 setShowExtraSlots(false);
+                setCollapsedMap({
+                    interior: false,
+                    exterior: false,
+                    'specialty-chemicals': true
+                });
+                setPdfSelection(['interior', 'exterior', 'specialty-chemicals']);
             }
         } catch (e) {
             console.error("Failed to fetch caddy worksheet data:", e);
@@ -179,19 +211,30 @@ export function StaticCaddyWorksheetModal({
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            console.log("Attempting save to Supabase with data:", { interior: data.interior.length, exterior: data.exterior.length });
+            const customCaddiesToSave = data.custom_caddies.map(c => ({
+                ...c,
+                collapsed: collapsedMap[c.id] !== undefined ? collapsedMap[c.id] : true
+            }));
+
+            const metaItem = {
+                id: '__caddy_meta__',
+                interiorCollapsed: Boolean(collapsedMap['interior']),
+                exteriorCollapsed: Boolean(collapsedMap['exterior'])
+            };
+
+            const fullCustomList = [...customCaddiesToSave, metaItem];
+
             const { data: savedData, error } = await supabase
                 .from('static_caddy_worksheet')
                 .upsert({
                     id: 1,
                     interior: data.interior,
                     exterior: data.exterior,
-                    custom_caddies: data.custom_caddies,
+                    custom_caddies: fullCustomList,
                     show_extra_slots: showExtraSlots,
                     updated_at: new Date().toISOString()
                 }).select();
 
-            console.log("Save response:", { savedData, error });
             if (error) {
                 console.error("Supabase Save Error:", error);
                 throw error;
@@ -209,7 +252,7 @@ export function StaticCaddyWorksheetModal({
 
             toast({
                 title: "Worksheet Saved",
-                description: "Your caddy worksheet has been securely saved to the database.",
+                description: "Your caddy worksheet and collapse settings have been saved to the database.",
                 className: "bg-green-600 text-white"
             });
         } catch (e) {
@@ -224,6 +267,40 @@ export function StaticCaddyWorksheetModal({
         }
     };
 
+    const toggleCollapse = async (caddyId: string) => {
+        const nextMap = {
+            ...collapsedMap,
+            [caddyId]: !collapsedMap[caddyId]
+        };
+        setCollapsedMap(nextMap);
+
+        // Auto-save collapse state to Supabase row 1 immediately
+        try {
+            const customCaddiesToSave = data.custom_caddies.map(c => ({
+                ...c,
+                collapsed: nextMap[c.id] !== undefined ? nextMap[c.id] : true
+            }));
+            const metaItem = {
+                id: '__caddy_meta__',
+                interiorCollapsed: Boolean(nextMap['interior']),
+                exteriorCollapsed: Boolean(nextMap['exterior'])
+            };
+
+            await supabase
+                .from('static_caddy_worksheet')
+                .upsert({
+                    id: 1,
+                    interior: data.interior,
+                    exterior: data.exterior,
+                    custom_caddies: [...customCaddiesToSave, metaItem],
+                    show_extra_slots: showExtraSlots,
+                    updated_at: new Date().toISOString()
+                });
+        } catch (e) {
+            console.warn("Auto-save collapse state failed:", e);
+        }
+    };
+
     const handleAddCustomCaddy = () => {
         const newId = `custom-${Date.now()}`;
         const newData = { ...data };
@@ -232,12 +309,15 @@ export function StaticCaddyWorksheetModal({
             title: `New Caddy ${newData.custom_caddies.length + 1}`,
             colorClass: 'text-fuchsia-400',
             visible: true,
+            collapsed: true,
             slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' })).concat([
                 { slot: 'Extra 1', name: '', ratio: '', purpose: '' },
                 { slot: 'Extra 2', name: '', ratio: '', purpose: '' }
             ])
         });
         setData(newData);
+        setCollapsedMap(prev => ({ ...prev, [newId]: true }));
+        setPdfSelection(prev => [...prev, newId]);
     };
 
     const handleDeleteSlot = (caddyId: string, index: number) => {
@@ -276,11 +356,10 @@ export function StaticCaddyWorksheetModal({
             const cIdx = newData.custom_caddies.findIndex(c => c.id === caddyId);
             if (cIdx > -1) {
                 const currentSlots = newData.custom_caddies[cIdx].slots;
-                // find the next numeric slot number
                 let maxNumeric = 0;
                 currentSlots.forEach(s => {
                     if (typeof s.slot === 'number') maxNumeric = Math.max(maxNumeric, s.slot);
-                    else if (!isNaN(parseInt(s.slot))) maxNumeric = Math.max(maxNumeric, parseInt(s.slot));
+                    else if (!isNaN(parseInt(s.slot as string))) maxNumeric = Math.max(maxNumeric, parseInt(s.slot as string));
                 });
                 currentSlots.push({
                     slot: maxNumeric + 1,
@@ -310,13 +389,19 @@ export function StaticCaddyWorksheetModal({
         }
     };
 
-    const handleGeneratePdf = () => {
-        const caddiesToPrint = [];
-        if (pdfSelection.includes('interior')) caddiesToPrint.push({ id: 'interior', title: 'Interior Caddy', color: [147, 51, 234], data: data.interior });
-        if (pdfSelection.includes('exterior')) caddiesToPrint.push({ id: 'exterior', title: 'Exterior Caddy', color: [59, 130, 246], data: data.exterior });
-        
+    const handleGeneratePdf = (overrideSelection?: string[]) => {
+        const targetSelection = overrideSelection || pdfSelection;
+        const caddiesToPrint: Array<{ id: string; title: string; color: number[]; data: CaddySlot[] }> = [];
+
+        if (targetSelection.includes('interior')) {
+            caddiesToPrint.push({ id: 'interior', title: 'Interior Caddy', color: [147, 51, 234], data: data.interior });
+        }
+        if (targetSelection.includes('exterior')) {
+            caddiesToPrint.push({ id: 'exterior', title: 'Exterior Caddy', color: [59, 130, 246], data: data.exterior });
+        }
+
         data.custom_caddies.forEach(c => {
-            if (pdfSelection.includes(c.id)) {
+            if (c.visible && targetSelection.includes(c.id)) {
                 caddiesToPrint.push({ id: c.id, title: c.title, color: [236, 72, 153], data: c.slots });
             }
         });
@@ -324,7 +409,7 @@ export function StaticCaddyWorksheetModal({
         if (caddiesToPrint.length === 0) {
             toast({
                 title: "No Caddies Selected",
-                description: "Please select at least one caddy to print from the Caddy Manager.",
+                description: "Please select at least one caddy to print.",
                 variant: "destructive"
             });
             return;
@@ -350,8 +435,6 @@ export function StaticCaddyWorksheetModal({
             doc.setTextColor(caddy.color[0], caddy.color[1], caddy.color[2]);
             doc.text(caddy.title, 14, currentY);
 
-            // Filter out empty slots if they don't want them, but let's keep all slots
-            // If they are base caddies, respect showExtraSlots. If custom, print all slots.
             const isBase = caddy.id === 'interior' || caddy.id === 'exterior';
             const slotsToPrint = (isBase && !showExtraSlots) ? caddy.data.slice(0, 8) : caddy.data;
 
@@ -376,13 +459,17 @@ export function StaticCaddyWorksheetModal({
                 alternateRowStyles: { fillColor: [249, 250, 251] },
             });
 
-            currentY = doc.lastAutoTable.finalY;
+            currentY = (doc as any).lastAutoTable.finalY;
         });
 
-        doc.save(`Static_Caddy_Worksheet_${new Date().toISOString().split('T')[0]}.pdf`);
+        const filename = caddiesToPrint.length === 1 
+            ? `${caddiesToPrint[0].title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+            : `Static_Caddy_Worksheet_${new Date().toISOString().split('T')[0]}.pdf`;
+
+        doc.save(filename);
         toast({
             title: "PDF Generated",
-            description: "Your printable Caddy Worksheet is ready.",
+            description: `Exported ${caddiesToPrint.length} caddy sheet${caddiesToPrint.length > 1 ? 's' : ''}.`,
             className: "bg-fuchsia-600 text-white"
         });
     };
@@ -470,74 +557,148 @@ export function StaticCaddyWorksheetModal({
         });
     };
 
-    const renderMobileTable = (caddy: string, title: string, colorClass: string) => {
+    const renderMobileTableBody = (caddy: string) => {
         const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
         if (!sourceSlots) return null;
         const isBase = caddy === 'interior' || caddy === 'exterior';
         const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
         return (
-            <div className="space-y-3">
-                <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2 sticky top-0 bg-zinc-950 z-20 py-2`}>
-                    {title} <span className="text-sm font-normal text-zinc-500">({items.length} slots)</span>
-                </h3>
-                <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
-                    {/* Header Row */}
-                    <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-2 sticky top-10 z-10">
-                        <div className="w-[45px] shrink-0 text-center px-1">Slot</div>
-                        <div className="flex-[4] min-w-0 px-1 truncate">Chemical Name</div>
-                        <div className="flex-[1] min-w-0 px-1 text-center truncate">Ratio</div>
-                        <div className="flex-[4] min-w-0 px-1 truncate">Purpose</div>
+            <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
+                <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-2 sticky top-0 z-10">
+                    <div className="w-[45px] shrink-0 text-center px-1">Slot</div>
+                    <div className="flex-[4] min-w-0 px-1 truncate">Chemical Name</div>
+                    <div className="flex-[1] min-w-0 px-1 text-center truncate">Ratio</div>
+                    <div className="flex-[4] min-w-0 px-1 truncate">Purpose</div>
+                </div>
+                <div className="flex flex-col w-full divide-y divide-zinc-800">
+                    {items.map((item, idx) => (
+                        <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-1.5">
+                            <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-1">
+                                <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                    <button 
+                                        onClick={() => moveSlot(caddy, idx, 'up')}
+                                        disabled={idx === 0}
+                                        className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                    >
+                                        <ChevronUp className="w-3 h-3" />
+                                    </button>
+                                    <button 
+                                        onClick={() => moveSlot(caddy, idx, 'down')}
+                                        disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                        className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                    >
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                </div>
+                                <span className="text-[10px] w-3 text-center">{item.slot}</span>
+                            </div>
+                            <div className="flex-[4] min-w-0 px-1">
+                                <Input
+                                    value={item.name}
+                                    onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
+                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                />
+                            </div>
+                            <div className="flex-[1] min-w-0 px-1">
+                                <Input
+                                    value={item.ratio}
+                                    maxLength={5}
+                                    onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
+                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1 text-center text-xs shadow-sm"
+                                />
+                            </div>
+                            <div className="flex-[4] min-w-0 px-1">
+                                <Input
+                                    value={item.purpose}
+                                    onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
+                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                />
+                            </div>
+                            {!isBase && (
+                                <div className="shrink-0 flex items-center pr-1">
+                                    <button
+                                        onClick={() => handleDeleteSlot(caddy, idx)}
+                                        className="text-red-900/50 hover:text-red-400 p-1 rounded"
+                                        title="Delete Slot"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderTableBody = (caddy: string) => {
+        if (isRealMobile) {
+            return renderMobileTableBody(caddy);
+        }
+
+        const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
+        if (!sourceSlots) return null;
+        const isBase = caddy === 'interior' || caddy === 'exterior';
+        const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
+        return (
+            <div className="rounded-md border border-zinc-800 overflow-hidden">
+                <div className="flex flex-col w-full text-sm overflow-hidden">
+                    <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-3">
+                        <div className="w-24 shrink-0 text-center px-4">Slot</div>
+                        <div className="flex-[4] min-w-0 px-2 truncate">Chemical Name</div>
+                        <div className="flex-[1] min-w-0 px-2 text-center truncate">Dilution Ratio</div>
+                        <div className="flex-[4] min-w-0 px-2 truncate">Purpose</div>
                     </div>
-                    {/* Body Rows */}
-                    <div className="flex flex-col w-full divide-y divide-zinc-800">
+                    <div className="flex flex-col w-full divide-y divide-zinc-800 bg-zinc-950/50">
                         {items.map((item, idx) => (
-                            <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-1.5">
-                                <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-1">
+                            <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-2">
+                                <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-4">
                                     <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'up')}
                                             disabled={idx === 0}
                                             className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                         >
-                                            <ChevronUp className="w-3 h-3" />
+                                            <ChevronUp className="w-3.5 h-3.5" />
                                         </button>
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'down')}
                                             disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
                                             className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                         >
-                                            <ChevronDown className="w-3 h-3" />
+                                            <ChevronDown className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
-                                    <span className="text-[10px] w-3 text-center">{item.slot}</span>
+                                    <span className="w-10 text-left truncate">{item.slot}</span>
                                 </div>
-                                <div className="flex-[4] min-w-0 px-1">
+                                <div className="flex-[4] min-w-0 px-2">
                                     <Input
                                         value={item.name}
                                         onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
                                     />
                                 </div>
-                                <div className="flex-[1] min-w-0 px-1">
+                                <div className="flex-[1] min-w-0 px-2">
                                     <Input
                                         value={item.ratio}
                                         maxLength={5}
                                         onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1 text-center text-xs shadow-sm"
+                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center shadow-sm"
                                     />
                                 </div>
-                                <div className="flex-[4] min-w-0 px-1">
+                                <div className="flex-[4] min-w-0 px-2">
                                     <Input
                                         value={item.purpose}
                                         onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
                                     />
                                 </div>
                                 {!isBase && (
-                                    <div className="shrink-0 flex items-center pr-1">
+                                    <div className="shrink-0 flex items-center pr-2">
                                         <button
                                             onClick={() => handleDeleteSlot(caddy, idx)}
-                                            className="text-red-900/50 hover:text-red-400 p-1 rounded"
+                                            className="text-red-900/50 hover:text-red-400 p-1.5 rounded"
                                             title="Delete Slot"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -552,88 +713,76 @@ export function StaticCaddyWorksheetModal({
         );
     };
 
-    const renderTable = (caddy: string, title: string, colorClass: string) => {
-        if (isRealMobile) {
-            return renderMobileTable(caddy, title, colorClass);
-        }
-
-        const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
+    const renderCaddySection = (caddyId: string, title: string, colorClass: string) => {
+        const sourceSlots = (caddyId === 'interior' || caddyId === 'exterior') 
+            ? data[caddyId as 'interior'|'exterior'] 
+            : data.custom_caddies.find(c => c.id === caddyId)?.slots;
         if (!sourceSlots) return null;
-        const isBase = caddy === 'interior' || caddy === 'exterior';
-        const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
+        const isBase = caddyId === 'interior' || caddyId === 'exterior';
+        const slotCount = (isBase && !showExtraSlots) ? 8 : sourceSlots.length;
+        const isCollapsed = Boolean(collapsedMap[caddyId]);
+        const isSelectedForPdf = pdfSelection.includes(caddyId);
+
         return (
-            <div className="space-y-3">
-                <h3 className={`text-lg font-bold ${colorClass} flex items-center gap-2`}>
-                    {title} <span className="text-sm font-normal text-zinc-500">({items.length} slots)</span>
-                </h3>
-                <div className="rounded-md border border-zinc-800 overflow-hidden">
-                    <div className="flex flex-col w-full text-sm overflow-hidden">
-                        <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-3">
-                            <div className="w-24 shrink-0 text-center px-4">Slot</div>
-                            <div className="flex-[4] min-w-0 px-2 truncate">Chemical Name</div>
-                            <div className="flex-[1] min-w-0 px-2 text-center truncate">Dilution Ratio</div>
-                            <div className="flex-[4] min-w-0 px-2 truncate">Purpose</div>
-                        </div>
-                        <div className="flex flex-col w-full divide-y divide-zinc-800 bg-zinc-950/50">
-                            {items.map((item, idx) => (
-                                <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-2">
-                                    <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-4">
-                                        <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
-                                            <button 
-                                                onClick={() => moveSlot(caddy, idx, 'up')}
-                                                disabled={idx === 0}
-                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                            >
-                                                <ChevronUp className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button 
-                                                onClick={() => moveSlot(caddy, idx, 'down')}
-                                                disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
-                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                            >
-                                                <ChevronDown className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                        <span className="w-10 text-left truncate">{item.slot}</span>
-                                    </div>
-                                    <div className="flex-[4] min-w-0 px-2">
-                                        <Input
-                                            value={item.name}
-                                            onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
-                                        />
-                                    </div>
-                                    <div className="flex-[1] min-w-0 px-2">
-                                        <Input
-                                            value={item.ratio}
-                                            maxLength={5}
-                                            onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center shadow-sm"
-                                        />
-                                    </div>
-                                    <div className="flex-[4] min-w-0 px-2">
-                                        <Input
-                                            value={item.purpose}
-                                            onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
-                                        />
-                                    </div>
-                                    {!isBase && (
-                                        <div className="shrink-0 flex items-center pr-2">
-                                            <button
-                                                onClick={() => handleDeleteSlot(caddy, idx)}
-                                                className="text-red-900/50 hover:text-red-400 p-1.5 rounded"
-                                                title="Delete Slot"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden shadow-sm">
+                <div className="flex items-center justify-between gap-2 p-3 bg-zinc-900/90 border-b border-zinc-800/80">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Checkbox
+                            id={`pdf-select-${caddyId}`}
+                            checked={isSelectedForPdf}
+                            onCheckedChange={() => {
+                                setPdfSelection(prev => 
+                                    prev.includes(caddyId) ? prev.filter(p => p !== caddyId) : [...prev, caddyId]
+                                );
+                            }}
+                            className="border-zinc-600 data-[state=checked]:bg-fuchsia-600 data-[state=checked]:border-fuchsia-600 shrink-0"
+                            title={isSelectedForPdf ? "Included in PDF selection" : "Excluded from PDF selection"}
+                        />
+                        <div 
+                            className="flex items-center gap-2 cursor-pointer select-none truncate"
+                            onClick={() => toggleCollapse(caddyId)}
+                        >
+                            <h3 className={`text-base sm:text-lg font-bold ${colorClass} truncate`}>
+                                {title}
+                            </h3>
+                            <span className="text-xs font-normal text-zinc-400 bg-zinc-950 px-2 py-0.5 rounded border border-zinc-800 shrink-0">
+                                {slotCount} slots
+                            </span>
                         </div>
                     </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGeneratePdf([caddyId])}
+                            title={`Print ${title} Only`}
+                            className="h-8 px-2.5 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-300 text-xs flex items-center gap-1.5 shrink-0"
+                        >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Print {title}</span>
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleCollapse(caddyId)}
+                            title={isCollapsed ? `Expand ${title}` : `Collapse ${title}`}
+                            className="h-8 px-2 text-zinc-400 hover:text-white hover:bg-zinc-800 flex items-center gap-1 shrink-0"
+                        >
+                            <span className="text-[11px] font-medium text-zinc-400 hidden sm:inline">
+                                {isCollapsed ? "Expand" : "Collapse"}
+                            </span>
+                            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                        </Button>
+                    </div>
                 </div>
+
+                {!isCollapsed && (
+                    <div className="p-3">
+                        {renderTableBody(caddyId)}
+                    </div>
+                )}
             </div>
         );
     };
@@ -662,8 +811,8 @@ export function StaticCaddyWorksheetModal({
                                                 <li><strong className="text-blue-400">✏️ 2. Editing the Setup:</strong> Manually type chemical names, ratios, and purposes directly into the table.</li>
                                                 <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
                                                 <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
-                                                <li><strong className="text-purple-400">🖨️ 5. Selective PDF Export:</strong> Inside the Caddy Manager (gear icon), use the Print button to pick exactly which caddies export to PDF.</li>
-                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Inside the Caddy Manager, click 'Add New Custom Caddy'. You can toggle their visibility and add infinite extra slots to them using the 'Add Slot' button.</li>
+                                                <li><strong className="text-purple-400">🖨️ 5. Per-Caddy Printing:</strong> Click the Print button directly next to any caddy to print just that caddy, or check checkboxes and hit Print Selected.</li>
+                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Inside the Caddy Manager, click 'Add New Custom Caddy'. You can toggle their visibility and manage slots with the +/- buttons.</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>
@@ -732,11 +881,12 @@ export function StaticCaddyWorksheetModal({
                                     </Button>
                                     <Button
                                         variant="outline"
-                                        onClick={handleGeneratePdf}
-                                        title="Export PDF"
-                                        className="h-9 w-9 p-0 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0"
+                                        onClick={() => handleGeneratePdf(pdfSelection)}
+                                        title="Print Selected Caddies"
+                                        className="h-9 px-3 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0 gap-1.5"
                                     >
                                         <Printer className="w-4 h-4" />
+                                        <span className="text-xs font-bold hidden sm:inline">Print Selected ({pdfSelection.length})</span>
                                     </Button>
                                     
                                     <Button onClick={handleSave}
@@ -933,12 +1083,12 @@ export function StaticCaddyWorksheetModal({
                             )}
                         </div>
                     ) : (
-                        <div className="space-y-8">
-                            {renderTable('interior', 'Interior Caddy', 'text-purple-400')}
-                            {renderTable('exterior', 'Exterior Caddy', 'text-blue-400')}
+                        <div className="space-y-6">
+                            {renderCaddySection('interior', 'Interior Caddy', 'text-purple-400')}
+                            {renderCaddySection('exterior', 'Exterior Caddy', 'text-blue-400')}
                             {data.custom_caddies.filter(c => c.visible).map(c => (
                                 <div key={c.id}>
-                                    {renderTable(c.id, c.title, c.colorClass)}
+                                    {renderCaddySection(c.id, c.title, c.colorClass)}
                                 </div>
                             ))}
                         </div>
