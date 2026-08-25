@@ -273,11 +273,22 @@ export function StaticCaddyWorksheetModal({
     };
 
     const toggleCollapse = async (caddyId: string) => {
+        const isCurrentlyCollapsed = Boolean(collapsedMap[caddyId]);
         const nextMap = {
             ...collapsedMap,
-            [caddyId]: !collapsedMap[caddyId]
+            [caddyId]: !isCurrentlyCollapsed
         };
         setCollapsedMap(nextMap);
+
+        // Auto-scroll to the top of the expanded caddy accordion if expanding
+        if (isCurrentlyCollapsed) {
+            setTimeout(() => {
+                const el = document.getElementById(`caddy-section-${caddyId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 60);
+        }
 
         // Auto-save collapse state to Supabase row 1 immediately
         try {
@@ -303,6 +314,52 @@ export function StaticCaddyWorksheetModal({
                 });
         } catch (e) {
             console.warn("Auto-save collapse state failed:", e);
+        }
+    };
+
+    // Calculate whether all active caddies are currently collapsed
+    const activeCaddyIds = ['interior', 'exterior', ...data.custom_caddies.filter(c => c.visible).map(c => c.id)];
+    const areAllCollapsed = activeCaddyIds.length > 0 && activeCaddyIds.every(id => Boolean(collapsedMap[id]));
+
+    const toggleCollapseAll = async () => {
+        const targetCollapsedState = !areAllCollapsed;
+        const nextMap: Record<string, boolean> = {
+            interior: targetCollapsedState,
+            exterior: targetCollapsedState
+        };
+        data.custom_caddies.forEach(c => {
+            nextMap[c.id] = targetCollapsedState;
+        });
+        setCollapsedMap(nextMap);
+
+        try {
+            const customCaddiesToSave = data.custom_caddies.map(c => ({
+                ...c,
+                collapsed: targetCollapsedState
+            }));
+            const metaItem = {
+                id: '__caddy_meta__',
+                interiorCollapsed: targetCollapsedState,
+                exteriorCollapsed: targetCollapsedState
+            };
+
+            await supabase
+                .from('static_caddy_worksheet')
+                .upsert({
+                    id: 1,
+                    interior: data.interior,
+                    exterior: data.exterior,
+                    custom_caddies: [...customCaddiesToSave, metaItem],
+                    show_extra_slots: showExtraSlots,
+                    updated_at: new Date().toISOString()
+                });
+
+            toast({
+                title: targetCollapsedState ? "All Accordions Collapsed" : "All Accordions Expanded",
+                description: `Updated visibility state for all caddies.`,
+            });
+        } catch (e) {
+            console.warn("Auto-save collapse all state failed:", e);
         }
     };
 
@@ -796,7 +853,10 @@ export function StaticCaddyWorksheetModal({
         const isSelectedForPdf = pdfSelection.includes(caddyId);
 
         return (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden shadow-sm">
+            <div 
+                id={`caddy-section-${caddyId}`}
+                className="rounded-lg border border-zinc-800 bg-zinc-950 overflow-hidden shadow-sm scroll-mt-3"
+            >
                 <div className="flex items-center justify-between gap-2 p-3 bg-zinc-900/90 border-b border-zinc-800/80">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Checkbox
@@ -876,23 +936,23 @@ export function StaticCaddyWorksheetModal({
                                         </button>
                                     </PopoverTrigger>
                                     <PopoverContent 
-                                    className="z-[99999] w-[90vw] max-w-lg p-4 bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl text-zinc-300 max-h-[80vh] overflow-y-auto" 
-                                    side="bottom" 
-                                    align="start"
-                                    sideOffset={5}
-                                >
-                                    <div className="text-zinc-300">
-                                        <h3 className="font-bold text-white text-base mb-3 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
-                                        <ul className="space-y-3 text-xs sm:text-sm leading-relaxed">
-                                            <li className="break-words"><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
-                                            <li className="break-words"><strong className="text-blue-400">🗂️ 2. Accordions & Defaults:</strong> Click any caddy header or Expand/Collapse button to toggle visibility. Interior & Exterior caddies default to expanded; custom caddies default to collapsed. Collapse states automatically persist across sessions in Supabase.</li>
-                                            <li className="break-words"><strong className="text-purple-400">🖨️ 3. Per-Caddy Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or select checkboxes and click Print Selected for batch printing.</li>
-                                            <li className="break-words"><strong className="text-amber-400">🧪 4. Ratio Field (Chemical Caddies):</strong> Chemical caddies (Interior, Exterior, Specialty) feature a dedicated 'Ratio' field formatted to comfortably fit codes like RTU, 10:1, and 4:1 on all screen sizes.</li>
-                                            <li className="break-words"><strong className="text-pink-400">📝 5. Custom Caddies & Descriptions:</strong> For any custom caddies (e.g. equipment, towels, pads, brushes, left/right caddy sides), each slot includes a full-width 'Description' line directly underneath the item.</li>
-                                            <li className="break-words"><strong className="text-green-400">💾 6. History & Persistence:</strong> Manual saves sync data to Supabase and log a local snapshot in History that you can restore anytime.</li>
-                                        </ul>
-                                    </div>
-                                </PopoverContent>
+                                        className="z-[99999] w-[90vw] max-w-lg p-4 bg-zinc-900 border border-zinc-700 shadow-2xl rounded-xl text-zinc-300 max-h-[80vh] overflow-y-auto" 
+                                        side="bottom" 
+                                        align="start"
+                                        sideOffset={5}
+                                    >
+                                        <div className="text-zinc-300">
+                                            <h3 className="font-bold text-white text-base mb-3 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
+                                            <ul className="space-y-3 text-xs sm:text-sm leading-relaxed">
+                                                <li className="break-words"><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
+                                                <li className="break-words"><strong className="text-blue-400">🗂️ 2. Accordions & Defaults:</strong> Click any caddy header or Expand/Collapse button to toggle visibility. Interior & Exterior caddies default to expanded; custom caddies default to collapsed. Collapse states automatically persist across sessions in Supabase. Expanding a caddy automatically scrolls its header to the top.</li>
+                                                <li className="break-words"><strong className="text-purple-400">🖨️ 3. Per-Caddy Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or select checkboxes and click Print Selected for batch printing.</li>
+                                                <li className="break-words"><strong className="text-amber-400">🧪 4. Ratio Field (Chemical Caddies):</strong> Chemical caddies (Interior, Exterior, Specialty) feature a dedicated 'Ratio' field formatted to comfortably fit codes like RTU, 10:1, and 4:1 on all screen sizes.</li>
+                                                <li className="break-words"><strong className="text-pink-400">📝 5. Custom Caddies & Descriptions:</strong> For any custom caddies (e.g. equipment, towels, pads, brushes, left/right caddy sides), each slot includes a full-width 'Description' line directly underneath the item.</li>
+                                                <li className="break-words"><strong className="text-green-400">💾 6. History & Reset:</strong> Save syncs data to Supabase and records History. The Reset button is located in Caddy Settings.</li>
+                                            </ul>
+                                        </div>
+                                    </PopoverContent>
                                 </Popover>
                             </div>
                             <p className="text-sm text-zinc-400 mt-1">
@@ -948,14 +1008,20 @@ export function StaticCaddyWorksheetModal({
                                     >
                                         <Settings2 className="h-4 w-4" />
                                     </Button>
+
+                                    {/* Collapse All / Expand All Toggle in Main Header */}
                                     <Button
                                         variant="outline"
-                                        onClick={handleReset}
-                                        title="Set as Default"
-                                        className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center"
+                                        onClick={toggleCollapseAll}
+                                        title={areAllCollapsed ? "Expand All Accordions" : "Collapse All Accordions"}
+                                        className={`h-9 px-3 border-zinc-700 flex items-center justify-center gap-1.5 shrink-0 ${areAllCollapsed ? 'bg-zinc-900 text-zinc-300 hover:text-white' : 'bg-zinc-800 text-white'}`}
                                     >
-                                        <Bookmark className="w-4 h-4" />
+                                        {areAllCollapsed ? <ChevronDown className="w-4 h-4 text-fuchsia-400" /> : <ChevronUp className="w-4 h-4 text-fuchsia-400" />}
+                                        <span className="text-xs font-semibold hidden sm:inline">
+                                            {areAllCollapsed ? "Expand All" : "Collapse All"}
+                                        </span>
                                     </Button>
+
                                     <Button
                                         variant="outline"
                                         onClick={() => handleGeneratePdf(pdfSelection)}
@@ -982,7 +1048,18 @@ export function StaticCaddyWorksheetModal({
                 <div className="p-6 overflow-y-auto">
                     {showManageCaddies ? (
                         <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-fuchsia-400 border-b border-fuchsia-500/20 pb-2">Manage Caddies</h3>
+                            <div className="flex items-center justify-between border-b border-fuchsia-500/20 pb-2">
+                                <h3 className="text-lg font-bold text-fuchsia-400">Manage Caddies</h3>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleReset}
+                                    title="Reset Worksheet to Saved Defaults"
+                                    className="h-8 px-3 text-xs border-amber-500/40 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 flex items-center gap-1.5"
+                                >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    Reset to Saved Defaults
+                                </Button>
+                            </div>
                             <div className="space-y-4 pt-2">
                                 <div className="flex items-center justify-between p-3 rounded bg-zinc-900 border border-zinc-800">
                                     <span className="text-sm font-bold text-purple-400">Interior Caddy</span>
