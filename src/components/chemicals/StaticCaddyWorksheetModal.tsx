@@ -31,6 +31,7 @@ interface CaddySlot {
     name: string;
     ratio: string;
     purpose: string;
+    description?: string;
 }
 
 export interface CustomCaddy {
@@ -47,6 +48,10 @@ interface CaddyData {
     exterior: CaddySlot[];
     custom_caddies: CustomCaddy[];
 }
+
+export const isChemicalCaddy = (caddyId: string) => {
+    return caddyId === 'interior' || caddyId === 'exterior' || caddyId === 'specialty-chemicals';
+};
 
 const DEFAULT_INTERIOR: CaddySlot[] = [
     { slot: 1, name: "Pink Perfection", ratio: "10:1", purpose: "Standard Interior Plastics/Vinyl" },
@@ -80,7 +85,7 @@ const DEFAULT_SPECIALTY: CustomCaddy = {
     colorClass: 'text-purple-400',
     visible: true,
     collapsed: true,
-    slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' }))
+    slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '', description: '' }))
 };
 
 const DEFAULT_DATA: CaddyData = {
@@ -224,7 +229,7 @@ export function StaticCaddyWorksheetModal({
 
             const fullCustomList = [...customCaddiesToSave, metaItem];
 
-            const { data: savedData, error } = await supabase
+            const { error } = await supabase
                 .from('static_caddy_worksheet')
                 .upsert({
                     id: 1,
@@ -233,7 +238,7 @@ export function StaticCaddyWorksheetModal({
                     custom_caddies: fullCustomList,
                     show_extra_slots: showExtraSlots,
                     updated_at: new Date().toISOString()
-                }).select();
+                });
 
             if (error) {
                 console.error("Supabase Save Error:", error);
@@ -310,9 +315,9 @@ export function StaticCaddyWorksheetModal({
             colorClass: 'text-fuchsia-400',
             visible: true,
             collapsed: true,
-            slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '' })).concat([
-                { slot: 'Extra 1', name: '', ratio: '', purpose: '' },
-                { slot: 'Extra 2', name: '', ratio: '', purpose: '' }
+            slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '', description: '' })).concat([
+                { slot: 'Extra 1', name: '', ratio: '', purpose: '', description: '' },
+                { slot: 'Extra 2', name: '', ratio: '', purpose: '', description: '' }
             ])
         });
         setData(newData);
@@ -365,7 +370,8 @@ export function StaticCaddyWorksheetModal({
                     slot: maxNumeric + 1,
                     name: '',
                     ratio: '',
-                    purpose: ''
+                    purpose: '',
+                    description: ''
                 });
             }
             return newData;
@@ -436,28 +442,54 @@ export function StaticCaddyWorksheetModal({
             doc.text(caddy.title, 14, currentY);
 
             const isBase = caddy.id === 'interior' || caddy.id === 'exterior';
+            const isChemical = isChemicalCaddy(caddy.id);
             const slotsToPrint = (isBase && !showExtraSlots) ? caddy.data.slice(0, 8) : caddy.data;
 
-            autoTable(doc, {
-                startY: currentY + 3,
-                head: [['Slot #', 'Chemical Name', 'Dilution Ratio', 'Purpose']],
-                body: slotsToPrint.map(item => [
-                    item.slot.toString(),
-                    item.name,
-                    item.ratio,
-                    item.purpose
-                ]),
-                theme: 'grid',
-                headStyles: { fillColor: caddy.color, textColor: [255, 255, 255], fontStyle: 'bold' },
-                columnStyles: {
-                    0: { cellWidth: 20, halign: 'center' },
-                    1: { cellWidth: 70 },
-                    2: { cellWidth: 20, halign: 'center' },
-                    3: { cellWidth: 'auto' }
-                },
-                styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
-                alternateRowStyles: { fillColor: [249, 250, 251] },
-            });
+            if (isChemical) {
+                autoTable(doc, {
+                    startY: currentY + 3,
+                    head: [['Slot #', 'Chemical Name', 'Ratio', 'Purpose']],
+                    body: slotsToPrint.map(item => [
+                        item.slot.toString(),
+                        item.name,
+                        item.ratio,
+                        item.purpose
+                    ]),
+                    theme: 'grid',
+                    headStyles: { fillColor: caddy.color, textColor: [255, 255, 255], fontStyle: 'bold' },
+                    columnStyles: {
+                        0: { cellWidth: 20, halign: 'center' },
+                        1: { cellWidth: 65 },
+                        2: { cellWidth: 25, halign: 'center' },
+                        3: { cellWidth: 'auto' }
+                    },
+                    styles: { fontSize: 9, cellPadding: 4, textColor: [30, 30, 30] },
+                    alternateRowStyles: { fillColor: [249, 250, 251] },
+                });
+            } else {
+                autoTable(doc, {
+                    startY: currentY + 3,
+                    head: [['Slot #', 'Item Name', 'Ratio / Qty', 'Purpose', 'Description']],
+                    body: slotsToPrint.map(item => [
+                        item.slot.toString(),
+                        item.name,
+                        item.ratio,
+                        item.purpose,
+                        item.description || ''
+                    ]),
+                    theme: 'grid',
+                    headStyles: { fillColor: caddy.color, textColor: [255, 255, 255], fontStyle: 'bold' },
+                    columnStyles: {
+                        0: { cellWidth: 16, halign: 'center' },
+                        1: { cellWidth: 45 },
+                        2: { cellWidth: 24, halign: 'center' },
+                        3: { cellWidth: 45 },
+                        4: { cellWidth: 'auto' }
+                    },
+                    styles: { fontSize: 8.5, cellPadding: 3.5, textColor: [30, 30, 30] },
+                    alternateRowStyles: { fillColor: [249, 250, 251] },
+                });
+            }
 
             currentY = (doc as any).lastAutoTable.finalY;
         });
@@ -538,14 +570,16 @@ export function StaticCaddyWorksheetModal({
                 ...currentItem,
                 name: targetItem.name,
                 ratio: targetItem.ratio,
-                purpose: targetItem.purpose
+                purpose: targetItem.purpose,
+                description: targetItem.description
             };
 
             arr[newIndex] = {
                 ...targetItem,
                 name: currentItem.name,
                 ratio: currentItem.ratio,
-                purpose: currentItem.purpose
+                purpose: currentItem.purpose,
+                description: currentItem.description
             };
 
             if (isBase) {
@@ -561,68 +595,87 @@ export function StaticCaddyWorksheetModal({
         const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
         if (!sourceSlots) return null;
         const isBase = caddy === 'interior' || caddy === 'exterior';
+        const isChem = isChemicalCaddy(caddy);
         const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
         return (
             <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
                 <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-2 sticky top-0 z-10">
                     <div className="w-[45px] shrink-0 text-center px-1">Slot</div>
-                    <div className="flex-[4] min-w-0 px-1 truncate">Chemical Name</div>
-                    <div className="flex-[1] min-w-0 px-1 text-center truncate">Ratio</div>
-                    <div className="flex-[4] min-w-0 px-1 truncate">Purpose</div>
+                    <div className="flex-[3.5] min-w-0 px-1 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
+                    <div className="w-16 shrink-0 text-center px-1 truncate">Ratio</div>
+                    <div className="flex-[3.5] min-w-0 px-1 truncate">Purpose</div>
+                    {!isBase && <div className="w-6 shrink-0"></div>}
                 </div>
                 <div className="flex flex-col w-full divide-y divide-zinc-800">
                     {items.map((item, idx) => (
-                        <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-1.5">
-                            <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-1">
-                                <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
-                                    <button 
-                                        onClick={() => moveSlot(caddy, idx, 'up')}
-                                        disabled={idx === 0}
-                                        className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                    >
-                                        <ChevronUp className="w-3 h-3" />
-                                    </button>
-                                    <button 
-                                        onClick={() => moveSlot(caddy, idx, 'down')}
-                                        disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
-                                        className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                    >
-                                        <ChevronDown className="w-3 h-3" />
-                                    </button>
+                        <div key={idx} className="flex flex-col w-full hover:bg-zinc-900/50 transition-colors py-1.5 px-1">
+                            <div className="flex w-full items-center">
+                                <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-0.5">
+                                    <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                        <button 
+                                            onClick={() => moveSlot(caddy, idx, 'up')}
+                                            disabled={idx === 0}
+                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronUp className="w-3 h-3" />
+                                        </button>
+                                        <button 
+                                            onClick={() => moveSlot(caddy, idx, 'down')}
+                                            disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                        >
+                                            <ChevronDown className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                    <span className="text-[10px] w-3 text-center">{item.slot}</span>
                                 </div>
-                                <span className="text-[10px] w-3 text-center">{item.slot}</span>
+                                <div className="flex-[3.5] min-w-0 px-1">
+                                    <Input
+                                        value={item.name}
+                                        onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        placeholder={isChem ? "Chemical Name" : "Item Name"}
+                                    />
+                                </div>
+                                <div className="w-16 shrink-0 px-1">
+                                    <Input
+                                        value={item.ratio}
+                                        maxLength={6}
+                                        onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full px-1 text-center text-xs font-semibold shadow-sm"
+                                        placeholder="Ratio"
+                                    />
+                                </div>
+                                <div className="flex-[3.5] min-w-0 px-1">
+                                    <Input
+                                        value={item.purpose}
+                                        onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
+                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        placeholder="Purpose"
+                                    />
+                                </div>
+                                {!isBase && (
+                                    <div className="w-6 shrink-0 flex items-center justify-center">
+                                        <button
+                                            onClick={() => handleDeleteSlot(caddy, idx)}
+                                            className="text-red-900/50 hover:text-red-400 p-0.5 rounded"
+                                            title="Delete Slot"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex-[4] min-w-0 px-1">
-                                <Input
-                                    value={item.name}
-                                    onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
-                                />
-                            </div>
-                            <div className="flex-[1] min-w-0 px-1">
-                                <Input
-                                    value={item.ratio}
-                                    maxLength={5}
-                                    onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1 text-center text-xs shadow-sm"
-                                />
-                            </div>
-                            <div className="flex-[4] min-w-0 px-1">
-                                <Input
-                                    value={item.purpose}
-                                    onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                    className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
-                                />
-                            </div>
-                            {!isBase && (
-                                <div className="shrink-0 flex items-center pr-1">
-                                    <button
-                                        onClick={() => handleDeleteSlot(caddy, idx)}
-                                        className="text-red-900/50 hover:text-red-400 p-1 rounded"
-                                        title="Delete Slot"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                            
+                            {!isChem && (
+                                <div className="w-full flex items-center gap-1.5 pt-1.5 pl-[45px] pr-1">
+                                    <span className="text-[10px] font-semibold text-fuchsia-400 shrink-0">Desc:</span>
+                                    <Input
+                                        value={item.description || ''}
+                                        onChange={(e) => updateSlot(caddy, idx, 'description', e.target.value)}
+                                        placeholder="Description (clay bars, pads, brushes, left/right side details...)"
+                                        className="h-7 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full"
+                                    />
                                 </div>
                             )}
                         </div>
@@ -640,69 +693,88 @@ export function StaticCaddyWorksheetModal({
         const sourceSlots = (caddy === 'interior' || caddy === 'exterior') ? data[caddy as 'interior'|'exterior'] : data.custom_caddies.find(c => c.id === caddy)?.slots;
         if (!sourceSlots) return null;
         const isBase = caddy === 'interior' || caddy === 'exterior';
+        const isChem = isChemicalCaddy(caddy);
         const items = (isBase && !showExtraSlots) ? sourceSlots.slice(0, 8) : sourceSlots;
         return (
             <div className="rounded-md border border-zinc-800 overflow-hidden">
                 <div className="flex flex-col w-full text-sm overflow-hidden">
                     <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-3">
                         <div className="w-24 shrink-0 text-center px-4">Slot</div>
-                        <div className="flex-[4] min-w-0 px-2 truncate">Chemical Name</div>
-                        <div className="flex-[1] min-w-0 px-2 text-center truncate">Dilution Ratio</div>
+                        <div className="flex-[4] min-w-0 px-2 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
+                        <div className="w-20 shrink-0 text-center px-2 truncate">Ratio</div>
                         <div className="flex-[4] min-w-0 px-2 truncate">Purpose</div>
+                        {!isBase && <div className="w-10 shrink-0"></div>}
                     </div>
                     <div className="flex flex-col w-full divide-y divide-zinc-800 bg-zinc-950/50">
                         {items.map((item, idx) => (
-                            <div key={idx} className="flex w-full items-center hover:bg-zinc-900/50 transition-colors py-2">
-                                <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-4">
-                                    <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
-                                        <button 
-                                            onClick={() => moveSlot(caddy, idx, 'up')}
-                                            disabled={idx === 0}
-                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                        >
-                                            <ChevronUp className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button 
-                                            onClick={() => moveSlot(caddy, idx, 'down')}
-                                            disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
-                                            className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
-                                        >
-                                            <ChevronDown className="w-3.5 h-3.5" />
-                                        </button>
+                            <div key={idx} className="flex flex-col w-full hover:bg-zinc-900/50 transition-colors py-2 px-2">
+                                <div className="flex w-full items-center">
+                                    <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-2">
+                                        <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
+                                            <button 
+                                                onClick={() => moveSlot(caddy, idx, 'up')}
+                                                disabled={idx === 0}
+                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                            >
+                                                <ChevronUp className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={() => moveSlot(caddy, idx, 'down')}
+                                                disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                                className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                                            >
+                                                <ChevronDown className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                        <span className="w-10 text-left truncate">{item.slot}</span>
                                     </div>
-                                    <span className="w-10 text-left truncate">{item.slot}</span>
+                                    <div className="flex-[4] min-w-0 px-2">
+                                        <Input
+                                            value={item.name}
+                                            onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
+                                            placeholder={isChem ? "Chemical Name" : "Item Name"}
+                                        />
+                                    </div>
+                                    <div className="w-20 shrink-0 px-2">
+                                        <Input
+                                            value={item.ratio}
+                                            maxLength={6}
+                                            onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center font-semibold shadow-sm"
+                                            placeholder="Ratio"
+                                        />
+                                    </div>
+                                    <div className="flex-[4] min-w-0 px-2">
+                                        <Input
+                                            value={item.purpose}
+                                            onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
+                                            placeholder="Purpose"
+                                        />
+                                    </div>
+                                    {!isBase && (
+                                        <div className="w-10 shrink-0 flex items-center justify-center">
+                                            <button
+                                                onClick={() => handleDeleteSlot(caddy, idx)}
+                                                className="text-red-900/50 hover:text-red-400 p-1.5 rounded"
+                                                title="Delete Slot"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="flex-[4] min-w-0 px-2">
-                                    <Input
-                                        value={item.name}
-                                        onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
-                                    />
-                                </div>
-                                <div className="flex-[1] min-w-0 px-2">
-                                    <Input
-                                        value={item.ratio}
-                                        maxLength={5}
-                                        onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center shadow-sm"
-                                    />
-                                </div>
-                                <div className="flex-[4] min-w-0 px-2">
-                                    <Input
-                                        value={item.purpose}
-                                        onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                        className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
-                                    />
-                                </div>
-                                {!isBase && (
-                                    <div className="shrink-0 flex items-center pr-2">
-                                        <button
-                                            onClick={() => handleDeleteSlot(caddy, idx)}
-                                            className="text-red-900/50 hover:text-red-400 p-1.5 rounded"
-                                            title="Delete Slot"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+
+                                {!isChem && (
+                                    <div className="w-full flex items-center gap-2 pt-1.5 pl-24 pr-10">
+                                        <span className="text-xs font-semibold text-fuchsia-400 shrink-0">Description:</span>
+                                        <Input
+                                            value={item.description || ''}
+                                            onChange={(e) => updateSlot(caddy, idx, 'description', e.target.value)}
+                                            placeholder="Description (e.g. clay bars, pads, brushes, left side/right side details...)"
+                                            className="h-8 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full"
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -803,16 +875,16 @@ export function StaticCaddyWorksheetModal({
                                             <HelpCircle className="h-5 w-5" />
                                         </button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="z-[99999] w-80 p-0 bg-zinc-900 border-zinc-700 shadow-2xl" side="bottom" align="start">
+                                    <PopoverContent className="z-[99999] w-84 p-0 bg-zinc-900 border-zinc-700 shadow-2xl" side="bottom" align="start">
                                         <div className="p-4 text-zinc-300">
                                             <h3 className="font-bold text-white text-base mb-2 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
                                             <ul className="space-y-3 text-sm">
                                                 <li><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
-                                                <li><strong className="text-blue-400">✏️ 2. Editing the Setup:</strong> Manually type chemical names, ratios, and purposes directly into the table.</li>
-                                                <li><strong className="text-amber-400">🔄 3. Reset to Defaults:</strong> Discard unsaved changes and reload the last saved database setup.</li>
-                                                <li><strong className="text-green-400">💾 4. History:</strong> Saves automatically create a local history snapshot you can revert to.</li>
-                                                <li><strong className="text-purple-400">🖨️ 5. Per-Caddy Printing:</strong> Click the Print button directly next to any caddy to print just that caddy, or check checkboxes and hit Print Selected.</li>
-                                                <li><strong className="text-pink-400">➕ 6. Custom Caddies:</strong> Inside the Caddy Manager, click 'Add New Custom Caddy'. You can toggle their visibility and manage slots with the +/- buttons.</li>
+                                                <li><strong className="text-blue-400">🗂️ 2. Accordions & Defaults:</strong> Click any caddy header or Expand/Collapse button to toggle visibility. Interior & Exterior caddies default to expanded; custom caddies default to collapsed. Collapse states automatically persist across sessions in Supabase.</li>
+                                                <li><strong className="text-purple-400">🖨️ 3. Per-Caddy Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or select checkboxes and click Print Selected for batch printing.</li>
+                                                <li><strong className="text-amber-400">🧪 4. Ratio Field (Chemical Caddies):</strong> Chemical caddies (Interior, Exterior, Specialty) feature a dedicated 'Ratio' field formatted to comfortably fit codes like RTU, 10:1, and 4:1 on all screen sizes.</li>
+                                                <li><strong className="text-pink-400">📝 5. Custom Caddies & Descriptions:</strong> For any custom caddies (e.g. equipment, towels, pads, brushes, left/right caddy sides), each slot includes a full-width 'Description' line directly underneath the item.</li>
+                                                <li><strong className="text-green-400">💾 6. History & Persistence:</strong> Manual saves sync data to Supabase and log a local snapshot in History that you can restore anytime.</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>
