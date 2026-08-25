@@ -62,8 +62,8 @@ const DEFAULT_INTERIOR: CaddySlot[] = [
     { slot: 6, name: "P&S Xpress", ratio: "1:1", purpose: "Strong Satin Finish" },
     { slot: 7, name: "Terminator", ratio: "RTU", purpose: "Odors & Stains" },
     { slot: 8, name: "Dirt Buster", ratio: "10:1", purpose: "General Interior Cleaner" },
-    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+    { slot: 'E1', name: "", ratio: "", purpose: "" },
+    { slot: 'E2', name: "", ratio: "", purpose: "" }
 ];
 
 const DEFAULT_EXTERIOR: CaddySlot[] = [
@@ -75,8 +75,8 @@ const DEFAULT_EXTERIOR: CaddySlot[] = [
     { slot: 6, name: "Meguiar's APC", ratio: "4:1", purpose: "Heavy Degreaser (Engine Bay)" },
     { slot: 7, name: "Dirt Buster", ratio: "7:1", purpose: "Exterior General Cleaner" },
     { slot: 8, name: "Cover All", ratio: "RTU", purpose: "Tire Dressing (Aerosol)" },
-    { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-    { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+    { slot: 'E1', name: "", ratio: "", purpose: "" },
+    { slot: 'E2', name: "", ratio: "", purpose: "" }
 ];
 
 const DEFAULT_SPECIALTY: CustomCaddy = {
@@ -160,23 +160,35 @@ export function StaticCaddyWorksheetModal({
                 const metaItem = rawCustomList.find((c: any) => c.id === '__caddy_meta__');
                 const validCustomCaddies = rawCustomList.filter((c: any) => c.id !== '__caddy_meta__');
 
+                const normalizeSlotLabel = (s: number | string) => {
+                    if (s === 'Extra 1') return 'E1';
+                    if (s === 'Extra 2') return 'E2';
+                    return s;
+                };
+
                 const parsed: CaddyData = {
-                    interior: dbData.interior || DEFAULT_INTERIOR,
-                    exterior: dbData.exterior || DEFAULT_EXTERIOR,
+                    interior: (dbData.interior || DEFAULT_INTERIOR).map((item: CaddySlot) => ({
+                        ...item,
+                        slot: normalizeSlotLabel(item.slot)
+                    })),
+                    exterior: (dbData.exterior || DEFAULT_EXTERIOR).map((item: CaddySlot) => ({
+                        ...item,
+                        slot: normalizeSlotLabel(item.slot)
+                    })),
                     custom_caddies: validCustomCaddies
                 };
                 
                 // Legacy slot migration fallback
                 if (parsed.interior.length === 8) {
                     parsed.interior.push(
-                        { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-                        { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                        { slot: 'E1', name: "", ratio: "", purpose: "" },
+                        { slot: 'E2', name: "", ratio: "", purpose: "" }
                     );
                 }
                 if (parsed.exterior.length === 8) {
                     parsed.exterior.push(
-                        { slot: 'Extra 1', name: "", ratio: "", purpose: "" },
-                        { slot: 'Extra 2', name: "", ratio: "", purpose: "" }
+                        { slot: 'E1', name: "", ratio: "", purpose: "" },
+                        { slot: 'E2', name: "", ratio: "", purpose: "" }
                     );
                 }
                 
@@ -926,7 +938,7 @@ export function StaticCaddyWorksheetModal({
                         <div>
                             <div className="flex items-center gap-2">
                                 <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
-                                    Static Caddy Worksheet
+                                    Caddy Worksheet
                                 </DialogTitle>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -941,14 +953,14 @@ export function StaticCaddyWorksheetModal({
                                         sideOffset={5}
                                     >
                                         <div className="text-zinc-300">
-                                            <h3 className="font-bold text-white text-base mb-3 border-b border-zinc-800 pb-2">Static Caddy Worksheet Guide</h3>
+                                            <h3 className="font-bold text-white text-base mb-3 border-b border-zinc-800 pb-2">Caddy Worksheet Guide</h3>
                                             <ul className="space-y-3 text-xs sm:text-sm leading-relaxed">
-                                                <li className="break-words"><strong className="text-fuchsia-400">🧰 1. Standalone Architecture:</strong> Runs completely independent of the main inventory. Perfect for printing quick-reference sheets.</li>
-                                                <li className="break-words"><strong className="text-blue-400">🗂️ 2. Accordions & Defaults:</strong> Click any caddy header or Expand/Collapse button to toggle visibility. Interior & Exterior caddies default to expanded; custom caddies default to collapsed. Collapse states automatically persist across sessions in Supabase. Expanding a caddy automatically scrolls its header to the top.</li>
-                                                <li className="break-words"><strong className="text-purple-400">🖨️ 3. Per-Caddy Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or select checkboxes and click Print Selected for batch printing.</li>
-                                                <li className="break-words"><strong className="text-amber-400">🧪 4. Ratio Field (Chemical Caddies):</strong> Chemical caddies (Interior, Exterior, Specialty) feature a dedicated 'Ratio' field formatted to comfortably fit codes like RTU, 10:1, and 4:1 on all screen sizes.</li>
-                                                <li className="break-words"><strong className="text-pink-400">📝 5. Custom Caddies & Descriptions:</strong> For any custom caddies (e.g. equipment, towels, pads, brushes, left/right caddy sides), each slot includes a full-width 'Description' line directly underneath the item.</li>
-                                                <li className="break-words"><strong className="text-green-400">💾 6. History & Settings:</strong> Save syncs data to Supabase and records History. Settings button opens all slot and reset preferences.</li>
+                                                <li className="break-words"><strong className="text-fuchsia-400">🧰 1. Standalone & Cloud Sync:</strong> Runs independent of main inventory while automatically syncing collapse states and caddy setups to Supabase.</li>
+                                                <li className="break-words"><strong className="text-blue-400">🗂️ 2. Accordions & Double-Arrow Toggle:</strong> Click any header or the header double-arrow icon button to expand or collapse all caddies. Expanding a caddy automatically scrolls its header to top of viewport.</li>
+                                                <li className="break-words"><strong className="text-purple-400">🖨️ 3. Per-Caddy & Batch Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or check boxes and click Print Selected.</li>
+                                                <li className="break-words"><strong className="text-amber-400">🧪 4. Ratio Field & E1/E2 Slots:</strong> Chemical caddies feature a dedicated 'Ratio' field. Extra slots 9 & 10 display cleanly as E1 and E2.</li>
+                                                <li className="break-words"><strong className="text-pink-400">📝 5. Custom Caddies & Aligned Descriptions:</strong> Non-chemical caddies feature a full-width Description line aligned under Item Name for gear, pads, brushes, and side details.</li>
+                                                <li className="break-words"><strong className="text-green-400">💾 6. Caddy Settings & History:</strong> Access Extra Slots toggle (8 vs 10 slots) and Reset to Saved Defaults inside Caddy Settings (gear icon).</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>

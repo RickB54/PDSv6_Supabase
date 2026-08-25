@@ -146,7 +146,7 @@ export const getMenuGroups = (counts: {
                 { title: "Chemical Workflow", url: "/chemical-training", key: "chem-train", icon: Beaker, helpTopicId: 'chemical-workflow' },
                 { title: "Rick's Tips", url: "/chemical-training?tips=open", key: "ricks-tips", icon: Zap, helpTopicId: 'ricks-tips' },
                 { title: "Prime Dilution Calculator", url: "/dilution-calculator", key: "dilution-calc-chem", icon: Calculator, helpTopicId: 'dilution-calc' },
-                { title: "Static Caddy Worksheet", url: "#static-caddy", key: "static-caddy", icon: Briefcase, helpTopicId: 'static-caddy-worksheet' },
+                { title: "Caddy Worksheet", url: "#static-caddy", key: "static-caddy", icon: Briefcase, helpTopicId: 'static-caddy-worksheet' },
                 { title: "Dilution Reference Chart", url: "/inventory-control?chart=modal", key: "dilution-chart-modal", icon: Printer, helpTopicId: 'dilution-chart-modal' },
             ]
         },
@@ -162,6 +162,7 @@ export const getMenuGroups = (counts: {
             title: "Inventory & Assets", icon: Package, iconColor: "text-cyan-400",
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
+                { title: "Caddy Worksheet", url: "#static-caddy", key: "caddy-worksheet-inv", icon: Briefcase, helpTopicId: 'static-caddy-worksheet' },
                 { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", role: "admin", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
                 { title: "Mobile Setup", url: "/mobile-setup", key: "mobile-setup", icon: Package, helpTopicId: 'mobile-setup' },
                 { title: "Shop Setup", url: "/shop-setup", key: "shop-setup", icon: Package, helpTopicId: 'shop-setup' },
