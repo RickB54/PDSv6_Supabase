@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, Plus, Minus, Settings2, ArrowLeft, Bookmark } from 'lucide-react';
+import { Save, Printer, Download, RotateCcw, Loader2, History as HistoryIcon, HelpCircle, X, Check, Edit2, Trash2, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Plus, Minus, Settings2, ArrowLeft, Bookmark } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -257,7 +257,7 @@ export function StaticCaddyWorksheetModal({
 
             toast({
                 title: "Worksheet Saved",
-                description: "Your caddy worksheet and collapse settings have been saved to the database.",
+                description: "Your caddy worksheet and settings have been saved to the database.",
                 className: "bg-green-600 text-white"
             });
         } catch (e) {
@@ -280,7 +280,7 @@ export function StaticCaddyWorksheetModal({
         };
         setCollapsedMap(nextMap);
 
-        // Auto-scroll to the top of the expanded caddy accordion if expanding
+        // Auto-scroll to top of expanded caddy section
         if (isCurrentlyCollapsed) {
             setTimeout(() => {
                 const el = document.getElementById(`caddy-section-${caddyId}`);
@@ -290,7 +290,7 @@ export function StaticCaddyWorksheetModal({
             }, 60);
         }
 
-        // Auto-save collapse state to Supabase row 1 immediately
+        // Auto-save collapse state to Supabase
         try {
             const customCaddiesToSave = data.custom_caddies.map(c => ({
                 ...c,
@@ -317,7 +317,6 @@ export function StaticCaddyWorksheetModal({
         }
     };
 
-    // Calculate whether all active caddies are currently collapsed
     const activeCaddyIds = ['interior', 'exterior', ...data.custom_caddies.filter(c => c.visible).map(c => c.id)];
     const areAllCollapsed = activeCaddyIds.length > 0 && activeCaddyIds.every(id => Boolean(collapsedMap[id]));
 
@@ -657,8 +656,8 @@ export function StaticCaddyWorksheetModal({
         return (
             <div className="rounded-md border border-zinc-800 bg-zinc-950 flex flex-col w-full text-xs overflow-hidden">
                 <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-2 sticky top-0 z-10">
-                    <div className="w-[45px] shrink-0 text-center px-1">Slot</div>
-                    <div className="flex-[3.5] min-w-0 px-1 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
+                    <div className="w-[42px] shrink-0 text-center px-1">Slot</div>
+                    <div className="flex-[5] min-w-0 px-1 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
                     <div className="w-16 shrink-0 text-center px-1 truncate">Ratio</div>
                     <div className="flex-[3.5] min-w-0 px-1 truncate">Purpose</div>
                     {!isBase && <div className="w-6 shrink-0"></div>}
@@ -667,7 +666,7 @@ export function StaticCaddyWorksheetModal({
                     {items.map((item, idx) => (
                         <div key={idx} className="flex flex-col w-full hover:bg-zinc-900/50 transition-colors py-1.5 px-1">
                             <div className="flex w-full items-center">
-                                <div className="w-[45px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-0.5">
+                                <div className="w-[42px] shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-0.5">
                                     <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'up')}
@@ -686,7 +685,7 @@ export function StaticCaddyWorksheetModal({
                                     </div>
                                     <span className="text-[10px] w-3 text-center">{item.slot}</span>
                                 </div>
-                                <div className="flex-[3.5] min-w-0 px-1">
+                                <div className="flex-[5] min-w-0 px-1">
                                     <Input
                                         value={item.name}
                                         onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
@@ -725,7 +724,7 @@ export function StaticCaddyWorksheetModal({
                             </div>
                             
                             {!isChem && (
-                                <div className="w-full flex items-center gap-1.5 pt-1.5 pl-[45px] pr-1">
+                                <div className="w-full flex items-center gap-1.5 pt-1.5 pl-[42px] pr-1">
                                     <span className="text-[10px] font-semibold text-fuchsia-400 shrink-0">Desc:</span>
                                     <Input
                                         value={item.description || ''}
@@ -756,8 +755,8 @@ export function StaticCaddyWorksheetModal({
             <div className="rounded-md border border-zinc-800 overflow-hidden">
                 <div className="flex flex-col w-full text-sm overflow-hidden">
                     <div className="flex w-full bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-medium py-3">
-                        <div className="w-24 shrink-0 text-center px-4">Slot</div>
-                        <div className="flex-[4] min-w-0 px-2 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
+                        <div className="w-16 shrink-0 text-center px-2">Slot</div>
+                        <div className="flex-[5] min-w-0 px-2 truncate">{isChem ? 'Chemical Name' : 'Item Name'}</div>
                         <div className="w-20 shrink-0 text-center px-2 truncate">Ratio</div>
                         <div className="flex-[4] min-w-0 px-2 truncate">Purpose</div>
                         {!isBase && <div className="w-10 shrink-0"></div>}
@@ -766,7 +765,7 @@ export function StaticCaddyWorksheetModal({
                         {items.map((item, idx) => (
                             <div key={idx} className="flex flex-col w-full hover:bg-zinc-900/50 transition-colors py-2 px-2">
                                 <div className="flex w-full items-center">
-                                    <div className="w-24 shrink-0 flex items-center justify-center gap-3 font-bold text-zinc-500 px-2">
+                                    <div className="w-16 shrink-0 flex items-center justify-center gap-1 font-bold text-zinc-500 px-1">
                                         <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
                                             <button 
                                                 onClick={() => moveSlot(caddy, idx, 'up')}
@@ -783,14 +782,14 @@ export function StaticCaddyWorksheetModal({
                                                 <ChevronDown className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
-                                        <span className="w-10 text-left truncate">{item.slot}</span>
+                                        <span className="w-6 text-center truncate">{item.slot}</span>
                                     </div>
-                                    <div className="flex-[4] min-w-0 px-2">
+                                    <div className="flex-[5] min-w-0 px-2">
                                         <Input
                                             value={item.name}
                                             onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
-                                            placeholder={isChem ? "Chemical Name" : "Item Name"}
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm"
+                                            placeholder={isChem ? "Chemical Name (e.g. Pink Perfection)" : "Item Name (e.g. Clay Bar / Microfiber)"}
                                         />
                                     </div>
                                     <div className="w-20 shrink-0 px-2">
@@ -798,7 +797,7 @@ export function StaticCaddyWorksheetModal({
                                             value={item.ratio}
                                             maxLength={6}
                                             onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center font-semibold shadow-sm"
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center font-semibold shadow-sm text-sm"
                                             placeholder="Ratio"
                                         />
                                     </div>
@@ -806,7 +805,7 @@ export function StaticCaddyWorksheetModal({
                                         <Input
                                             value={item.purpose}
                                             onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm"
+                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm"
                                             placeholder="Purpose"
                                         />
                                     </div>
@@ -824,7 +823,7 @@ export function StaticCaddyWorksheetModal({
                                 </div>
 
                                 {!isChem && (
-                                    <div className="w-full flex items-center gap-2 pt-1.5 pl-24 pr-10">
+                                    <div className="w-full flex items-center gap-2 pt-1.5 pl-16 pr-10">
                                         <span className="text-xs font-semibold text-fuchsia-400 shrink-0">Description:</span>
                                         <Input
                                             value={item.description || ''}
@@ -921,12 +920,12 @@ export function StaticCaddyWorksheetModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-0">
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 border-zinc-800 text-white p-0 overflow-hidden">
                 <DialogHeader className="p-6 pb-4 border-b border-zinc-800 shrink-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                             <div className="flex items-center gap-2">
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tight text-white">
+                                <DialogTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
                                     Static Caddy Worksheet
                                 </DialogTitle>
                                 <Popover>
@@ -949,17 +948,19 @@ export function StaticCaddyWorksheetModal({
                                                 <li className="break-words"><strong className="text-purple-400">🖨️ 3. Per-Caddy Printing:</strong> Click the dedicated Print button directly next to any caddy to print just that sheet, or select checkboxes and click Print Selected for batch printing.</li>
                                                 <li className="break-words"><strong className="text-amber-400">🧪 4. Ratio Field (Chemical Caddies):</strong> Chemical caddies (Interior, Exterior, Specialty) feature a dedicated 'Ratio' field formatted to comfortably fit codes like RTU, 10:1, and 4:1 on all screen sizes.</li>
                                                 <li className="break-words"><strong className="text-pink-400">📝 5. Custom Caddies & Descriptions:</strong> For any custom caddies (e.g. equipment, towels, pads, brushes, left/right caddy sides), each slot includes a full-width 'Description' line directly underneath the item.</li>
-                                                <li className="break-words"><strong className="text-green-400">💾 6. History & Reset:</strong> Save syncs data to Supabase and records History. The Reset button is located in Caddy Settings.</li>
+                                                <li className="break-words"><strong className="text-green-400">💾 6. History & Settings:</strong> Save syncs data to Supabase and records History. Settings button opens all slot and reset preferences.</li>
                                             </ul>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
                             </div>
-                            <p className="text-sm text-zinc-400 mt-1">
+                            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
                                 Independent fallback reference sheet. These edits are isolated from the main inventory.
                             </p>
                         </div>
-                        <div className="flex gap-2 shrink-0">
+
+                        {/* Main Action Bar */}
+                        <div className="flex items-center gap-2 shrink-0">
                             {(showHistory || showManageCaddies) ? (
                                 <>
                                 <Button
@@ -977,7 +978,7 @@ export function StaticCaddyWorksheetModal({
                                     <Button onClick={handleSave}
                                         disabled={isSaving}
                                         title="Save"
-                                        className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0 ml-2"
+                                        className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0 ml-1"
                                     >
                                         <Save className="w-4 h-4" />
                                     </Button>
@@ -989,44 +990,39 @@ export function StaticCaddyWorksheetModal({
                                         variant="outline"
                                         onClick={() => setShowHistory(true)}
                                         title="History"
-                                        className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center bg-zinc-900 text-zinc-400 hover:text-white"
+                                        className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center bg-zinc-900 text-zinc-400 hover:text-white shrink-0"
                                     >
                                         <HistoryIcon className="w-4 h-4" />
                                     </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowExtraSlots(!showExtraSlots)}
-                                        className={`h-9 px-3 border-zinc-700 ${showExtraSlots ? 'bg-zinc-800 text-white' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}
-                                    >
-                                        {showExtraSlots ? 'Hide Extra Slots' : 'Show Extra Slots'}
-                                    </Button>
+                                    
                                     <Button
                                         variant="outline"
                                         onClick={() => setShowManageCaddies(true)}
-                                        title="Manage Caddies"
+                                        title="Caddy Settings"
                                         className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 bg-zinc-900 text-zinc-400 hover:text-white"
                                     >
                                         <Settings2 className="h-4 w-4" />
                                     </Button>
 
-                                    {/* Collapse All / Expand All Toggle in Main Header */}
+                                    {/* Icon-Only Double Arrow Expand/Collapse All Button (Exact 36px x 36px size) */}
                                     <Button
                                         variant="outline"
                                         onClick={toggleCollapseAll}
                                         title={areAllCollapsed ? "Expand All Accordions" : "Collapse All Accordions"}
-                                        className={`h-9 px-3 border-zinc-700 flex items-center justify-center gap-1.5 shrink-0 ${areAllCollapsed ? 'bg-zinc-900 text-zinc-300 hover:text-white' : 'bg-zinc-800 text-white'}`}
+                                        className="h-9 w-9 p-0 border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 flex items-center justify-center shrink-0"
                                     >
-                                        {areAllCollapsed ? <ChevronDown className="w-4 h-4 text-fuchsia-400" /> : <ChevronUp className="w-4 h-4 text-fuchsia-400" />}
-                                        <span className="text-xs font-semibold hidden sm:inline">
-                                            {areAllCollapsed ? "Expand All" : "Collapse All"}
-                                        </span>
+                                        {areAllCollapsed ? (
+                                            <ChevronsDown className="w-4 h-4 text-fuchsia-400" />
+                                        ) : (
+                                            <ChevronsUp className="w-4 h-4 text-fuchsia-400" />
+                                        )}
                                     </Button>
 
                                     <Button
                                         variant="outline"
                                         onClick={() => handleGeneratePdf(pdfSelection)}
                                         title="Print Selected Caddies"
-                                        className="h-9 px-3 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0 gap-1.5"
+                                        className="h-9 px-2.5 border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 text-fuchsia-400 flex items-center justify-center shrink-0 gap-1.5"
                                     >
                                         <Printer className="w-4 h-4" />
                                         <span className="text-xs font-bold hidden sm:inline">Print Selected ({pdfSelection.length})</span>
@@ -1049,7 +1045,7 @@ export function StaticCaddyWorksheetModal({
                     {showManageCaddies ? (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between border-b border-fuchsia-500/20 pb-2">
-                                <h3 className="text-lg font-bold text-fuchsia-400">Manage Caddies</h3>
+                                <h3 className="text-lg font-bold text-fuchsia-400">Caddy Settings</h3>
                                 <Button
                                     variant="outline"
                                     onClick={handleReset}
@@ -1060,7 +1056,23 @@ export function StaticCaddyWorksheetModal({
                                     Reset to Saved Defaults
                                 </Button>
                             </div>
+                            
                             <div className="space-y-4 pt-2">
+                                {/* Extra Slots Setting Card */}
+                                <div className="flex items-center justify-between p-3.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                                    <div>
+                                        <span className="text-sm font-bold text-white">Worksheet Extra Slots View</span>
+                                        <p className="text-xs text-zinc-400 mt-0.5">Toggle display of Extra 1 & Extra 2 slots (slots 9 & 10) on base caddies.</p>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowExtraSlots(!showExtraSlots)}
+                                        className={`h-9 px-3 border-zinc-700 text-xs font-semibold shrink-0 ${showExtraSlots ? 'bg-fuchsia-600/20 text-fuchsia-300 border-fuchsia-500/30' : 'bg-zinc-800 text-zinc-300'}`}
+                                    >
+                                        {showExtraSlots ? 'Extra Slots Shown (10 Slots)' : 'Extra Slots Hidden (8 Slots)'}
+                                    </Button>
+                                </div>
+
                                 <div className="flex items-center justify-between p-3 rounded bg-zinc-900 border border-zinc-800">
                                     <span className="text-sm font-bold text-purple-400">Interior Caddy</span>
                                     <div className="flex items-center gap-2">
