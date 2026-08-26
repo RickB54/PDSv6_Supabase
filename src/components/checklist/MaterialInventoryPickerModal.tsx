@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info } from 'lucide-react';
+import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info, HelpCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Chemical, Material, Tool as Equipment } from '@/lib/inventory-data';
 import { isChemicalLowStock } from '@/lib/chemicals';
 import { useToast } from '@/hooks/use-toast';
@@ -385,19 +386,72 @@ export default function MaterialInventoryPickerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 text-white border-zinc-800 p-0 overflow-hidden">
-        <DialogHeader className="p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/60">
-          <DialogTitle className="text-xl font-bold flex items-center justify-between text-white">
-            <div className="flex items-center gap-2">
-              <Droplets className="h-6 w-6 text-blue-400" />
-              Materials & Equipment Usage Report Log
+        <DialogHeader className="p-4 md:p-6 border-b border-zinc-800 bg-zinc-900/60 relative">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
+                <Droplets className="h-6 w-6 text-blue-400" />
+                Materials & Equipment Usage Report Log
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-blue-400 ml-1 rounded-full bg-zinc-800/50" title="How to use this modal">
+                      <HelpCircle className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-4 bg-zinc-950 border-blue-900/50 text-sm shadow-2xl z-50">
+                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                      <h4 className="font-bold text-blue-400 flex items-center gap-2 border-b border-blue-900/30 pb-2">
+                        <Info className="w-4 h-4" /> Using the Usage Report Log
+                      </h4>
+                      
+                      <div>
+                        <strong className="text-zinc-300 block mb-1">1. Navigation Tabs</strong>
+                        <p className="text-zinc-400 text-xs leading-relaxed">
+                          Switch between <strong className="text-white">Exterior, Interior, Supplies, Tools,</strong> and <strong className="text-white">Equipment Maintenance</strong> to find the items you need to log for this job.
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong className="text-zinc-300 block mb-1">2. Search & Sort</strong>
+                        <p className="text-zinc-400 text-xs leading-relaxed">
+                          Use the search bar to instantly find specific items. The sort dropdown helps you order the list by A-Z, Low Stock, or Brand.
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong className="text-zinc-300 block mb-1">3. Granular Chemical Logging (1/8 oz)</strong>
+                        <p className="text-zinc-400 text-xs leading-relaxed">
+                          When you add a chemical, it appears in the bottom list. Use the <strong className="text-white">+/-</strong> buttons to quickly adjust the amount in <strong className="text-white">1/8 oz increments</strong> (e.g. 0.125, 0.25). The system automatically calculates how much pure concentrate was used based on the dilution ratio.
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong className="text-zinc-300 block mb-1">4. Equipment Maintenance</strong>
+                        <p className="text-zinc-400 text-xs leading-relaxed">
+                          In the Equipment tab, record critical rig details like Gas Tank Levels (Full, 3/4, etc.), Last Oil/Filter Change dates, and specific condition notes for any tool (e.g. "Hose has a small leak").
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong className="text-zinc-300 block mb-1">5. Safe Saving (Reporting Only)</strong>
+                        <p className="text-zinc-400 text-xs leading-relaxed">
+                          Click <strong className="text-white">Save Materials Usage Log</strong> to save these details to the customer's job report. This modal is <strong className="text-white">reporting only</strong>—it does NOT permanently deduct from your Master IAC (Inventory Audit Checklist) stock levels.
+                        </p>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </DialogTitle>
+              <p className="text-xs text-zinc-400">
+                Search inventory to log granular chemical usage (in 1/8 oz increments), supplies, and equipment maintenance status for job reports.
+              </p>
             </div>
-            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-300 border-amber-500/30">
-              Reporting Only • No IAC Stock Impact
-            </Badge>
-          </DialogTitle>
-          <p className="text-xs text-zinc-400">
-            Search inventory to log granular chemical usage (in 1/8 oz increments), supplies, and equipment maintenance status for job reports.
-          </p>
+            <div className="flex flex-col items-end gap-2">
+              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-300 border-amber-500/30 whitespace-nowrap">
+                Reporting Only • No IAC Stock Impact
+              </Badge>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">

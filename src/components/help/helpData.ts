@@ -3478,6 +3478,34 @@ export const hostedInvoicePortalTopic: HelpTopic = {
   ],
 };
 
+export const materialUsageLogModalTopic: HelpTopic = {
+  id: 'materials-usage-log-modal',
+  title: 'Materials & Equipment Usage Report Log',
+  summary: 'Learn how to accurately log chemical usage, track supplies, and record equipment maintenance for job reports.',
+  content: [
+    '**The Usage Report Log**: This modal allows you to precisely record everything you used or checked during a specific detailing job.',
+    '',
+    '🗂️ **1. Navigation Tabs**',
+    'The top of the modal features buttons to switch between **Exterior Chemicals, Interior Chemicals, Supplies, Tools**, and **Equipment Maintenance**. Clicking these instantly filters the inventory list to help you find what you need fast.',
+    '',
+    '🔍 **2. Search & Sort**',
+    '• **Search Bar**: Type any name or brand to instantly filter the active tab.',
+    '• **Sort Dropdown**: Quickly organize items A-Z, show Low Stock items first, or group by Brand.',
+    '',
+    '💧 **3. Granular Chemical Logging (1/8 oz)**',
+    'When you log a chemical, it drops into the "Logged Job Usage Items" section at the bottom. Use the **+/-** buttons to quickly adjust the amount used in highly precise **1/8 oz increments** (0.125, 0.25, 0.375, etc.). Based on the dilution ratio, the system automatically calculates exactly how much pure concentrate was deducted from the bottle.',
+    '',
+    '⚙️ **4. Equipment Maintenance Tracking**',
+    'Switch to the Equipment Maintenance tab to record critical rig details for the job:',
+    '• **Generator Log**: Record Gas Tank Levels (Full, 3/4, etc.), Last Fill-up Dates, Last Oil Change, and Air Filter changes.',
+    '• **Other Rig Equipment**: Keep condition notes for your Pressure Washer, Compressors, and Hoses (e.g. "Hose has a small leak, needs replacing soon").',
+    '',
+    '💾 **5. Safe Saving (Reporting Only)**',
+    'Clicking **Save Materials Usage Log** saves all this data directly to the customer\'s job report. **Crucial Note:** This modal is for reporting purposes only. It does **NOT** permanently deduct from your Master IAC (Inventory Audit Checklist) stock levels. It only logs what was used for this specific service.',
+  ],
+  section: 'chemicals',
+};
+
 export const adminTopics: HelpTopic[] = [
   ...adminMenuTopics,
   ...adminDashboardTopics,
@@ -3485,6 +3513,7 @@ export const adminTopics: HelpTopic[] = [
   logicInspectorTopic,
   hostedEstimatePortalTopic,
   hostedInvoicePortalTopic,
+  materialUsageLogModalTopic,
 ];
 
 export const employeeMenuTopics: HelpTopic[] = [

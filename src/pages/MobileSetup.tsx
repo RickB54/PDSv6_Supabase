@@ -418,23 +418,23 @@ const MobileSetup = () => {
         <div className="relative mb-10 rounded-3xl bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/50 shadow-2xl overflow-hidden p-6 md:p-10">
           <div className="absolute inset-0 bg-[url('/MoblieSetup.jpg')] opacity-50 bg-cover bg-[position:center_40%]" />
           
-          <div className="relative z-10 flex flex-col items-center text-center lg:text-left lg:items-start lg:flex-row gap-6 md:gap-8">
+          <div className="relative z-10 flex flex-col items-center text-center xl:text-left xl:items-start xl:flex-row gap-6 md:gap-8">
             <div className="relative h-16 w-16 md:h-20 md:w-20 flex items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group shrink-0">
               <Truck className="h-8 w-8 md:h-10 md:w-10 text-indigo-400 group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-30 group-hover:opacity-60 transition-opacity" />
             </div>
 
-            <div className="flex-1 w-full min-w-0">
-              <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-2 md:mb-3 leading-tight break-words">F150 Command Center</h1>
-              <p className="text-zinc-400 text-xs sm:text-sm md:text-lg font-medium max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+            <div className="flex-1 w-full min-w-[250px]">
+              <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white mb-2 md:mb-3 leading-tight">F150 Command Center</h1>
+              <p className="text-zinc-400 text-xs sm:text-sm md:text-lg font-medium max-w-2xl mx-auto xl:mx-0 leading-relaxed">
                 Professional mobile detailing configuration. Real-time equipment inventory and visual setup documentation.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-4 w-full xl:w-auto">
               <Button
                 variant="outline"
-                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
+                className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm flex-1 sm:flex-none"
                 onClick={(e) => { e.stopPropagation(); setCatManagerOpen(true); }}
               >
                 <FolderOpen className="h-4 w-4 md:h-5 md:w-5" /> Manage Categories
@@ -442,7 +442,7 @@ const MobileSetup = () => {
               {isAdmin && (
                 <Button
                   variant="outline"
-                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm w-full sm:w-auto"
+                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm flex-1 sm:flex-none"
                   onClick={() => navigate("/shop-setup")}
                 >
                   <Warehouse className="h-4 w-4 md:h-5 md:w-5" /> Switch to Shop
@@ -451,7 +451,7 @@ const MobileSetup = () => {
               <Button
                 disabled={uploading}
                 onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all w-full sm:w-auto"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest px-8 md:px-10 h-12 md:h-14 shadow-xl shadow-indigo-600/40 active:scale-95 transition-all flex-1 sm:flex-none"
               >
                 {uploading && uploadProgress
                   ? <><span className="mr-2 animate-bounce">↑</span> {uploadProgress.done}/{uploadProgress.total}</>
