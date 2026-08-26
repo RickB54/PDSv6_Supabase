@@ -2690,21 +2690,14 @@ const ServiceChecklist = () => {
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
         subtitle="Execute the Prime Standard for every vehicle."
       >
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Always Visible Progress Bar in Sticky PageHeader */}
-          <div className="flex items-center gap-2 bg-black/60 px-2.5 py-1 rounded-full border border-white/10 shadow-inner">
-            <span className="text-[9px] text-zinc-400 uppercase font-black tracking-wider">Progress</span>
-            <Progress value={progressPercent} className="h-2 w-14 sm:w-24 bg-zinc-800" />
-            <span className="text-xs sm:text-sm font-bold text-white font-mono">{progressPercent}%</span>
-          </div>
-
+        <div className="flex gap-2">
           <Button 
             variant="outline" 
             onClick={saveCurrentSession}
             disabled={!hasUnsavedChanges}
-            className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-8 sm:h-9 px-2.5 sm:px-3 text-xs", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
+            className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-9 px-3 text-xs", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
           >
-            <Save className="w-3.5 h-3.5 md:mr-1.5" />
+            <Save className="w-4 h-4 md:mr-2" />
             <span className="hidden md:inline">Save Progress</span>
           </Button>
         </div>
@@ -2892,6 +2885,13 @@ const ServiceChecklist = () => {
                       )}
                     </div>
                   </div>
+              </div>
+
+              {/* Progress Bar inside Service Summary */}
+              <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-2.5 w-full">
+                <span className="text-[10px] text-zinc-400 uppercase font-black tracking-wider shrink-0">Progress:</span>
+                <Progress value={progressPercent} className="h-2 flex-1 bg-zinc-800" />
+                <span className="text-xs md:text-sm font-bold text-white font-mono shrink-0">{progressPercent}%</span>
               </div>
             </div>
           )}
@@ -4660,7 +4660,24 @@ const ServiceChecklist = () => {
             {discountExpanded && (
               <div className="mb-4 p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg animate-in slide-in-from-top-2 duration-200">
                 <div className="space-y-4">
-                  <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Apply Discount</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Apply Discount</Label>
+                    {(discountValue || discountCode) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDiscountValue('');
+                          setDiscountCode('');
+                          toast({ title: 'Discount Cleared', description: 'Discount removed from total.' });
+                        }}
+                        className="h-6 px-2 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-500/10 font-bold gap-1"
+                      >
+                        <X className="h-3 w-3" /> Clear Discount
+                      </Button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     <Select value={discountMethod} onValueChange={(val: 'coupon' | 'custom') => {
                       setDiscountMethod(val);
@@ -4689,35 +4706,53 @@ const ServiceChecklist = () => {
 
                     {discountMethod === 'coupon' ? (
                       <div className="col-span-2 sm:col-span-4 flex flex-col gap-2">
-                        <Select
-                          value={(discountCode && coupons.some(c => c.code === discountCode)) ? discountCode : (discountCode ? 'CUSTOM_CODE' : '')}
-                          onValueChange={(val) => {
-                            if (val === 'CUSTOM_CODE') {
-                              setDiscountCode('CUSTOM');
-                              setDiscountType('dollar');
-                              setDiscountValue('');
-                            } else {
-                              setDiscountCode(val);
-                              const matched = coupons.find(c => c.code === val);
-                              if (matched) {
-                                setDiscountType(matched.percent ? 'percent' : 'dollar');
-                                setDiscountValue(String(matched.percent || matched.amount || 0));
+                        <div className="flex items-center gap-1.5">
+                          <Select
+                            value={(discountCode && coupons.some(c => c.code === discountCode)) ? discountCode : (discountCode ? 'CUSTOM_CODE' : '')}
+                            onValueChange={(val) => {
+                              if (val === 'CUSTOM_CODE') {
+                                setDiscountCode('CUSTOM');
+                                setDiscountType('dollar');
+                                setDiscountValue('');
+                              } else {
+                                setDiscountCode(val);
+                                const matched = coupons.find(c => c.code === val);
+                                if (matched) {
+                                  setDiscountType(matched.percent ? 'percent' : 'dollar');
+                                  setDiscountValue(String(matched.percent || matched.amount || 0));
+                                }
                               }
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-xs">
-                            <SelectValue placeholder="Select Coupon..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {coupons.filter(c => c.active).map(c => (
-                              <SelectItem key={c.code} value={c.code}>
-                                {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="CUSTOM_CODE" className="text-zinc-500 italic">Enter Custom Code...</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            }}
+                          >
+                            <SelectTrigger className="h-9 bg-zinc-900 border-zinc-800 text-xs flex-1">
+                              <SelectValue placeholder="Select Coupon..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {coupons.filter(c => c.active).map(c => (
+                                <SelectItem key={c.code} value={c.code}>
+                                  {c.code} ({c.percent ? `${c.percent}% Off` : `$${c.amount} Off`})
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="CUSTOM_CODE" className="text-zinc-500 italic">Enter Custom Code...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {discountCode && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setDiscountValue('');
+                                setDiscountCode('');
+                                toast({ title: 'Discount Cleared', description: 'Discount removed.' });
+                              }}
+                              className="h-9 px-2.5 bg-red-950/40 border-red-800/50 text-red-300 hover:bg-red-900/60 font-bold text-xs shrink-0 flex items-center gap-1"
+                              title="Clear Coupon"
+                            >
+                              <X className="h-3.5 w-3.5" /> Clear
+                            </Button>
+                          )}
+                        </div>
                         {((discountCode && !coupons.some(c => c.code === discountCode)) || discountCode === 'CUSTOM') && (
                           <Input
                             type="text"
@@ -4740,7 +4775,7 @@ const ServiceChecklist = () => {
                         )}
                       </div>
                     ) : (
-                      <div className="col-span-2 sm:col-span-4 flex gap-2">
+                      <div className="col-span-2 sm:col-span-4 flex items-center gap-2">
                         <Select value={discountType} onValueChange={(val: 'percent' | 'dollar') => setDiscountType(val)}>
                           <SelectTrigger className="w-[120px] bg-zinc-900 border-zinc-800 h-9 text-xs shrink-0">
                             <SelectValue />
@@ -4751,16 +4786,34 @@ const ServiceChecklist = () => {
                           </SelectContent>
                         </Select>
 
-                        <div className="relative flex-1">
-                          {discountType === 'dollar' && <span className="absolute left-3 top-2 text-zinc-500 text-xs">$</span>}
-                          <Input
-                            type="number"
-                            placeholder={discountType === 'percent' ? "e.g. 10" : "e.g. 25"}
-                            className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-xs ${discountType === 'dollar' ? 'pl-7' : ''}`}
-                            value={discountValue}
-                            onChange={e => setDiscountValue(e.target.value)}
-                          />
-                          {discountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-xs">%</span>}
+                        <div className="relative flex-1 flex items-center gap-1.5">
+                          <div className="relative flex-1">
+                            {discountType === 'dollar' && <span className="absolute left-3 top-2 text-zinc-500 text-xs">$</span>}
+                            <Input
+                              type="number"
+                              placeholder={discountType === 'percent' ? "e.g. 10" : "e.g. 25"}
+                              className={`h-9 bg-zinc-900 border-zinc-800 text-zinc-200 text-xs ${discountType === 'dollar' ? 'pl-7' : ''}`}
+                              value={discountValue}
+                              onChange={e => setDiscountValue(e.target.value)}
+                            />
+                            {discountType === 'percent' && <span className="absolute right-3 top-2 text-zinc-500 text-xs">%</span>}
+                          </div>
+                          {discountValue && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setDiscountValue('');
+                                setDiscountCode('');
+                                toast({ title: 'Discount Cleared', description: 'Discount removed.' });
+                              }}
+                              className="h-9 px-2.5 bg-red-950/40 border-red-800/50 text-red-300 hover:bg-red-900/60 font-bold text-xs shrink-0 flex items-center gap-1"
+                              title="Clear discount amount"
+                            >
+                              <X className="h-3.5 w-3.5" /> Clear
+                            </Button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -4806,8 +4859,22 @@ const ServiceChecklist = () => {
                 <span className="font-mono text-zinc-200">${Math.round(calculateSubtotal())}</span>
               </div>
               {calculateDiscount() > 0 && (
-                <div className="flex justify-between text-red-400">
-                  <span>Discount Applied:</span>
+                <div className="flex justify-between items-center text-red-400">
+                  <div className="flex items-center gap-2">
+                    <span>Discount Applied:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscountValue('');
+                        setDiscountCode('');
+                        toast({ title: 'Discount Cleared', description: 'Discount removed.' });
+                      }}
+                      className="text-[11px] underline hover:text-red-300 text-red-400/90 font-bold cursor-pointer"
+                      title="Clear applied discount"
+                    >
+                      (Clear)
+                    </button>
+                  </div>
                   <span className="font-mono">-${Math.round(calculateDiscount())}</span>
                 </div>
               )}
