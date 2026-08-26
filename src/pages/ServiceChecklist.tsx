@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -3737,6 +3737,9 @@ const ServiceChecklist = () => {
                                               </div>
                                             ) : (
                                               <div className="leading-relaxed space-y-1">
+                                                {sopItem?.shortSummary && (
+                                                  <p className="text-xs text-zinc-400 italic mb-2">"{sopItem.shortSummary}"</p>
+                                                )}
                                                 {instructionText.split('. ').map((sentence, idx) => {
                                                   const parts = sentence.split(': ');
                                                   if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
@@ -3749,16 +3752,28 @@ const ServiceChecklist = () => {
                                                   }
                                                   return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
                                                 })}
-                                                 {sopItem?.ricksTips && (
-                                                   <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2">
-                                                     <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                                                     <div>
-                                                       <span className="font-extrabold uppercase text-amber-400 text-[10px] block mb-0.5">Rick's Pro Tip:</span>
-                                                       {sopItem.ricksTips}
-                                                     </div>
-                                                   </div>
-                                                 )}
-                                                 {getCurrentUser()?.role === 'admin' && (
+                                                {sopItem?.ricksTips && (
+                                                  <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2">
+                                                    <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                    <div>
+                                                      <span className="font-extrabold uppercase text-amber-400 text-[10px] block mb-0.5">Rick's Pro Tip:</span>
+                                                      {sopItem.ricksTips}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                {sopItem?.dilutionRatio && sopItem.dilutionRatio !== 'N/A' && (
+                                                  <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                    <Beaker className="h-3.5 w-3.5" />
+                                                    <span>Ratio: {sopItem.dilutionRatio}</span>
+                                                  </div>
+                                                )}
+                                                {sopItem?.tools && sopItem.tools.length > 0 && (
+                                                  <div className="text-xs text-blue-400 font-semibold mt-1 flex items-center gap-1">
+                                                    <Wrench className="h-3.5 w-3.5" />
+                                                    <span>Tools: {sopItem.tools.join(', ')}</span>
+                                                  </div>
+                                                )}
+                                                {getCurrentUser()?.role === 'admin' && (
                                                   <Button 
                                                     variant="ghost" 
                                                     size="sm" 

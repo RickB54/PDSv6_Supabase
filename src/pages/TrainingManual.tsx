@@ -361,10 +361,30 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
         doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
         currentY += 10;
 
+        const formatStepForPDF = (s: MasterSOPItem) => {
+            const lines: string[] = [];
+            if (s.shortSummary) {
+                lines.push(`"${s.shortSummary}"`);
+            }
+            if (s.detailedInstructions) {
+                lines.push(s.detailedInstructions);
+            }
+            if (s.ricksTips) {
+                lines.push(`[Rick's Tip: ${s.ricksTips}]`);
+            }
+            if (s.dilutionRatio && s.dilutionRatio !== 'N/A') {
+                lines.push(`[Ratio: ${s.dilutionRatio}]`);
+            }
+            if (s.tools && s.tools.length > 0) {
+                lines.push(`[Tools: ${s.tools.join(', ')}]`);
+            }
+            return lines.join('\n');
+        };
+
         const allMasterSOPs = sopService.getMasterSOPsSync();
         const exteriorSteps = allMasterSOPs.filter(s => s.category === 'exterior').map(s => ({
             title: `Step ${s.stepNumber} — ${s.title}`,
-            content: `${s.detailedInstructions}${s.ricksTips ? ` [Rick's Tip: ${s.ricksTips}]` : ''}`
+            content: formatStepForPDF(s)
         }));
 
         exteriorSteps.forEach((step, idx) => {
@@ -407,7 +427,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
 
         const interiorSteps = allMasterSOPs.filter(s => s.category === 'interior').map(s => ({
             title: `Step ${s.stepNumber} — ${s.title}`,
-            content: `${s.detailedInstructions}${s.ricksTips ? ` [Rick's Tip: ${s.ricksTips}]` : ''}`
+            content: formatStepForPDF(s)
         }));
 
         interiorSteps.forEach((step, idx) => {
