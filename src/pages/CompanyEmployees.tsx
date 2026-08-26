@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth";
-import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye, GraduationCap, FileText } from "lucide-react";
+import { Users, Clock, CheckCircle2, DollarSign, Plus, Edit, Trash2, Wallet, AlertTriangle, Shield, User, ShieldCheck, UserCircle, RefreshCw, Calculator, HelpCircle, Archive, ArchiveRestore, EyeOff, Eye, GraduationCap, FileText, ListChecks } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -495,11 +495,11 @@ const CompanyEmployees = () => {
                     </Button>
                     <Button 
                       variant="outline" 
-                      className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 justify-start"
-                      onClick={() => openPdf('Vehicle_Detail_Checklist.pdf')}
+                      className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 justify-start"
+                      onClick={() => navigate('/training-manual?tab=process')}
                     >
-                      <FileText className="w-4 h-4 mr-2" />
-                      Vehicle Detail Checklist
+                      <ListChecks className="w-4 h-4 mr-2 text-cyan-400" />
+                      Standard Operating Procedures (SOPs)
                     </Button>
                   </div>
                 </div>

@@ -385,6 +385,11 @@ const EmployeeDashboard = () => {
             />
 
             <DashboardTile 
+              href="/training-manual?tab=process" title="STANDARD OPERATING PROCEDURES (SOPs)" desc="Master step-by-step detailing procedures." bgColor="bg-cyan-800"
+              helpTopicId="sops-process"
+            />
+
+            <DashboardTile 
               href="/learning-library" title="LEARNING LIBRARY" desc="Company knowledge base & resources." bgColor="bg-indigo-600"
               helpTopicId="dashboard-learning-library"
             />

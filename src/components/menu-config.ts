@@ -62,6 +62,7 @@ export const TOP_ITEMS: MenuItem[] = [
     { title: "Business Goals", url: "/goals", role: "admin", key: "goals", icon: Target, iconColor: "text-emerald-400", helpTopicId: 'business-goals' },
     { title: "Website Administration", url: "/website-admin", role: "admin", key: "website-admin", icon: Shield, highlight: "red", iconColor: "text-red-500", helpTopicId: 'website-admin' },
     { title: "Employee Dashboard", url: "/dashboard/employee", role: "employee", key: "employee-dashboard", icon: LayoutDashboard, iconColor: "text-blue-500", helpTopicId: 'employee-dashboard' },
+    { title: "Standard Operating Procedures (SOPs)", url: "/training-manual?tab=process", role: "employee", key: "sops-process-top", icon: ListChecks, iconColor: "text-cyan-400", helpTopicId: 'sops-process' },
 ];
 
 // Note: Badge counts like todoCount, payrollDueCount, etc. are dynamic and passed from the component.

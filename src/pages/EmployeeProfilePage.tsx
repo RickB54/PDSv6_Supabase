@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle, GraduationCap, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Save, Shield, User, Briefcase, FileText, Activity, DollarSign, Star, AlertCircle, ChevronRight, Clock, RefreshCw, Edit, MessageSquare, Plus, CheckCircle, Circle, GraduationCap, HelpCircle, ListChecks } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ADMIN_TRAINING_PHASES } from '@/lib/training-data';
@@ -984,8 +984,8 @@ export default function EmployeeProfilePage() {
                   <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('PAD_New_Hire_Training_Checklist.pdf')}>
                     <FileText className="h-3.5 w-3.5 mr-1.5" /> View Onboarding Checklist
                   </Button>
-                  <Button variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-xs" onClick={() => openPdf('Vehicle_Detail_Checklist.pdf')}>
-                    <FileText className="h-3.5 w-3.5 mr-1.5" /> View Vehicle Detail Checklist
+                  <Button variant="outline" className="border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 text-xs font-bold" onClick={() => navigate('/training-manual?tab=process')}>
+                    <ListChecks className="h-3.5 w-3.5 mr-1.5 text-cyan-400" /> Standard Operating Procedures (SOPs)
                   </Button>
                 </div>
               </div>
