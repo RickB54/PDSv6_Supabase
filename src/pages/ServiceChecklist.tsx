@@ -2503,6 +2503,23 @@ const ServiceChecklist = () => {
     toast({ title: "Checklist Generated", description: "Clean colorful PDF is ready." });
   };
 
+  // Guided-Flow Visual Guidance Helper Calculations
+  const isCustomerValid = Boolean(selectedCustomer) || (Boolean(genericCustomerName) && genericCustomerName.trim().length > 0);
+  const isVehicleValid = Boolean(vehicleType) && vehicleType !== 'choose' && vehicleType !== 'Choose Type';
+  const isPackageValid = Boolean(selectedPackage) && selectedPackage.trim().length > 0;
+  const isEmployeeValid = Boolean(employeeAssigned) && employeeAssigned !== '' && employeeAssigned !== 'unassigned';
+
+  const isJobSetupComplete = isCustomerValid && isVehicleValid && isPackageValid && isEmployeeValid;
+
+  const categoriesSequence: ('preparation' | 'exterior' | 'interior' | 'addons' | 'final')[] = ['preparation', 'exterior', 'interior', 'addons', 'final'];
+  
+  const activeCategoryTarget = isJobSetupComplete
+    ? categoriesSequence.find(cat => {
+        const catSteps = checklistSteps.filter(s => s.category === cat);
+        return catSteps.length > 0 && catSteps.some(s => !s.checked);
+      })
+    : null;
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader 
@@ -2982,7 +2999,12 @@ const ServiceChecklist = () => {
           {/* ============================================================ */}
 
           {/* Job Setup */}
-          <Card className={`bg-gradient-card border-border overflow-visible mb-4 transition-all duration-300`}>
+          <Card className={cn(
+            "bg-gradient-card overflow-visible mb-4 transition-all duration-300",
+            !isJobSetupComplete
+              ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+              : "border-border"
+          )}>
             <div 
               className="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/50 transition-all rounded-t-xl"
               onClick={() => setJobSetupExpanded(!jobSetupExpanded)}
@@ -2996,6 +3018,15 @@ const ServiceChecklist = () => {
                     <h2 className="text-lg md:text-2xl font-bold text-white truncate transition-all">
                       Job Setup
                     </h2>
+                    {isJobSetupComplete ? (
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                        <Check className="w-3 h-3 text-emerald-400" /> Complete
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Required Step
+                      </span>
+                    )}
                     {jobSetupExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
                   </div>
                   {jobSetupExpanded && <p className="text-zinc-500 text-[10px] md:text-xs font-bold uppercase tracking-widest animate-in fade-in truncate">Customer, Vehicle & Services</p>}
@@ -3044,7 +3075,10 @@ const ServiceChecklist = () => {
                 <select
                   value={selectedCustomer}
                   onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm"
+                  className={cn(
+                    "flex h-10 w-full rounded-md border bg-black text-white px-3 py-2 text-sm transition-all",
+                    !isCustomerValid ? "border-amber-500/60 ring-1 ring-amber-500/30" : "border-white/20"
+                  )}
                 >
                   <option value="">-- Generic / New Customer --</option>
                   {customers.map((c) => (
@@ -3059,7 +3093,10 @@ const ServiceChecklist = () => {
                     placeholder="Enter customer name..." 
                     value={genericCustomerName} 
                     onChange={(e) => setGenericCustomerName(e.target.value)}
-                    className="h-10 border-blue-500/20 bg-black text-white focus:border-blue-500/50"
+                    className={cn(
+                      "h-10 text-white transition-all",
+                      !isCustomerValid ? "border-amber-500/60 bg-amber-500/10 ring-1 ring-amber-500/30" : "border-blue-500/20 bg-black focus:border-blue-500/50"
+                    )}
                   />
                 </div>
               )}
@@ -3138,7 +3175,10 @@ const ServiceChecklist = () => {
                 <select
                   value={vehicleType}
                   onChange={(e) => setVehicleType(e.target.value)}
-                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
+                  className={cn(
+                    "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
+                    isCustomerValid && !isVehicleValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                  )}
                 >
                   {vehicleOptions.map((opt) => (
                     <option key={opt} value={opt}>{vehicleLabels[opt] || opt}</option>
@@ -3152,7 +3192,10 @@ const ServiceChecklist = () => {
                   <select
                     value={selectedPackage}
                     onChange={(e) => setSelectedPackage(e.target.value)}
-                    className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
+                    className={cn(
+                      "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
+                      isCustomerValid && isVehicleValid && !isPackageValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                    )}
                   >
                     <option value="">Select a package...</option>
                     {coreServicesDisplay.map(p => (
@@ -3222,7 +3265,10 @@ const ServiceChecklist = () => {
                   value={employeeAssigned}
                   onChange={(e) => setEmployeeAssigned(e.target.value)}
                   disabled={!isAdminUser}
-                  className="flex h-11 w-full rounded-md border border-white/20 bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={cn(
+                    "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                    isCustomerValid && isVehicleValid && isPackageValid && !isEmployeeValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                  )}
                 >
                   <option value="">Select employee...</option>
                   {employees.map((e: any) => (
@@ -3454,20 +3500,37 @@ const ServiceChecklist = () => {
 
                     const isCompleted = steps.every(s => s.checked);
                     const isExpanded = !collapsedSections[section];
+                    const isActiveSection = isJobSetupComplete && (activeCategoryTarget === section);
 
                     return (
-                      <div key={section} className="space-y-3 transition-all duration-500 opacity-100">
+                      <div 
+                        key={section} 
+                        className={cn(
+                          "space-y-3 transition-all duration-300 rounded-xl p-3 md:p-4",
+                          isActiveSection 
+                            ? "border border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                            : isCompleted 
+                              ? "border border-emerald-500/20 bg-emerald-500/5" 
+                              : "border border-transparent"
+                        )}
+                      >
                         <button
                           type="button"
                           className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
                           onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
                         >
-                          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : 'group-hover:text-primary'}`}>
+                          <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-wrap">
+                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : isActiveSection ? 'text-amber-400 font-bold' : 'group-hover:text-primary'}`}>
                               {section === 'final' ? 'Final Inspection' : section === 'addons' ? 'Add-On Services' : section.charAt(0).toUpperCase() + section.slice(1)}
                             </span>
                             {isCompleted ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500 animate-in zoom-in" />
+                              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                                <Check className="w-3 h-3 text-emerald-400" /> Complete
+                              </span>
+                            ) : isActiveSection ? (
+                              <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+                              </span>
                             ) : null}
                             {section !== 'preparation' && jobStartTime && (
                               <div className="flex items-center gap-2">
