@@ -607,9 +607,10 @@ const ServiceChecklist = () => {
   }, []);
 
   const isAllSectionsCollapsed = 
-    Boolean(collapsedSections['preparation']) && 
-    Boolean(collapsedSections['exterior']) && 
-    Boolean(collapsedSections['interior']);
+    !jobSetupExpanded && 
+    !checklistExpanded && 
+    !preVehicleExpanded && 
+    !materialsSectionExpanded;
 
   const handleToggleAllSections = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -636,7 +637,7 @@ const ServiceChecklist = () => {
       setMileageExpanded(false);
       setDiscountExpanded(false);
       setDestinationExpanded(false);
-      setChecklistExpanded(true);
+      setChecklistExpanded(false);
       setExpandedHelp({});
     }
   };
