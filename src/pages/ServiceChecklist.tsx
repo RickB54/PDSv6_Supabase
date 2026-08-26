@@ -3273,10 +3273,11 @@ const ServiceChecklist = () => {
 
             <div className="flex items-center gap-1 sm:gap-2">
               {(() => {
-                const availableSections = ['preparation', 'exterior', 'interior', 'addons', 'final'].filter(sec =>
-                  checklistSteps.some(s => s.category === sec)
-                );
-                const allSectionsCollapsed = availableSections.length > 0 && availableSections.every(sec => collapsedSections[sec]);
+                const isAllCollapsed = 
+                  Boolean(collapsedSections['preparation']) && 
+                  Boolean(collapsedSections['exterior']) && 
+                  Boolean(collapsedSections['interior']);
+
                 return (
                   <Button 
                     variant="outline" 
@@ -3284,20 +3285,36 @@ const ServiceChecklist = () => {
                     className="h-8 w-8 md:h-7 md:w-7 p-0 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 shrink-0"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (allSectionsCollapsed) {
+                      if (isAllCollapsed) {
                         setCollapsedSections({});
+                        setJobSetupExpanded(true);
+                        setPreVehicleExpanded(true);
+                        setMaterialsSectionExpanded(true);
+                        setMileageExpanded(true);
+                        setDiscountExpanded(true);
+                        setDestinationExpanded(true);
+                        setChecklistExpanded(true);
                       } else {
-                        const next: Record<string, boolean> = {};
-                        ['preparation', 'exterior', 'interior', 'addons', 'final'].forEach(sec => {
-                          next[sec] = true;
+                        setCollapsedSections({
+                          preparation: true,
+                          exterior: true,
+                          interior: true,
+                          addons: true,
+                          final: true,
                         });
-                        setCollapsedSections(next);
+                        setJobSetupExpanded(false);
+                        setPreVehicleExpanded(false);
+                        setMaterialsSectionExpanded(false);
+                        setMileageExpanded(false);
+                        setDiscountExpanded(false);
+                        setDestinationExpanded(false);
+                        setChecklistExpanded(true);
                         setExpandedHelp({});
                       }
                     }}
-                    title={allSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
+                    title={isAllCollapsed ? "Expand All Sections" : "Collapse All Sections"}
                   >
-                    {allSectionsCollapsed ? (
+                    {isAllCollapsed ? (
                       <ChevronsDown className="h-4 w-4 text-zinc-300" />
                     ) : (
                       <ChevronsUp className="h-4 w-4 text-zinc-300" />
