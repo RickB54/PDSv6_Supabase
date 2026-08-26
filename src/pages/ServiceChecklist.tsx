@@ -2625,66 +2625,75 @@ const ServiceChecklist = () => {
 
       <main className="container mx-auto px-2 sm:px-4 py-4 md:py-8 max-w-7xl animate-fade-in space-y-4 md:space-y-8">
         {/* Premium Header Block */}
-        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-4 md:p-6 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight truncate flex items-center gap-2">
+        <div className="bg-gradient-to-r from-purple-900/20 via-black to-zinc-950 p-3 md:p-6 rounded-2xl border border-purple-900/20 shadow-2xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+            
+            {/* Top Row on Mobile: Title + Help Popups + Mobile Progress */}
+            <div className="flex items-center justify-between w-full md:w-auto gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <h1 className="text-base sm:text-xl md:text-3xl font-extrabold text-white tracking-tight whitespace-nowrap">
                   Service Checklist
-                  <PaymentWorkflowHelp variant="service-checklist" />
                 </h1>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 shrink-0"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('open-help', { 
-                      detail: { topicId: 'service-checklist', role: getCurrentUser()?.role } 
-                    }));
-                  }}
-                  title="SOP & Procedure Guide"
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-                
-                {/* Moved Buttons */}
-                <div className="flex gap-2 ml-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate('/chemical-training')} 
-                    className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                <div className="flex items-center gap-1 shrink-0">
+                  <PaymentWorkflowHelp variant="service-checklist" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 sm:h-7 sm:w-7 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 shrink-0"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open-help', { 
+                        detail: { topicId: 'service-checklist', role: getCurrentUser()?.role } 
+                      }));
+                    }}
+                    title="SOP & Procedure Guide"
                   >
-                    <Beaker className="w-3 h-3 md:w-4 md:h-4 md:mr-2" /> 
-                    <span className="hidden md:inline">Chemical Decision</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate('/dilution-calculator')} 
-                    className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
-                  >
-                    <Scale className="w-3 h-3 md:w-4 md:h-4 md:mr-2" />
-                    <span className="hidden md:inline">Dilution Calc</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={(e) => handleToggleAllSections(e)} 
-                    className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white text-zinc-300 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
-                    title={isAllSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
-                  >
-                    {isAllSectionsCollapsed ? (
-                      <ChevronsDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-300 md:mr-1.5" />
-                    ) : (
-                      <ChevronsUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-300 md:mr-1.5" />
-                    )}
-                    <span className="hidden md:inline">{isAllSectionsCollapsed ? 'Expand All' : 'Collapse All'}</span>
+                    <HelpCircle className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              <p className="text-zinc-500 text-[10px] md:text-xs max-w-xl hidden sm:block">Quality control & estimation workflow</p>
+
+              {/* Progress Indicator on Mobile Top Right */}
+              <div className="flex md:hidden items-center gap-2 bg-black/60 px-2.5 py-1 rounded-full border border-white/10 shrink-0">
+                <span className="text-[8px] text-zinc-500 uppercase font-black">Progress</span>
+                <span className="text-sm font-bold text-white font-mono">{progressPercent}%</span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-4 shrink-0">
-              {/* Progress Indicator moved to far right top row */}
+            {/* Quick Tool Action Buttons */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/chemical-training')} 
+                className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+              >
+                <Beaker className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" /> 
+                <span className="inline">Chemical Decision</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/dilution-calculator')} 
+                className="border-green-500/30 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+              >
+                <Scale className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" />
+                <span className="inline">Dilution Calc</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={(e) => handleToggleAllSections(e)} 
+                className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white text-zinc-300 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                title={isAllSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
+              >
+                {isAllSectionsCollapsed ? (
+                  <ChevronsDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-300 mr-1" />
+                ) : (
+                  <ChevronsUp className="w-3.5 h-3.5 md:w-4 md:h-4 text-zinc-300 mr-1" />
+                )}
+                <span className="inline">{isAllSectionsCollapsed ? 'Expand All' : 'Collapse All'}</span>
+              </Button>
+            </div>
+
+            {/* Desktop Progress Indicator */}
+            <div className="hidden md:flex items-center gap-4 shrink-0">
               <div className="flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-full border border-white/5 shadow-inner">
                 <div className="text-right flex items-center gap-2">
                   <span className="text-[9px] text-zinc-500 uppercase tracking-tighter font-black">Progress</span>
@@ -2692,7 +2701,7 @@ const ServiceChecklist = () => {
                 </div>
               </div>
               
-              <div className="hidden md:flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-7 text-[10px] px-2 font-bold">
                   Tips
                 </Button>
@@ -2702,8 +2711,9 @@ const ServiceChecklist = () => {
               </div>
             </div>
           </div>
-          {/* Mobile Buttons Row - hidden to save space if needed, or keep minimal */}
-          <div className="flex md:hidden items-center gap-1.5 mt-3 pt-3 border-t border-white/5">
+
+          {/* Mobile Buttons Row */}
+          <div className="flex md:hidden items-center gap-1.5 mt-2 pt-2 border-t border-white/5">
             <Button variant="secondary" size="sm" onClick={() => setTipsOpen(true)} className="bg-purple-700 text-white hover:bg-purple-800 h-6 text-[9px] px-2 font-bold flex-1">
               Tips
             </Button>
