@@ -3649,7 +3649,7 @@ const ServiceChecklist = () => {
                   const next = allExpanded ? {} : checklistSteps.reduce((acc, s) => ({ ...acc, [s.id]: true }), {} as Record<string, boolean>);
                   setExpandedHelp(next);
                 }}>
-                  {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Collapse</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Expand</span>}
+                  {checklistSteps.length > 0 && checklistSteps.every(s => expandedHelp[s.id]) ? <span className="flex items-center gap-1"><ChevronUp className="h-4 w-4" /> Hide Descriptions</span> : <span className="flex items-center gap-1"><ChevronDown className="h-4 w-4" /> Show Descriptions</span>}
                 </Button>
                 <Button variant="outline" size="sm" className="text-[11px] h-8 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-lg" onClick={generateColorfulChecklistPDF}>
                   <FileText className="h-4 w-4 mr-2" />
@@ -3722,11 +3722,11 @@ const ServiceChecklist = () => {
                         key={section} 
                         className={cn(
                           "space-y-3 transition-all duration-300 rounded-xl p-3 md:p-4",
-                          isActiveSection 
-                            ? "border border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
-                            : isCompleted 
-                              ? "border border-emerald-500/20 bg-emerald-500/5" 
-                              : "border border-transparent"
+                          isCompleted 
+                            ? "border border-emerald-500/30 bg-emerald-500/5 shadow-sm" 
+                            : isActiveSection 
+                              ? "border border-blue-500 bg-red-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
+                              : "border border-red-500/30 bg-red-500/5 hover:border-red-500/50 shadow-sm"
                         )}
                       >
                         <button
@@ -3833,6 +3833,27 @@ const ServiceChecklist = () => {
                               }}
                             >
                               {checklistSteps.filter(s => s.category === section).every(s => s.checked) ? 'Uncheck All' : 'Check All'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] uppercase font-black text-zinc-400 hover:text-blue-400 hover:bg-blue-400/10 transition-colors ml-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const secSteps = checklistSteps.filter(s => s.category === section);
+                                const allSecExpanded = secSteps.length > 0 && secSteps.every(s => expandedHelp[s.id]);
+                                setExpandedHelp(prev => {
+                                  const next = { ...prev };
+                                  secSteps.forEach(s => {
+                                    if (allSecExpanded) delete next[s.id];
+                                    else next[s.id] = true;
+                                  });
+                                  return next;
+                                });
+                              }}
+                              title="Toggle item descriptions for this section"
+                            >
+                              {checklistSteps.filter(s => s.category === section).length > 0 && checklistSteps.filter(s => s.category === section).every(s => expandedHelp[s.id]) ? 'Hide Descriptions' : 'Show Descriptions'}
                             </Button>
                             <div className="flex items-center gap-2 ml-auto mr-4" onClick={(e) => e.stopPropagation()}>
                               <div className="relative">
