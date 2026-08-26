@@ -832,7 +832,23 @@ const InventoryControl = () => {
     }
 
     if (supplySort === "low_stock") {
-      filtered = filtered.filter(s => typeof s.lowThreshold === 'number' && s.quantity < (s.lowThreshold || 0));
+      const allGroups = Object.values((supplies || []).reduce((acc, m) => {
+        const key = (m.name || '').trim().toLowerCase();
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(m);
+        return acc;
+      }, {} as Record<string, any[]>));
+
+      const lowStockKeys = new Set(
+        allGroups
+          .filter(group => {
+            const totalQty = group.reduce((sum: number, x: any) => sum + (Number(x.quantity) || 0), 0);
+            const lowThreshold = group.find((x: any) => typeof x.lowThreshold === 'number')?.lowThreshold ?? group.find((x: any) => typeof x.threshold === 'number')?.threshold ?? 1;
+            return totalQty < lowThreshold;
+          })
+          .map(group => (group[0]?.name || '').trim().toLowerCase())
+      );
+      filtered = filtered.filter(s => lowStockKeys.has((s.name || '').trim().toLowerCase()));
     }
     
     return [...filtered].sort((a, b) => {
@@ -925,6 +941,13 @@ const InventoryControl = () => {
     acc[key].push(m);
     return acc;
   }, {} as Record<string, any[]>));
+
+  const isSupplyGroupLowStock = (group: any[]): boolean => {
+    if (!group || group.length === 0) return false;
+    const totalQty = group.reduce((sum: number, x: any) => sum + (Number(x.quantity) || 0), 0);
+    const lowThreshold = group.find((x: any) => typeof x.lowThreshold === 'number')?.lowThreshold ?? group.find((x: any) => typeof x.threshold === 'number')?.threshold ?? 1;
+    return totalQty < lowThreshold;
+  };
 
   // Helper for brand grouping
   const groupedChemicals = productGroups.reduce((acc, group) => {
@@ -2760,7 +2783,7 @@ const InventoryControl = () => {
             onClick={() => toggleSection('materials')}
           >
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div className={`h-2 w-2 rounded-full ${materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
+              <div className={`h-2 w-2 rounded-full ${supplyGroups.some(group => isSupplyGroupLowStock(group)) ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}`} />
               <h3 className="text-lg font-semibold text-blue-100">Supplies</h3>
               <Popover>
                 <PopoverTrigger asChild>
@@ -2820,7 +2843,7 @@ const InventoryControl = () => {
               <div className="hidden sm:inline">
                 {renderHeaderStats('material', false)}
               </div>
-              {materials.some(m => typeof m.lowThreshold === 'number' && m.quantity < m.lowThreshold) && (
+              {supplyGroups.some(group => isSupplyGroupLowStock(group)) && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
                   <AlertTriangle className="h-3 w-3" />
                   <span className="text-[10px] font-bold uppercase tracking-tight">Low Stock</span>
@@ -2930,8 +2953,8 @@ const InventoryControl = () => {
                               {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
                             </span>
                           ) : (
-                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                              {group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                              {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
                               {totalQty} units
                             </span>
                           )}
@@ -3049,8 +3072,8 @@ const InventoryControl = () => {
                         </div>
                         <div className="text-[10px] text-zinc-400 italic mt-1">Purchased at: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit h-fit ${group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                        {group.some((x: any) => typeof x.lowThreshold === 'number' && x.quantity < x.lowThreshold) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+                      <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit h-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+                        {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
                         {totalQty} units
                       </span>
                     </div>

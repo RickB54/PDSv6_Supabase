@@ -126,7 +126,7 @@ async function updateInventoryStock(item: InventoryItem, quantityUsed: number): 
 
         // Check if below threshold and send alert
         const threshold = currentItem.threshold || currentItem.lowThreshold || 0;
-        if (newStock <= threshold && newStock > 0) {
+        if (newStock < threshold && newStock > 0) {
             pushAdminAlert(
                 "low_inventory",
                 `Low stock: ${item.name} (${newStock} ${item.unitOfMeasure || "units"} remaining)`,
