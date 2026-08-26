@@ -57,7 +57,9 @@ const renderSidebarContent = (
     isAdmin: boolean, 
     pendingPayrollCount: number = 0, 
     isDemoMode: boolean = false, 
-    activeMode: 'customer' | 'employee' | 'admin' = 'admin'
+    activeMode: 'customer' | 'employee' | 'admin' = 'admin',
+    navigate?: any,
+    location?: any
 ) => {
     // 1. CUSTOMER VIEW MODE
     if (activeMode === 'customer') {
@@ -356,10 +358,12 @@ const renderSidebarContent = (
             {isAdmin && (
                 <>
                     {!isDemoMode && (
-                        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => {
-                            navigate('/package-pricing', { state: { returnTo: location.pathname } });
+                        <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => handleAction(() => {
+                            if (navigate && location) {
+                                navigate('/package-pricing', { state: { returnTo: location.pathname } });
+                            }
                             setTimeout(() => window.dispatchEvent(new Event('open-quick-pricing')), 300);
-                        }} title="Pricing Control Center" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
+                        })} title="Pricing Control Center" className={`group relative ${collapsed ? "" : "w-full justify-start gap-2"} hover:bg-blue-800/10`}>
                             <div className="relative flex items-center justify-center w-5 h-5">
                                 <DollarSign className="w-5 h-5 text-blue-900 absolute translate-x-[1px] translate-y-[1px]" strokeWidth={3} />
                                 <DollarSign className="w-5 h-5 text-blue-500 absolute -translate-x-[1px] -translate-y-[1px]" strokeWidth={2} />
@@ -437,7 +441,7 @@ const renderSidebarContent = (
                         <Package className="w-5 h-5 text-cyan-500" />
                         {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Inventory</span>}
                     </Button>
-                    <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => { navigate('/inventory-control'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-inventory-audit')), 100); }} title="Inventory Audit" className={collapsed ? "" : "w-full justify-start gap-2"}>
+                    <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={() => handleAction(() => { if (navigate) navigate('/inventory-control'); setTimeout(() => window.dispatchEvent(new CustomEvent('open-inventory-audit')), 100); })} title="Inventory Audit" className={collapsed ? "" : "w-full justify-start gap-2"}>
                         <ClipboardCheck className="w-5 h-5 text-fuchsia-400" />
                         {!collapsed && <span className="text-white font-black text-[10px] tracking-widest uppercase">Audit</span>}
                     </Button>
@@ -674,7 +678,7 @@ export function GlobalRightSidebar() {
                 </Button>
                 
                 <div className="flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0">
-                    {renderSidebarContent(collapsed, handleAction, isAdmin, pendingPayroll, isDemoMode, activeMode)}
+                    {renderSidebarContent(collapsed, handleAction, isAdmin, pendingPayroll, isDemoMode, activeMode, navigate, location)}
                 </div>
             </div>
         );
@@ -702,7 +706,7 @@ export function GlobalRightSidebar() {
             </Button>
             
             <div className={`flex-1 overflow-y-auto w-full flex flex-col gap-1.5 styled-scrollbar pt-0 pb-4 ${collapsed ? 'items-center' : 'items-start'}`}>
-                {renderSidebarContent(collapsed, handleAction, isAdmin, pendingPayroll, isDemoMode, activeMode as any)}
+                {renderSidebarContent(collapsed, handleAction, isAdmin, pendingPayroll, isDemoMode, activeMode as any, navigate, location)}
             </div>
         </div>
     </>
