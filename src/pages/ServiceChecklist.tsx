@@ -563,6 +563,27 @@ const ServiceChecklist = () => {
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
   const isRestoringDraft = useRef(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [maxVisitedStageIndex, setMaxVisitedStageIndex] = useState<number>(0);
+
+  const FLOW_STAGES = [
+    'vehicle-type',
+    'service-package',
+    'preparation',
+    'exterior',
+    'interior',
+    'addons',
+    'final',
+    'materials',
+    'totals-payment',
+    'finish-job'
+  ] as const;
+
+  const advanceGuidedFlowToStage = useCallback((stageName: string) => {
+    const idx = FLOW_STAGES.indexOf(stageName as any);
+    if (idx !== -1) {
+      setMaxVisitedStageIndex(prev => Math.max(prev, idx));
+    }
+  }, []);
 
   const isAllSectionsCollapsed = 
     Boolean(collapsedSections['preparation']) && 
@@ -2503,22 +2524,42 @@ const ServiceChecklist = () => {
     toast({ title: "Checklist Generated", description: "Clean colorful PDF is ready." });
   };
 
-  // Guided-Flow Visual Guidance Helper Calculations
+  // Guided-Flow Stage Calculation
   const isCustomerValid = Boolean(selectedCustomer) || (Boolean(genericCustomerName) && genericCustomerName.trim().length > 0);
   const isVehicleValid = Boolean(vehicleType) && vehicleType !== 'choose' && vehicleType !== 'Choose Type';
   const isPackageValid = Boolean(selectedPackage) && selectedPackage.trim().length > 0;
   const isEmployeeValid = Boolean(employeeAssigned) && employeeAssigned !== '' && employeeAssigned !== 'unassigned';
 
-  const isJobSetupComplete = isCustomerValid && isVehicleValid && isPackageValid && isEmployeeValid;
+  const isVehicleSelected = isVehicleValid;
+  const isPackageSelected = isPackageValid;
 
-  const categoriesSequence: ('preparation' | 'exterior' | 'interior' | 'addons' | 'final')[] = ['preparation', 'exterior', 'interior', 'addons', 'final'];
-  
-  const activeCategoryTarget = isJobSetupComplete
-    ? categoriesSequence.find(cat => {
-        const catSteps = checklistSteps.filter(s => s.category === cat);
-        return catSteps.length > 0 && catSteps.some(s => !s.checked);
-      })
-    : null;
+  // Job setup is complete as soon as both Vehicle Type and Service Package are selected (Customer & Employee have defaults)
+  const isJobSetupComplete = isVehicleSelected && isPackageSelected;
+
+  const determineActiveFlowStage = (): string | null => {
+    if (isJobCompleted) return null;
+    if (!isVehicleSelected) return 'vehicle-type';
+    if (!isPackageSelected) return 'service-package';
+
+    // Job Setup is complete! Look through remaining flow stages starting from maxVisitedStageIndex (min 2)
+    const minIndex = Math.max(2, maxVisitedStageIndex);
+    const categoriesList: string[] = ['preparation', 'exterior', 'interior', 'addons', 'final'];
+
+    for (let i = minIndex; i < FLOW_STAGES.length; i++) {
+      const stage = FLOW_STAGES[i];
+      if (categoriesList.includes(stage)) {
+        const catSteps = checklistSteps.filter(s => s.category === stage);
+        if (catSteps.length > 0 && catSteps.some(s => !s.checked)) {
+          return stage;
+        }
+      } else {
+        return stage;
+      }
+    }
+    return 'finish-job';
+  };
+
+  const activeFlowStage = determineActiveFlowStage();
 
   return (
     <div className="min-h-screen bg-background">
@@ -3177,7 +3218,7 @@ const ServiceChecklist = () => {
                   onChange={(e) => setVehicleType(e.target.value)}
                   className={cn(
                     "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
-                    isCustomerValid && !isVehicleValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                    activeFlowStage === 'vehicle-type' ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]" : "border-white/20"
                   )}
                 >
                   {vehicleOptions.map((opt) => (
@@ -3194,7 +3235,7 @@ const ServiceChecklist = () => {
                     onChange={(e) => setSelectedPackage(e.target.value)}
                     className={cn(
                       "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
-                      isCustomerValid && isVehicleValid && !isPackageValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                      activeFlowStage === 'service-package' ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]" : "border-white/20"
                     )}
                   >
                     <option value="">Select a package...</option>
@@ -3500,7 +3541,7 @@ const ServiceChecklist = () => {
 
                     const isCompleted = steps.every(s => s.checked);
                     const isExpanded = !collapsedSections[section];
-                    const isActiveSection = isJobSetupComplete && (activeCategoryTarget === section);
+                    const isActiveSection = (activeFlowStage === section);
 
                     return (
                       <div 
@@ -3517,7 +3558,10 @@ const ServiceChecklist = () => {
                         <button
                           type="button"
                           className="w-full text-left text-xl font-semibold mb-2 flex items-center justify-between group"
-                          onClick={() => setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }))}
+                          onClick={() => {
+                            setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
+                            advanceGuidedFlowToStage(section);
+                          }}
                         >
                           <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-wrap">
                             <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : isActiveSection ? 'text-amber-400 font-bold' : 'group-hover:text-primary'}`}>
@@ -3661,7 +3705,10 @@ const ServiceChecklist = () => {
                                       <input
                                         type="checkbox"
                                         checked={step.checked}
-                                        onChange={(e) => handleToggleStep(step.id, e.target.checked)}
+                                        onChange={(e) => {
+                                          handleToggleStep(step.id, e.target.checked);
+                                          advanceGuidedFlowToStage(step.category);
+                                        }}
                                         className="h-5 w-5 rounded border-zinc-600 bg-zinc-900 text-red-600 focus:ring-red-600 focus:ring-offset-0 cursor-pointer"
                                       />
                                       <div className="flex items-center gap-2 overflow-hidden flex-1">
@@ -4065,17 +4112,30 @@ const ServiceChecklist = () => {
       </Card>
 
       {/* Materials Used */}
-      <Card className="p-3 md:p-6 bg-gradient-card border-border space-y-6">
+      <Card className={cn(
+        "p-3 md:p-6 bg-gradient-card space-y-6 transition-all duration-300 rounded-xl",
+        activeFlowStage === 'materials' 
+          ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+          : "border-border"
+      )}>
         <div 
           className="flex items-center justify-between cursor-pointer group"
-              onClick={() => setMaterialsSectionExpanded(!materialsSectionExpanded)}
-            >
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600">Materials Used</h2>
-                <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-mono">
-                  {chemRows.length + matRows.length + toolRows.length} items logged
-                </div>
-              </div>
+          onClick={() => {
+            setMaterialsSectionExpanded(!materialsSectionExpanded);
+            advanceGuidedFlowToStage('materials');
+          }}
+        >
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600">Materials Used</h2>
+            {activeFlowStage === 'materials' && (
+              <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+              </span>
+            )}
+            <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-mono">
+              {chemRows.length + matRows.length + toolRows.length} items logged
+            </div>
+          </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
@@ -4386,9 +4446,24 @@ const ServiceChecklist = () => {
 
 
           {/* Discount & Total */}
-          <Card className="p-6 bg-gradient-card border-border">
+          <Card 
+            className={cn(
+              "p-6 bg-gradient-card transition-all duration-300 rounded-xl",
+              activeFlowStage === 'totals-payment' 
+                ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                : "border-border"
+            )}
+            onClick={() => advanceGuidedFlowToStage('totals-payment')}
+          >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-              <h2 className="text-2xl font-bold text-foreground">Totals & Payment</h2>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-2xl font-bold text-foreground">Totals & Payment</h2>
+                {activeFlowStage === 'totals-payment' && (
+                  <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 <div
                   className={`flex items-center gap-2 cursor-pointer text-sm transition-colors px-3 py-1.5 rounded-full border ${discountExpanded ? 'bg-zinc-800 border-zinc-500 text-white' : 'bg-zinc-900/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-white'}`}
@@ -4581,11 +4656,21 @@ const ServiceChecklist = () => {
           </Card>
 
           {/* Actions & Completion */}
-          <div className="flex flex-col gap-6">
-            <Card className="p-4 md:p-6 bg-gradient-card border-border space-y-6">
+          <div className="flex flex-col gap-6" onClick={() => advanceGuidedFlowToStage('finish-job')}>
+            <Card className={cn(
+              "p-4 md:p-6 bg-gradient-card space-y-6 transition-all duration-300 rounded-xl",
+              activeFlowStage === 'finish-job' 
+                ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                : "border-border"
+            )}>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl md:text-2xl font-bold text-white">Final Steps</h2>
+                  {activeFlowStage === 'finish-job' && (
+                    <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Ready To Complete
+                    </span>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -4623,11 +4708,14 @@ const ServiceChecklist = () => {
                 <Button 
                   onClick={finishJob} 
                   disabled={isJobCompleted}
-                  className={`md:col-span-2 text-white font-black italic h-12 text-lg transition-all ${
+                  className={cn(
+                    "md:col-span-2 text-white font-black italic h-12 text-lg transition-all",
                     isJobCompleted 
-                      ? 'bg-emerald-600/50 cursor-not-allowed opacity-50' 
-                      : 'bg-purple-600 hover:bg-purple-700 shadow-[0_0_20px_rgba(147,51,234,0.3)]'
-                  }`}
+                      ? "bg-emerald-600/50 cursor-not-allowed opacity-50" 
+                      : activeFlowStage === 'finish-job'
+                        ? "bg-purple-600 hover:bg-purple-700 border-2 border-amber-400 animate-pulse ring-4 ring-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.6)]"
+                        : "bg-purple-600 hover:bg-purple-700 shadow-[0_0_20px_rgba(147,51,234,0.3)]"
+                  )}
                 >
                   <CheckCircle2 className="h-5 w-5 mr-3" />
                   {isJobCompleted ? 'JOB FINISHED & LOCKED' : 'FINISH & COMPLETE JOB'}
