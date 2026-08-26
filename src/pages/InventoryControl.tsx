@@ -3774,9 +3774,66 @@ const InventoryControl = () => {
         matRows={[]}
         toolRows={[]}
         equipLogs={[]}
-        onSaveRows={() => {
-            toast({ title: "Usage Report Logged", description: "This is a demonstration. To log to a real job, open this from a Service Checklist.", className: "bg-green-600 text-white" });
-            handleUsageReportClose(false);
+        standaloneMode={true}
+        onSaveRows={async (chemRows, matRows, toolRows, equipLogs, standaloneNote) => {
+            const dateStr = new Date().toISOString();
+            const baseNote = standaloneNote || "Standalone Usage";
+            
+            try {
+              const promises = [];
+              
+              for (const c of chemRows) {
+                 promises.push(inventoryData.saveUsageHistory({
+                    id: crypto.randomUUID(),
+                    chemicalId: c.chemicalId,
+                    serviceName: "Standalone: " + baseNote,
+                    date: dateStr,
+                    amountUsed: c.amountUsedOz.toString() + " oz",
+                    notes: `Dilution: ${c.dilutionRatioStr} | Conc. Deducted: ${c.concentrateDeductedOz.toFixed(2)} oz`
+                 }));
+              }
+              
+              for (const m of matRows) {
+                 promises.push(inventoryData.saveUsageHistory({
+                    id: crypto.randomUUID(),
+                    materialId: m.materialId,
+                    serviceName: "Standalone: " + baseNote,
+                    date: dateStr,
+                    amountUsed: m.quantityUsed.toString()
+                 }));
+              }
+
+              for (const t of toolRows) {
+                 promises.push(inventoryData.saveUsageHistory({
+                    id: crypto.randomUUID(),
+                    toolId: t.toolId,
+                    serviceName: "Standalone: " + baseNote,
+                    date: dateStr,
+                    amountUsed: 1,
+                    notes: t.notes
+                 }));
+              }
+              
+              if (equipLogs) {
+                for (const e of equipLogs) {
+                   promises.push(inventoryData.saveUsageHistory({
+                      id: crypto.randomUUID(),
+                      toolId: e.equipmentId,
+                      serviceName: "Standalone: " + baseNote + " (Maintenance)",
+                      date: dateStr,
+                      amountUsed: 0,
+                      notes: `Gas: ${e.gasLevel || '-'} | Cond: ${e.conditionNotes || '-'}`
+                   }));
+                }
+              }
+
+              await Promise.all(promises);
+              
+              handleUsageReportClose(false);
+            } catch (err) {
+              console.error(err);
+              toast({ title: "Error Saving Usage", description: "Could not save standalone usage records.", variant: "destructive" });
+            }
         }}
       />
       <InventoryAuditModal

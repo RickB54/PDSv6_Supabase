@@ -62,11 +62,13 @@ interface MaterialInventoryPickerModalProps {
   matRows: LoggedMaterialUsage[];
   toolRows: LoggedToolUsage[];
   equipLogs?: EquipmentMaintenanceLog[];
+  standaloneMode?: boolean;
   onSaveRows: (
     chemRows: LoggedChemicalUsage[],
     matRows: LoggedMaterialUsage[],
     toolRows: LoggedToolUsage[],
-    equipLogs?: EquipmentMaintenanceLog[]
+    equipLogs?: EquipmentMaintenanceLog[],
+    standaloneNote?: string
   ) => void;
 }
 
@@ -80,6 +82,7 @@ export default function MaterialInventoryPickerModal({
   matRows = [],
   toolRows = [],
   equipLogs = [],
+  standaloneMode = false,
   onSaveRows,
 }: MaterialInventoryPickerModalProps) {
   const { toast } = useToast();
@@ -97,14 +100,17 @@ export default function MaterialInventoryPickerModal({
 
   // Equipment Maintenance State
   const [localEquipLogs, setLocalEquipLogs] = useState<EquipmentMaintenanceLog[]>(equipLogs);
+  
+  // Standalone Mode State
+  const [standaloneNote, setStandaloneNote] = useState('');
 
-  // Sync state when modal opens
   React.useEffect(() => {
     if (open) {
       setLocalChemRows(chemRows);
       setLocalMatRows(matRows);
       setLocalToolRows(toolRows);
       setLocalEquipLogs(equipLogs || []);
+      setStandaloneNote('');
     }
   }, [open, chemRows, matRows, toolRows, equipLogs]);
 
@@ -371,10 +377,15 @@ export default function MaterialInventoryPickerModal({
 
   // Pure Report Save Handler (No IAC Stock Modification!)
   const handleSaveReportOnly = () => {
-    onSaveRows(localChemRows, localMatRows, localToolRows, localEquipLogs);
+    if (standaloneMode && !standaloneNote.trim()) {
+      toast({ title: "Note Required", description: "Please enter a Purpose/Note for this standalone entry.", variant: "destructive" });
+      return;
+    }
+    onSaveRows(localChemRows, localMatRows, localToolRows, localEquipLogs, standaloneNote);
     toast({
       title: 'Usage Log Saved',
-      description: 'Materials & equipment usage logged for job report. IAC stock levels were not modified.'
+      description: standaloneMode ? 'Standalone usage logged successfully.' : 'Materials & equipment usage logged for job report. IAC stock levels were not modified.',
+      className: standaloneMode ? "bg-green-600 text-white" : ""
     });
     onOpenChange(false);
   };
@@ -1009,6 +1020,18 @@ export default function MaterialInventoryPickerModal({
             )}
           </div>
         </div>
+
+        {standaloneMode && (
+          <div className="p-4 border-t border-zinc-800 bg-zinc-900/80">
+            <Label className="text-zinc-300 text-xs font-bold mb-1.5 block">Purpose / Note (Required for standalone entries)</Label>
+            <Input 
+              value={standaloneNote} 
+              onChange={e => setStandaloneNote(e.target.value)} 
+              placeholder="e.g. Personal use - F150, Shop cleanup, Demonstration..." 
+              className="bg-zinc-950 border-zinc-700 text-white text-sm"
+            />
+          </div>
+        )}
 
         <DialogFooter className="p-4 border-t border-zinc-800 bg-zinc-900/60 flex items-center justify-between">
           <div className="text-xs text-zinc-400 flex items-center gap-1.5">
