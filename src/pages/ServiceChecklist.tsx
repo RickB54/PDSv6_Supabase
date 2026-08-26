@@ -406,6 +406,21 @@ const ServiceChecklist = () => {
     }
     sessionStorage.removeItem('pending_draft_steps');
 
+    setMaxVisitedStageIndex(0);
+    setJobSetupExpanded(true);
+    setPreVehicleExpanded(false);
+    setMaterialsSectionExpanded(false);
+    setMileageExpanded(false);
+    setDiscountExpanded(false);
+    setDestinationExpanded(false);
+    setCollapsedSections({
+      preparation: true,
+      exterior: true,
+      interior: true,
+      addons: true,
+      final: true,
+    });
+
     // Clear URL parameters to prevent re-hydration on refresh
     setSearchParams({}, { replace: true });
   };
@@ -562,7 +577,13 @@ const ServiceChecklist = () => {
   type ChecklistStep = { id: string; name: string; category: 'preparation' | 'exterior' | 'interior' | 'addons' | 'final'; checked: boolean; instructions?: string; stepChemicals?: string[] };
   const [checklistSteps, setChecklistSteps] = useState<ChecklistStep[]>([]);
   const isRestoringDraft = useRef(false);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    preparation: true,
+    exterior: true,
+    interior: true,
+    addons: true,
+    final: true,
+  });
   const [maxVisitedStageIndex, setMaxVisitedStageIndex] = useState<number>(0);
 
   const FLOW_STAGES = [
@@ -2560,6 +2581,27 @@ const ServiceChecklist = () => {
   };
 
   const activeFlowStage = determineActiveFlowStage();
+
+  // Auto-expand whatever section is currently required by guided flow
+  useEffect(() => {
+    if (!activeFlowStage) return;
+
+    if (activeFlowStage === 'vehicle-type' || activeFlowStage === 'service-package') {
+      setJobSetupExpanded(true);
+    } else if (['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage)) {
+      setCollapsedSections(prev => {
+        if (prev[activeFlowStage]) {
+          const next = { ...prev };
+          delete next[activeFlowStage];
+          return next;
+        }
+        return prev;
+      });
+      setChecklistExpanded(true);
+    } else if (activeFlowStage === 'materials') {
+      setMaterialsSectionExpanded(true);
+    }
+  }, [activeFlowStage]);
 
   return (
     <div className="min-h-screen bg-background">
