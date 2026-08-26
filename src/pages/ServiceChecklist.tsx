@@ -56,7 +56,7 @@ import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
 import { getChemicals, getMaterials, getTools, Chemical, Material, Tool as Equipment } from "@/lib/inventory-data";
-import MaterialInventoryPickerModal, { LoggedChemicalUsage, LoggedMaterialUsage, LoggedToolUsage } from "@/components/checklist/MaterialInventoryPickerModal";
+import MaterialInventoryPickerModal, { LoggedChemicalUsage, LoggedMaterialUsage, LoggedToolUsage, EquipmentMaintenanceLog } from "@/components/checklist/MaterialInventoryPickerModal";
 import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
 import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
 import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
@@ -977,6 +977,7 @@ const ServiceChecklist = () => {
   const [chemRows, setChemRows] = useState<LoggedChemicalUsage[]>([]);
   const [matRows, setMatRows] = useState<LoggedMaterialUsage[]>([]);
   const [toolRows, setToolRows] = useState<LoggedToolUsage[]>([]);
+  const [equipLogs, setEquipLogs] = useState<EquipmentMaintenanceLog[]>([]);
   const [materialsModalOpen, setMaterialsModalOpen] = useState(false);
 
   // Chemical Modal State
@@ -1359,17 +1360,16 @@ const ServiceChecklist = () => {
     try {
       const res = await api('/api/checklist/materials', { method: 'POST', body: JSON.stringify({ jobId, rows: items }) });
       if ((res as any)?.ok || res === null) {
-        toast({ title: finalize ? 'Materials finalized' : 'Materials saved', description: finalize ? 'Inventory updated and usage history logged.' : 'Materials usage recorded for this job.' });
+        toast({ title: 'Materials usage saved', description: 'Materials usage recorded for this job report. IAC stock levels were not modified.' });
       } else {
         const serverErr = (res as any)?.error;
         throw new Error(String(serverErr || 'Failed to sync materials'));
       }
       return res;
     } catch (e: any) {
-      const msg = e?.message || 'Could not sync materials to inventory.';
-      toast({ title: 'Sync failed', description: msg, variant: 'destructive' });
-      console.error('postChecklistMaterials error:', e);
-      throw e;
+      const msg = e?.message || 'Could not save materials to job report.';
+      toast({ title: 'Report save issue', description: msg, variant: 'outline' });
+      return null;
     }
   };
 
@@ -2019,22 +2019,23 @@ const ServiceChecklist = () => {
         y += split.length * 5 + 4;
       }
 
-      // Materials Used - chemicals and materials rows
+      // Materials Used & Equipment Report
       doc.setFontSize(13);
-      doc.text('Materials Used', 20, y); y += 7;
+      doc.text('Materials & Equipment Job Report', 20, y); y += 7;
       doc.setFontSize(11);
       // Chemicals
-      doc.text('Chemicals:', 20, y); y += 6;
+      doc.text('Chemicals Used:', 20, y); y += 6;
       const chemLines = (chemRows || []).map(row => {
         const name = row.chemicalName || fullChemicalsList.find(c => String(c.id) === String(row.chemicalId))?.name || row.chemicalId || '';
         const amt = row.amountUsedOz ? `${row.amountUsedOz} oz` : '';
+        const ratio = row.dilutionRatioStr ? ` (${row.dilutionRatioStr})` : '';
         const note = row.notes ? ` - ${row.notes}` : '';
-        return name ? `• ${name}${amt ? ` (${amt})` : ''}${note}` : '';
+        return name ? `• ${name}${amt ? `: ${amt}` : ''}${ratio}${note}` : '';
       }).filter(Boolean);
       const chemText = doc.splitTextToSize(chemLines.length ? chemLines.join('\n') : '(none)', 170);
       doc.text(chemText, 28, y); y += chemText.length * 5 + 4;
       // Materials
-      doc.text('Materials:', 20, y); y += 6;
+      doc.text('Materials / Supplies:', 20, y); y += 6;
       const matLines = (matRows || []).map(row => {
         const name = row.materialName || fullMaterialsList.find(m => String(m.id) === String(row.materialId))?.name || row.materialId || '';
         const qty = row.quantityUsed ? `${row.quantityUsed} item(s)` : '';
@@ -2044,7 +2045,7 @@ const ServiceChecklist = () => {
       const matText = doc.splitTextToSize(matLines.length ? matLines.join('\n') : '(none)', 170);
       doc.text(matText, 28, y); y += matText.length * 5 + 4;
       // Tools
-      doc.text('Tools:', 20, y); y += 6;
+      doc.text('Tools & Equipment:', 20, y); y += 6;
       const toolLines = (toolRows || []).map(row => {
         const name = fullToolsList.find(t => String(t.id) === String(row.toolId))?.name || row.toolId || '';
         const note = row.notes ? ` - ${row.notes}` : '';
@@ -2052,6 +2053,23 @@ const ServiceChecklist = () => {
       }).filter(Boolean);
       const toolText = doc.splitTextToSize(toolLines.length ? toolLines.join('\n') : '(none)', 170);
       doc.text(toolText, 28, y); y += toolText.length * 5 + 4;
+      // Equipment Status & Maintenance
+      if (equipLogs && equipLogs.length > 0) {
+        doc.text('Equipment Status & Maintenance Notes:', 20, y); y += 6;
+        const equipLines = equipLogs.map(l => {
+          const parts = [`• ${l.equipmentName || 'Equipment'}`];
+          if (l.gasLevel) parts.push(`Gas Level: ${l.gasLevel}`);
+          if (l.lastFillUpDate) parts.push(`Fill-up: ${l.lastFillUpDate}`);
+          if (l.lastOilChange) parts.push(`Oil Change: ${l.lastOilChange}`);
+          if (l.lastAirFilterChange) parts.push(`Air Filter: ${l.lastAirFilterChange}`);
+          if (l.winterStorageNotes) parts.push(`Notes: ${l.winterStorageNotes}`);
+          if (l.lastServiceDate) parts.push(`Service Date: ${l.lastServiceDate}`);
+          if (l.conditionNotes) parts.push(`Condition: ${l.conditionNotes}`);
+          return parts.join(' | ');
+        });
+        const equipText = doc.splitTextToSize(equipLines.join('\n'), 170);
+        doc.text(equipText, 28, y); y += equipText.length * 5 + 4;
+      }
 
       const dataUrl = doc.output('dataurlstring');
       const recordType = finalize ? 'Job' : 'Checklist';
@@ -4390,15 +4408,12 @@ const ServiceChecklist = () => {
         chemRows={chemRows}
         matRows={matRows}
         toolRows={toolRows}
-        onSaveRows={(newChem, newMat, newTool) => {
+        equipLogs={equipLogs}
+        onSaveRows={(newChem, newMat, newTool, newEquip) => {
           setChemRows(newChem);
           setMatRows(newMat);
           setToolRows(newTool);
-        }}
-        onDeductComplete={async () => {
-          const [chems, mats] = await Promise.all([getChemicals(), getMaterials()]);
-          setFullChemicalsList(chems || []);
-          setFullMaterialsList(mats || []);
+          if (newEquip) setEquipLogs(newEquip);
         }}
       />
 

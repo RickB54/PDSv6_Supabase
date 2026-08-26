@@ -189,9 +189,13 @@ interface ChemicalAuditState {
 
 const FILL_LEVELS = [
   { label: 'Full', value: 1 },
+  { label: '7/8', value: 0.875 },
   { label: '3/4', value: 0.75 },
+  { label: '5/8', value: 0.625 },
   { label: '1/2', value: 0.5 },
+  { label: '3/8', value: 0.375 },
   { label: '1/4', value: 0.25 },
+  { label: '1/8', value: 0.125 },
   { label: 'Empty', value: 0 },
 ];
 
