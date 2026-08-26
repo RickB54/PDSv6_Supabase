@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench, GripVertical } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -731,6 +731,86 @@ const ServiceChecklist = () => {
       } catch (e) { console.error("Master timer restore failed", e); }
     }
   }, [checklistId]);
+
+  // Draggable Master Timer Position State
+  const [timerPos, setTimerPos] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('checklist_timer_pos');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [isDraggingTimer, setIsDraggingTimer] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
+
+  const handleTimerDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const currentX = timerPos ? timerPos.x : (window.innerWidth - 200);
+    const currentY = timerPos ? timerPos.y : 80;
+
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: currentX,
+      initialY: currentY,
+    };
+    setIsDraggingTimer(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingTimer) return;
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragRef.current) return;
+      const clientX = 'touches' in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = 'touches' in e ? (e as TouchEvent).touches[0].clientY : (e as MouseEvent).clientY;
+
+      const deltaX = clientX - dragRef.current.startX;
+      const deltaY = clientY - dragRef.current.startY;
+
+      const newX = Math.max(10, Math.min(window.innerWidth - 160, dragRef.current.initialX + deltaX));
+      const newY = Math.max(10, Math.min(window.innerHeight - 80, dragRef.current.initialY + deltaY));
+
+      setTimerPos({ x: newX, y: newY });
+    };
+
+    const handleEnd = () => {
+      setIsDraggingTimer(false);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('touchmove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchend', handleEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [isDraggingTimer]);
+
+  useEffect(() => {
+    if (timerPos) {
+      localStorage.setItem('checklist_timer_pos', JSON.stringify(timerPos));
+    }
+  }, [timerPos]);
+
+  const handlePrefillAvgTimes = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setItemDurations(prev => {
+      const next = { ...prev };
+      checklistSteps.forEach(s => {
+        if (!next[s.id] || next[s.id] === 0) {
+          next[s.id] = getAvgTime(s.name);
+        }
+      });
+      return next;
+    });
+    toast({ title: 'Times Prefilled', description: 'Average durations applied to all checklist steps.' });
+  };
 
   const handleStartTimer = () => {
     if (!isTimerRunning) {
@@ -2610,14 +2690,21 @@ const ServiceChecklist = () => {
         title={`Service Checklist ${selectedCustomer ? '(Linked)' : '(Generic)'}`} 
         subtitle="Execute the Prime Standard for every vehicle."
       >
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Always Visible Progress Bar in Sticky PageHeader */}
+          <div className="flex items-center gap-2 bg-black/60 px-2.5 py-1 rounded-full border border-white/10 shadow-inner">
+            <span className="text-[9px] text-zinc-400 uppercase font-black tracking-wider">Progress</span>
+            <Progress value={progressPercent} className="h-2 w-14 sm:w-24 bg-zinc-800" />
+            <span className="text-xs sm:text-sm font-bold text-white font-mono">{progressPercent}%</span>
+          </div>
+
           <Button 
             variant="outline" 
             onClick={saveCurrentSession}
             disabled={!hasUnsavedChanges}
-            className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-9 px-3", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
+            className={cn("border-purple-500/30 bg-purple-500/10 hover:bg-purple-500 hover:text-white font-bold h-8 sm:h-9 px-2.5 sm:px-3 text-xs", hasUnsavedChanges ? "text-purple-400 animate-pulse" : "text-zinc-500")}
           >
-            <Save className="w-4 h-4 md:mr-2" />
+            <Save className="w-3.5 h-3.5 md:mr-1.5" />
             <span className="hidden md:inline">Save Progress</span>
           </Button>
         </div>
@@ -2663,6 +2750,15 @@ const ServiceChecklist = () => {
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
               <Button 
                 variant="outline" 
+                onClick={handlePrefillAvgTimes} 
+                className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500 hover:text-white text-indigo-300 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                title="Prefill average times for all steps"
+              >
+                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-2" /> 
+                <span className="inline">Prefill Avg Times</span>
+              </Button>
+              <Button 
+                variant="outline" 
                 onClick={() => navigate('/chemical-training')} 
                 className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-400 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
               >
@@ -2680,7 +2776,7 @@ const ServiceChecklist = () => {
               <Button 
                 variant="outline" 
                 onClick={(e) => handleToggleAllSections(e)} 
-                className="border-zinc-700 bg-zinc-900 hover:bg-zinc-800 hover:text-white text-zinc-300 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
+                className="border-zinc-700 bg-zinc-900 hover:bg-zinc-850 hover:text-white text-zinc-300 font-bold h-7 md:h-8 px-2 md:px-3 text-[10px] md:text-xs"
                 title={isAllSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
               >
                 {isAllSectionsCollapsed ? (
@@ -3485,6 +3581,16 @@ const ServiceChecklist = () => {
             </div>
 
             <div className="flex items-center gap-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-7 bg-indigo-950/40 border-indigo-700/40 text-indigo-300 hover:bg-indigo-900/40 gap-1 px-2"
+                onClick={(e) => handlePrefillAvgTimes(e)}
+                title="Prefill average times for all steps"
+              >
+                <Clock className="h-3 w-3" />
+                <span className="hidden md:inline text-[10px]">Prefill Avg Times</span>
+              </Button>
               {getCurrentUser()?.role === 'admin' && (
                 <Button 
                   variant="outline" 
@@ -5498,16 +5604,30 @@ const ServiceChecklist = () => {
       )}
 
 
-      {/* Floating Global Job Timer - Master Timer (Job Duration) */}
+      {/* Floating Global Job Timer - Master Timer (Job Duration) - Draggable & Fully Visible */}
       {(masterIsRunning || masterElapsedTimeMs > 0) && !showTipScreen && (
-        <div className="fixed top-[74px] right-2 md:right-4 z-[200] animate-in slide-in-from-right duration-500">
-          <div className={`flex flex-col items-end gap-1 px-3 md:px-4 py-1.5 md:py-2 bg-zinc-950/90 border-2 shadow-xl rounded-2xl backdrop-blur-md ${jobEndTime ? 'border-green-500' : 'border-blue-600'}`}>
-            <span className="text-[8px] md:text-[10px] text-zinc-500 uppercase font-black tracking-widest">Job Duration</span>
-            <div className="flex items-center gap-2">
-              <Clock className={`h-4 w-4 md:h-5 md:w-5 ${jobEndTime ? 'text-green-500' : 'text-blue-500'}`} />
-              <span className={`text-sm md:text-2xl font-mono font-black ${jobEndTime ? 'text-green-500' : 'text-blue-400'}`}>
-                {formatDuration((masterIsRunning ? (Date.now() - (masterStartTime || Date.now())) : 0) + masterElapsedTimeMs)}
-              </span>
+        <div 
+          style={timerPos ? { left: `${timerPos.x}px`, top: `${timerPos.y}px`, right: 'auto' } : undefined}
+          className={cn(
+            "fixed z-[200] animate-in slide-in-from-right duration-300 touch-none select-none",
+            !timerPos && "top-[80px] right-6 md:right-10"
+          )}
+        >
+          <div 
+            onMouseDown={handleTimerDragStart}
+            onTouchStart={handleTimerDragStart}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 bg-zinc-950/95 border-2 shadow-2xl rounded-2xl backdrop-blur-md cursor-grab active:cursor-grabbing whitespace-nowrap min-w-fit ${jobEndTime ? 'border-green-500/80 shadow-green-500/10' : 'border-blue-600/80 shadow-blue-500/20'}`}
+            title="Click or touch and drag to move timer"
+          >
+            <GripVertical className="h-4 w-4 text-zinc-500 hover:text-zinc-300 shrink-0" />
+            <div className="flex flex-col items-end gap-0.5 min-w-0">
+              <span className="text-[9px] md:text-[10px] text-zinc-400 uppercase font-black tracking-widest leading-none">Job Duration</span>
+              <div className="flex items-center gap-1.5 leading-none mt-0.5">
+                <Clock className={`h-4 w-4 md:h-5 md:w-5 shrink-0 ${jobEndTime ? 'text-green-500' : 'text-blue-500'}`} />
+                <span className={`text-base md:text-xl font-mono font-black tracking-tight ${jobEndTime ? 'text-green-500' : 'text-blue-400'}`}>
+                  {formatDuration((masterIsRunning ? (Date.now() - (masterStartTime || Date.now())) : 0) + masterElapsedTimeMs)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
