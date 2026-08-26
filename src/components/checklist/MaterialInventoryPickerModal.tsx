@@ -144,15 +144,18 @@ export default function MaterialInventoryPickerModal({
     return amountOz / (ratioParts + 1);
   };
 
-  // Category match checker: Handles Exterior, Interior, and 'Both'
+  // Category match checker: Handles Exterior, Interior, and 'Both'/'Dual-Use'
   const isChemicalCategoryMatch = (chem: Chemical, targetSection: 'exterior' | 'interior'): boolean => {
-    const cat = (chem.category || chem.shelf || chem.section || '').toLowerCase().trim();
-    if (cat === 'both' || cat.includes('both')) return true; // Appears in BOTH sections!
+    const rawCat = (chem.category || chem.shelf || chem.section || '').toLowerCase().trim();
+    // 'both' and 'dual-use' appear in BOTH sections
+    if (rawCat === 'both' || rawCat.includes('both') || rawCat === 'dual-use' || rawCat.includes('dual')) return true;
     if (targetSection === 'exterior') {
-      return cat.includes('exterior') || cat.includes('ext') || !cat.includes('interior');
+      // Only exterior if explicitly exterior, or if no specific interior/both tag exists
+      if (rawCat.includes('interior') || rawCat.includes(' int')) return false;
+      return rawCat.includes('exterior') || rawCat.includes('ext') || rawCat === '';
     }
     if (targetSection === 'interior') {
-      return cat.includes('interior') || cat.includes('int');
+      return rawCat.includes('interior') || rawCat.includes(' int');
     }
     return false;
   };

@@ -335,13 +335,13 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                             <Input value={editing?.brand || ''} onChange={e => setEditing({ ...editing, brand: e.target.value })} className="bg-zinc-900 border-zinc-700" placeholder="e.g. Koch Chemie" />
                         </div>
                         <div className="space-y-2">
-                            <Label>Category</Label>
-                            <Select value={editing?.category} onValueChange={(v: any) => setEditing({ ...editing, category: v })}>
-                                <SelectTrigger className="bg-zinc-900 border-zinc-700"><SelectValue /></SelectTrigger>
+                            <Label>Usage Type (Interior / Exterior / Both)</Label>
+                            <Select value={(editing?.category || '').toLowerCase()} onValueChange={(v: any) => setEditing({ ...editing, category: v })}>
+                                <SelectTrigger className="bg-zinc-900 border-zinc-700"><SelectValue placeholder="Select usage type..." /></SelectTrigger>
                                 <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    <SelectItem value="Exterior">Exterior</SelectItem>
-                                    <SelectItem value="Interior">Interior</SelectItem>
-                                    <SelectItem value="Dual-Use">Dual-Use</SelectItem>
+                                    <SelectItem value="exterior">Exterior Only</SelectItem>
+                                    <SelectItem value="interior">Interior Only</SelectItem>
+                                    <SelectItem value="both">Both (Interior & Exterior)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
