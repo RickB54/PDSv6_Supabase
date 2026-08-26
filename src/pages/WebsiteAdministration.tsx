@@ -47,9 +47,11 @@ import {
   Construction,
   Info,
   Settings,
-  Tag
+  Tag,
+  BookOpen
 } from "lucide-react";
 import HelpModal from "@/components/help/HelpModal";
+import { MasterSOPEditor } from "@/components/admin/MasterSOPEditor";
 
 const notifyChange = (kind: string) => {
   try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind } })); } catch { }
@@ -608,7 +610,7 @@ export default function WebsiteAdministration() {
   const [newAboutSection, setNewAboutSection] = useState('');
   const [newAboutContent, setNewAboutContent] = useState('');
   const [accordionValue, setAccordionValue] = useState<string[]>([]);
-  const ALL_SECTIONS = ["home", "about-page", "bookings", "faqs", "vehicle-types", "launch-status", "contact", "package-details", "footer", "header"];
+  const ALL_SECTIONS = ["home", "about-page", "bookings", "faqs", "vehicle-types", "launch-status", "sop-editor", "contact", "package-details", "footer", "header"];
 
   const loadWA = async () => {
     // 1. VEHICLE TYPES
@@ -1669,6 +1671,25 @@ export default function WebsiteAdministration() {
                   )}
                 </div>
 
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Master SOP Architecture & Editor */}
+            <AccordionItem 
+              value="sop-editor" 
+              className="border-2 mb-4 rounded-xl bg-gradient-to-br from-purple-950/40 via-zinc-900 to-zinc-950 hover:from-purple-900/20 transition-all border-purple-500/30 overflow-hidden px-2 shadow-[0_0_30px_rgba(168,85,247,0.05)] scale-[1.01]"
+            >
+              <AccordionTrigger className="hover:no-underline px-6 py-5 hover:text-purple-400 [&[data-state=open]]:text-purple-400 font-bold uppercase tracking-tight text-lg group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-500/10 rounded-xl group-data-[state=open]:bg-purple-500/20 transition-colors">
+                    <BookOpen className="h-6 w-6 text-purple-400 group-data-[state=open]:animate-bounce" />
+                  </div>
+                  <span className="font-black text-white tracking-tighter text-xl">Master SOP Catalog & Editor</span>
+                  <div className="ml-2 px-2 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[8px] font-black text-purple-400 uppercase tracking-widest">Single Source of Truth</div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="p-4 md:p-6 bg-black/40">
+                <MasterSOPEditor />
               </AccordionContent>
             </AccordionItem>
 

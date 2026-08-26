@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -73,6 +73,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { sopService, MasterSOPItem } from "@/lib/sop-service";
+import { SOPTooltip } from "@/components/SOPTooltip";
 
 type DisplayService = {
   id: string;
@@ -202,6 +204,50 @@ const ServiceChecklist = () => {
   useEffect(() => {
     refreshCoupons();
   }, [refreshCoupons]);
+  
+  const [masterSOPs, setMasterSOPs] = useState<MasterSOPItem[]>([]);
+
+  useEffect(() => {
+    sopService.getMasterSOPs().then(setMasterSOPs);
+    const handleSOPUpdate = (e: any) => {
+      if (e.detail?.sops) {
+        setMasterSOPs(e.detail.sops);
+      } else {
+        sopService.getMasterSOPs().then(setMasterSOPs);
+      }
+    };
+    window.addEventListener('master-sops-updated', handleSOPUpdate);
+    return () => window.removeEventListener('master-sops-updated', handleSOPUpdate);
+  }, []);
+
+  const getSOPItemForStep = useCallback((stepId: string, stepName: string): MasterSOPItem | undefined => {
+    if (!masterSOPs || masterSOPs.length === 0) return undefined;
+    let found = masterSOPs.find(s => s.id.toLowerCase() === stepId.toLowerCase() || s.code.toLowerCase() === stepId.toLowerCase());
+    if (found) return found;
+
+    const nameLower = stepName.toLowerCase();
+    if (nameLower.includes('wheel') || nameLower.includes('rim')) return masterSOPs.find(s => s.id === 'ext-1');
+    if (nameLower.includes('bug') || (nameLower.includes('rinse') && !nameLower.includes('final'))) return masterSOPs.find(s => s.id === 'ext-2');
+    if (nameLower.includes('foam')) return masterSOPs.find(s => s.id === 'ext-3');
+    if (nameLower.includes('hand wash') || nameLower.includes('contact wash') || (nameLower.includes('wash') && !nameLower.includes('pressure'))) return masterSOPs.find(s => s.id === 'ext-4');
+    if (nameLower.includes('iron') || nameLower.includes('tar') || nameLower.includes('decon')) return masterSOPs.find(s => s.id === 'ext-5');
+    if (nameLower.includes('clay')) return masterSOPs.find(s => s.id === 'ext-6');
+    if (nameLower.includes('dry') || nameLower.includes('blow')) return masterSOPs.find(s => s.id === 'ext-7');
+    if (nameLower.includes('protect') || nameLower.includes('sealant') || nameLower.includes('wax') || nameLower.includes('trim')) return masterSOPs.find(s => s.id === 'ext-8');
+
+    if (nameLower.includes('personal') || nameLower.includes('trash')) return masterSOPs.find(s => s.id === 'int-1');
+    if (nameLower.includes('air') || nameLower.includes('blow-out') || nameLower.includes('vent')) return masterSOPs.find(s => s.id === 'int-2');
+    if (nameLower.includes('vac') || nameLower.includes('vacuum')) return masterSOPs.find(s => s.id === 'int-3');
+    if (nameLower.includes('mat') || nameLower.includes('rug')) return masterSOPs.find(s => s.id === 'int-4');
+    if (nameLower.includes('dash') || nameLower.includes('console') || nameLower.includes('switch')) return masterSOPs.find(s => s.id === 'int-5');
+    if (nameLower.includes('seat') || nameLower.includes('leather')) return masterSOPs.find(s => s.id === 'int-6');
+    if (nameLower.includes('extract') || nameLower.includes('shampoo') || nameLower.includes('carpet')) return masterSOPs.find(s => s.id === 'int-7');
+    if (nameLower.includes('glass') || nameLower.includes('window')) return masterSOPs.find(s => s.id === 'int-8');
+    if (nameLower.includes('uv') || nameLower.includes('protectant')) return masterSOPs.find(s => s.id === 'int-9');
+    if (nameLower.includes('final') || nameLower.includes('inspection')) return masterSOPs.find(s => s.id === 'int-10');
+
+    return masterSOPs.find(s => s.title.toLowerCase().includes(nameLower) || nameLower.includes(s.title.toLowerCase()));
+  }, [masterSOPs]);
   
   const [destinationFee, setDestinationFee] = useState(0);
   const [customerAddress, setCustomerAddress] = useState("");
@@ -3481,7 +3527,8 @@ const ServiceChecklist = () => {
                         {isExpanded && (
                           <div className="space-y-2 animate-in slide-in-from-top-1 duration-300">
                             {steps.map((step) => {
-                              const instructionText = step.instructions || getServiceInstructions(step.name, step.id);
+                              const sopItem = getSOPItemForStep(step.id, step.name);
+                              const instructionText = sopItem ? sopItem.detailedInstructions : (step.instructions || getServiceInstructions(step.name, step.id));
                               return (
                                 <div key={step.id} id={`step-${step.id}`} className="border-b border-border/40 last:border-0 hover:bg-zinc-900/50 rounded-lg transition-colors">
                                   <div className="flex items-center justify-between py-2 gap-2">
@@ -3533,6 +3580,8 @@ const ServiceChecklist = () => {
                                     </label>
                                     
                                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                                      {/* Integrated Master SOP Tooltip */}
+                                      <SOPTooltip sopIdOrCode={sopItem?.id || step.id} title={step.name} variant="icon" />
                                       {(itemDurations[step.id] !== undefined || step.checked || editingDurationId === step.id) ? (
                                         editingDurationId === step.id ? (
                                           <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-1">
@@ -3700,7 +3749,16 @@ const ServiceChecklist = () => {
                                                   }
                                                   return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
                                                 })}
-                                                {getCurrentUser()?.role === 'admin' && (
+                                                 {sopItem?.ricksTips && (
+                                                   <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2">
+                                                     <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                     <div>
+                                                       <span className="font-extrabold uppercase text-amber-400 text-[10px] block mb-0.5">Rick's Pro Tip:</span>
+                                                       {sopItem.ricksTips}
+                                                     </div>
+                                                   </div>
+                                                 )}
+                                                 {getCurrentUser()?.role === 'admin' && (
                                                   <Button 
                                                     variant="ghost" 
                                                     size="sm" 
