@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { 
   BookOpen, 
@@ -20,32 +19,31 @@ import {
   Lightbulb, 
   Beaker, 
   Wrench, 
-  CheckCircle2, 
   Search,
-  RotateCcw,
-  Sparkles,
-  HelpCircle
+  RotateCcw
 } from 'lucide-react';
 import { sopService, MasterSOPItem, SOPCategory } from '@/lib/sop-service';
 import { SOPTooltip } from '@/components/SOPTooltip';
 
-export const MasterSOPEditor: React.FC = () => {
+export interface SOPEditModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item: MasterSOPItem | null;
+  defaultCategory?: SOPCategory;
+  onSaveSuccess?: () => void;
+}
+
+export const SOPEditModal: React.FC<SOPEditModalProps> = ({
+  open,
+  onOpenChange,
+  item,
+  defaultCategory = 'exterior',
+  onSaveSuccess
+}) => {
   const { toast } = useToast();
-  const [sops, setSops] = useState<MasterSOPItem[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Edit Modal State
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<MasterSOPItem | null>(null);
-
-  // Delete Confirmation Modal
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<MasterSOPItem | null>(null);
-
-  // Form Fields
-  const [formCategory, setFormCategory] = useState<SOPCategory>('exterior');
+  const [formCategory, setFormCategory] = useState<SOPCategory>(defaultCategory);
   const [formCode, setFormCode] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formStepNumber, setFormStepNumber] = useState<number>(1);
@@ -57,54 +55,35 @@ export const MasterSOPEditor: React.FC = () => {
   const [formChemicalIds, setFormChemicalIds] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
 
-  const loadSOPs = async () => {
-    const data = await sopService.getMasterSOPs();
-    setSops([...data]);
-  };
-
   useEffect(() => {
-    loadSOPs();
-    const handleUpdate = () => loadSOPs();
-    window.addEventListener('master-sops-updated', handleUpdate);
-    return () => window.removeEventListener('master-sops-updated', handleUpdate);
-  }, []);
-
-  const openCreateDialog = (category: SOPCategory = 'exterior') => {
-    const categorySOPs = sops.filter(s => s.category === category);
-    const nextStep = categorySOPs.length + 1;
-    const prefix = category === 'exterior' ? 'EXT' : category === 'interior' ? 'INT' : category === 'preparation' ? 'PREP' : 'SOP';
-    const code = `${prefix}-${nextStep < 10 ? '0' + nextStep : nextStep}`;
-
-    setEditingItem(null);
-    setFormCategory(category);
-    setFormCode(code);
-    setFormTitle('');
-    setFormStepNumber(nextStep);
-    setFormShortSummary('');
-    setFormDetailedInstructions('');
-    setFormRicksTips('');
-    setFormDilutionRatio('RTU');
-    setFormTools('');
-    setFormChemicalIds('');
-    setFormIsActive(true);
-    setEditDialogOpen(true);
-  };
-
-  const openEditDialog = (item: MasterSOPItem) => {
-    setEditingItem(item);
-    setFormCategory(item.category);
-    setFormCode(item.code);
-    setFormTitle(item.title);
-    setFormStepNumber(item.stepNumber);
-    setFormShortSummary(item.shortSummary || '');
-    setFormDetailedInstructions(item.detailedInstructions || '');
-    setFormRicksTips(item.ricksTips || '');
-    setFormDilutionRatio(item.dilutionRatio || 'RTU');
-    setFormTools(item.tools ? item.tools.join(', ') : '');
-    setFormChemicalIds(item.chemicalIds ? item.chemicalIds.join(', ') : '');
-    setFormIsActive(item.isActive !== false);
-    setEditDialogOpen(true);
-  };
+    if (open) {
+      if (item) {
+        setFormCategory(item.category);
+        setFormCode(item.code);
+        setFormTitle(item.title);
+        setFormStepNumber(item.stepNumber);
+        setFormShortSummary(item.shortSummary || '');
+        setFormDetailedInstructions(item.detailedInstructions || '');
+        setFormRicksTips(item.ricksTips || '');
+        setFormDilutionRatio(item.dilutionRatio || 'RTU');
+        setFormTools(item.tools ? item.tools.join(', ') : '');
+        setFormChemicalIds(item.chemicalIds ? item.chemicalIds.join(', ') : '');
+        setFormIsActive(item.isActive !== false);
+      } else {
+        setFormCategory(defaultCategory);
+        setFormCode('');
+        setFormTitle('');
+        setFormStepNumber(1);
+        setFormShortSummary('');
+        setFormDetailedInstructions('');
+        setFormRicksTips('');
+        setFormDilutionRatio('RTU');
+        setFormTools('');
+        setFormChemicalIds('');
+        setFormIsActive(true);
+      }
+    }
+  }, [open, item, defaultCategory]);
 
   const handleSaveForm = async () => {
     if (!formTitle.trim()) {
@@ -118,19 +97,20 @@ export const MasterSOPEditor: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const currentSOPs = await sopService.getMasterSOPs();
       const toolsArray = formTools ? formTools.split(',').map(s => s.trim()).filter(Boolean) : [];
       const chemicalsArray = formChemicalIds ? formChemicalIds.split(',').map(s => s.trim()).filter(Boolean) : [];
 
       let updatedList: MasterSOPItem[];
 
-      if (editingItem) {
+      if (item) {
         // Update existing item
-        updatedList = sops.map(s => {
-          if (s.id === editingItem.id) {
+        updatedList = currentSOPs.map(s => {
+          if (s.id === item.id) {
             return {
               ...s,
               category: formCategory,
-              code: formCode.trim().toUpperCase(),
+              code: formCode.trim().toUpperCase() || s.code,
               title: formTitle.trim(),
               stepNumber: formStepNumber,
               shortSummary: formShortSummary.trim(),
@@ -147,13 +127,18 @@ export const MasterSOPEditor: React.FC = () => {
         });
       } else {
         // Create new item
+        const categorySOPs = currentSOPs.filter(s => s.category === formCategory);
+        const nextStep = formStepNumber || (categorySOPs.length + 1);
+        const prefix = formCategory === 'exterior' ? 'EXT' : formCategory === 'interior' ? 'INT' : formCategory === 'preparation' ? 'PREP' : 'SOP';
+        const code = formCode.trim().toUpperCase() || `${prefix}-${nextStep < 10 ? '0' + nextStep : nextStep}`;
         const newId = `${formCategory.substring(0, 3)}-${Date.now()}`;
+
         const newItem: MasterSOPItem = {
           id: newId,
           category: formCategory,
-          code: formCode.trim().toUpperCase() || 'SOP-99',
+          code: code,
           title: formTitle.trim(),
-          stepNumber: formStepNumber,
+          stepNumber: nextStep,
           shortSummary: formShortSummary.trim(),
           detailedInstructions: formDetailedInstructions.trim(),
           ricksTips: formRicksTips.trim(),
@@ -163,16 +148,16 @@ export const MasterSOPEditor: React.FC = () => {
           isActive: formIsActive,
           updatedAt: new Date().toISOString()
         };
-        updatedList = [...sops, newItem];
+        updatedList = [...currentSOPs, newItem];
       }
 
       const success = await sopService.saveMasterSOPs(updatedList);
       if (success) {
-        setSops(updatedList);
-        setEditDialogOpen(false);
+        onOpenChange(false);
+        if (onSaveSuccess) onSaveSuccess();
         toast({
-          title: editingItem ? 'SOP Step Updated' : 'New SOP Step Created',
-          description: `Successfully saved ${formCode || 'SOP step'} to database single source of truth.`
+          title: item ? 'SOP Step Updated' : 'New SOP Step Created',
+          description: `Saved directly to database single source of truth.`
         });
       } else {
         toast({ title: 'Save Failed', description: 'Could not update Supabase meta record.', variant: 'destructive' });
@@ -184,6 +169,201 @@ export const MasterSOPEditor: React.FC = () => {
     }
   };
 
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl bg-zinc-950 border-purple-500/30 text-white shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <Pencil className="h-5 w-5 text-purple-400" />
+            {item ? `Edit Master SOP Step (${item.code})` : 'Create Master SOP Step'}
+          </DialogTitle>
+          <DialogDescription className="text-zinc-400 text-xs">
+            Configure SOP procedural details, dilution ratios, tools, and Rick's Tips. Changes save directly to `master_sops_v1` single source of truth.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-zinc-400">Category</Label>
+              <select
+                value={formCategory}
+                onChange={(e) => setFormCategory(e.target.value as SOPCategory)}
+                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 text-white px-3 py-1 text-xs focus:ring-1 focus:ring-purple-500 mt-1"
+              >
+                <option value="exterior">Exterior</option>
+                <option value="interior">Interior</option>
+                <option value="preparation">Preparation</option>
+                <option value="final">Final Inspection</option>
+                <option value="safety">Safety</option>
+              </select>
+            </div>
+
+            <div>
+              <Label className="text-xs text-zinc-400">SOP Code</Label>
+              <Input 
+                value={formCode}
+                onChange={(e) => setFormCode(e.target.value)}
+                placeholder="e.g. EXT-01"
+                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-mono uppercase"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-zinc-400">Step Number</Label>
+              <Input 
+                type="number"
+                value={formStepNumber}
+                onChange={(e) => setFormStepNumber(parseInt(e.target.value) || 1)}
+                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs text-zinc-400">Step Title *</Label>
+            <Input 
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              placeholder="e.g. Wheels, Tires & Wheel Wells"
+              className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-bold"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs text-zinc-400">Short Summary (Subheader)</Label>
+            <Input 
+              value={formShortSummary}
+              onChange={(e) => setFormShortSummary(e.target.value)}
+              placeholder="e.g. Clean wheels, tires, and wheel wells before touching paint."
+              className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs text-zinc-400">Detailed Standard Instructions *</Label>
+            <Textarea 
+              value={formDetailedInstructions}
+              onChange={(e) => setFormDetailedInstructions(e.target.value)}
+              placeholder="Provide complete step-by-step standard operating instructions..."
+              className="min-h-[120px] bg-zinc-900 border-zinc-800 text-white text-xs mt-1 leading-relaxed"
+            />
+          </div>
+
+          <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl space-y-2">
+            <Label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <Lightbulb className="h-4 w-4" /> Rick's Pro Tip (Expert Guidance)
+            </Label>
+            <Textarea 
+              value={formRicksTips}
+              onChange={(e) => setFormRicksTips(e.target.value)}
+              placeholder="e.g. Work on one wheel at a time. Never let wheel cleaner dry on hot rims."
+              className="min-h-[70px] bg-zinc-950 border-amber-500/20 text-amber-200 text-xs leading-relaxed"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-zinc-400">Dilution Ratio</Label>
+              <Input 
+                value={formDilutionRatio}
+                onChange={(e) => setFormDilutionRatio(e.target.value)}
+                placeholder="e.g. 4:1, 10:1, RTU, N/A"
+                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-semibold"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-zinc-400">Required Tools (Comma-separated)</Label>
+              <Input 
+                value={formTools}
+                onChange={(e) => setFormTools(e.target.value)}
+                placeholder="e.g. Wheel Brush, Tire Scrub Brush, Pressure Washer"
+                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs text-zinc-400">Associated Chemical IDs (Comma-separated)</Label>
+            <Input 
+              value={formChemicalIds}
+              onChange={(e) => setFormChemicalIds(e.target.value)}
+              placeholder="e.g. brake-buster, all-purpose-cleaner"
+              className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={formIsActive}
+                onCheckedChange={setFormIsActive}
+                id="sop-active-switch"
+              />
+              <Label htmlFor="sop-active-switch" className="text-xs text-zinc-300 cursor-pointer">
+                Active SOP Step
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="border-zinc-800 text-zinc-400 hover:text-white text-xs"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveForm}
+            disabled={isSaving}
+            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
+          >
+            <Save className="h-4 w-4 mr-1.5" />
+            {isSaving ? 'Saving to Database...' : 'Save SOP Step'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const MasterSOPEditor: React.FC = () => {
+  const { toast } = useToast();
+  const [sops, setSops] = useState<MasterSOPItem[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MasterSOPItem | null>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<MasterSOPItem | null>(null);
+
+  const loadSOPs = async () => {
+    const data = await sopService.getMasterSOPs();
+    setSops([...data]);
+  };
+
+  useEffect(() => {
+    loadSOPs();
+    const handleUpdate = () => loadSOPs();
+    window.addEventListener('master-sops-updated', handleUpdate);
+    return () => window.removeEventListener('master-sops-updated', handleUpdate);
+  }, []);
+
+  const openCreateDialog = (category: SOPCategory = 'exterior') => {
+    setEditingItem(null);
+    setEditDialogOpen(true);
+  };
+
+  const openEditDialog = (item: MasterSOPItem) => {
+    setEditingItem(item);
+    setEditDialogOpen(true);
+  };
+
   const handleMoveStep = async (item: MasterSOPItem, direction: 'up' | 'down') => {
     const categorySOPs = sops.filter(s => s.category === item.category).sort((a, b) => a.stepNumber - b.stepNumber);
     const currentIndex = categorySOPs.findIndex(s => s.id === item.id);
@@ -192,7 +372,6 @@ export const MasterSOPEditor: React.FC = () => {
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= categorySOPs.length) return;
 
-    // Swap stepNumbers
     const targetItem = categorySOPs[targetIndex];
     const newSops = sops.map(s => {
       if (s.id === item.id) return { ...s, stepNumber: targetItem.stepNumber };
@@ -231,7 +410,6 @@ export const MasterSOPEditor: React.FC = () => {
     }
   };
 
-  // Filtering
   const filteredSOPs = sops
     .filter(s => activeTab === 'all' || s.category === activeTab)
     .filter(s => {
@@ -260,7 +438,6 @@ export const MasterSOPEditor: React.FC = () => {
 
   return (
     <Card className="bg-zinc-950 border-zinc-800 p-4 md:p-6 space-y-6 shadow-2xl rounded-2xl overflow-hidden">
-      {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-800">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -268,14 +445,13 @@ export const MasterSOPEditor: React.FC = () => {
               <BookOpen className="h-5 w-5" />
             </div>
             <h2 className="text-xl md:text-2xl font-black text-white tracking-tight uppercase italic">
-              Master SOP Editor
+              Master SOP Catalog
             </h2>
             <Badge variant="outline" className="border-purple-500/40 text-purple-400 bg-purple-950/40 text-[10px] font-bold">
               Database Single Source of Truth
             </Badge>
           </div>
           <p className="text-xs text-zinc-400 max-w-2xl">
-            Centralized management hub for all Standard Operating Procedures (`master_sops_v1`). 
             Edits here instantly propagate across Prime Training Center, Service Checklist, and all SOP Tooltips in real-time.
           </p>
         </div>
@@ -286,7 +462,6 @@ export const MasterSOPEditor: React.FC = () => {
             size="sm"
             onClick={handleResetToDefaults}
             className="bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white text-xs h-9"
-            title="Reset to original master default catalog"
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
             Reset Defaults
@@ -301,9 +476,7 @@ export const MasterSOPEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Category Filters */}
         <div className="flex flex-wrap gap-1.5 bg-black/50 p-1.5 rounded-xl border border-zinc-800">
           {[
             { id: 'all', label: 'All SOPs' },
@@ -329,7 +502,6 @@ export const MasterSOPEditor: React.FC = () => {
           ))}
         </div>
 
-        {/* Search Field */}
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
           <Input 
@@ -341,13 +513,11 @@ export const MasterSOPEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* SOP List View */}
       <div className="space-y-3">
         {filteredSOPs.length === 0 ? (
           <div className="text-center py-12 bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800">
             <BookOpen className="h-10 w-10 text-zinc-600 mx-auto mb-3 animate-pulse" />
             <h3 className="text-zinc-300 font-bold text-sm">No SOP steps found</h3>
-            <p className="text-zinc-500 text-xs mt-1">Try adjusting your category filter or search query.</p>
           </div>
         ) : (
           filteredSOPs.map((item, idx) => {
@@ -357,11 +527,7 @@ export const MasterSOPEditor: React.FC = () => {
             return (
               <div 
                 key={item.id}
-                className={`p-4 rounded-xl border transition-all duration-200 ${
-                  item.isActive 
-                    ? 'bg-zinc-900/70 border-zinc-800/80 hover:border-purple-500/40' 
-                    : 'bg-zinc-950/40 border-zinc-900 opacity-60'
-                }`}
+                className="p-4 rounded-xl border bg-zinc-900/70 border-zinc-800/80 hover:border-purple-500/40 transition-all duration-200"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -377,9 +543,6 @@ export const MasterSOPEditor: React.FC = () => {
                     <div className="space-y-1 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-sm font-bold text-white tracking-tight">{item.title}</h3>
-                        <Badge variant="outline" className="text-[9px] uppercase font-bold text-zinc-400 border-zinc-800">
-                          {item.category}
-                        </Badge>
                         {item.dilutionRatio && (
                           <Badge variant="outline" className="text-[9px] font-bold text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
                             <Beaker className="h-3 w-3 mr-1" /> Ratio: {item.dilutionRatio}
@@ -405,17 +568,10 @@ export const MasterSOPEditor: React.FC = () => {
                           </div>
                         </div>
                       )}
-
-                      {item.tools && item.tools.length > 0 && (
-                        <div className="flex items-center gap-1 text-[10px] text-blue-400 mt-1">
-                          <Wrench className="h-3 w-3" /> Tools: {item.tools.join(', ')}
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  {/* Actions Block */}
-                  <div className="flex sm:flex-col items-center justify-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-800/50">
+                  <div className="flex sm:flex-col items-center justify-end gap-1.5 shrink-0">
                     <div className="flex items-center gap-1">
                       <Button
                         size="icon"
@@ -423,7 +579,6 @@ export const MasterSOPEditor: React.FC = () => {
                         disabled={isFirst}
                         onClick={() => handleMoveStep(item, 'up')}
                         className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
-                        title="Move Step Up"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </Button>
@@ -433,7 +588,6 @@ export const MasterSOPEditor: React.FC = () => {
                         disabled={isLast}
                         onClick={() => handleMoveStep(item, 'down')}
                         className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
-                        title="Move Step Down"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </Button>
@@ -456,7 +610,6 @@ export const MasterSOPEditor: React.FC = () => {
                           setDeleteDialogOpen(true);
                         }}
                         className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-950/20"
-                        title="Delete Step"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -469,166 +622,14 @@ export const MasterSOPEditor: React.FC = () => {
         )}
       </div>
 
-      {/* Edit / Create Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-purple-500/30 text-white shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Pencil className="h-5 w-5 text-purple-400" />
-              {editingItem ? `Edit SOP Step (${editingItem.code})` : 'Create Master SOP Step'}
-            </DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
-              Configure SOP procedural details, dilution ratios, and Rick's Tips. Changes save directly to `master_sops_v1`.
-            </DialogDescription>
-          </DialogHeader>
+      <SOPEditModal 
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        item={editingItem}
+        defaultCategory={activeTab !== 'all' ? (activeTab as SOPCategory) : 'exterior'}
+        onSaveSuccess={loadSOPs}
+      />
 
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs text-zinc-400">Category</Label>
-                <select
-                  value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value as SOPCategory)}
-                  className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 text-white px-3 py-1 text-xs focus:ring-1 focus:ring-purple-500 mt-1"
-                >
-                  <option value="exterior">Exterior</option>
-                  <option value="interior">Interior</option>
-                  <option value="preparation">Preparation</option>
-                  <option value="final">Final Inspection</option>
-                  <option value="safety">Safety</option>
-                </select>
-              </div>
-
-              <div>
-                <Label className="text-xs text-zinc-400">SOP Code</Label>
-                <Input 
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value)}
-                  placeholder="e.g. EXT-01"
-                  className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-mono uppercase"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs text-zinc-400">Step Number</Label>
-                <Input 
-                  type="number"
-                  value={formStepNumber}
-                  onChange={(e) => setFormStepNumber(parseInt(e.target.value) || 1)}
-                  className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs text-zinc-400">Step Title *</Label>
-              <Input 
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="e.g. Wheels, Tires & Wheel Wells"
-                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-bold"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs text-zinc-400">Short Summary (Subheader)</Label>
-              <Input 
-                value={formShortSummary}
-                onChange={(e) => setFormShortSummary(e.target.value)}
-                placeholder="e.g. Clean wheels, tires, and wheel wells before touching paint."
-                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
-              />
-            </div>
-
-            <div>
-              <Label className="text-xs text-zinc-400">Detailed Standard Instructions *</Label>
-              <Textarea 
-                value={formDetailedInstructions}
-                onChange={(e) => setFormDetailedInstructions(e.target.value)}
-                placeholder="Provide complete step-by-step standard operating instructions..."
-                className="min-h-[120px] bg-zinc-900 border-zinc-800 text-white text-xs mt-1 leading-relaxed"
-              />
-            </div>
-
-            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl space-y-2">
-              <Label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                <Lightbulb className="h-4 w-4" /> Rick's Pro Tip (Expert Guidance)
-              </Label>
-              <Textarea 
-                value={formRicksTips}
-                onChange={(e) => setFormRicksTips(e.target.value)}
-                placeholder="e.g. Work on one wheel at a time. Never let wheel cleaner dry on hot rims."
-                className="min-h-[70px] bg-zinc-950 border-amber-500/20 text-amber-200 text-xs leading-relaxed"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-zinc-400">Dilution Ratio</Label>
-                <Input 
-                  value={formDilutionRatio}
-                  onChange={(e) => setFormDilutionRatio(e.target.value)}
-                  placeholder="e.g. 4:1, 10:1, RTU, N/A"
-                  className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-semibold"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs text-zinc-400">Required Tools (Comma-separated)</Label>
-                <Input 
-                  value={formTools}
-                  onChange={(e) => setFormTools(e.target.value)}
-                  placeholder="e.g. Wheel Brush, Tire Scrub Brush, Pressure Washer"
-                  className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs text-zinc-400">Associated Chemical IDs (Comma-separated)</Label>
-              <Input 
-                value={formChemicalIds}
-                onChange={(e) => setFormChemicalIds(e.target.value)}
-                placeholder="e.g. brake-buster, all-purpose-cleaner"
-                className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
-              <div className="flex items-center gap-2">
-                <Switch 
-                  checked={formIsActive}
-                  onCheckedChange={setFormIsActive}
-                  id="sop-active-switch"
-                />
-                <Label htmlFor="sop-active-switch" className="text-xs text-zinc-300 cursor-pointer">
-                  Active SOP Step
-                </Label>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
-              onClick={() => setEditDialogOpen(false)}
-              className="border-zinc-800 text-zinc-400 hover:text-white text-xs"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSaveForm}
-              disabled={isSaving}
-              className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
-            >
-              <Save className="h-4 w-4 mr-1.5" />
-              {isSaving ? 'Saving to Database...' : 'Save SOP Step'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md bg-zinc-950 border-red-500/30 text-white shadow-2xl rounded-2xl">
           <DialogHeader>
@@ -637,7 +638,7 @@ export const MasterSOPEditor: React.FC = () => {
               Confirm SOP Step Deletion
             </DialogTitle>
             <DialogDescription className="text-zinc-400 text-xs">
-              Are you sure you want to delete SOP Step <strong className="text-white">{itemToDelete?.code}</strong> ({itemToDelete?.title})? This will update the database source of truth for all users.
+              Are you sure you want to delete SOP Step <strong className="text-white">{itemToDelete?.code}</strong> ({itemToDelete?.title})? This will update the database source of truth.
             </DialogDescription>
           </DialogHeader>
 

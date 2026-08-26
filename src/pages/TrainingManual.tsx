@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, ListChecks, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download } from "lucide-react";
+import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, ListChecks, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download, Database, Info, Wrench } from "lucide-react";
 import jsPDF from 'jspdf';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
     getTrainingModules, upsertTrainingModule, deleteTrainingModule,
     getTrainingProgress, upsertTrainingProgress, getTrainingBadges,
@@ -28,6 +29,7 @@ import { ADMIN_TRAINING_PHASES, EMPLOYEE_TRAINING_PHASES } from "@/lib/training-
 import proceduresData from "@/pages/ProceduresBooklet";
 import { sopService, MasterSOPItem } from "@/lib/sop-service";
 import { SOPTooltip } from "@/components/SOPTooltip";
+import { SOPEditModal } from "@/components/admin/MasterSOPEditor";
 
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
@@ -153,9 +155,20 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     const [badges, setBadges] = useState<TrainingBadge[]>([]);
     const [checklist, setChecklist] = useState<any[]>([]);
     const [masterSOPs, setMasterSOPs] = useState<MasterSOPItem[]>([]);
+    const [sopModalOpen, setSopModalOpen] = useState(false);
+    const [sopEditingItem, setSopEditingItem] = useState<MasterSOPItem | null>(null);
+    const [sopDefaultCategory, setSopDefaultCategory] = useState<any>('exterior');
+
+    const refreshMasterSOPs = async () => {
+        const data = await sopService.getMasterSOPs();
+        setMasterSOPs([...data]);
+    };
 
     useEffect(() => {
-        sopService.getMasterSOPs().then(setMasterSOPs);
+        refreshMasterSOPs();
+        const handleUpdate = () => refreshMasterSOPs();
+        window.addEventListener('master-sops-updated', handleUpdate);
+        return () => window.removeEventListener('master-sops-updated', handleUpdate);
     }, []);
 
     // UI State
@@ -1013,19 +1026,50 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                             <div className="bg-zinc-900 p-4 md:p-6 rounded-xl border border-zinc-800 space-y-8">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                                     <div>
-                                        <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
-                                            <ListChecks className="w-6 h-6 text-cyan-400"/> Standard Operating Procedures (SOPs)
-                                        </h2>
+                                        <div className="flex items-center gap-3 flex-wrap">
+                                            <h2 className="text-2xl font-bold flex items-center gap-2 text-white">
+                                                <ListChecks className="w-6 h-6 text-cyan-400"/> Standard Operating Procedures (SOPs)
+                                            </h2>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Badge variant="outline" className="border-purple-500/40 text-purple-300 bg-purple-950/40 text-[11px] font-bold px-2.5 py-1 flex items-center gap-1.5 cursor-help">
+                                                            <Database className="h-3.5 w-3.5 text-purple-400" />
+                                                            Single Source of Truth
+                                                            <Info className="h-3.5 w-3.5 text-purple-400/80" />
+                                                        </Badge>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="max-w-xs bg-zinc-950 border-purple-500/40 text-zinc-200 text-xs p-3 shadow-xl">
+                                                        <p className="font-bold text-purple-400 mb-1">Database Single Source of Truth</p>
+                                                        <p>This SOP page is the single source of truth. Edits made here automatically update the Service Checklist and all SOP Tooltips site-wide in real-time.</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        </div>
                                         <p className="text-zinc-400 text-sm mt-1">
                                             Tap any step to view complete chemical, dilution, and execution instructions.
                                         </p>
                                     </div>
-                                    <Button 
-                                        onClick={handleSaveSOPsPDF}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2 shrink-0 w-full sm:w-auto"
-                                    >
-                                        <Download className="w-4 h-4" /> Save SOPs PDF
-                                    </Button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {isAdmin && (
+                                            <Button
+                                                onClick={() => {
+                                                    setSopEditingItem(null);
+                                                    setSopDefaultCategory('exterior');
+                                                    setSopModalOpen(true);
+                                                }}
+                                                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs h-9 shadow-lg shadow-purple-950/50"
+                                            >
+                                                <Plus className="w-4 h-4 mr-1.5" /> Add SOP Step
+                                            </Button>
+                                        )}
+                                        <Button 
+                                            onClick={handleSaveSOPsPDF}
+                                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-2 shrink-0 h-9"
+                                        >
+                                            <Download className="w-4 h-4" /> Save SOPs PDF
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {/* Section 1: Exterior Detail Process */}
@@ -1048,14 +1092,66 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                             <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 text-xs flex items-center justify-center font-bold shrink-0">{item.stepNumber}</span>
                                                             Step {item.stepNumber} — {item.title}
                                                         </span>
-                                                        <SOPTooltip sopIdOrCode={item.id} variant="icon" />
+                                                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                            {isAdmin && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost" 
+                                                                    className="h-7 px-2 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 rounded-md"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSopEditingItem(item);
+                                                                        setSopDefaultCategory('exterior');
+                                                                        setSopModalOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <Pencil className="h-3 w-3 mr-1" /> Edit Step
+                                                                </Button>
+                                                            )}
+                                                            <SOPTooltip sopIdOrCode={item.id} variant="icon" />
+                                                        </div>
                                                     </div>
                                                 </AccordionTrigger>
                                                 <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3 space-y-2">
+                                                    {item.shortSummary && (
+                                                        <p className="text-xs text-zinc-400 italic">"{item.shortSummary}"</p>
+                                                    )}
                                                     <p>{item.detailedInstructions}</p>
                                                     {item.ricksTips && (
-                                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2">
-                                                            <strong>Rick's Tip:</strong> {item.ricksTips}
+                                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2 flex items-start gap-1.5">
+                                                            <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <strong className="text-amber-400 uppercase text-[10px] block">Rick's Tip:</strong>
+                                                                {item.ricksTips}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {item.dilutionRatio && item.dilutionRatio !== 'N/A' && (
+                                                        <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                            <Beaker className="h-3.5 w-3.5" />
+                                                            <span>Ratio: {item.dilutionRatio}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.tools && item.tools.length > 0 && (
+                                                        <div className="text-xs text-blue-400 font-semibold flex items-center gap-1">
+                                                            <Wrench className="h-3.5 w-3.5" />
+                                                            <span>Tools: {item.tools.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <div className="pt-2 flex items-center justify-end border-t border-zinc-900/80 mt-3">
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="h-7 px-2.5 text-[11px] font-bold text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
+                                                                onClick={() => {
+                                                                    setSopEditingItem(item);
+                                                                    setSopDefaultCategory('exterior');
+                                                                    setSopModalOpen(true);
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-3 w-3 mr-1" /> Edit Step Details
+                                                            </Button>
                                                         </div>
                                                     )}
                                                 </AccordionContent>
@@ -1088,14 +1184,66 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                             <span className="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs flex items-center justify-center font-bold shrink-0">{item.stepNumber}</span>
                                                             Step {item.stepNumber} — {item.title}
                                                         </span>
-                                                        <SOPTooltip sopIdOrCode={item.id} variant="icon" />
+                                                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                            {isAdmin && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="ghost" 
+                                                                    className="h-7 px-2 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 rounded-md"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSopEditingItem(item);
+                                                                        setSopDefaultCategory('interior');
+                                                                        setSopModalOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <Pencil className="h-3 w-3 mr-1" /> Edit Step
+                                                                </Button>
+                                                            )}
+                                                            <SOPTooltip sopIdOrCode={item.id} variant="icon" />
+                                                        </div>
                                                     </div>
                                                 </AccordionTrigger>
                                                 <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3 space-y-2">
+                                                    {item.shortSummary && (
+                                                        <p className="text-xs text-zinc-400 italic">"{item.shortSummary}"</p>
+                                                    )}
                                                     <p>{item.detailedInstructions}</p>
                                                     {item.ricksTips && (
-                                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2">
-                                                            <strong>Rick's Tip:</strong> {item.ricksTips}
+                                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2 flex items-start gap-1.5">
+                                                            <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <strong className="text-amber-400 uppercase text-[10px] block">Rick's Tip:</strong>
+                                                                {item.ricksTips}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {item.dilutionRatio && item.dilutionRatio !== 'N/A' && (
+                                                        <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                            <Beaker className="h-3.5 w-3.5" />
+                                                            <span>Ratio: {item.dilutionRatio}</span>
+                                                        </div>
+                                                    )}
+                                                    {item.tools && item.tools.length > 0 && (
+                                                        <div className="text-xs text-blue-400 font-semibold flex items-center gap-1">
+                                                            <Wrench className="h-3.5 w-3.5" />
+                                                            <span>Tools: {item.tools.join(', ')}</span>
+                                                        </div>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <div className="pt-2 flex items-center justify-end border-t border-zinc-900/80 mt-3">
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="h-7 px-2.5 text-[11px] font-bold text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
+                                                                onClick={() => {
+                                                                    setSopEditingItem(item);
+                                                                    setSopDefaultCategory('interior');
+                                                                    setSopModalOpen(true);
+                                                                }}
+                                                            >
+                                                                <Pencil className="h-3 w-3 mr-1" /> Edit Step Details
+                                                            </Button>
                                                         </div>
                                                     )}
                                                 </AccordionContent>
@@ -1103,6 +1251,14 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                         ))}
                                     </Accordion>
                                 </div>
+
+                                <SOPEditModal
+                                    open={sopModalOpen}
+                                    onOpenChange={setSopModalOpen}
+                                    item={sopEditingItem}
+                                    defaultCategory={sopDefaultCategory}
+                                    onSaveSuccess={refreshMasterSOPs}
+                                />
 
                             </div>
 
