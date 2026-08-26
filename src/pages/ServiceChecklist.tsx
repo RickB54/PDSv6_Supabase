@@ -3714,6 +3714,7 @@ const ServiceChecklist = () => {
                     if (steps.length === 0) return null;
 
                     const isCompleted = steps.every(s => s.checked);
+                    const hasStarted = steps.some(s => s.checked);
                     const isExpanded = !collapsedSections[section];
                     const isActiveSection = (activeFlowStage === section);
 
@@ -3724,9 +3725,11 @@ const ServiceChecklist = () => {
                           "space-y-3 transition-all duration-300 rounded-xl p-3 md:p-4",
                           isCompleted 
                             ? "border border-emerald-500/30 bg-emerald-500/5 shadow-sm" 
-                            : isActiveSection 
-                              ? "border border-blue-500 bg-red-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
-                              : "border border-red-500/30 bg-red-500/5 hover:border-red-500/50 shadow-sm"
+                            : hasStarted
+                              ? "border border-amber-500/40 bg-amber-500/10 shadow-sm hover:border-amber-500/60"
+                              : isActiveSection 
+                                ? "border border-blue-500 bg-red-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
+                                : "border border-red-500/30 bg-red-500/5 hover:border-red-500/50 shadow-sm"
                         )}
                       >
                         <button
@@ -3738,12 +3741,16 @@ const ServiceChecklist = () => {
                           }}
                         >
                           <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-wrap">
-                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : isActiveSection ? 'text-blue-400 font-bold' : 'group-hover:text-primary'}`}>
+                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : hasStarted ? 'text-amber-400 font-bold' : isActiveSection ? 'text-blue-400 font-bold' : 'group-hover:text-primary'}`}>
                               {section === 'final' ? 'Final Inspection' : section === 'addons' ? 'Add-On Services' : section.charAt(0).toUpperCase() + section.slice(1)}
                             </span>
                             {isCompleted ? (
                               <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
                                 <Check className="w-3 h-3 text-emerald-400" /> Complete
+                              </span>
+                            ) : hasStarted ? (
+                              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 shrink-0">
+                                In Progress
                               </span>
                             ) : isActiveSection ? (
                               <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
