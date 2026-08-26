@@ -327,7 +327,7 @@ const ServiceChecklist = () => {
   const [expandedSession, setExpandedSession] = useState<any>(null);
 
   // Pre-Vehicle Inspection Checklist State
-  const [preVehicleExpanded, setPreVehicleExpanded] = useState(true);
+  const [preVehicleExpanded, setPreVehicleExpanded] = useState(false);
   const initialPreVehicleChecks = {
     // Exterior (11)
     paint: false, frontBumper: false, headlightsFoglights: false, windshield: false,
@@ -460,7 +460,7 @@ const ServiceChecklist = () => {
   const [discountExpanded, setDiscountExpanded] = useState(false);
   const [destinationExpanded, setDestinationExpanded] = useState(false);
   const [jobSetupExpanded, setJobSetupExpanded] = useState(true);
-  const [checklistExpanded, setChecklistExpanded] = useState(true);
+  const [checklistExpanded, setChecklistExpanded] = useState(false);
 
 
   const toggleMatAccordion = (sec: 'chemicals' | 'materials' | 'tools') => setMaterialsAccordion(prev => ({ ...prev, [sec]: !prev[sec] }));
@@ -2582,13 +2582,13 @@ const ServiceChecklist = () => {
 
   const activeFlowStage = determineActiveFlowStage();
 
-  // Auto-expand whatever section is currently required by guided flow
+  // Auto-expand whatever section is currently required by guided flow once user progresses
   useEffect(() => {
     if (!activeFlowStage) return;
 
     if (activeFlowStage === 'vehicle-type' || activeFlowStage === 'service-package') {
       setJobSetupExpanded(true);
-    } else if (['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage)) {
+    } else if (maxVisitedStageIndex > 0 && ['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage)) {
       setCollapsedSections(prev => {
         if (prev[activeFlowStage]) {
           const next = { ...prev };
@@ -2598,10 +2598,10 @@ const ServiceChecklist = () => {
         return prev;
       });
       setChecklistExpanded(true);
-    } else if (activeFlowStage === 'materials') {
+    } else if (maxVisitedStageIndex > 0 && activeFlowStage === 'materials') {
       setMaterialsSectionExpanded(true);
     }
-  }, [activeFlowStage]);
+  }, [activeFlowStage, maxVisitedStageIndex]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -3085,7 +3085,7 @@ const ServiceChecklist = () => {
           <Card className={cn(
             "bg-gradient-card overflow-visible mb-4 transition-all duration-300",
             !isJobSetupComplete
-              ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+              ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]"
               : "border-border"
           )}>
             <div 
@@ -3106,8 +3106,8 @@ const ServiceChecklist = () => {
                         <Check className="w-3 h-3 text-emerald-400" /> Complete
                       </span>
                     ) : (
-                      <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Required Step
+                      <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Required Step
                       </span>
                     )}
                     {jobSetupExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
@@ -3260,7 +3260,7 @@ const ServiceChecklist = () => {
                   onChange={(e) => setVehicleType(e.target.value)}
                   className={cn(
                     "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
-                    activeFlowStage === 'vehicle-type' ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]" : "border-white/20"
+                    activeFlowStage === 'vehicle-type' ? "border-blue-500 ring-2 ring-blue-500/60 animate-pulse shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "border-white/20"
                   )}
                 >
                   {vehicleOptions.map((opt) => (
@@ -3277,7 +3277,7 @@ const ServiceChecklist = () => {
                     onChange={(e) => setSelectedPackage(e.target.value)}
                     className={cn(
                       "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all",
-                      activeFlowStage === 'service-package' ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]" : "border-white/20"
+                      activeFlowStage === 'service-package' ? "border-blue-500 ring-2 ring-blue-500/60 animate-pulse shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "border-white/20"
                     )}
                   >
                     <option value="">Select a package...</option>
@@ -3350,7 +3350,7 @@ const ServiceChecklist = () => {
                   disabled={!isAdminUser}
                   className={cn(
                     "flex h-11 w-full rounded-md border bg-black text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                    isCustomerValid && isVehicleValid && isPackageValid && !isEmployeeValid ? "border-amber-500/60 ring-1 ring-amber-500/30 animate-pulse" : "border-white/20"
+                    isCustomerValid && isVehicleValid && isPackageValid && !isEmployeeValid ? "border-blue-500 ring-2 ring-blue-500/60 animate-pulse shadow-[0_0_20px_rgba(59,130,246,0.5)]" : "border-white/20"
                   )}
                 >
                   <option value="">Select employee...</option>
@@ -3428,11 +3428,15 @@ const ServiceChecklist = () => {
           </div>
         )}
 
-      <Card className="bg-gradient-card border-border overflow-visible relative mb-4"
+      <Card className={cn(
+        "bg-gradient-card overflow-hidden relative mb-4 transition-all duration-300 rounded-xl",
+        activeFlowStage && ['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage)
+          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]"
+          : "border-border"
+      )}
             style={{ opacity: isJobCompleted ? 0.65 : 1, pointerEvents: isJobCompleted ? 'none' : 'auto', transition: 'opacity 0.3s' }}>
         <div 
-          style={{ top: 'var(--header-total-height, 64px)' }}
-          className="sticky z-40 px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/95 backdrop-blur-md transition-all rounded-t-xl"
+          className="px-4 md:px-6 py-4 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/50 hover:bg-black/70 transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -3442,6 +3446,11 @@ const ServiceChecklist = () => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
+                {activeFlowStage && ['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage) && (
+                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
+                  </span>
+                )}
                 {checklistExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
               </div>
               <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
@@ -3449,26 +3458,21 @@ const ServiceChecklist = () => {
           </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3 shrink-0 font-bold"
-                onClick={(e) => handleToggleAllSections(e)}
-                title={isAllSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
-              >
-                {isAllSectionsCollapsed ? (
-                  <ChevronsDown className="h-3.5 w-3.5 md:h-3 md:w-3 text-zinc-300" />
-                ) : (
-                  <ChevronsUp className="h-3.5 w-3.5 md:h-3 md:w-3 text-zinc-300" />
-                )}
-                <span className="hidden md:inline text-[10px]">{isAllSectionsCollapsed ? "Expand All" : "Collapse All"}</span>
-              </Button>
+              {/* Progress bar line in header */}
+              <div className="flex items-center gap-2.5 bg-black/60 px-3 py-1.5 rounded-lg border border-white/10 shrink-0">
+                <div className="flex flex-col items-end">
+                  <span className="text-[8px] text-zinc-400 uppercase font-black tracking-wider">Progress</span>
+                  <span className="text-xs font-black text-white font-mono">{progressPercent}%</span>
+                </div>
+                <Progress value={progressPercent} className="h-2 w-16 md:w-28 bg-zinc-800" />
+              </div>
+
               {getCurrentUser()?.role === 'admin' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
                   className={`h-8 md:h-7 gap-1.5 px-2 md:px-3 ${isAdminEditMode ? 'bg-orange-500 text-white border-orange-600' : 'bg-zinc-900 border-zinc-700 text-zinc-300'}`}
-                  onClick={() => setIsAdminEditMode(!isAdminEditMode)}
+                  onClick={(e) => { e.stopPropagation(); setIsAdminEditMode(!isAdminEditMode); }}
                 >
                   <Settings2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
                   <span className="hidden md:inline text-[10px]">{isAdminEditMode ? 'Exit Edit' : 'Edit Checklist'}</span>
@@ -3479,7 +3483,7 @@ const ServiceChecklist = () => {
                   variant="outline" 
                   size="sm" 
                   className="h-8 md:h-7 bg-green-900/20 border-green-700/30 text-green-400 hover:bg-green-900/30 gap-1.5 px-2 md:px-3"
-                  onClick={saveAsStandardProcess}
+                  onClick={(e) => { e.stopPropagation(); saveAsStandardProcess(); }}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
                   <span className="hidden md:inline text-[10px]">Save Standard</span>
@@ -3489,7 +3493,7 @@ const ServiceChecklist = () => {
                 variant="outline" 
                 size="sm" 
                 className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3"
-                onClick={() => generateJobReport(false)}
+                onClick={(e) => { e.stopPropagation(); generateJobReport(false); }}
                 title="Generate Report"
               >
                 <Download className="h-3.5 w-3.5 md:h-3 md:w-3" />
@@ -3499,7 +3503,7 @@ const ServiceChecklist = () => {
                 variant="outline" 
                 size="sm" 
                 className="h-8 md:h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5 px-2 md:px-3"
-                onClick={() => generateJobReport(true)}
+                onClick={(e) => { e.stopPropagation(); generateJobReport(true); }}
                 title="Archive Job"
               >
                 <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
@@ -3591,7 +3595,7 @@ const ServiceChecklist = () => {
                         className={cn(
                           "space-y-3 transition-all duration-300 rounded-xl p-3 md:p-4",
                           isActiveSection 
-                            ? "border border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                            ? "border border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
                             : isCompleted 
                               ? "border border-emerald-500/20 bg-emerald-500/5" 
                               : "border border-transparent"
@@ -3606,7 +3610,7 @@ const ServiceChecklist = () => {
                           }}
                         >
                           <div className="flex items-center gap-2 min-w-0 overflow-hidden flex-wrap">
-                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : isActiveSection ? 'text-amber-400 font-bold' : 'group-hover:text-primary'}`}>
+                            <span className={`transition-colors truncate ${isCompleted ? 'text-green-500' : isActiveSection ? 'text-blue-400 font-bold' : 'group-hover:text-primary'}`}>
                               {section === 'final' ? 'Final Inspection' : section === 'addons' ? 'Add-On Services' : section.charAt(0).toUpperCase() + section.slice(1)}
                             </span>
                             {isCompleted ? (
@@ -3614,8 +3618,8 @@ const ServiceChecklist = () => {
                                 <Check className="w-3 h-3 text-emerald-400" /> Complete
                               </span>
                             ) : isActiveSection ? (
-                              <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+                              <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                                <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
                               </span>
                             ) : null}
                             {section !== 'preparation' && jobStartTime && (
@@ -4157,7 +4161,7 @@ const ServiceChecklist = () => {
       <Card className={cn(
         "p-3 md:p-6 bg-gradient-card space-y-6 transition-all duration-300 rounded-xl",
         activeFlowStage === 'materials' 
-          ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
           : "border-border"
       )}>
         <div 
@@ -4170,8 +4174,8 @@ const ServiceChecklist = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600">Materials Used</h2>
             {activeFlowStage === 'materials' && (
-              <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+              <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
               </span>
             )}
             <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-mono">
@@ -4492,7 +4496,7 @@ const ServiceChecklist = () => {
             className={cn(
               "p-6 bg-gradient-card transition-all duration-300 rounded-xl",
               activeFlowStage === 'totals-payment' 
-                ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
                 : "border-border"
             )}
             onClick={() => advanceGuidedFlowToStage('totals-payment')}
@@ -4501,8 +4505,8 @@ const ServiceChecklist = () => {
               <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-2xl font-bold text-foreground">Totals & Payment</h2>
                 {activeFlowStage === 'totals-payment' && (
-                  <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Current Section
+                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
                   </span>
                 )}
               </div>
@@ -4702,15 +4706,15 @@ const ServiceChecklist = () => {
             <Card className={cn(
               "p-4 md:p-6 bg-gradient-card space-y-6 transition-all duration-300 rounded-xl",
               activeFlowStage === 'finish-job' 
-                ? "border-amber-500/60 bg-amber-500/5 ring-1 ring-amber-500/30 shadow-[0_0_20px_rgba(245,158,11,0.15)]" 
+                ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/50 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
                 : "border-border"
             )}>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl md:text-2xl font-bold text-white">Final Steps</h2>
                   {activeFlowStage === 'finish-job' && (
-                    <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping inline-block" /> Ready To Complete
+                    <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
+                      <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Ready To Complete
                     </span>
                   )}
                   <Button
@@ -4755,7 +4759,7 @@ const ServiceChecklist = () => {
                     isJobCompleted 
                       ? "bg-emerald-600/50 cursor-not-allowed opacity-50" 
                       : activeFlowStage === 'finish-job'
-                        ? "bg-purple-600 hover:bg-purple-700 border-2 border-amber-400 animate-pulse ring-4 ring-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.6)]"
+                        ? "bg-blue-600 hover:bg-blue-500 border-2 border-blue-300 animate-pulse ring-4 ring-blue-500/60 shadow-[0_0_35px_rgba(59,130,246,0.8)]"
                         : "bg-purple-600 hover:bg-purple-700 shadow-[0_0_20px_rgba(147,51,234,0.3)]"
                   )}
                 >
