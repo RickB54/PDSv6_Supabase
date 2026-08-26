@@ -2813,27 +2813,27 @@ const ServiceChecklist = () => {
           {/* ============================================================ */}
           <Card className="bg-zinc-900 border-zinc-800 overflow-hidden shadow-2xl border-t-4 border-t-amber-500/60 mb-4">
             <div
-              className="px-4 md:px-6 py-4 flex items-center justify-between gap-4 cursor-pointer group bg-black/60 transition-all rounded-t-xl"
+              className="px-3 md:px-6 py-2.5 md:py-4 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/60 transition-all rounded-t-xl"
               onClick={() => setPreVehicleExpanded(!preVehicleExpanded)}
             >
-              <div className="flex items-center gap-3">
-                <div className="rounded-full h-9 w-9 bg-amber-500/20 flex items-center justify-center shrink-0">
-                  <ClipboardList className="h-5 w-5 text-amber-400" />
+              <div className="flex items-center gap-2.5 md:gap-3 min-w-0 flex-1">
+                <div className="rounded-full h-8 w-8 md:h-9 md:w-9 bg-amber-500/20 flex items-center justify-center shrink-0">
+                  <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-amber-400" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-tight flex items-center gap-2 flex-wrap">
                     Pre-Vehicle Inspection Checklist
-                    <span className="text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Prime Standard</span>
+                    <span className="hidden md:inline-flex text-[10px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">Prime Standard</span>
                   </h2>
-                  <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Complete BEFORE starting any service</p>
+                  <p className="text-zinc-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest truncate">Complete BEFORE starting any service</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
                 <a
                   href="/Pre-Vehicle-Inspection-Checklist.pdf"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all text-[10px] font-black uppercase tracking-widest shrink-0" title="Open original PDF form for printing" onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 px-2 py-1 md:px-3 md:py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/60 transition-all text-[10px] font-black uppercase tracking-widest shrink-0" title="Open original PDF form for printing" onClick={(e) => e.stopPropagation()}
                 >
                   <Printer className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Print PDF Form</span>
@@ -3437,45 +3437,52 @@ const ServiceChecklist = () => {
       )}
             style={{ opacity: isJobCompleted ? 0.65 : 1, pointerEvents: isJobCompleted ? 'none' : 'auto', transition: 'opacity 0.3s' }}>
         <div 
-          className="px-4 md:px-6 py-4 flex items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/50 hover:bg-black/70 transition-all rounded-t-xl"
+          className="px-3 md:px-6 py-3 md:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 md:gap-4 cursor-pointer group bg-black/50 hover:bg-black/70 transition-all rounded-t-xl"
           onClick={() => setChecklistExpanded(!checklistExpanded)}
         >
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0 group-hover:bg-red-600/30 transition-colors">
-              <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg md:text-2xl font-bold text-white truncate">Service Checklist</h2>
-                {activeFlowStage && ['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage) && (
-                  <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
-                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
-                  </span>
-                )}
-                {checklistExpanded ? <ChevronUp className="h-5 w-5 text-zinc-600" /> : <ChevronDown className="h-5 w-5 text-zinc-600" />}
+          {/* Row 1: Title block & Chevron */}
+          <div className="flex items-center justify-between w-full sm:w-auto gap-2 min-w-0">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-red-600/20 flex items-center justify-center shrink-0 group-hover:bg-red-600/30 transition-colors">
+                <ClipboardList className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
               </div>
-              <p className="text-[10px] md:text-sm text-zinc-400">Step-by-step quality control</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <h2 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">Service Checklist</h2>
+                  {activeFlowStage && ['preparation', 'exterior', 'interior', 'addons', 'final'].includes(activeFlowStage) && (
+                    <span className="text-[9px] sm:text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-1.5 sm:px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1 shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping inline-block" /> Current
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] md:text-sm text-zinc-400 hidden sm:block">Step-by-step quality control</p>
+              </div>
+            </div>
+            <div className="sm:hidden p-1 rounded-full group-hover:bg-white/5 transition-colors shrink-0">
+              {checklistExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
             </div>
           </div>
 
-            <div className="flex items-center gap-1 sm:gap-2">
-              {/* Progress bar line in header */}
-              <div className="flex items-center gap-2.5 bg-black/60 px-3 py-1.5 rounded-lg border border-white/10 shrink-0">
-                <div className="flex flex-col items-end">
-                  <span className="text-[8px] text-zinc-400 uppercase font-black tracking-wider">Progress</span>
-                  <span className="text-xs font-black text-white font-mono">{progressPercent}%</span>
-                </div>
-                <Progress value={progressPercent} className="h-2 w-16 md:w-28 bg-zinc-800" />
+          {/* Row 2: Progress bar & Buttons */}
+          <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-white/5">
+            {/* Progress bar line in header */}
+            <div className="flex items-center gap-2 bg-black/60 px-2.5 py-1.5 rounded-lg border border-white/10 shrink-0">
+              <div className="flex flex-col items-end">
+                <span className="text-[8px] text-zinc-400 uppercase font-black tracking-wider">Progress</span>
+                <span className="text-xs font-black text-white font-mono">{progressPercent}%</span>
               </div>
+              <Progress value={progressPercent} className="h-2 w-14 sm:w-16 md:w-28 bg-zinc-800" />
+            </div>
 
+            <div className="flex items-center gap-1">
               {getCurrentUser()?.role === 'admin' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className={`h-8 md:h-7 gap-1.5 px-2 md:px-3 ${isAdminEditMode ? 'bg-orange-500 text-white border-orange-600' : 'bg-zinc-900 border-zinc-700 text-zinc-300'}`}
+                  className={`h-7 gap-1 px-2 ${isAdminEditMode ? 'bg-orange-500 text-white border-orange-600' : 'bg-zinc-900 border-zinc-700 text-zinc-300'}`}
                   onClick={(e) => { e.stopPropagation(); setIsAdminEditMode(!isAdminEditMode); }}
                 >
-                  <Settings2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <Settings2 className="h-3 w-3" />
                   <span className="hidden md:inline text-[10px]">{isAdminEditMode ? 'Exit Edit' : 'Edit Checklist'}</span>
                 </Button>
               )}
@@ -3483,35 +3490,39 @@ const ServiceChecklist = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-8 md:h-7 bg-green-900/20 border-green-700/30 text-green-400 hover:bg-green-900/30 gap-1.5 px-2 md:px-3"
+                  className="h-7 bg-green-900/20 border-green-700/30 text-green-400 hover:bg-green-900/30 gap-1 px-2"
                   onClick={(e) => { e.stopPropagation(); saveAsStandardProcess(); }}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                  <CheckCircle2 className="h-3 w-3" />
                   <span className="hidden md:inline text-[10px]">Save Standard</span>
                 </Button>
               )}
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-8 md:h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1.5 px-2 md:px-3"
+                className="h-7 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 gap-1 px-2"
                 onClick={(e) => { e.stopPropagation(); generateJobReport(false); }}
                 title="Generate Report"
               >
-                <Download className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                <Download className="h-3 w-3" />
                 <span className="hidden md:inline text-[10px]">Report</span>
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="h-8 md:h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1.5 px-2 md:px-3"
+                className="h-7 bg-red-900/10 border-red-900/30 text-red-400 hover:bg-red-900/20 gap-1 px-2"
                 onClick={(e) => { e.stopPropagation(); generateJobReport(true); }}
                 title="Archive Job"
               >
-                <Save className="h-3.5 w-3.5 md:h-3 md:w-3" />
+                <Save className="h-3 w-3" />
                 <span className="hidden md:inline text-[10px]">Archive</span>
               </Button>
+              <div className="hidden sm:block p-1 rounded-full group-hover:bg-white/5 transition-colors shrink-0">
+                {checklistExpanded ? <ChevronUp className="h-5 w-5 text-zinc-500" /> : <ChevronDown className="h-5 w-5 text-zinc-500" />}
+              </div>
             </div>
           </div>
+        </div>
 
         {checklistExpanded && (
           <div className="animate-in fade-in slide-in-from-top-2 duration-300">
