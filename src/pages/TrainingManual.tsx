@@ -1039,9 +1039,20 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                             <Info className="h-3.5 w-3.5 text-purple-400/80" />
                                                         </Badge>
                                                     </TooltipTrigger>
-                                                    <TooltipContent className="max-w-xs bg-zinc-950 border-purple-500/40 text-zinc-200 text-xs p-3 shadow-xl">
-                                                        <p className="font-bold text-purple-400 mb-1">Database Single Source of Truth</p>
-                                                        <p>This SOP page is the single source of truth. Edits made here automatically update the Service Checklist and all SOP Tooltips site-wide in real-time.</p>
+                                                    <TooltipContent className="max-w-sm bg-zinc-950 border-purple-500/40 text-zinc-200 text-xs p-3.5 shadow-2xl space-y-2">
+                                                        <p className="font-bold text-purple-400 border-b border-zinc-800 pb-1 flex items-center gap-1.5">
+                                                            <Database className="h-3.5 w-3.5 text-purple-400" /> Database Single Source of Truth
+                                                        </p>
+                                                        <p className="leading-relaxed text-zinc-300">
+                                                            This page is the master single source of truth. Edits made here automatically update all connected SOP areas in real-time:
+                                                        </p>
+                                                        <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-300 pl-1 font-medium">
+                                                            <li><strong className="text-purple-300">Prime Training Center:</strong> SOP steps & accordions</li>
+                                                            <li><strong className="text-purple-300">Service Checklist:</strong> Interactive procedural steps & popups</li>
+                                                            <li><strong className="text-purple-300">Employee SOPs:</strong> SOP help tooltips & reference guides</li>
+                                                            <li><strong className="text-purple-300">Rick's Tips:</strong> Step advice & chemical execution guidance</li>
+                                                            <li><strong className="text-purple-300">App-Wide SOP Tooltips:</strong> All inline <span className="text-purple-400 font-mono">?</span> icons site-wide</li>
+                                                        </ul>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </TooltipProvider>

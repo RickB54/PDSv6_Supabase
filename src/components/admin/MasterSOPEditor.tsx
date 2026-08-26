@@ -452,7 +452,7 @@ export const MasterSOPEditor: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-zinc-400 max-w-2xl">
-            Edits here instantly propagate across Prime Training Center, Service Checklist, and all SOP Tooltips in real-time.
+            Edits here instantly propagate across Prime Training Center, Service Checklist, Employee SOPs, Rick's Tips, and all site-wide SOP Tooltips in real-time.
           </p>
         </div>
 
