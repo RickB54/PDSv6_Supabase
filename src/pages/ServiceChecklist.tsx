@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench, GripVertical } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench, GripVertical, Droplets } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -55,7 +55,8 @@ import { servicePackages, addOns, getServicePrice, getAddOnPrice, VehicleType as
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { getCustomPackages, getCustomAddOns, getPackageMeta, getAddOnMeta, buildFullSyncPayload } from "@/lib/servicesMeta";
 import { Progress } from "@/components/ui/progress";
-import MaterialsUsedModal from "@/components/checklist/MaterialsUsedModal";
+import { getChemicals, getMaterials, getTools, Chemical, Material, Tool as Equipment } from "@/lib/inventory-data";
+import MaterialInventoryPickerModal, { LoggedChemicalUsage, LoggedMaterialUsage, LoggedToolUsage } from "@/components/checklist/MaterialInventoryPickerModal";
 import { ChemicalStepModal } from "@/components/checklist/ChemicalStepModal";
 import { ChemicalDecisionModal } from "@/components/checklist/ChemicalDecisionModal";
 import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
@@ -969,18 +970,13 @@ const ServiceChecklist = () => {
   };
 
   // Materials Used state
-  type ChemItem = { id: string; name: string; threshold?: number; currentStock?: number };
-  type MatItem = { id: string; name: string; lowThreshold?: number; quantity?: number };
-  type ToolItem = { id: string; name: string; };
-  const [chemicalsList, setChemicalsList] = useState<ChemItem[]>([]);
-  const [materialsList, setMaterialsList] = useState<MatItem[]>([]);
-  const [toolsList, setToolsList] = useState<ToolItem[]>([]);
-  type ChemRow = { chemicalId: string; fraction: '1/8' | '1/4' | '3/8' | '1/2' | '5/8' | '3/4' | '7/8' | '1' | ''; notes?: string };
-  type MatRow = { materialId: string; quantityNote: string };
-  type ToolRow = { toolId: string; notes: string };
-  const [chemRows, setChemRows] = useState<ChemRow[]>([]);
-  const [matRows, setMatRows] = useState<MatRow[]>([]);
-  const [toolRows, setToolRows] = useState<ToolRow[]>([]);
+  const [fullChemicalsList, setFullChemicalsList] = useState<Chemical[]>([]);
+  const [fullMaterialsList, setFullMaterialsList] = useState<Material[]>([]);
+  const [fullToolsList, setFullToolsList] = useState<Equipment[]>([]);
+
+  const [chemRows, setChemRows] = useState<LoggedChemicalUsage[]>([]);
+  const [matRows, setMatRows] = useState<LoggedMaterialUsage[]>([]);
+  const [toolRows, setToolRows] = useState<LoggedToolUsage[]>([]);
   const [materialsModalOpen, setMaterialsModalOpen] = useState(false);
 
   // Chemical Modal State
@@ -1165,63 +1161,23 @@ const ServiceChecklist = () => {
     }
   }, [selectedCustomer, customers]);
 
-  // Load inventory lists for Materials Used selector (preferred split endpoints, fallback to /all)
+  // Load inventory lists for Materials Used selector
   useEffect(() => {
     (async () => {
-      // Helper to normalize IDs to string and handle _id/key variants
-      const normalize = (list: any[]) => {
-        if (!Array.isArray(list)) return [];
-        return list
-          .map(i => ({ ...i, id: String(i.id || i._id || i.key || '') }))
-          .filter(i => i.id && i.name);
-      };
-
       try {
-        const chems = await api('/api/inventory/chemicals', { method: 'GET' });
-        const mats = await api('/api/inventory/materials', { method: 'GET' });
-
-        let validChems = normalize(chems as any[]);
-        let validMats = normalize(mats as any[]);
-
-        // Fallback if either is empty
-        if (validChems.length === 0 || validMats.length === 0) {
-          const res = await api('/api/inventory/all', { method: 'GET' });
-          const { chemicals = [], materials = [] } = (res as any) || {};
-          if (validChems.length === 0) validChems = normalize(chemicals);
-          if (validMats.length === 0) validMats = normalize(materials);
-        }
-        setChemicalsList(validChems);
-        setMaterialsList(validMats);
-      } catch {
-        try {
-          const res = await api('/api/inventory/all', { method: 'GET' });
-          const { chemicals = [], materials = [] } = (res as any) || {};
-          setChemicalsList(normalize(chemicals));
-          setMaterialsList(normalize(materials));
-        } catch {
-          setChemicalsList([]);
-          setMaterialsList([]);
-        }
+        const [chems, mats, tls] = await Promise.all([
+          getChemicals(),
+          getMaterials(),
+          getTools()
+        ]);
+        setFullChemicalsList(chems || []);
+        setFullMaterialsList(mats || []);
+        setFullToolsList(tls || []);
+      } catch (err) {
+        console.error('Failed to load inventory for Materials Used:', err);
       }
-      const tls = await localforage.getItem<ToolItem[]>('tools') || [];
-      // Normalize tools as well just in case
-      setToolsList(normalize(tls));
     })();
   }, []);
-
-  // Materials helpers
-  const FRACTIONS: ChemRow['fraction'][] = ['1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8', '1'];
-  const [chemSearch, setChemSearch] = useState<string>('');
-  const [matSearch, setMatSearch] = useState<string>('');
-  const addChemicalRow = () => setChemRows(prev => ([...prev, { chemicalId: '', fraction: '', notes: '' }]));
-  const updateChemicalRow = (idx: number, patch: Partial<ChemRow>) => setChemRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
-  const removeChemicalRow = (idx: number) => setChemRows(prev => prev.filter((_, i) => i !== idx));
-  const addMaterialRow = () => setMatRows(prev => ([...prev, { materialId: '', quantityNote: '' }]));
-  const updateMaterialRow = (idx: number, patch: Partial<MatRow>) => setMatRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
-  const removeMaterialRow = (idx: number) => setMatRows(prev => prev.filter((_, i) => i !== idx));
-  const addToolRow = () => setToolRows(prev => ([...prev, { toolId: '', notes: '' }]));
-  const updateToolRow = (idx: number, patch: Partial<ToolRow>) => setToolRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
-  const removeToolRow = (idx: number) => setToolRows(prev => prev.filter((_, i) => i !== idx));
 
 
    const generateJobReport = (saveToArchive: boolean = false) => {
@@ -1365,37 +1321,29 @@ const ServiceChecklist = () => {
   };
 
   const postChecklistMaterials = async (jobId: string, finalize = false) => {
-    // Map fractional selections to numeric quantities for inventory decrement
-    const FRACTION_TO_NUM: Record<string, number> = {
-      '1/8': 0.125, '1/4': 0.25, '3/8': 0.375, '1/2': 0.5, '5/8': 0.625, '3/4': 0.75, '7/8': 0.875, '1': 1, '': 0
-    };
     const serviceName = (servicePackages.find(p => p.id === selectedPackage)?.name
       || getCustomPackages().find((p: any) => p.id === selectedPackage)?.name
       || 'Service');
     const nowIso = new Date().toISOString();
-    const chemItems = chemRows.filter(r => r.chemicalId).map(r => ({
+    const chemItems = chemRows.map(r => ({
       chemicalId: r.chemicalId,
-      quantity: FRACTION_TO_NUM[r.fraction || ''] || 0,
+      quantity: r.concentrateDeductedOz || r.amountUsedOz || 0,
       notes: r.notes || '',
       serviceName,
       date: nowIso,
       employee: employeeAssigned || '',
     })).filter(i => i.quantity > 0);
-    const matItems = matRows.filter(r => r.materialId).map(r => {
-      const match = String(r.quantityNote || '').match(/\d+(\.\d+)?/);
-      const quantity = match ? Number(match[0]) : 0;
-      return {
-        materialId: r.materialId,
-        quantity,
-        notes: r.quantityNote || '',
-        serviceName,
-        date: nowIso,
-        employee: employeeAssigned || '',
-      };
-    }).filter(i => i.quantity > 0);
-    const toolItems = toolRows.filter(r => r.toolId).map(r => ({
+    const matItems = matRows.map(r => ({
+      materialId: r.materialId,
+      quantity: r.quantityUsed || 1,
+      notes: r.notes || '',
+      serviceName,
+      date: nowIso,
+      employee: employeeAssigned || '',
+    })).filter(i => i.quantity > 0);
+    const toolItems = toolRows.map(r => ({
       toolId: r.toolId,
-      toolName: toolsList.find(t => t.id === r.toolId)?.name,
+      toolName: fullToolsList.find(t => String(t.id) === String(r.toolId))?.name || r.toolId,
       notes: r.notes || '',
       serviceName,
       date: nowIso,
@@ -2078,26 +2026,27 @@ const ServiceChecklist = () => {
       // Chemicals
       doc.text('Chemicals:', 20, y); y += 6;
       const chemLines = (chemRows || []).map(row => {
-        const name = String(chemicalsList.find(c => String(c.id) === String(row.chemicalId))?.name || row.chemicalId || '');
-        const frac = row.fraction ? String(row.fraction) : '';
+        const name = row.chemicalName || fullChemicalsList.find(c => String(c.id) === String(row.chemicalId))?.name || row.chemicalId || '';
+        const amt = row.amountUsedOz ? `${row.amountUsedOz} oz` : '';
         const note = row.notes ? ` - ${row.notes}` : '';
-        return name ? `• ${name}${frac ? ` (${frac})` : ''}${note}` : '';
+        return name ? `• ${name}${amt ? ` (${amt})` : ''}${note}` : '';
       }).filter(Boolean);
       const chemText = doc.splitTextToSize(chemLines.length ? chemLines.join('\n') : '(none)', 170);
       doc.text(chemText, 28, y); y += chemText.length * 5 + 4;
       // Materials
       doc.text('Materials:', 20, y); y += 6;
       const matLines = (matRows || []).map(row => {
-        const name = String(materialsList.find(m => String(m.id) === String(row.materialId))?.name || row.materialId || '');
-        const qty = row.quantityNote ? row.quantityNote : '';
-        return name ? `• ${name}${qty ? ` - ${qty}` : ''}` : '';
+        const name = row.materialName || fullMaterialsList.find(m => String(m.id) === String(row.materialId))?.name || row.materialId || '';
+        const qty = row.quantityUsed ? `${row.quantityUsed} item(s)` : '';
+        const note = row.notes ? ` - ${row.notes}` : '';
+        return name ? `• ${name}${qty ? ` (${qty})` : ''}${note}` : '';
       }).filter(Boolean);
       const matText = doc.splitTextToSize(matLines.length ? matLines.join('\n') : '(none)', 170);
       doc.text(matText, 28, y); y += matText.length * 5 + 4;
       // Tools
       doc.text('Tools:', 20, y); y += 6;
       const toolLines = (toolRows || []).map(row => {
-        const name = String(toolsList.find(t => String(t.id) === String(row.toolId))?.name || row.toolId || '');
+        const name = fullToolsList.find(t => String(t.id) === String(row.toolId))?.name || row.toolId || '';
         const note = row.notes ? ` - ${row.notes}` : '';
         return name ? `• ${name}${note}` : '';
       }).filter(Boolean);
@@ -4110,154 +4059,155 @@ const ServiceChecklist = () => {
                                                 </div>
                                               </div>
                                             ) : (
-                                              <div className="leading-relaxed space-y-1">
-                                                {sopItem?.shortSummary && (
-                                                  <p className="text-xs text-zinc-400 italic mb-2">"{sopItem.shortSummary}"</p>
-                                                )}
-                                                {instructionText.split('. ').map((sentence, idx) => {
-                                                  const parts = sentence.split(': ');
-                                                  if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
-                                                    return (
-                                                      <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
-                                                        <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
-                                                        <span>{parts[1]}</span>
+                                              <>
+                                                <div className="leading-relaxed space-y-1">
+                                                  {sopItem?.shortSummary && (
+                                                    <p className="text-xs text-zinc-400 italic mb-2">"{sopItem.shortSummary}"</p>
+                                                  )}
+                                                  {instructionText.split('. ').map((sentence, idx) => {
+                                                    const parts = sentence.split(': ');
+                                                    if (parts.length > 1 && ['Chemical', 'Alternative', 'Dwell Time', 'Application', 'Application Tip', 'Precautions'].some(k => parts[0].includes(k))) {
+                                                      return (
+                                                        <div key={idx} className="flex flex-col sm:flex-row sm:gap-2">
+                                                          <span className="font-bold text-primary shrink-0">{parts[0]}:</span>
+                                                          <span>{parts[1]}</span>
+                                                        </div>
+                                                      );
+                                                    }
+                                                    return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
+                                                  })}
+                                                  {sopItem?.ricksTips && (
+                                                    <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2">
+                                                      <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                      <div>
+                                                        <span className="font-extrabold uppercase text-amber-400 text-[10px] block mb-0.5">Rick's Pro Tip:</span>
+                                                        {sopItem.ricksTips}
                                                       </div>
-                                                    );
-                                                  }
-                                                  return <p key={idx}>{sentence}{idx < instructionText.split('. ').length - 1 ? '.' : ''}</p>;
-                                                })}
-                                                {sopItem?.ricksTips && (
-                                                  <div className="mt-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 flex items-start gap-2">
-                                                    <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                                                    <div>
-                                                      <span className="font-extrabold uppercase text-amber-400 text-[10px] block mb-0.5">Rick's Pro Tip:</span>
-                                                      {sopItem.ricksTips}
                                                     </div>
-                                                  </div>
-                                                )}
-                                                {sopItem?.dilutionRatio && sopItem.dilutionRatio !== 'N/A' && (
-                                                  <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
-                                                    <Beaker className="h-3.5 w-3.5" />
-                                                    <span>Ratio: {sopItem.dilutionRatio}</span>
-                                                  </div>
-                                                )}
-                                                {sopItem?.tools && sopItem.tools.length > 0 && (
-                                                  <div className="text-xs text-blue-400 font-semibold mt-1 flex items-center gap-1">
-                                                    <Wrench className="h-3.5 w-3.5" />
-                                                    <span>Tools: {sopItem.tools.join(', ')}</span>
-                                                  </div>
-                                                )}
-                                                {getCurrentUser()?.role === 'admin' && (
-                                                  <Button 
-                                                    variant="ghost" 
-                                                    size="sm" 
-                                                    className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50 shrink-0"
-                                                    onClick={() => {
-                                                      setEditingStepId(step.id);
-                                                      setEditInstructionText(instructionText);
-                                                    }}
-                                                  >
-                                                    <FileText className="h-3 w-3" /> Edit Process
-                                                  </Button>
-                                                )}
-                                              </div>
-                                            )}
+                                                  )}
+                                                  {sopItem?.dilutionRatio && sopItem.dilutionRatio !== 'N/A' && (
+                                                    <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                      <Beaker className="h-3.5 w-3.5" />
+                                                      <span>Ratio: {sopItem.dilutionRatio}</span>
+                                                    </div>
+                                                  )}
+                                                  {sopItem?.tools && sopItem.tools.length > 0 && (
+                                                    <div className="text-xs text-blue-400 font-semibold mt-1 flex items-center gap-1">
+                                                      <Wrench className="h-3.5 w-3.5" />
+                                                      <span>Tools: {sopItem.tools.join(', ')}</span>
+                                                    </div>
+                                                  )}
+                                                  {getCurrentUser()?.role === 'admin' && (
+                                                    <Button 
+                                                      variant="ghost" 
+                                                      size="sm" 
+                                                      className="mt-2 text-[10px] text-zinc-500 hover:text-primary h-6 px-2 gap-1.5 border border-zinc-800/50 shrink-0"
+                                                      onClick={() => {
+                                                        setEditingStepId(step.id);
+                                                        setEditInstructionText(instructionText);
+                                                      }}
+                                                    >
+                                                      <FileText className="h-3 w-3" /> Edit Process
+                                                    </Button>
+                                                  )}
+                                                </div>
+                                                <div className="mt-3 pt-3 border-t border-zinc-800/60">
+                                                  <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                                    <span>🧪</span> Chemicals for this step
+                                                  </p>
+                                                  {fullChemicalsList.length === 0 ? (
+                                                    <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
+                                                  ) : (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                      {fullChemicalsList.map((chem: any) => {
+                                                        const isSelected = (step.stepChemicals || []).includes(chem.id);
+                                                        return (
+                                                          <button
+                                                            key={chem.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                              setChecklistSteps(prev => prev.map(s => {
+                                                                if (s.id !== step.id) return s;
+                                                                const current = s.stepChemicals || [];
+                                                                const next = isSelected
+                                                                  ? current.filter(id => id !== chem.id)
+                                                                  : [...current, chem.id];
+                                                                return { ...s, stepChemicals: next };
+                                                              }));
+                                                            }}
+                                                            title={chem.dilutionRatioStr ? `Dilution: ${chem.dilutionRatioStr}` : chem.name}
+                                                            className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
+                                                              isSelected
+                                                                ? 'bg-primary/20 border-primary text-primary'
+                                                                : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+                                                            }`}
+                                                          >
+                                                            <span className="font-semibold leading-tight">{chem.name}</span>
+                                                            {chem.dilutionRatioStr && (
+                                                              <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilutionRatioStr}</span>
+                                                            )}
+                                                          </button>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
 
-                                            <div className="mt-3 pt-3 border-t border-zinc-800/60">
-                                              <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                                <span>🧪</span> Chemicals for this step
-                                              </p>
-                                              {chemicalsList.length === 0 ? (
-                                                <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
-                                              ) : (
-                                                <div className="flex flex-wrap gap-1.5">
-                                                  {chemicalsList.map((chem: any) => {
-                                                    const isSelected = (step.stepChemicals || []).includes(chem.id);
-                                                    return (
+                                                  {(() => {
+                                                    const addKey = `adding_chem_${step.id}`;
+                                                    const isAdding = !!(window as any)[addKey];
+                                                    return isAdding ? (
+                                                      <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                                                        <Input
+                                                          id={`new-chem-name-${step.id}`}
+                                                          placeholder="Chemical name"
+                                                          className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
+                                                          autoFocus
+                                                        />
+                                                        <Input
+                                                          id={`new-chem-dilution-${step.id}`}
+                                                          placeholder="Dilution (e.g. 4:1)"
+                                                          className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
+                                                        />
+                                                        <button
+                                                          type="button"
+                                                          className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+                                                          onClick={async () => {
+                                                            const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
+                                                            const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
+                                                            const name = nameEl?.value?.trim();
+                                                            if (!name) return;
+                                                            const newChem: any = { id: `chem-${Date.now()}`, name, dilutionRatioStr: dilEl?.value?.trim() || '' };
+                                                            try {
+                                                              await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
+                                                            } catch { /* save best-effort */ }
+                                                            setFullChemicalsList((prev: any[]) => [...prev, newChem]);
+                                                            setChecklistSteps(prev => prev.map(s => {
+                                                              if (s.id !== step.id) return s;
+                                                              return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
+                                                            }));
+                                                            (window as any)[addKey] = false;
+                                                            setExpandedHelp(prev => ({ ...prev }));
+                                                          }}
+                                                        >Save</button>
+                                                        <button
+                                                          type="button"
+                                                          className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
+                                                          onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
+                                                        >Cancel</button>
+                                                      </div>
+                                                    ) : (
                                                       <button
-                                                        key={chem.id}
                                                         type="button"
-                                                        onClick={() => {
-                                                          setChecklistSteps(prev => prev.map(s => {
-                                                            if (s.id !== step.id) return s;
-                                                            const current = s.stepChemicals || [];
-                                                            const next = isSelected
-                                                              ? current.filter(id => id !== chem.id)
-                                                              : [...current, chem.id];
-                                                            return { ...s, stepChemicals: next };
-                                                          }));
-                                                        }}
-                                                        title={chem.dilution ? `Dilution: ${chem.dilution}` : chem.name}
-                                                        className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
-                                                          isSelected
-                                                            ? 'bg-primary/20 border-primary text-primary'
-                                                            : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                                                        }`}
+                                                        className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
+                                                        onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
                                                       >
-                                                        <span className="font-semibold leading-tight">{chem.name}</span>
-                                                        {chem.dilution && (
-                                                          <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilution}</span>
-                                                        )}
+                                                        <Plus className="h-3 w-3" /> Add new chemical
                                                       </button>
                                                     );
-                                                  })}
+                                                  })()}
                                                 </div>
-                                              )}
-
-                                              {(() => {
-                                                const addKey = `adding_chem_${step.id}`;
-                                                const isAdding = !!(window as any)[addKey];
-                                                return isAdding ? (
-                                                  <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-                                                    <Input
-                                                      id={`new-chem-name-${step.id}`}
-                                                      placeholder="Chemical name"
-                                                      className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
-                                                      autoFocus
-                                                    />
-                                                    <Input
-                                                      id={`new-chem-dilution-${step.id}`}
-                                                      placeholder="Dilution (e.g. 4:1)"
-                                                      className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
-                                                    />
-                                                    <button
-                                                      type="button"
-                                                      className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
-                                                      onClick={async () => {
-                                                        const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
-                                                        const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
-                                                        const name = nameEl?.value?.trim();
-                                                        if (!name) return;
-                                                        const newChem = { id: `chem-${Date.now()}`, name, dilution: dilEl?.value?.trim() || '' };
-                                                        try {
-                                                          await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
-                                                        } catch { /* save best-effort */ }
-                                                        setChemicalsList((prev: any[]) => [...prev, newChem]);
-                                                        setChecklistSteps(prev => prev.map(s => {
-                                                          if (s.id !== step.id) return s;
-                                                          return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
-                                                        }));
-                                                        (window as any)[addKey] = false;
-                                                        setExpandedHelp(prev => ({ ...prev }));
-                                                      }}
-                                                    >Save</button>
-                                                    <button
-                                                      type="button"
-                                                      className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
-                                                      onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
-                                                    >Cancel</button>
-                                                  </div>
-                                                ) : (
-                                                  <button
-                                                    type="button"
-                                                    className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
-                                                    onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
-                                                  >
-                                                    <Plus className="h-3 w-3" /> Add new chemical
-                                                  </button>
-                                                );
-                                              })()}
-                                            </div>
+                                              </>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -4313,7 +4263,7 @@ const ServiceChecklist = () => {
         )}
       </Card>
 
-      {/* Materials Used */}
+      {/* Materials Used & Inventory Depletion Tracking */}
       <Card className={cn(
         "p-3 md:p-6 bg-gradient-card space-y-6 transition-all duration-300 rounded-xl",
         activeFlowStage === 'materials' 
@@ -4328,234 +4278,101 @@ const ServiceChecklist = () => {
           }}
         >
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600">Materials Used</h2>
+            <h2 className="text-2xl font-bold text-white pb-1 border-b-2 border-red-600 flex items-center gap-2">
+              <Droplets className="h-6 w-6 text-blue-400" />
+              Materials & Inventory Depletion
+            </h2>
             {activeFlowStage === 'materials' && (
               <span className="text-[10px] text-blue-400 font-black uppercase tracking-widest bg-blue-500/20 px-2 py-0.5 rounded border border-blue-500/40 animate-pulse flex items-center gap-1.5 shrink-0">
                 <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping inline-block" /> Current Section
               </span>
             )}
-            <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-mono">
-              {chemRows.length + matRows.length + toolRows.length} items logged
+            <div className="text-[10px] bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-md border border-zinc-700 font-mono">
+              {chemRows.length} chemicals • {matRows.length} supplies logged
             </div>
           </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 border-zinc-800 text-zinc-400 hover:text-white"
-                  onClick={(e) => { e.stopPropagation(); setMaterialsModalOpen(true); }}
-                >
-                  Quick Updates
-                </Button>
-                <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
-                  {materialsSectionExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
-                </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="h-8 bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1.5 shadow-md"
+              onClick={(e) => { e.stopPropagation(); setMaterialsModalOpen(true); }}
+            >
+              <Plus className="h-4 w-4" />
+              Search & Add Items
+            </Button>
+            <div className="p-1 rounded-full group-hover:bg-white/5 transition-colors">
+              {materialsSectionExpanded ? <ChevronUp className="h-6 w-6 text-zinc-500" /> : <ChevronDown className="h-6 w-6 text-zinc-500" />}
+            </div>
+          </div>
+        </div>
+
+        {materialsSectionExpanded && (
+          <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+            {/* Quick Open Banner */}
+            <div className="p-4 bg-zinc-900/80 border border-blue-500/30 rounded-xl flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-blue-400" />
+                  IAC Inventory Depletion System
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Search chemicals & supplies directly from inventory. Granular ounce usage is automatically deducted from real stock on save.
+                </p>
               </div>
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                onClick={() => setMaterialsModalOpen(true)}
+              >
+                Open Searchable Inventory Picker
+              </Button>
             </div>
 
-            {materialsSectionExpanded && (
-              <div className="space-y-6 animate-in slide-in-from-top-2 duration-300">
-                {/* Quick add */}
-                <div className="p-4 bg-zinc-900/50 border border-zinc-800 rounded-lg">
-                  <Label className="mb-2 block text-zinc-400">Quick Add from Inventory (Auto-expands section)</Label>
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) return;
-                      const chem = chemicalsList.find(c => String(c.id) === String(val));
-                      const mat = materialsList.find(m => String(m.id) === String(val));
-                      if (chem) {
-                        setChemRows(prev => ([...prev, { chemicalId: String(chem.id), fraction: '', notes: '' }]));
-                        setMaterialsAccordion(prev => ({ ...prev, chemicals: true }));
-                      } else if (mat) {
-                        setMatRows(prev => ([...prev, { materialId: String(mat.id), quantityNote: '' }]));
-                        setMaterialsAccordion(prev => ({ ...prev, materials: true }));
-                      } else {
-                        const tool = toolsList.find(t => String(t.id) === String(val));
-                        if (tool) setToolRows(prev => ([...prev, { toolId: String(tool.id), notes: '' }]));
-                        setMaterialsAccordion(prev => ({ ...prev, tools: true }));
-                      }
-                      e.currentTarget.selectedIndex = 0;
-                    }}
-                    className="flex h-10 w-full rounded-md border border-red-600 bg-black text-white px-3 py-2 text-sm"
-                  >
-                    <option value="">Select item to add...</option>
-                    <optgroup label="Chemicals">
-                      {chemicalsList.map(it => (<option key={`chem-${it.id}`} value={it.id}>{it.name}</option>))}
-                    </optgroup>
-                    <optgroup label="Materials">
-                      {materialsList.map(it => (<option key={`mat-${it.id}`} value={it.id}>{it.name}</option>))}
-                    </optgroup>
-                    <optgroup label="Tools">
-                      {toolsList.map(it => (<option key={`tool-${it.id}`} value={it.id}>{it.name}</option>))}
-                    </optgroup>
-                  </select>
-                </div>
-
-            {/* Chemicals Accordion (Yellow) */}
-            <div className="border border-yellow-500/30 rounded-xl overflow-hidden bg-zinc-900/50">
-              <div
-                className="p-4 bg-yellow-500/10 flex items-center justify-between cursor-pointer hover:bg-yellow-500/15 transition-colors"
-                onClick={() => toggleMatAccordion('chemicals')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                  <h3 className="text-lg font-semibold text-yellow-100">Chemicals (fractional)</h3>
-                  <HelpCircle className="h-4 w-4 text-zinc-400 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-chemicals' })); }} />
-                  <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{chemRows.length} items</span>
-                </div>
-                {materialsAccordion.chemicals ? <ChevronUp className="h-5 w-5 text-yellow-500/50" /> : <ChevronDown className="h-5 w-5 text-yellow-500/50" />}
-              </div>
-
-              {materialsAccordion.chemicals && (
-                <div className="p-4 border-t border-yellow-500/10 animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-yellow-500/70">Track precise chemical usage (e.g. 1/4 bottle)</p>
-                    <Button onClick={addChemicalRow} size="sm" className="bg-yellow-600 hover:bg-yellow-500 text-white h-8"><Plus className="h-4 w-4 mr-2" />Add Row</Button>
-                  </div>
-                  <div className="mb-3">
-                    <Label>Search</Label>
-                    <Input placeholder="Filter chemicals..." value={chemSearch} onChange={(e) => setChemSearch(e.target.value)} className="h-9 bg-zinc-950/50 border-yellow-500/20 focus-visible:ring-yellow-500/50" />
-                  </div>
-                  <div className="space-y-3">
-                    {chemRows.map((row, idx) => (
-                      <div key={`chem-${idx}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 rounded bg-zinc-950/30 border border-zinc-800/50">
-                        <div className="md:col-span-4">
-                          <Label className="text-xs text-yellow-500/70">Chemical</Label>
-                          <select
-                            value={row.chemicalId}
-                            onChange={(e) => updateChemicalRow(idx, { chemicalId: e.target.value })}
-                            className="flex h-9 w-full rounded-md border border-yellow-500/20 bg-zinc-900 text-white px-3 py-1 text-sm focus:border-yellow-500/50 outline-none"
-                          >
-                            <option value="">Select a chemical...</option>
-                            {chemicalsList
-                              .filter(it => (chemSearch ? String(it.name || '').toLowerCase().includes(chemSearch.toLowerCase()) : true))
-                              .map(it => (<option key={it.id} value={it.id}>{it.name}</option>))}
-                          </select>
-                        </div>
-                        <div className="md:col-span-6">
-                          <Label className="text-xs text-yellow-500/70">Quantity Used</Label>
-                          <div className="flex flex-wrap gap-2 mt-1">
-                            {FRACTIONS.map(f => (
-                              <label key={f} className={`flex items-center gap-1 text-xs px-2 py-1 rounded border cursor-pointer transition-colors ${row.fraction === f ? 'bg-yellow-500/20 border-yellow-500 text-yellow-200' : 'border-zinc-700 text-zinc-400 hover:border-yellow-500/30'}`}>
-                                <input type="checkbox" className="hidden" checked={row.fraction === f} onChange={() => updateChemicalRow(idx, { fraction: row.fraction === f ? '' : f })} />
-                                <span>{f}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label className="text-xs text-yellow-500/70">Notes</Label>
-                          <Input className="h-9 border-yellow-500/20 bg-zinc-900" type="text" value={row.notes || ''} onChange={(e) => updateChemicalRow(idx, { notes: e.target.value })} placeholder="Note" />
-                        </div>
-                        <div className="md:col-span-12 flex justify-end mt-2 md:mt-0">
-                          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8" onClick={() => removeChemicalRow(idx)}><Trash2 className="h-4 w-4 mr-2" /> Remove</Button>
-                        </div>
+            {/* Active Logged Items Summary */}
+            <div className="space-y-3 pt-2">
+              {chemRows.length === 0 && matRows.length === 0 && toolRows.length === 0 ? (
+                <p className="text-center text-xs text-zinc-500 italic py-6 border border-dashed border-zinc-800 rounded-xl">
+                  No materials logged for this job yet. Click "Search & Add Items" to select chemicals from inventory.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Logged Chemicals */}
+                  {chemRows.map((r, i) => (
+                    <div key={r.id || `chem-${i}`} className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-xs text-white truncate">{r.chemicalName}</div>
+                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-300 border-blue-500/30">
+                          {r.category.toUpperCase()}
+                        </Badge>
                       </div>
-                    ))}
-                    {chemRows.length === 0 && <p className="text-center text-sm text-zinc-500 italic py-4">No chemicals added yet.</p>}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Materials Accordion (Blue) */}
-            <div className="border border-blue-500/30 rounded-xl overflow-hidden bg-zinc-900/50">
-              <div
-                className="p-4 bg-blue-500/10 flex items-center justify-between cursor-pointer hover:bg-blue-500/15 transition-colors"
-                onClick={() => toggleMatAccordion('materials')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-blue-500" />
-                  <h3 className="text-lg font-semibold text-blue-100">Materials (note-based)</h3>
-                  <HelpCircle className="h-4 w-4 text-zinc-400 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-materials' })); }} />
-                  <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{matRows.length} items</span>
-                </div>
-                {materialsAccordion.materials ? <ChevronUp className="h-5 w-5 text-blue-500/50" /> : <ChevronDown className="h-5 w-5 text-blue-500/50" />}
-              </div>
-
-              {materialsAccordion.materials && (
-                <div className="p-4 border-t border-blue-500/10 animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-blue-500/70">Track disposables and items (e.g. 5 rags)</p>
-                    <Button onClick={addMaterialRow} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white h-8"><Plus className="h-4 w-4 mr-2" />Add Row</Button>
-                  </div>
-                  <div className="space-y-3">
-                    {matRows.map((row, idx) => (
-                      <div key={`mat-${idx}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 rounded bg-zinc-950/30 border border-zinc-800/50">
-                        <div className="md:col-span-5">
-                          <Label className="text-xs text-blue-500/70">Material</Label>
-                          <select
-                            value={row.materialId}
-                            onChange={(e) => updateMaterialRow(idx, { materialId: e.target.value })}
-                            className="flex h-9 w-full rounded-md border border-blue-500/20 bg-zinc-900 text-white px-3 py-1 text-sm focus:border-blue-500/50 outline-none"
-                          >
-                            <option value="">Select a material...</option>
-                            {materialsList.map(it => (<option key={it.id} value={it.id}>{it.name}</option>))}
-                          </select>
-                        </div>
-                        <div className="md:col-span-6">
-                          <Label className="text-xs text-blue-500/70">Quantity / Notes</Label>
-                          <Input className="h-9 border-blue-500/20 bg-zinc-900" type="text" value={row.quantityNote} onChange={(e) => updateMaterialRow(idx, { quantityNote: e.target.value })} placeholder="e.g. 5 rags" />
-                        </div>
-                        <div className="md:col-span-1 flex justify-end">
-                          <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-9 w-9" onClick={() => removeMaterialRow(idx)}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
+                      <div className="text-[11px] text-zinc-400 flex items-center gap-2 font-mono">
+                        <span>Used: <strong className="text-blue-300">{r.amountUsedOz} oz</strong> ({r.dilutionRatioStr})</span>
+                        <span>•</span>
+                        <span>Deducted: <strong className="text-amber-400">{(r.concentrateDeductedOz || 0).toFixed(2)} oz</strong> conc.</span>
                       </div>
-                    ))}
-                    {matRows.length === 0 && <p className="text-center text-sm text-zinc-500 italic py-4">No materials added yet.</p>}
-                  </div>
-                </div>
-              )}
-            </div>
+                      {r.isStockClamped && (
+                        <div className="text-[10px] text-amber-400 flex items-center gap-1 font-bold pt-1">
+                          <AlertCircle className="h-3 w-3" /> Exceeded stock — clamped to 0.00
+                        </div>
+                      )}
+                    </div>
+                  ))}
 
-            {/* Tools Accordion (Purple) */}
-            <div className="border border-purple-500/30 rounded-xl overflow-hidden bg-zinc-900/50">
-              <div
-                className="p-4 bg-purple-500/10 flex items-center justify-between cursor-pointer hover:bg-purple-500/15 transition-colors"
-                onClick={() => toggleMatAccordion('tools')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-purple-500" />
-                  <h3 className="text-lg font-semibold text-purple-100">Tools (tracking)</h3>
-                  <HelpCircle className="h-4 w-4 text-zinc-400 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: 'inventory-tools' })); }} />
-                  <span className="text-xs px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">{toolRows.length} items</span>
-                </div>
-                {materialsAccordion.tools ? <ChevronUp className="h-5 w-5 text-purple-500/50" /> : <ChevronDown className="h-5 w-5 text-purple-500/50" />}
-              </div>
-
-              {materialsAccordion.tools && (
-                <div className="p-4 border-t border-purple-500/10 animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="text-sm text-purple-500/70">Log usage of main tools</p>
-                    <Button onClick={addToolRow} size="sm" className="bg-purple-600 hover:bg-purple-500 text-white h-8"><Plus className="h-4 w-4 mr-2" />Add Row</Button>
-                  </div>
-                  <div className="space-y-3">
-                    {toolRows.map((row, idx) => (
-                      <div key={`tool-${idx}`} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 rounded bg-zinc-950/30 border border-zinc-800/50">
-                        <div className="md:col-span-5">
-                          <Label className="text-xs text-purple-500/70">Tool</Label>
-                          <select
-                            value={row.toolId}
-                            onChange={(e) => updateToolRow(idx, { toolId: e.target.value })}
-                            className="flex h-9 w-full rounded-md border border-purple-500/20 bg-zinc-900 text-white px-3 py-1 text-sm focus:border-purple-500/50 outline-none"
-                          >
-                            <option value="">Select a tool...</option>
-                            {toolsList.map(it => (<option key={it.id} value={it.id}>{it.name}</option>))}
-                          </select>
-                        </div>
-                        <div className="md:col-span-6">
-                          <Label className="text-xs text-purple-500/70">Activity Notes</Label>
-                          <Input className="h-9 border-purple-500/20 bg-zinc-900" type="text" value={row.notes} onChange={(e) => updateToolRow(idx, { notes: e.target.value })} placeholder="Usage details" />
-                        </div>
-                        <div className="md:col-span-1 flex justify-end">
-                          <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-9 w-9" onClick={() => removeToolRow(idx)}><Trash2 className="h-4 w-4" /></Button>
-                        </div>
+                  {/* Logged Supplies */}
+                  {matRows.map((r, i) => (
+                    <div key={r.id || `mat-${i}`} className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-xs text-white truncate">{r.materialName}</div>
+                        <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
+                          SUPPLY
+                        </Badge>
                       </div>
-                    ))}
-                    {toolRows.length === 0 && <p className="text-center text-sm text-zinc-500 italic py-4">No tools added yet.</p>}
-                  </div>
+                      <div className="text-[11px] text-zinc-400 font-mono">
+                        Qty Used: <strong className="text-emerald-300">{r.quantityUsed} item(s)</strong>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -4563,16 +4380,27 @@ const ServiceChecklist = () => {
         )}
       </Card>
 
-          {/* Materials Used Modal */}
-          <MaterialsUsedModal
-            open={materialsModalOpen}
-            onOpenChange={setMaterialsModalOpen}
-            chemicalsList={chemicalsList}
-            materialsList={materialsList}
-            initialChemRows={chemRows}
-            initialMatRows={matRows}
-            onSave={(newChemRows, newMatRows) => { setChemRows(newChemRows); setMatRows(newMatRows); }}
-          />
+      {/* IAC Inventory Picker Modal */}
+      <MaterialInventoryPickerModal
+        open={materialsModalOpen}
+        onOpenChange={setMaterialsModalOpen}
+        chemicals={fullChemicalsList}
+        materials={fullMaterialsList}
+        tools={fullToolsList}
+        chemRows={chemRows}
+        matRows={matRows}
+        toolRows={toolRows}
+        onSaveRows={(newChem, newMat, newTool) => {
+          setChemRows(newChem);
+          setMatRows(newMat);
+          setToolRows(newTool);
+        }}
+        onDeductComplete={async () => {
+          const [chems, mats] = await Promise.all([getChemicals(), getMaterials()]);
+          setFullChemicalsList(chems || []);
+          setFullMaterialsList(mats || []);
+        }}
+      />
 
           {/* Mileage Section (New) */}
           <Card className="p-6 bg-gradient-to-br from-indigo-500/10 to-blue-500/10 border-indigo-500/20">
