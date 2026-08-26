@@ -144,6 +144,11 @@ export default function MaterialInventoryPickerModal({
     return amountOz / (ratioParts + 1);
   };
 
+  // Helper to count distinct chemicals by matching name and brand
+  const countDistinctChemicals = (chems: Chemical[]) => {
+    return new Set(chems.map(c => `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}`)).size;
+  };
+
   // Category match checker: Handles Exterior, Interior, and 'Both'/'Dual-Use'
   const isChemicalCategoryMatch = (chem: Chemical, targetSection: 'exterior' | 'interior'): boolean => {
     const rawCat = (chem.category || chem.shelf || chem.section || '').toLowerCase().trim();
@@ -406,7 +411,7 @@ export default function MaterialInventoryPickerModal({
                 onClick={() => setActiveTab('exterior')}
               >
                 <Sparkles className="h-4 w-4 mr-1.5 text-blue-400" />
-                Exterior Chemicals ({filteredChemicalsExterior.length})
+                Exterior Chemicals ({countDistinctChemicals(filteredChemicalsExterior)})
               </Button>
               <Button
                 size="sm"
@@ -415,7 +420,7 @@ export default function MaterialInventoryPickerModal({
                 onClick={() => setActiveTab('interior')}
               >
                 <Droplets className="h-4 w-4 mr-1.5 text-amber-400" />
-                Interior Chemicals ({filteredChemicalsInterior.length})
+                Interior Chemicals ({countDistinctChemicals(filteredChemicalsInterior)})
               </Button>
               <Button
                 size="sm"

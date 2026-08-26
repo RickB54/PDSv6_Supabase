@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCombinedSelectableProducts, deleteChemical, syncOrphanedChemicalLibraryCards } from "@/lib/chemicals";
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
-import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap, X } from "lucide-react";
+import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap, X, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
@@ -146,6 +147,10 @@ export default function ChemicalsLibrary() {
         }
     };
 
+    const countDistinctChemicals = (chems: Chemical[]) => {
+        return new Set(chems.map(c => `${(c.name || '').trim().toLowerCase()}_${(c.brand || '').trim().toLowerCase()}`)).size;
+    };
+
     const uniqueBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort();
 
     const handlePdfAll = () => {
@@ -233,20 +238,59 @@ export default function ChemicalsLibrary() {
                             <div className="flex flex-wrap items-center gap-3">
                                 <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 uppercase tracking-tight">Chemical Knowledge Base</h1>
                                 <Badge className="bg-purple-950/80 text-purple-300 border-purple-500/50 text-xs sm:text-sm font-bold px-3 py-1 mb-1 shrink-0">
-                                    Total Cards: {chemicals.length}
+                                    Total Products: {countDistinctChemicals(chemicals)}
                                 </Badge>
                             </div>
                             <p className="text-zinc-500 text-sm font-medium">Master every product in our arsenal.</p>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'admin', topicId: 'chemical-cards-guide' } }))}
-                            className="text-zinc-600 hover:text-blue-400 h-10 w-10 shrink-0"
-                            title="Help Guide"
-                        >
-                            <HelpCircle className="w-6 h-6" />
-                        </Button>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-zinc-500 hover:text-blue-400 h-10 w-10 shrink-0"
+                                    title="How to manage chemicals"
+                                >
+                                    <HelpCircle className="w-6 h-6" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[340px] p-4 bg-zinc-950 border-blue-900/50 text-sm shadow-2xl">
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-blue-400 flex items-center gap-2 border-b border-blue-900/30 pb-2">
+                                        <Info className="w-4 h-4" /> Managing Chemical Cards
+                                    </h4>
+                                    
+                                    <div>
+                                        <strong className="text-zinc-300 block mb-1">1. Editing a Chemical</strong>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">
+                                            Click on any chemical card, then click the <strong className="text-white">Pencil Icon (Edit)</strong> in the top right of the popup. This opens the master edit form for that product.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <strong className="text-zinc-300 block mb-1">2. Changing Tabs (Usage Type)</strong>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">
+                                            To change if a product shows up in the <strong className="text-white">Exterior or Interior</strong> tabs in the inventory picker, look for the <strong className="text-white">Usage Type</strong> dropdown inside the master edit form (under Core Identity). Choose Exterior Only, Interior Only, or Both.
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <strong className="text-zinc-300 block mb-1">3. Key Fields Overview</strong>
+                                        <ul className="text-zinc-400 text-[11px] leading-relaxed list-disc pl-4 space-y-1 mt-1">
+                                            <li><strong className="text-zinc-300">Dilution Ratios:</strong> Controls the water-to-product math for mixing bottles.</li>
+                                            <li><strong className="text-zinc-300">In Stock / On Hand:</strong> Toggle off if you no longer carry this product.</li>
+                                            <li><strong className="text-zinc-300">Application Guide:</strong> Shows up on printed labels and reference guides for the team.</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="bg-blue-950/20 p-2 rounded border border-blue-900/30 mt-2">
+                                        <p className="text-[10px] text-blue-300 leading-tight">
+                                            <strong>Note on Duplicates:</strong> The Total Products count groups items by exact name and brand. If you have different sizes of the same product (e.g., 16oz and 1 Gallon), they count as 1 distinct product here.
+                                        </p>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                     <div className="flex flex-col gap-2 w-full lg:w-auto">
                         {/* Row 1: Navigation Tools */}
@@ -377,12 +421,12 @@ export default function ChemicalsLibrary() {
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-950 border-zinc-900 text-white max-h-[300px]">
                                     <SelectItem value="brand" className="group text-[10px] font-bold uppercase tracking-widest text-indigo-400">
-                                        By Brand (All) <span className="ml-1 text-zinc-500 group-data-[highlighted]:text-white transition-colors">({chemicals.length})</span>
+                                        By Brand (All) <span className="ml-1 text-zinc-500 group-data-[highlighted]:text-white transition-colors">({countDistinctChemicals(chemicals)})</span>
                                     </SelectItem>
                                     <SelectItem value="name" className="text-[10px] font-bold uppercase tracking-widest">A-Z List</SelectItem>
                                     <div className="px-2 py-1.5 text-[9px] font-black text-amber-500 uppercase tracking-[0.2em] border-t border-zinc-900 mt-1 italic">Jump to Brand</div>
                                     {uniqueBrands.map(b => {
-                                        const count = chemicals.filter(c => (c.brand || "Other / No Brand") === b).length;
+                                        const count = countDistinctChemicals(chemicals.filter(c => (c.brand || "Other / No Brand") === b));
                                         return (
                                             <SelectItem key={b} value={`brand:${b}`} className="group text-[10px] font-bold uppercase tracking-widest text-zinc-300 hover:text-white">
                                                 {b} <span className="ml-1 text-zinc-500 group-data-[highlighted]:text-zinc-200 font-normal transition-colors">({count})</span>
