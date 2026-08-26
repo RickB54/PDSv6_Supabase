@@ -350,14 +350,38 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
 
 }
 
-export async function deleteChemical(id: string): Promise<void> {
+export async function deleteChemical(id: string, deleteLibraryCard: boolean = true): Promise<void> {
     if (isDemoActive()) return;
+
+    // Retrieve the item details before deletion to locate chemical_library association
+    const { data: item } = await supabase.from('chemicals').select('*').eq('id', id).maybeSingle();
+
     const { error } = await supabase
         .from('chemicals')
         .delete()
         .eq('id', id);
 
     if (error) throw error;
+
+    if (deleteLibraryCard && item) {
+        const libId = (item as any).chemical_library_id || (item as any).chemicalLibraryId;
+        if (libId) {
+            await supabase.from('chemical_library').delete().eq('id', libId);
+        }
+        if (item.name) {
+            const cleanName = item.name.trim().toLowerCase();
+            const cleanBrand = (item.brand || '').trim().toLowerCase();
+            const { data: libRows } = await supabase.from('chemical_library').select('id, name, brand');
+            if (libRows) {
+                const matchIds = libRows
+                    .filter(l => (l.name || '').trim().toLowerCase() === cleanName && (l.brand || '').trim().toLowerCase() === cleanBrand)
+                    .map(l => l.id);
+                if (matchIds.length > 0) {
+                    await supabase.from('chemical_library').delete().in('id', matchIds);
+                }
+            }
+        }
+    }
 }
 
 export async function cleanupGhostDuplicates(): Promise<number> {

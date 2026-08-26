@@ -448,23 +448,64 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
     }
 }
 
-export async function deleteChemical(id: string): Promise<boolean> {
+export async function deleteChemical(idOrChem: string | Chemical, libraryId?: string): Promise<boolean> {
     if (isDemoActive()) return false;
     try {
-        const items = await getInventoryChemicals();
-        const matching = items.filter(inv => inv.chemicalLibraryId === id);
-        for (const item of matching) {
-            await saveInventoryChemical({
-                ...item,
-                chemicalLibraryId: undefined
-            }, false, true); // skipLibrarySync
-        }
-    } catch (e) {
-        console.warn("Failed to unlink inventory items during deletion", e);
-    }
+        const chemObj = typeof idOrChem === 'object' ? idOrChem : null;
+        const chemId = typeof idOrChem === 'string' ? idOrChem : idOrChem.id;
+        const libId = libraryId || (chemObj ? (chemObj.chemical_library_id || (chemObj as any).chemicalLibraryId || chemObj.id) : chemId);
+        const chemName = chemObj ? chemObj.name : undefined;
+        const chemBrand = chemObj ? chemObj.brand : undefined;
 
-    const { error } = await supabase.from('chemical_library').delete().eq('id', id);
-    return !error;
+        // 1. Delete from chemical_library by ID / libId
+        if (libId) {
+            await supabase.from('chemical_library').delete().eq('id', libId);
+        }
+        if (chemId && chemId !== libId) {
+            await supabase.from('chemical_library').delete().eq('id', chemId);
+        }
+
+        // 2. Delete from chemical_library by Name & Brand matching if available
+        if (chemName) {
+            const cleanName = chemName.trim().toLowerCase();
+            const cleanBrand = (chemBrand || '').trim().toLowerCase();
+            const { data: libRows } = await supabase.from('chemical_library').select('id, name, brand');
+            if (libRows) {
+                const matchingLibIds = libRows
+                    .filter(l => (l.name || '').trim().toLowerCase() === cleanName && (l.brand || '').trim().toLowerCase() === cleanBrand)
+                    .map(l => l.id);
+                if (matchingLibIds.length > 0) {
+                    await supabase.from('chemical_library').delete().in('id', matchingLibIds);
+                }
+            }
+        }
+
+        // 3. Delete matching physical inventory rows from chemicals table
+        if (libId) {
+            await supabase.from('chemicals').delete().eq('chemical_library_id', libId);
+        }
+        if (chemId) {
+            await supabase.from('chemicals').delete().eq('id', chemId);
+        }
+        if (chemName) {
+            const cleanName = chemName.trim().toLowerCase();
+            const cleanBrand = (chemBrand || '').trim().toLowerCase();
+            const { data: invRows } = await supabase.from('chemicals').select('id, name, brand');
+            if (invRows) {
+                const matchingInvIds = invRows
+                    .filter(c => (c.name || '').trim().toLowerCase() === cleanName && (c.brand || '').trim().toLowerCase() === cleanBrand)
+                    .map(c => c.id);
+                if (matchingInvIds.length > 0) {
+                    await supabase.from('chemicals').delete().in('id', matchingInvIds);
+                }
+            }
+        }
+
+        return true;
+    } catch (e) {
+        console.error("Failed to delete chemical:", e);
+        return false;
+    }
 }
 
 // Helper to store Inventory Defaults in user_notes if columns are missing

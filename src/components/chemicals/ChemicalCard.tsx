@@ -26,7 +26,7 @@ interface ChemicalCardProps {
     chemical: Chemical;
     onClick?: () => void;
     isAdmin?: boolean;
-    onDelete?: (id: string) => void;
+    onDelete?: (chemical: Chemical | string) => void;
     onUpdate?: () => void;
 }
 
@@ -182,16 +182,18 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                             {isAdmin && onDelete && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-600 hover:text-red-500" onClick={e => e.stopPropagation()}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-600 hover:text-red-500" onClick={e => e.stopPropagation()} title="Delete Chemical Card"><Trash2 className="w-3.5 h-3.5" /></Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-red-500">Delete Chemical?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-zinc-400">Are you sure you want to delete <strong>{chemical.name}</strong>?</AlertDialogDescription>
+                                            <AlertDialogTitle className="text-red-500">Delete Chemical Card?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-zinc-400">
+                                                Are you sure you want to permanently delete <strong>{chemical.name}</strong>? This will remove this product card from your Chemical Knowledge Base and delete any associated inventory records.
+                                            </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-white">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={(e) => { e.stopPropagation(); onDelete(chemical.id); }} className="bg-red-600 hover:bg-red-700">Delete Forever</AlertDialogAction>
+                                            <AlertDialogAction onClick={(e) => { e.stopPropagation(); onDelete(chemical); }} className="bg-red-600 hover:bg-red-700">Delete Forever</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>

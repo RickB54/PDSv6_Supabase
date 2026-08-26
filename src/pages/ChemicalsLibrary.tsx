@@ -193,17 +193,30 @@ export default function ChemicalsLibrary() {
         setDetailOpen(true);
     };
 
-    const handleDeleteChemical = async (id: string) => {
+    const handleDeleteChemical = async (target: Chemical | string) => {
         if (!isAdmin) {
             toast({ title: "Access Denied", description: "You do not have permission to delete chemical cards.", variant: "destructive" });
             return;
         }
-        const success = await deleteChemical(id);
+        const chemObj = typeof target === 'object' ? target : chemicals.find(c => c.id === target || c.chemical_library_id === target);
+        const targetId = chemObj ? chemObj.id : (target as string);
+        const libId = chemObj ? (chemObj.chemical_library_id || chemObj.id) : (target as string);
+        const chemName = chemObj ? chemObj.name.trim().toLowerCase() : '';
+        const chemBrand = chemObj ? (chemObj.brand || '').trim().toLowerCase() : '';
+
+        const success = await deleteChemical(chemObj || targetId, libId);
         if (!success) {
             toast({ title: "Error", description: "Failed to delete chemical.", variant: "destructive" });
         } else {
-            toast({ title: "Deleted", description: "Chemical removed from library.", className: "bg-red-900 border-red-800 text-white" });
-            setChemicals(prev => prev.filter(c => c.id !== id));
+            toast({ title: "Deleted", description: "Chemical card permanently removed.", className: "bg-red-900 border-red-800 text-white" });
+            setChemicals(prev => prev.filter(c => {
+                const cLibId = c.chemical_library_id || c.id;
+                const cName = (c.name || '').trim().toLowerCase();
+                const cBrand = (c.brand || '').trim().toLowerCase();
+                if (c.id === targetId || cLibId === libId || c.id === libId) return false;
+                if (chemName && cName === chemName && cBrand === chemBrand) return false;
+                return true;
+            }));
         }
     };
 
