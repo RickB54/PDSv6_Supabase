@@ -451,8 +451,20 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
 export async function deleteChemical(idOrChem: string | Chemical, libraryId?: string): Promise<boolean> {
     if (isDemoActive()) return false;
     try {
-        const chemObj = typeof idOrChem === 'object' ? idOrChem : null;
+        let chemObj = typeof idOrChem === 'object' ? idOrChem : null;
         const chemId = typeof idOrChem === 'string' ? idOrChem : idOrChem.id;
+
+        // If string ID was passed, attempt lookup to secure name, brand, and chemical_library_id
+        if (!chemObj && typeof idOrChem === 'string') {
+            const { data: libData } = await supabase.from('chemical_library').select('*').eq('id', idOrChem).maybeSingle();
+            if (libData) {
+                chemObj = libData as any;
+            } else {
+                const { data: invData } = await supabase.from('chemicals').select('*').eq('id', idOrChem).maybeSingle();
+                if (invData) chemObj = invData as any;
+            }
+        }
+
         const libId = libraryId || (chemObj ? (chemObj.chemical_library_id || (chemObj as any).chemicalLibraryId || chemObj.id) : chemId);
         const chemName = chemObj ? chemObj.name : undefined;
         const chemBrand = chemObj ? chemObj.brand : undefined;

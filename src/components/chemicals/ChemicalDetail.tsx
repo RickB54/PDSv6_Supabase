@@ -28,7 +28,8 @@ import {
     BookOpen,
     Images,
     Calculator,
-    Sparkles
+    Sparkles,
+    Trash2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
@@ -68,6 +69,8 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
     const [confirmDelete, setConfirmDelete] = useState<{ url: string; isPrimary: boolean } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [autoAiTrigger, setAutoAiTrigger] = useState(false); // New state
+    const [deleteCardDialogOpen, setDeleteCardDialogOpen] = useState(false);
+    const [isDeletingCard, setIsDeletingCard] = useState(false);
     const { toast } = useToast();
     const navigate = useNavigate();
 
@@ -813,6 +816,11 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                                 <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="text-zinc-400 hover:text-white" title="Save as PDF">
                                     <Download className="w-5 h-5" />
                                 </Button>
+                                {isAdmin && (
+                                    <Button variant="ghost" size="icon" onClick={() => setDeleteCardDialogOpen(true)} className="text-zinc-400 hover:text-red-500 hover:bg-red-950/40" title="Delete Chemical Card">
+                                        <Trash2 className="w-5 h-5 text-red-400" />
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1275,6 +1283,61 @@ export function ChemicalDetail({ chemical, open, onOpenChange, onUpdate, isAdmin
                             disabled={isSaving}
                         >
                             {isSaving ? "Deleting..." : "Delete Photo"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Chemical Card Confirmation Dialog */}
+            <AlertDialog open={deleteCardDialogOpen} onOpenChange={setDeleteCardDialogOpen}>
+                <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-red-500 flex items-center gap-2 text-xl font-bold">
+                            <Trash2 className="w-6 h-6 text-red-500" />
+                            Delete Chemical Card?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-300 pt-2 text-base">
+                            Are you sure you want to permanently delete <strong className="text-white">{chemical?.name}</strong>?
+                            <br /><br />
+                            This will remove this product card from your Chemical Knowledge Base and delete any associated inventory records. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4 flex gap-3">
+                        <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white mt-0 h-11 w-full">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isDeletingCard}
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!chemical) return;
+                                setIsDeletingCard(true);
+                                try {
+                                    const { deleteChemical } = await import('@/lib/chemicals');
+                                    const success = await deleteChemical(chemical);
+                                    if (success) {
+                                        toast({
+                                            title: "Chemical Card Deleted",
+                                            description: `${chemical.name} has been permanently deleted from your library and inventory.`,
+                                            className: "bg-red-900 border-red-800 text-white"
+                                        });
+                                        setDeleteCardDialogOpen(false);
+                                        onOpenChange(false);
+                                        if (onUpdate) onUpdate();
+                                    } else {
+                                        toast({ title: "Delete Failed", description: "Failed to delete chemical card.", variant: "destructive" });
+                                    }
+                                } catch (err: any) {
+                                    console.error("Delete Error:", err);
+                                    toast({ title: "Delete Error", description: err.message || "Failed to delete chemical.", variant: "destructive" });
+                                } finally {
+                                    setIsDeletingCard(false);
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold h-11 w-full"
+                        >
+                            {isDeletingCard ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Delete Forever
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

@@ -15,6 +15,16 @@ import { supabase, isDemoActive } from "@/lib/supa-data";
 import { ensureAllStorageBuckets } from "@/lib/storage-utils";
 import { ChemicalGalleryModal } from "./ChemicalGalleryModal";
 import { compressImageForUpload } from "@/lib/image-compression";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ChemicalEditFormProps {
     initialData: Partial<Chemical>;
@@ -32,6 +42,8 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [showUrlInput, setShowUrlInput] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Ensure buckets exist on mount
     useEffect(() => {
@@ -976,6 +988,17 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                 >
                     Cancel
                 </Button>
+
+                {editing?.id && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="bg-red-950/30 text-red-400 border-red-500/40 hover:bg-red-900/50 text-[10px] font-black uppercase tracking-widest px-4 h-9"
+                        onClick={() => setDeleteDialogOpen(true)}
+                    >
+                        <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Delete Card
+                    </Button>
+                )}
                 
                 <Button
                     variant="outline"
@@ -1073,6 +1096,59 @@ export function ChemicalEditForm({ initialData, onSave, onCancel, autoFillOnMoun
                     }}
                 />
             )}
+            {/* Delete Confirmation Modal */}
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-white max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-red-500 flex items-center gap-2 text-xl font-bold">
+                            <Trash2 className="w-6 h-6 text-red-500" />
+                            Delete Chemical Card?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-300 pt-2 text-base">
+                            Are you sure you want to permanently delete <strong className="text-white">{editing?.name}</strong>?
+                            <br /><br />
+                            This will remove this product card from your Chemical Knowledge Base and delete any associated inventory records. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4 flex gap-3">
+                        <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-white hover:bg-zinc-800 hover:text-white mt-0 h-11 w-full">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={isDeleting}
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                if (!editing) return;
+                                setIsDeleting(true);
+                                try {
+                                    const { deleteChemical } = await import('@/lib/chemicals');
+                                    const success = await deleteChemical(editing as Chemical);
+                                    if (success) {
+                                        toast({
+                                            title: "Chemical Card Deleted",
+                                            description: `${editing.name} has been permanently deleted.`,
+                                            className: "bg-red-900 border-red-800 text-white"
+                                        });
+                                        setDeleteDialogOpen(false);
+                                        onSave();
+                                    } else {
+                                        toast({ title: "Delete Failed", description: "Failed to delete chemical card.", variant: "destructive" });
+                                    }
+                                } catch (err: any) {
+                                    console.error("Delete Error:", err);
+                                    toast({ title: "Delete Error", description: err.message || "Failed to delete chemical.", variant: "destructive" });
+                                } finally {
+                                    setIsDeleting(false);
+                                }
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white font-bold h-11 w-full"
+                        >
+                            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Delete Forever
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
