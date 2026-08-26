@@ -23,6 +23,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getReceivables } from "@/lib/receivables";
 import { getExpenses } from "@/lib/db";
 import { getChemicals, getMaterials, getTools } from "@/lib/inventory-data";
+import { isChemicalLowStock } from "@/lib/chemicals";
 import { getSupabaseEstimates, getSupabaseTaxExpenses, getSupabaseInvoices, getSupabaseMileageLogs, getSupabaseTaxReports, saveSupabaseTaxReport, getSupabaseCustomers, getSupabaseBookings, getSupabaseEmployees, getInventoryAuditHistory, type AuditSnapshot } from "@/lib/supa-data";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTIMATES, MOCK_ACCOUNTING, MOCK_PROSPECTS } from "@/lib/demoMockData";
@@ -904,14 +905,14 @@ const Reports = () => {
     doc.save(`Tax_Report_${taxReport.year}.pdf`);
   };
 
-  const lowStockChemicals = (chemicals || []).filter(c => c.currentStock < c.threshold);
+  const lowStockChemicals = (chemicals || []).filter(c => isChemicalLowStock(c, chemicals));
   const lowStockMaterials = (materials || []).filter(m => (m.quantity || 0) < (m.threshold || m.lowThreshold || 0));
   const lowStockTools = (tools || []).filter(t => (t.quantity || 0) < (t.threshold || 0));
   const totalInventoryValue = (chemicals || []).reduce((sum, c) => sum + ((c.costPerBottle || 0) * (c.currentStock || 0)), 0);
   const totalMaterialsValue = (materials || []).reduce((sum, m) => sum + ((m.costPerItem || 0) * (m.quantity || 0)), 0);
   const totalToolsValue = (tools || []).reduce((sum, t) => sum + ((t.price || 0) * (t.quantity || 1)), 0);
   const chemicalsSorted = [...(chemicals || [])].sort((a, b) => {
-    const alow = a.currentStock < a.threshold; const blow = b.currentStock < b.threshold;
+    const alow = isChemicalLowStock(a, chemicals); const blow = isChemicalLowStock(b, chemicals);
     if (alow !== blow) return alow ? -1 : 1; return (a.name || '').localeCompare(b.name || '');
   });
   const materialsSorted = [...(materials || [])].sort((a, b) => {
@@ -1572,10 +1573,10 @@ const Reports = () => {
                       <TableRow key={c.id} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-medium text-zinc-200 whitespace-nowrap">{c.name}</TableCell>
                         <TableCell className="text-zinc-400 whitespace-nowrap">{c.bottleSize}</TableCell>
-                        <TableCell className={c.currentStock < c.threshold ? "text-amber-500 font-bold whitespace-nowrap" : "text-zinc-300 whitespace-nowrap"}>{c.currentStock}</TableCell>
+                        <TableCell className={isChemicalLowStock(c, chemicals) ? "text-amber-500 font-bold whitespace-nowrap" : "text-zinc-300 whitespace-nowrap"}>{c.currentStock}</TableCell>
                         <TableCell className="text-zinc-400 whitespace-nowrap">${(c.costPerBottle || 0).toFixed(2)}</TableCell>
                         <TableCell className="text-zinc-300 whitespace-nowrap">${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{c.currentStock < c.threshold ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
+                        <TableCell className="whitespace-nowrap">{isChemicalLowStock(c, chemicals) ? <span className="text-amber-500 text-xs font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 rounded">LOW</span> : <span className="text-emerald-500 text-xs">OK</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

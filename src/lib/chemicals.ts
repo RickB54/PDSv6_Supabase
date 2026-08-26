@@ -141,13 +141,20 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             });
 
             if (libMatch) {
+                const effectiveImg = libMatch.primary_image_url || inv.image_url || inv.imageUrl;
+                // Auto-sync image to chemical_library if library card is missing it
+                if (!libMatch.primary_image_url && effectiveImg) {
+                    libMatch.primary_image_url = effectiveImg;
+                    updateChemicalPartial(libMatch.id, { primary_image_url: effectiveImg }, true).catch(err => console.warn('Image auto-sync error:', err));
+                }
+
                 return {
                     ...libMatch,
                     id: inv.id, // Use inventory ID so it maps correctly to their specific stock
                     name: inv.name || libMatch.name, // Use inventory name to respect user's naming
                     brand: inv.brand || libMatch.brand,
                     chemical_library_id: libMatch.id, // Preserve library ID for backward compatibility in tips
-                    primary_image_url: inv.image_url || inv.imageUrl || libMatch.primary_image_url,
+                    primary_image_url: effectiveImg,
                     is_inventory_only: false,
                     updated_at: inv.updated_at || libMatch.updated_at || inv.created_at || libMatch.created_at
                 };
@@ -179,6 +186,15 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
             });
             
             if (!alreadyIncluded) {
+                // If library item is missing primary_image_url, check if any inventory item had an image
+                if (!lib.primary_image_url) {
+                    const invImgMatch = inventoryData.find(inv => (inv.image_url || inv.imageUrl) && isMatch(inv.name.toLowerCase().trim(), libName));
+                    if (invImgMatch) {
+                        lib.primary_image_url = invImgMatch.image_url || invImgMatch.imageUrl;
+                        updateChemicalPartial(lib.id, { primary_image_url: lib.primary_image_url }, true).catch(() => {});
+                    }
+                }
+
                 result.push({
                     ...lib,
                     is_inventory_only: false,
@@ -206,6 +222,9 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
                     if (newTime > existingTime) {
                         (existing as any).updated_at = (chem as any).updated_at;
                     }
+                    if (!existing.primary_image_url && chem.primary_image_url) {
+                        existing.primary_image_url = chem.primary_image_url;
+                    }
                 }
             }
         });
@@ -215,6 +234,58 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
         console.error('getCombinedSelectableProducts exception:', e);
         return await getChemicals();
     }
+}
+
+/**
+ * Checks if a chemical container size or container type represents a Gallon container.
+ * Low stock alerts apply strictly to Gallon containers.
+ */
+export function isGallonSize(sizeStr?: string, containerType?: string): boolean {
+    const s = (sizeStr || '').toLowerCase().trim();
+    const ct = (containerType || '').toLowerCase().trim();
+    return s.includes('gal') || s.includes('128') || s.includes('jug') || ct.includes('gal') || ct.includes('jug');
+}
+
+/**
+ * Aggregate Low Stock Threshold Logic:
+ * 1. ONLY Gallon sized containers trigger low stock alerts. Spray bottles/32oz do NOT trigger low stock alerts.
+ * 2. Sums remaining stock across ALL gallon containers in inventory for the same product (by chemicalLibraryId or name + brand).
+ * 3. Alert triggers ONLY when total aggregate gallon stock <= 0.25 (25% of 1 gallon remaining).
+ */
+export function isChemicalLowStock(chem: { bottleSize?: string; containerType?: string; currentStock?: number; current_stock?: number; chemicalLibraryId?: string | null; chemical_library_id?: string | null; name?: string; brand?: string }, allChemicals: any[]): boolean {
+    if (!chem || !isGallonSize(chem.bottleSize, chem.containerType)) {
+        return false; // Spray bottles, 32oz, 16oz, etc. do NOT trigger low stock pings
+    }
+
+    const chemName = (chem.name || '').trim().toLowerCase();
+    const chemBrand = (chem.brand || '').trim().toLowerCase();
+    const libId = chem.chemicalLibraryId || chem.chemical_library_id;
+
+    // Filter all gallon items for the same product in inventory
+    const matchingGallons = (allChemicals || []).filter(c => {
+        if (!c || !isGallonSize(c.bottleSize, c.containerType)) return false;
+        if (libId && (c.chemicalLibraryId || c.chemical_library_id)) {
+            return (c.chemicalLibraryId || c.chemical_library_id) === libId;
+        }
+        const cName = (c.name || '').trim().toLowerCase();
+        const cBrand = (c.brand || '').trim().toLowerCase();
+        return cName === chemName && cBrand === chemBrand;
+    });
+
+    const totalGallonStock = matchingGallons.reduce((sum, c) => sum + (Number(c.currentStock ?? c.current_stock) || 0), 0);
+
+    return totalGallonStock <= 0.25;
+}
+
+/**
+ * Helper to check low stock status for a grouped array of chemical items.
+ */
+export function isChemicalGroupLowStock(group: any[], allChemicals: any[]): boolean {
+    if (!group || group.length === 0) return false;
+    const gallonItems = group.filter(x => isGallonSize(x.bottleSize, x.containerType));
+    if (gallonItems.length === 0) return false; // No gallons = no low stock alert
+
+    return isChemicalLowStock(gallonItems[0], allChemicals);
 }
 
 export async function getChemicalById(id: string): Promise<Chemical | null> {

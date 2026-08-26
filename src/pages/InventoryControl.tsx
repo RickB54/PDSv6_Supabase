@@ -32,7 +32,7 @@ import { getSupabaseEmployees } from "@/lib/supa-data"; // NEW IMPORT
 import localforage from "localforage";
 import { ChemicalDetail } from "@/components/chemicals/ChemicalDetail";
 import { LinkChemicalModal } from "@/components/inventory/LinkChemicalModal";
-import { getChemicalById, getChemicals as getLibraryChemicals } from "@/lib/chemicals";
+import { getChemicalById, getChemicals as getLibraryChemicals, isChemicalLowStock, isChemicalGroupLowStock } from "@/lib/chemicals";
 import { InventoryImportModal } from "@/components/inventory/InventoryImportModal";
 import { InventoryCleanupModal } from "@/components/inventory/InventoryCleanupModal";
 import { generateTemplate } from "@/lib/chemical-ai";
@@ -573,7 +573,7 @@ const InventoryControl = () => {
 
   // Update menu badge count whenever low stock changes
   useEffect(() => {
-    const lowStockCount = (chemicals || []).filter(c => c && (c.currentStock || 0) < (c.threshold || 0)).length +
+    const lowStockCount = (chemicals || []).filter(c => c && isChemicalLowStock(c, chemicals)).length +
       (materials || []).filter(m => m && typeof m.lowThreshold === 'number' && (m.quantity || 0) < (m.lowThreshold || 0)).length;
     try {
       localStorage.setItem('inventory_low_count', String(lowStockCount));
@@ -786,7 +786,7 @@ const InventoryControl = () => {
     // MODES that use the Flat List view
     if (chemicalSort === "low_stock") {
       return [...baseFiltered]
-        .filter(c => c.currentStock < c.threshold)
+        .filter(c => isChemicalLowStock(c, chemicals))
         .sort((a, b) => a.name.localeCompare(b.name));
     }
     if (chemicalSort === "no_cost") {
@@ -1254,17 +1254,17 @@ const InventoryControl = () => {
             </div>
             <div class="summary-item">
               <div class="summary-label">Low Stock</div>
-              <div class="summary-value" style="color: #ef4444;">${(items as any[]).filter(c => c.currentStock < c.threshold).length}</div>
+              <div class="summary-value" style="color: #ef4444;">${(items as any[]).filter(c => isChemicalLowStock(c, chemicals)).length}</div>
             </div>
           </div>
           ${(items as any[]).map((c, idx) => `
-            <div class="item ${c.currentStock < c.threshold ? 'low-stock' : ''}">
+            <div class="item ${isChemicalLowStock(c, chemicals) ? 'low-stock' : ''}">
               <div class="item-header">${c.brand ? `${c.brand} / ` : ''}${c.name}</div>
               ${c.brand ? `<div class="field"><div class="field-label">Brand</div><div class="field-value">${c.brand}</div></div>` : ''}
               <div class="field"><div class="field-label">Product Name</div><div class="field-value">${c.name}</div></div>
               <div class="field"><div class="field-label">Bottle Size</div><div class="field-value">${c.bottleSize}</div></div>
               <div class="field"><div class="field-label">Cost Per Bottle</div><div class="field-value">$${(c.costPerBottle || 0).toFixed(2)}</div></div>
-              <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${c.currentStock < c.threshold ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
+              <div class="field"><div class="field-label">Current Stock</div><div class="field-value" style="${isChemicalLowStock(c, chemicals) ? 'color: #ef4444; font-weight: bold;' : ''}">${c.currentStock} bottles</div></div>
               <div class="field"><div class="field-label">Low Threshold</div><div class="field-value">${c.threshold} bottles</div></div>
               <div class="field"><div class="field-label">Purchased From</div><div class="field-value">${c.wherePurchased || '-'}</div></div>
               <div class="field"><div class="field-label">Total Value</div><div class="field-value">$${((c.costPerBottle || 0) * (c.currentStock || 0)).toFixed(2)}</div></div>
@@ -1758,7 +1758,7 @@ const InventoryControl = () => {
 
   const filteredHistory = usageHistory.filter(filterByDate);
 
-  const lowStockChemicals = chemicals.filter(c => c.currentStock < c.threshold);
+  const lowStockChemicals = chemicals.filter(c => isChemicalLowStock(c, chemicals));
   const lowStockMaterials = materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold as number));
   const lowStockTotal = lowStockChemicals.length + lowStockMaterials.length;
 
@@ -1790,7 +1790,7 @@ const InventoryControl = () => {
     return `${(effectiveName || '').trim().toLowerCase()}_${(effectiveBrand || '').trim().toLowerCase()}`;
   })).size;
   const totalItems = uniqueChemicalCount + materials.length + tools.length;
-  const lowStockCount = chemicals.filter(c => c.currentStock < c.threshold).length +
+  const lowStockCount = chemicals.filter(c => isChemicalLowStock(c, chemicals)).length +
     materials.filter(m => typeof m.lowThreshold === 'number' && m.quantity < (m.lowThreshold || 0)).length +
     tools.filter(t => (t as any).lowThreshold && (t.quantity || 0) < (t as any).lowThreshold).length;
   // Approximating value if cost exists
@@ -1822,8 +1822,7 @@ const InventoryControl = () => {
 
     // Combine stock info
     const totalStock = group.reduce((sum, x) => sum + (x.currentStock || 0), 0);
-    const anyStockLeft = group.some(x => x.currentStock > 0);
-    const isLowStock = !anyStockLeft; // "If there is at least one size of the same product... it should not be counted as Low Threshold"
+    const isLowStock = isChemicalGroupLowStock(group, chemicals);
 
     // Combine wherePurchased
     const vendors = Array.from(new Set(group.map(x => x.wherePurchased).filter(Boolean))).join(', ');
@@ -1960,7 +1959,7 @@ const InventoryControl = () => {
     const itemizedPricesStr = group.map(x => `${x.bottleSize || 'N/A'}: $${(x.costPerBottle || 0).toFixed(2)}`).join(' • ');
     const totalGroupValue = group.reduce((sum, x) => sum + ((x.costPerBottle || 0) * (x.currentStock || 0)), 0);
     const totalStock = group.reduce((sum, x) => sum + (x.currentStock || 0), 0);
-    const isLowStock = !group.some(x => x.currentStock > 0);
+    const isLowStock = isChemicalGroupLowStock(group, chemicals);
     const vendors = Array.from(new Set(group.map(x => x.wherePurchased).filter(Boolean))).join(', ');
 
     return (
@@ -2589,7 +2588,7 @@ const InventoryControl = () => {
             onClick={() => toggleSection('chemicals')}
           >
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <div className={`h-2 w-2 rounded-full ${chemicals.some(c => c.currentStock < c.threshold) ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
+              <div className={`h-2 w-2 rounded-full ${chemicals.some(c => isChemicalLowStock(c, chemicals)) ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
               <h3 className="text-lg font-semibold text-yellow-100">Chemicals</h3>
               <Popover>
                 <PopoverTrigger asChild>
@@ -2656,7 +2655,7 @@ const InventoryControl = () => {
               <div className="hidden sm:inline">
                 {renderHeaderStats('chemical', false)}
               </div>
-              {chemicals.some(c => c.currentStock < c.threshold) && (
+              {chemicals.some(c => isChemicalLowStock(c, chemicals)) && (
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-red-500 animate-pulse">
                   <AlertTriangle className="h-3 w-3" />
                   <span className="text-[10px] font-bold uppercase tracking-tight">Low Stock</span>

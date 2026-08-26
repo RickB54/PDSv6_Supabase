@@ -91,8 +91,8 @@ export function ChemicalCard({ chemical, onClick, isAdmin, onDelete, onUpdate }:
                 onClick={onClick}
             >
                 <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
-                    {chemical.primary_image_url ? (
-                        <img src={chemical.primary_image_url} alt={chemical.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                    {(chemical.primary_image_url || (chemical as any).imageUrl || (chemical as any).image_url) ? (
+                        <img src={chemical.primary_image_url || (chemical as any).imageUrl || (chemical as any).image_url} alt={chemical.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-zinc-700">
                             <Droplet className="w-12 h-12 mb-2 opacity-20" />

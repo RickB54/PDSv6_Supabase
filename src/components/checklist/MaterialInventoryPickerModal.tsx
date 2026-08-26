@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info } from 'lucide-react';
 import { Chemical, Material, Tool as Equipment } from '@/lib/inventory-data';
+import { isChemicalLowStock } from '@/lib/chemicals';
 import { useToast } from '@/hooks/use-toast';
 
 export interface LoggedChemicalUsage {
@@ -237,7 +238,12 @@ export default function MaterialInventoryPickerModal({
     // Apply Sorting
     return [...list].sort((a, b) => {
       if (chemSortBy === 'name_asc') return a.name.localeCompare(b.name);
-      if (chemSortBy === 'low_threshold') return (a.currentStock || 0) - (b.currentStock || 0);
+      if (chemSortBy === 'low_threshold') {
+        const aLow = isChemicalLowStock(a, chemicals);
+        const bLow = isChemicalLowStock(b, chemicals);
+        if (aLow !== bLow) return aLow ? -1 : 1;
+        return (a.currentStock || 0) - (b.currentStock || 0);
+      }
       if (chemSortBy === 'missing_cost') return (a.unitPrice ? 1 : -1) - (b.unitPrice ? 1 : -1);
       if (chemSortBy === 'last_updated') return (b.updatedAt || '').localeCompare(a.updatedAt || '');
       if (chemSortBy.startsWith('jump_brand:')) {
@@ -268,7 +274,12 @@ export default function MaterialInventoryPickerModal({
     // Apply Sorting
     return [...list].sort((a, b) => {
       if (chemSortBy === 'name_asc') return a.name.localeCompare(b.name);
-      if (chemSortBy === 'low_threshold') return (a.currentStock || 0) - (b.currentStock || 0);
+      if (chemSortBy === 'low_threshold') {
+        const aLow = isChemicalLowStock(a, chemicals);
+        const bLow = isChemicalLowStock(b, chemicals);
+        if (aLow !== bLow) return aLow ? -1 : 1;
+        return (a.currentStock || 0) - (b.currentStock || 0);
+      }
       if (chemSortBy === 'missing_cost') return (a.unitPrice ? 1 : -1) - (b.unitPrice ? 1 : -1);
       if (chemSortBy === 'last_updated') return (b.updatedAt || '').localeCompare(a.updatedAt || '');
       if (chemSortBy.startsWith('jump_brand:')) {
