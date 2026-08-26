@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench } from "lucide-react";
+import { Plus, Minus, Trash2, CheckCircle2, CheckCircle, ArrowRight, ChevronRight, Save, Receipt, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, ArrowUp, FileText, Check, AlertCircle, HelpCircle, Info, Clock, FlaskConical, Car, Calendar, Beaker, Scale, ClipboardList, Share2, MapPin, Printer, Download, X, Camera, Image as ImageIcon, Video, Gauge, Sparkles, ExternalLink, DollarSign, RotateCcw, Loader2, Settings2, Play, Pause, History as HistoryIcon, Package, User, Lightbulb, Wrench } from "lucide-react";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import { Badge } from "@/components/ui/badge";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -3272,6 +3272,39 @@ const ServiceChecklist = () => {
           </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
+              {(() => {
+                const availableSections = ['preparation', 'exterior', 'interior', 'addons', 'final'].filter(sec =>
+                  checklistSteps.some(s => s.category === sec)
+                );
+                const allSectionsCollapsed = availableSections.length > 0 && availableSections.every(sec => collapsedSections[sec]);
+                return (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 w-8 md:h-7 md:w-7 p-0 bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white hover:border-white/30 shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (allSectionsCollapsed) {
+                        setCollapsedSections({});
+                      } else {
+                        const next: Record<string, boolean> = {};
+                        ['preparation', 'exterior', 'interior', 'addons', 'final'].forEach(sec => {
+                          next[sec] = true;
+                        });
+                        setCollapsedSections(next);
+                        setExpandedHelp({});
+                      }
+                    }}
+                    title={allSectionsCollapsed ? "Expand All Sections" : "Collapse All Sections"}
+                  >
+                    {allSectionsCollapsed ? (
+                      <ChevronsDown className="h-4 w-4 text-zinc-300" />
+                    ) : (
+                      <ChevronsUp className="h-4 w-4 text-zinc-300" />
+                    )}
+                  </Button>
+                );
+              })()}
               {getCurrentUser()?.role === 'admin' && (
                 <Button 
                   variant="outline" 
