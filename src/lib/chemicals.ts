@@ -520,6 +520,50 @@ export async function deleteChemical(idOrChem: string | Chemical, libraryId?: st
     }
 }
 
+export async function syncOrphanedChemicalLibraryCards(): Promise<number> {
+    if (isDemoActive()) return 0;
+    try {
+        const { data: invData } = await supabase.from('chemicals').select('id, name, brand, chemical_library_id');
+        const { data: libData } = await supabase.from('chemical_library').select('id, name, brand');
+        
+        if (!invData || !libData) return 0;
+
+        const clean = (s: string) => (s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const isMatch = (invName: string, libName: string) => {
+            const iName = clean(invName);
+            const lName = clean(libName);
+            if (iName === lName) return true;
+            if (iName.length > 3 && lName.includes(iName)) return true;
+            if (lName.length > 3 && iName.includes(lName)) return true;
+            return false;
+        };
+
+        const orphanedLibIds = libData
+            .filter(lib => {
+                const libName = lib.name || '';
+                const libBrand = lib.brand || '';
+                const hasMatch = invData.some(inv => {
+                    if (inv.chemical_library_id === lib.id) return true;
+                    if (clean(inv.name) === clean(libName) && clean((inv.brand || '')) === clean(libBrand)) return true;
+                    return isMatch(inv.name, libName);
+                });
+                return !hasMatch;
+            })
+            .map(l => l.id);
+
+        if (orphanedLibIds.length > 0) {
+            await supabase.from('chemical_library').delete().in('id', orphanedLibIds);
+            console.log(`Cleaned up ${orphanedLibIds.length} orphaned chemical library cards.`);
+            return orphanedLibIds.length;
+        }
+        return 0;
+    } catch (e) {
+        console.warn("Failed syncing orphaned library cards", e);
+        return 0;
+    }
+}
+
 // Helper to store Inventory Defaults in user_notes if columns are missing
 export interface InventoryConfig {
     cost?: number;

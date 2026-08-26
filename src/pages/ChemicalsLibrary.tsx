@@ -6,7 +6,7 @@ import { MixedLabelMaker } from "@/components/chemicals/MixedLabelMaker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCombinedSelectableProducts, deleteChemical } from "@/lib/chemicals";
+import { getCombinedSelectableProducts, deleteChemical, syncOrphanedChemicalLibraryCards } from "@/lib/chemicals";
 import { Chemical, ChemicalCategory } from "@/types/chemicals";
 import { Plus, Search, Tag, HelpCircle, Beaker, Calculator, Printer, Sparkles, TrendingUp, Zap, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -78,6 +78,7 @@ export default function ChemicalsLibrary() {
             setLoading(false);
             return MOCK_CHEMICAL_LIBRARY;
         }
+        await syncOrphanedChemicalLibraryCards();
         const data = await getCombinedSelectableProducts();
         setChemicals(data);
         setLoading(false);
@@ -229,7 +230,12 @@ export default function ChemicalsLibrary() {
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                     <div className="flex items-center gap-4">
                         <div>
-                            <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 uppercase tracking-tight">Chemical Knowledge Base</h1>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h1 className="text-2xl sm:text-3xl font-black text-white mb-1 uppercase tracking-tight">Chemical Knowledge Base</h1>
+                                <Badge className="bg-purple-950/80 text-purple-300 border-purple-500/50 text-xs sm:text-sm font-bold px-3 py-1 mb-1 shrink-0">
+                                    Total Cards: {chemicals.length}
+                                </Badge>
+                            </div>
                             <p className="text-zinc-500 text-sm font-medium">Master every product in our arsenal.</p>
                         </div>
                         <Button
