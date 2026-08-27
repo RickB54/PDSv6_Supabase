@@ -422,6 +422,89 @@ export default function BusinessDrive() {
         if (!silent) toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
     };
 
+    // 1. Restore Legacy Test Files if completely missing
+    useEffect(() => {
+        if (!isLoaded) return;
+        const RESTORED_KEY = 'v6_test_files_restored_final';
+        if (!localStorage.getItem(RESTORED_KEY)) {
+            localStorage.setItem(RESTORED_KEY, 'true');
+            const mockFiles = [
+                { name: 'Checklist_Progress.pdf', folder: 'Checklists', cat: 'Checklist' },
+                { name: 'Job_Completion_1.pdf', folder: 'Jobs', cat: 'Job' },
+                { name: 'Job_Completion_2.pdf', folder: 'Jobs', cat: 'Job' },
+                { name: 'Bookings.pdf', folder: 'Bookings', cat: 'Bookings' }
+            ];
+            const toAdd = mockFiles.filter(m => !files.some(f => f.name === m.name));
+            if (toAdd.length > 0) {
+                let newFiles: DriveFile[] = [];
+                toAdd.forEach((m, idx) => {
+                    newFiles.push({
+                        id: 'restored-' + idx + '-' + Date.now(),
+                        name: m.name,
+                        type: 'application/pdf',
+                        size: '150 KB',
+                        modified: new Date(Date.now() - 24 * 3600 * 1000 * (idx % 2)).toISOString(),
+                        path: ['System Archives', m.folder],
+                        data: 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmoKPDwKICAvVHlwZSAvUGFnZXMKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqCjw8CiAgL1R5cGUgL1BhZ2UKICAvUGFyZW50IDIgMCBSCiAgL1Jlc291cmNlcyA8PAogICAgL0ZvbnQgPDwKICAgICAgL0YxIDQgMCBSCj4+CiAgPj4KICAvQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8CiAgL1R5cGUgL0ZvbnQKICAvU3VidHlwZSAvVHlwZTEKICAvQmFzZUZvbnQgL1RpbWVzLVJvbWFuCj4+CmVuZG9iagoKNSAwIG9iago8PAogIC9MZW5ndGggMzAKPj4Kc3RhcnR4cmVmCkJUCi9GMSAxOCBUZgoyMCAxMDAgVGQKKFJlc3RvcmVkIEZpbGUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxMCAwMDAwMCBuIAowMDAwMDAwMDc5IDAwMDAwIG4gCjAwMDAwMDAxNzMgMDAwMDAgbiAKMDAwMDAwMDI5MiAwMDAwMCBuIAowMDAwMDAwMzg3IDAwMDAwIG4gCnRyYWlsZXIKPDwKICAvU2l6ZSA2CiAgL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjQ2NgolJUVPRgo=',
+                        metadata: { recordType: m.cat }
+                    });
+                });
+                
+                // Also ensure the subfolders exist
+                setFolders(prev => {
+                    const newFolders = [...prev];
+                    mockFiles.forEach(m => {
+                        if (!newFolders.some(f => f.name === m.folder && f.path.length === 1 && f.path[0] === 'System Archives')) {
+                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: m.folder, path: ['System Archives'] });
+                        }
+                    });
+                    import('localforage').then(lf => {
+                        lf.default.setItem('business_drive_folders_v3', newFolders);
+                    });
+                    return newFolders;
+                });
+
+                setFiles(prev => [...prev, ...newFiles]);
+                import('localforage').then(lf => {
+                    lf.default.getItem<DriveFile[]>('business_drive_files_v3').then(existing => {
+                        lf.default.setItem('business_drive_files_v3', [...(existing || []), ...newFiles]);
+                    });
+                });
+            }
+        }
+    }, [isLoaded, files]);
+
+    // 2. Auto-open System Archives in List View if it has files
+    useEffect(() => {
+        if (!isLoaded) return;
+        const autoExpanded = sessionStorage.getItem('v6_auto_expanded_system_archives');
+        if (!autoExpanded) {
+            sessionStorage.setItem('v6_auto_expanded_system_archives', 'true');
+            // Check if System Archives contains files
+            const systemArchivesFiles = files.filter(f => f.path.length > 0 && f.path[0] === 'System Archives');
+            if (systemArchivesFiles.length > 0) {
+                // Force list view
+                setViewMode('list');
+                localStorage.setItem('business_drive_view', 'list');
+                
+                // Expand System Archives and relevant subfolders
+                setExpandedFolders(prev => {
+                    const next = { ...prev, 'system-archives-main': true };
+                    const subFoldersWithFiles = new Set(systemArchivesFiles.map(f => f.path[1]));
+                    
+                    folders.forEach(folder => {
+                        if (folder.path.length === 1 && folder.path[0] === 'System Archives' && subFoldersWithFiles.has(folder.name)) {
+                            next[folder.id] = true;
+                        }
+                    });
+                    
+                    localStorage.setItem('business_drive_expanded_folders', JSON.stringify(next));
+                    return next;
+                });
+            }
+        }
+    }, [isLoaded, files, folders]);
+
     const currentItems = useMemo(() => {
         let filteredFiles = files;
         let filteredFolders = folders;
@@ -897,9 +980,6 @@ export default function BusinessDrive() {
                             <Button variant="destructive" size="sm" onClick={() => setDeleteAllOpen(true)}>
                                 <Trash2 className="w-4 h-4 mr-2" /> Delete All
                             </Button>
-                            <Button className="bg-purple-600 hover:bg-purple-700" size="sm" onClick={() => setAdminModalOpen(true)}>
-                                Admin Update PDF
-                            </Button>
                         </div>
                     )}
                 </div>
@@ -926,6 +1006,15 @@ export default function BusinessDrive() {
                             <SelectItem value="year">Past Year</SelectItem>
                         </SelectContent>
                     </Select>
+                    {folders.some(f => f.name === 'System Archives') && (
+                        <Button 
+                            className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-10 px-3 md:px-4 mr-1 md:mr-2 border border-purple-500/20 shrink-0" 
+                            onClick={() => setAdminModalOpen(true)}
+                        >
+                            <FileText className="w-4 h-4 md:mr-2" />
+                            <span className="hidden md:inline">Admin Update PDF</span>
+                        </Button>
+                    )}
                     <Button 
                         variant="ghost" 
                         size="icon" 
