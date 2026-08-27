@@ -1083,7 +1083,7 @@ export default function BusinessDrive() {
                             />
                         </div>
                         <Select value={dateFilter} onValueChange={setDateFilter}>
-                            <SelectTrigger className="w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
+                            <SelectTrigger className="w-[120px] md:w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider shrink-0">
                                 <SelectValue placeholder="Time" />
                             </SelectTrigger>
                             <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
@@ -1095,55 +1095,56 @@ export default function BusinessDrive() {
                             </SelectContent>
                         </Select>
                         
-                        {/* System Folders Dropdown */}
-                        <Select 
-                            value={currentPath.length > 0 && currentPath[0] === 'System Archives' ? (currentPath.length > 1 ? `sys-${currentPath[1]}` : 'system') : 'none'}
-                            onValueChange={(val) => {
-                                if (val === 'none') return;
-                                if (val === 'system') {
-                                    setCurrentPath(['System Archives']);
-                                } else if (val.startsWith('sys-')) {
-                                    const catName = val.replace('sys-', '');
-                                    setCurrentPath(['System Archives', catName]);
-                                }
-                            }}>
-                            <SelectTrigger className="w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
-                                <SelectValue placeholder="System Folders" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                                <SelectItem value="none" className="hidden">System Folders</SelectItem>
-                                <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
-                                <SelectSeparator className="bg-zinc-800" />
-                                {ALL_CATEGORIES.map(cat => (
-                                    <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                            {/* Root Folders Dropdown (My Folders) */}
+                            <Select 
+                                value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
+                                onValueChange={(val) => {
+                                    if (val === 'none') return;
+                                    if (val === 'root') {
+                                        setCurrentPath([]);
+                                    } else {
+                                        setCurrentPath([val]);
+                                    }
+                                }}>
+                                <SelectTrigger className="flex-1 md:w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[10px] md:text-xs uppercase tracking-wider truncate">
+                                    <SelectValue placeholder="My Folders" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
+                                    <SelectItem value="none" className="hidden">My Folders</SelectItem>
+                                    <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
+                                    <SelectSeparator className="bg-zinc-800" />
+                                    {ROOT_FOLDERS.map(root => (
+                                        <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
-                        {/* Root Folders Dropdown */}
-                        <Select 
-                            value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
-                            onValueChange={(val) => {
-                                if (val === 'none') return;
-                                if (val === 'root') {
-                                    setCurrentPath([]);
-                                } else {
-                                    setCurrentPath([val]);
-                                }
-                            }}>
-                            <SelectTrigger className="w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
-                                <SelectValue placeholder="My Folders" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                                <SelectItem value="none" className="hidden">My Folders</SelectItem>
-                                <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
-                                <SelectSeparator className="bg-zinc-800" />
-                                {ROOT_FOLDERS.map(root => (
-                                    <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
+                            {/* System Folders Dropdown */}
+                            <Select 
+                                value={currentPath.length > 0 && currentPath[0] === 'System Archives' ? (currentPath.length > 1 ? `sys-${currentPath[1]}` : 'system') : 'none'}
+                                onValueChange={(val) => {
+                                    if (val === 'none') return;
+                                    if (val === 'system') {
+                                        setCurrentPath(['System Archives']);
+                                    } else if (val.startsWith('sys-')) {
+                                        const catName = val.replace('sys-', '');
+                                        setCurrentPath(['System Archives', catName]);
+                                    }
+                                }}>
+                                <SelectTrigger className="flex-1 md:w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[10px] md:text-xs uppercase tracking-wider truncate">
+                                    <SelectValue placeholder="System Folders" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
+                                    <SelectItem value="none" className="hidden">System Folders</SelectItem>
+                                    <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
+                                    <SelectSeparator className="bg-zinc-800" />
+                                    {ALL_CATEGORIES.map(cat => (
+                                        <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     {/* Row 2 */}
