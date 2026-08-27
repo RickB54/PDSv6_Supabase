@@ -197,11 +197,22 @@ export function savePDFToArchive(
        const folderName = folderMap[recordType] || recordType;
 
        let folders: any[] = await localforage.getItem('business_drive_folders_v3') || [];
-       if (!folders.some(f => f.name === folderName && f.path.length === 0)) {
+       
+       // Ensure main folder exists
+       if (!folders.some(f => f.name === 'System Archives' && f.path.length === 0)) {
+           folders.push({
+               id: 'system-archives-main',
+               name: 'System Archives',
+               path: []
+           });
+       }
+
+       // Ensure subfolder exists
+       if (!folders.some(f => f.name === folderName && f.path.length === 1 && f.path[0] === 'System Archives')) {
            folders.push({
                id: Math.random().toString(36).substring(2, 9),
                name: folderName,
-               path: []
+               path: ['System Archives']
            });
            await localforage.setItem('business_drive_folders_v3', folders);
        }
@@ -215,7 +226,7 @@ export function savePDFToArchive(
            type: "application/pdf",
            size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
            modified: new Date().toISOString(),
-           path: [folderName],
+           path: ['System Archives', folderName],
            data: record.pdfData
        });
        

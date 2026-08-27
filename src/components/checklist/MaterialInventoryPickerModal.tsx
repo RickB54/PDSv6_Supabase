@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info, HelpCircle } from 'lucide-react';
+import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info, HelpCircle, FileText } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Chemical, Material, Tool as Equipment, getUsageHistory, deleteUsageHistory, saveUsageHistory, UsageHistory } from '@/lib/inventory-data';
 import jsPDF from "jspdf";

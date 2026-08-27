@@ -42,6 +42,10 @@ import { cn } from "@/lib/utils";
 import { uploadFile } from "@/lib/storage-utils";
 import supabase from "@/lib/supabase";
 import { useDemoMode } from "@/contexts/DemoContext";
+import jsPDF from "jspdf";
+import { useAlertsStore } from "@/store/alerts";
+import { savePDFToArchive } from "@/lib/pdfArchive";
+import { dismissAlertsForRecord } from "@/lib/adminAlerts";
 
 interface DriveFile {
     id: string;
@@ -67,7 +71,8 @@ const DEFAULT_FOLDERS: DriveFolder[] = [
     { id: '5', name: "Operating Procedures", path: [] },
     { id: '6', name: "Addons", path: [] },
     { id: '7', name: "Chemicals", path: [] },
-    { id: '8', name: "My Logos", path: [] }
+    { id: '8', name: "My Logos", path: [] },
+    { id: 'system-archives-main', name: "System Archives", path: [] }
 ];
 
 const getFileCategory = (file: DriveFile): string => {
@@ -150,6 +155,24 @@ export default function BusinessDrive() {
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     
+    // System Archive Modals State
+    const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+    const [adminModalOpen, setAdminModalOpen] = useState(false);
+    const [adminNotes, setAdminNotes] = useState("");
+    const [adminPnl, setAdminPnl] = useState("");
+    const [adminRevenue, setAdminRevenue] = useState("");
+    const [adminPendingCount, setAdminPendingCount] = useState("");
+    const [employeeRows, setEmployeeRows] = useState<{name: string, training: string, jobsToday: string, hours: string}[]>([]);
+    
+    const latestAlerts = useAlertsStore(s => s.latest);
+    const refreshAlerts = useAlertsStore(s => s.refresh);
+
+    useEffect(() => {
+        if (adminModalOpen) {
+            try { refreshAlerts(); } catch {}
+        }
+    }, [adminModalOpen, refreshAlerts]);
+
     const [isSyncing, setIsSyncing] = useState(false);
 
     const handleSync = async (showToast = false) => {
@@ -212,8 +235,16 @@ export default function BusinessDrive() {
                 const localFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
                 const localFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3');
                 if (localFiles) setFiles(localFiles);
-                if (localFolders) setFolders(localFolders);
-                else setFolders(DEFAULT_FOLDERS);
+                if (localFolders) {
+                    let updated = [...localFolders];
+                    if (!updated.some(f => f.name === 'System Archives' && f.path.length === 0)) {
+                        updated.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
+                        await localforage.setItem('business_drive_folders_v3', updated);
+                    }
+                    setFolders(updated);
+                } else {
+                    setFolders(DEFAULT_FOLDERS);
+                }
 
                 // 2. Initial Cloud Sync
                 handleSync(false);
@@ -241,6 +272,61 @@ export default function BusinessDrive() {
                         } catch (e) { console.error("Legacy folder migration failed", e); }
                     }
                 }
+                
+                // 4. Migration: legacy PDF Archive to Business Drive System Archives
+                try {
+                    const legacyPdfs = localStorage.getItem('pdfArchive');
+                    if (legacyPdfs) {
+                        const parsedPdfs: any[] = JSON.parse(legacyPdfs);
+                        if (parsedPdfs.length > 0) {
+                            let updatedFolders = [...(localFolders || folders)];
+                            let updatedFiles = [...(localFiles || files)];
+
+                            if (!updatedFolders.some(f => f.name === 'System Archives' && f.path.length === 0)) {
+                                updatedFolders.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
+                            }
+
+                            const folderMap: Record<string, string> = {
+                                "Invoice": "Invoices", "Estimate": "Estimates", "Job": "Jobs", "Checklist": "Checklists",
+                                "Customer": "Customer Records", "Employee Training": "Employee Training", "Bookings": "Bookings",
+                                "Admin Updates": "Admin Updates", "Payroll": "Payroll", "Employee Contact": "Employee Contact",
+                                "add-Ons": "Addons", "Sub Contractors": "Admin Updates", "Sub-Contractors": "Admin Updates",
+                                "Package Comparisons": "Estimates", "Upsell Scripts": "Employee Training", "Client Evaluation": "Customer Records",
+                                "Detailing Vendors": "Inventory Report", "Vehicle Classification": "Vehicle History",
+                                "Vehicle History": "Vehicle History", "Inventory Report": "Inventory Report", "Prospects": "Prospects"
+                            };
+
+                            for (const pdf of parsedPdfs) {
+                                const folderName = folderMap[pdf.recordType] || pdf.recordType || 'Uncategorized';
+                                if (!updatedFolders.some(f => f.name === folderName && f.path.length === 1 && f.path[0] === 'System Archives')) {
+                                    updatedFolders.push({ id: Math.random().toString(36).substring(2, 9), name: folderName, path: ['System Archives'] });
+                                }
+                                
+                                const sizeKb = pdf.pdfData ? Math.round(pdf.pdfData.length * 0.75 / 1024) : 100;
+                                if (!updatedFiles.some(f => f.name === pdf.fileName)) {
+                                    updatedFiles.push({
+                                        id: pdf.id || Math.random().toString(36).substring(2, 9),
+                                        name: pdf.fileName,
+                                        type: "application/pdf",
+                                        size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
+                                        modified: new Date(pdf.timestamp || Date.now()).toISOString(),
+                                        path: ['System Archives', folderName],
+                                        data: pdf.pdfData
+                                    });
+                                }
+                            }
+                            
+                            setFolders(updatedFolders);
+                            setFiles(updatedFiles);
+                            await localforage.setItem('business_drive_folders_v3', updatedFolders);
+                            await localforage.setItem('business_drive_files_v3', updatedFiles);
+                            localStorage.removeItem('pdfArchive');
+                        }
+                    }
+                } catch (e) {
+                    console.error("PDF Archive migration failed", e);
+                }
+
                 setIsLoaded(true);
             } catch (err) {
                 console.error("Failed to load Business Drive data:", err);
@@ -569,6 +655,17 @@ export default function BusinessDrive() {
                             </button>
                         </React.Fragment>
                     ))}
+                    
+                    {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
+                        <div className="flex gap-2 ml-4">
+                            <Button variant="destructive" size="sm" onClick={() => setDeleteAllOpen(true)}>
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete All
+                            </Button>
+                            <Button className="bg-purple-600 hover:bg-purple-700" size="sm" onClick={() => setAdminModalOpen(true)}>
+                                Admin Update PDF
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto">
@@ -849,12 +946,15 @@ export default function BusinessDrive() {
                                 return valB - valA;
                             });
 
+                            const isSystemArchive = folder.name === 'System Archives';
+
                             return viewMode === 'grid' ? (
                                 <HoverCard key={folder.id} openDelay={400}>
                                   <HoverCardTrigger asChild>
                                     <Card 
                                         className={cn(
                                             "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
+                                            isSystemArchive ? "border-purple-500/50 bg-purple-950/10 hover:border-purple-400 hover:bg-purple-950/20" :
                                             containsFiles 
                                                 ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
                                                 : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
@@ -864,6 +964,7 @@ export default function BusinessDrive() {
                                         <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
                                             <div className={cn(
                                                 "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
+                                                isSystemArchive ? "bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30 group-hover:text-purple-300" :
                                                 containsFiles
                                                     ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
                                                     : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
@@ -872,6 +973,7 @@ export default function BusinessDrive() {
                                             </div>
                                             <span className={cn(
                                                 "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
+                                                isSystemArchive ? "text-purple-300 group-hover:text-purple-200" :
                                                 containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
                                             )}>{folder.name}</span>
                                         </div>
@@ -930,6 +1032,7 @@ export default function BusinessDrive() {
                                     <div 
                                         className={cn(
                                             "flex items-center justify-between p-4 bg-[#0d1117] rounded-xl transition-all group shadow-sm cursor-pointer border",
+                                            isSystemArchive ? "border-purple-500/50 bg-purple-950/10 hover:bg-purple-950/20" :
                                             containsFiles
                                                 ? "border-emerald-500/50 bg-emerald-950/5 hover:bg-emerald-950/15"
                                                 : "border-zinc-800 hover:bg-[#161b22]"
@@ -939,6 +1042,7 @@ export default function BusinessDrive() {
                                         <div className="flex items-center gap-4 flex-1 min-w-0">
                                             <div className={cn(
                                                 "p-2 rounded-lg transition-all",
+                                                isSystemArchive ? "bg-purple-500/20 text-purple-400 group-hover:text-purple-300" :
                                                 containsFiles
                                                     ? "bg-emerald-500/20 text-emerald-400 group-hover:text-emerald-300"
                                                     : "bg-zinc-800/50 text-zinc-400 group-hover:text-blue-400"
@@ -947,6 +1051,7 @@ export default function BusinessDrive() {
                                             </div>
                                             <span className={cn(
                                                 "text-sm font-bold truncate transition-colors",
+                                                isSystemArchive ? "text-purple-300 group-hover:text-purple-200" :
                                                 containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
                                             )}>{folder.name}</span>
                                         </div>
@@ -1301,6 +1406,184 @@ export default function BusinessDrive() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Delete ALL Confirmation Dialog */}
+            <AlertDialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete All Files?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. All archived files will be permanently deleted from the System Archives.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="button-group-responsive">
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                const systemArchiveFiles = files.filter(f => f.path.includes('System Archives'));
+                                const allIds = systemArchiveFiles.map(r => r.id);
+                                
+                                try {
+                                    const deletedPdfIds: string[] = JSON.parse(localStorage.getItem('deleted_pdf_ids') || '[]');
+                                    allIds.forEach(id => {
+                                        if (!deletedPdfIds.includes(id)) deletedPdfIds.push(id);
+                                    });
+                                    localStorage.setItem('deleted_pdf_ids', JSON.stringify(deletedPdfIds));
+                                } catch { }
+
+                                systemArchiveFiles.forEach(r => {
+                                    // Parse out potential recordType and recordId
+                                    // Assuming old IDs were like: "Invoice_123_170000"
+                                    const parts = r.id.split('_');
+                                    if (parts.length >= 2) {
+                                        dismissAlertsForRecord(parts[0], r.id);
+                                        dismissAlertsForRecord(parts[0], parts[1]);
+                                    }
+                                });
+
+                                const remainingFiles = files.filter(f => !f.path.includes('System Archives'));
+                                setFiles(remainingFiles);
+
+                                try {
+                                    const { default: localforage } = await import('localforage');
+                                    await localforage.setItem('business_drive_files_v3', remainingFiles);
+                                } catch (e) {
+                                    console.warn("Storage update failed", e);
+                                }
+
+                                try {
+                                    if (localStorage.getItem("demo_mode_active") !== "true" && allIds.length > 0) {
+                                        const { default: supabase } = await import('@/lib/supabase');
+                                        await supabase.from('pdf_records').delete().in('id', allIds);
+                                    }
+                                } catch (e) {
+                                    console.warn("Supabase wipe failed:", e);
+                                }
+
+                                try { refreshAlerts(); } catch { }
+
+                                setDeleteAllOpen(false);
+                                toast({ title: "All Files Deleted", description: "The System Archives have been cleared." });
+                            }}
+                            className="bg-destructive hover:bg-red-700"
+                        >
+                            Yes, Delete Everything
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Admin Updates Creator Dialog */}
+            <Dialog open={adminModalOpen} onOpenChange={setAdminModalOpen}>
+                <DialogContent className="sm:max-w-[720px] bg-[#0d1117] border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Create Admin Update PDF</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm text-zinc-400">Date/Time</label>
+                                <Input value={new Date().toLocaleString()} readOnly className="bg-[#161b22] border-zinc-800" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-zinc-400">Pending Bookings Count</label>
+                                <Input value={adminPendingCount} onChange={(e) => setAdminPendingCount(e.target.value)} placeholder="e.g., 5" className="bg-[#161b22] border-zinc-800" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm text-zinc-400">Large Notes</label>
+                            <textarea className="w-full h-48 p-3 rounded-md border border-zinc-800 bg-[#161b22] focus:ring-blue-500/20" value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Write updates, notes, issues…" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-sm text-zinc-400">P&L Summary</label>
+                                <Input value={adminPnl} onChange={(e) => setAdminPnl(e.target.value)} placeholder="Brief P&L summary" className="bg-[#161b22] border-zinc-800" />
+                            </div>
+                            <div>
+                                <label className="text-sm text-zinc-400">Today's Revenue</label>
+                                <Input value={adminRevenue} onChange={(e) => setAdminRevenue(e.target.value)} placeholder="e.g., $1,250" className="bg-[#161b22] border-zinc-800" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm text-zinc-400">Alerts Summary</label>
+                            <div className="p-3 rounded-md border border-zinc-800 bg-[#161b22] text-sm max-h-40 overflow-y-auto">
+                                {(latestAlerts || []).length === 0 ? (
+                                    <div className="text-zinc-500">No current alerts.</div>
+                                ) : (
+                                    <ul className="list-disc ml-5 space-y-1 text-zinc-300">
+                                        {latestAlerts
+                                            .map((a) => a.title?.trim())
+                                            .filter(Boolean)
+                                            .map((t, idx) => (<li key={`al-${idx}`}>{t}</li>))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-sm text-zinc-400 mb-2 block">Employee Progress</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                {employeeRows.map((row, idx) => (
+                                    <div key={idx} className="grid grid-cols-4 gap-2 text-sm items-center">
+                                        <Input value={row.name} onChange={(e) => setEmployeeRows(r => { const c = [...r]; c[idx] = { ...c[idx], name: e.target.value }; return c; })} className="bg-[#161b22] border-zinc-800" placeholder="Name" />
+                                        <Input value={row.training} onChange={(e) => setEmployeeRows(r => { const c = [...r]; c[idx] = { ...c[idx], training: e.target.value }; return c; })} className="bg-[#161b22] border-zinc-800" placeholder="Training %" />
+                                        <Input value={row.jobsToday} onChange={(e) => setEmployeeRows(r => { const c = [...r]; c[idx] = { ...c[idx], jobsToday: e.target.value }; return c; })} className="bg-[#161b22] border-zinc-800" placeholder="Jobs Today" />
+                                        <Input value={row.hours} onChange={(e) => setEmployeeRows(r => { const c = [...r]; c[idx] = { ...c[idx], hours: e.target.value }; return c; })} className="bg-[#161b22] border-zinc-800" placeholder="Hours" />
+                                    </div>
+                                ))}
+                                <Button variant="outline" size="sm" onClick={() => setEmployeeRows([...employeeRows, {name: '', training: '', jobsToday: '', hours: ''}])} className="border-zinc-800 w-full mt-2 text-white">
+                                    <Plus className="w-4 h-4 mr-2" /> Add Employee Row
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button variant="outline" onClick={() => setAdminModalOpen(false)} className="border-zinc-800 text-zinc-400 hover:text-white">Cancel</Button>
+                            <Button className="bg-red-700 hover:bg-red-800 text-white" onClick={() => {
+                                try {
+                                    try { refreshAlerts(); } catch { }
+                                    const doc = new jsPDF();
+                                    doc.setTextColor(200, 0, 0);
+                                    doc.setFontSize(18);
+                                    doc.text("Admin Updates", 20, 20);
+                                    doc.setTextColor(0, 0, 0);
+                                    doc.setFontSize(11);
+                                    doc.text(`Date/Time: ${new Date().toLocaleString()}`, 20, 30);
+                                    doc.setFontSize(12);
+                                    doc.text("Notes:", 20, 40);
+                                    const notes = doc.splitTextToSize(adminNotes || "(none)", 170);
+                                    doc.text(notes, 20, 48);
+                                    let y = 48 + notes.length * 6 + 6;
+                                    doc.text("Alerts:", 20, y);
+                                    const alerts = (latestAlerts || []).map(a => (a.title || '').trim()).filter(Boolean).map(t => `• ${t}`);
+                                    const alertsText = doc.splitTextToSize(alerts.length ? alerts.join("\n") : "(none)", 170);
+                                    y += 8;
+                                    doc.text(alertsText, 20, y);
+                                    y += alertsText.length * 6 + 6;
+                                    doc.text("Employee Progress:", 20, y);
+                                    y += 8;
+                                    employeeRows.forEach((row) => {
+                                        doc.text(`${row.name} — Training ${row.training}% — Jobs Today ${row.jobsToday} — Hours ${row.hours}`, 20, y);
+                                        y += 6;
+                                    });
+                                    y += 4;
+                                    doc.text(`P&L: ${adminPnl || '(n/a)'} | Revenue: ${adminRevenue || '(n/a)'} | Pending Bookings: ${adminPendingCount || '(n/a)'}`, 20, y);
+                                    const pdfDataUrl = doc.output('dataurlstring');
+                                    const fileName = `Admin_Update_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`;
+                                    
+                                    // Save via pdfArchive which will push to System Archives
+                                    savePDFToArchive('Admin Updates', 'Admin', 'admin_updates', pdfDataUrl, { fileName, path: 'Admin Updates/' });
+                                    toast({ title: 'Saved', description: 'Admin Update PDF created.' });
+                                    setAdminModalOpen(false);
+                                    
+                                    // Refresh drive data
+                                    handleSync(false);
+                                } catch (err: any) {
+                                    toast({ title: 'Error', description: err?.message || String(err), variant: 'destructive' });
+                                }
+                            }}>Save Admin Update</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
