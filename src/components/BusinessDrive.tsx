@@ -6,7 +6,7 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown
+    RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown, Video, Image as ImageIcon, Headphones
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -1155,6 +1155,7 @@ export default function BusinessDrive() {
                                 className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
                                 onClick={() => handleSync(true)}
                                 title="Cloud Sync"
+                                disabled={isSyncing}
                             >
                                 <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
                             </Button>
@@ -1193,14 +1194,14 @@ export default function BusinessDrive() {
                                         className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
                                         onClick={() => setSortDirection('desc')}
                                     >
-                                        Newest / Z-A
+                                        Z-A
                                         {sortDirection === 'desc' && <span className="text-xs">✓</span>}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 
                                         className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
                                         onClick={() => setSortDirection('asc')}
                                     >
-                                        Oldest / A-Z
+                                        A-Z
                                         {sortDirection === 'asc' && <span className="text-xs">✓</span>}
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -1230,9 +1231,9 @@ export default function BusinessDrive() {
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10">
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        New
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 px-3 md:px-4">
+                                        <Plus className="w-4 h-4 md:mr-2" />
+                                        <span className="hidden md:inline">New</span>
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
@@ -1289,26 +1290,35 @@ export default function BusinessDrive() {
             {/* Sort options by Type */}
             <div className="flex flex-col gap-4 bg-[#0d1117]/50 border border-zinc-800/80 p-4 rounded-2xl shadow-md">
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 shrink-0">Sort by Type:</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 shrink-0 hidden md:inline">Sort by Type:</span>
                     {['Documents', 'Spreadsheets', 'Videos', 'Pictures', 'PDFs', 'Audio'].map(type => {
                         const isActive = selectedTypeFilter === type;
+                        
+                        let Icon = FileText;
+                        if (type === 'Spreadsheets') Icon = Grid;
+                        if (type === 'Videos') Icon = Video;
+                        if (type === 'Pictures') Icon = ImageIcon;
+                        if (type === 'Audio') Icon = Headphones;
+
                         return (
                             <Button
                                 key={type}
                                 variant="ghost"
+                                title={type}
                                 onClick={() => {
                                     const nextHistory = [...filterHistory, type];
                                     setFilterHistory(nextHistory);
                                     setSelectedTypeFilter(type);
                                 }}
                                 className={cn(
-                                    "h-8 px-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border shrink-0",
+                                    "h-8 px-3 md:px-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border shrink-0",
                                     isActive 
                                         ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20" 
                                         : "bg-[#161b22] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
                                 )}
                             >
-                                {type}
+                                <Icon className="w-4 h-4 md:mr-2" />
+                                <span className="hidden md:inline">{type}</span>
                             </Button>
                         );
                     })}
