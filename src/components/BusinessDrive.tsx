@@ -53,7 +53,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import jsPDF from "jspdf";
 import { useAlertsStore } from "@/store/alerts";
 import { savePDFToArchive } from "@/lib/pdfArchive";
-import { dismissAlertsForRecord } from "@/lib/adminAlerts";
+import { dismissAlertsForRecord, pushAdminAlert } from "@/lib/adminAlerts";
 
 interface DriveFile {
     id: string;
@@ -840,6 +840,24 @@ export default function BusinessDrive() {
         }
     };
 
+    const toggleAlert = (file: DriveFile, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (fileHasAlert(file)) {
+            handleDismissAlert(file, true);
+        } else {
+            const recordType = file.metadata?.recordType || 'File';
+            const recordId = file.metadata?.recordId || '';
+            const customerName = file.metadata?.customerName || 'Customer';
+            pushAdminAlert('pdf_saved', `Attention requested for ${file.name}`, 'System', { 
+                id: file.id, 
+                recordId, 
+                recordType,
+                customerName
+            });
+            try { refreshAlerts(); } catch {}
+        }
+    };
+
     const renderListFile = (file: DriveFile, depth: number) => {
         const hasAlert = fileHasAlert(file);
         return (
@@ -858,8 +876,8 @@ export default function BusinessDrive() {
                     </div>
                     <span className="text-sm font-bold text-white truncate">{file.name}</span>
                     {file.path.includes('System Archives') && (
-                        <div title={hasAlert ? "Unread Alert" : "Viewed"}>
-                            <Bell className={cn("w-4 h-4 ml-2", hasAlert ? "text-yellow-400" : "text-white")} />
+                        <div title={hasAlert ? "Unread Alert (Click to mark viewed)" : "Viewed (Click to mark unread)"} onClick={(e) => toggleAlert(file, e)}>
+                            <Bell className={cn("w-4 h-4 ml-2 cursor-pointer hover:scale-110 transition-transform", hasAlert ? "text-yellow-400 drop-shadow-md" : "text-zinc-500 hover:text-white")} />
                         </div>
                     )}
                 </div>
@@ -1508,8 +1526,8 @@ export default function BusinessDrive() {
                                     <div className="flex flex-col items-center text-center space-y-3">
                                         <div className="absolute top-2 left-2 z-10">
                                             {file.path.includes('System Archives') && (
-                                                <div title={fileHasAlert(file) ? "Unread Alert" : "Viewed"}>
-                                                    <Bell className={cn("w-4 h-4", fileHasAlert(file) ? "text-yellow-400 drop-shadow-md" : "text-white opacity-50")} />
+                                                <div title={fileHasAlert(file) ? "Unread Alert (Click to mark viewed)" : "Viewed (Click to mark unread)"} onClick={(e) => toggleAlert(file, e)}>
+                                                    <Bell className={cn("w-4 h-4 cursor-pointer hover:scale-110 transition-transform", fileHasAlert(file) ? "text-yellow-400 drop-shadow-md" : "text-white opacity-50 hover:opacity-100")} />
                                                 </div>
                                             )}
                                         </div>
