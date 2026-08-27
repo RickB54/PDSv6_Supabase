@@ -27,7 +27,8 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
+    SelectSeparator
 } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -117,6 +118,17 @@ const getFileCategory = (file: DriveFile): string => {
     }
     return 'Other';
 };
+
+export const ALL_CATEGORIES = [
+    "Invoices", "Estimates", "Jobs", "Checklists", "Customer Records", 
+    "Employee Training", "Bookings", "Admin Updates", "Payroll", 
+    "Employee Contact", "Addons", "Vehicle History", "Inventory Report", "Prospects"
+];
+
+export const ROOT_FOLDERS = [
+    "QR Codes", "Pricing", "Operating Procedures", "My Logos", 
+    "Inventory", "Client Engagement", "Chemicals", "Analytics"
+];
 
 const DEMO_FOLDERS: DriveFolder[] = [
     { id: 'demo-1', name: "Business Docs", path: [] },
@@ -445,7 +457,7 @@ export default function BusinessDrive() {
                         size: '150 KB',
                         modified: new Date(Date.now() - 24 * 3600 * 1000 * (idx % 2)).toISOString(),
                         path: ['System Archives', m.folder],
-                        data: 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmoKPDwKICAvVHlwZSAvUGFnZXMKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqCjw8CiAgL1R5cGUgL1BhZ2UKICAvUGFyZW50IDIgMCBSCiAgL1Jlc291cmNlcyA8PAogICAgL0ZvbnQgPDwKICAgICAgL0YxIDQgMCBSCj4+CiAgPj4KICAvQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8CiAgL1R5cGUgL0ZvbnQKICAvU3VidHlwZSAvVHlwZTEKICAvQmFzZUZvbnQgL1RpbWVzLVJvbWFuCj4+CmVuZG9iagoKNSAwIG9iago8PAogIC9MZW5ndGggMzAKPj4Kc3RhcnR4cmVmCkJUCi9GMSAxOCBUZgoyMCAxMDAgVGQKKFJlc3RvcmVkIEZpbGUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxMCAwMDAwMCBuIAowMDAwMDAwMDc5IDAwMDAwIG4gCjAwMDAwMDAxNzMgMDAwMDAgbiAKMDAwMDAwMDI5MiAwMDAwMCBuIAowMDAwMDAwMzg3IDAwMDAwIG4gCnRyYWlsZXIKPDwKICAvU2l6ZSA2CiAgL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjQ2NgolJUVPRgo=',
+                        data: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=',
                         metadata: { recordType: m.cat }
                     });
                 });
@@ -453,11 +465,19 @@ export default function BusinessDrive() {
                 // Also ensure the subfolders exist
                 setFolders(prev => {
                     const newFolders = [...prev];
-                    mockFiles.forEach(m => {
-                        if (!newFolders.some(f => f.name === m.folder && f.path.length === 1 && f.path[0] === 'System Archives')) {
-                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: m.folder, path: ['System Archives'] });
+                    
+                    ALL_CATEGORIES.forEach(cat => {
+                        if (!newFolders.some(f => f.name === cat && f.path.length === 1 && f.path[0] === 'System Archives')) {
+                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: cat, path: ['System Archives'] });
                         }
                     });
+
+                    ROOT_FOLDERS.forEach(root => {
+                        if (!newFolders.some(f => f.name === root && f.path.length === 0)) {
+                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: root, path: [] });
+                        }
+                    });
+
                     import('localforage').then(lf => {
                         lf.default.setItem('business_drive_folders_v3', newFolders);
                     });
@@ -1004,6 +1024,42 @@ export default function BusinessDrive() {
                             <SelectItem value="week">Past Week</SelectItem>
                             <SelectItem value="month">Past Month</SelectItem>
                             <SelectItem value="year">Past Year</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value="jump" onValueChange={(val) => {
+                        if (val === 'root') {
+                            setCurrentPath([]);
+                        } else if (val === 'system') {
+                            setCurrentPath(['System Archives']);
+                            setExpandedFolders(p => ({ ...p, 'system-archives-main': true }));
+                        } else if (val.startsWith('sys-')) {
+                            const catName = val.replace('sys-', '');
+                            setCurrentPath(['System Archives', catName]);
+                            // Also expand system archives and the selected folder in list view
+                            const folderId = folders.find(f => f.name === catName && f.path.length === 1 && f.path[0] === 'System Archives')?.id;
+                            setExpandedFolders(p => ({ ...p, 'system-archives-main': true, ...(folderId ? { [folderId]: true } : {}) }));
+                        } else {
+                            setCurrentPath([val]);
+                        }
+                    }}>
+                        <SelectTrigger className="w-[160px] h-10 bg-indigo-950/20 border-indigo-900/30 text-indigo-300 font-black text-xs uppercase tracking-wider">
+                            <SelectValue placeholder="Jump to Folder..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
+                            <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
+                            <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
+                            
+                            <SelectSeparator className="bg-zinc-800" />
+                            <div className="px-2 py-1 text-[10px] font-black uppercase text-zinc-500">System Folders</div>
+                            {ALL_CATEGORIES.map(cat => (
+                                <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
+                            ))}
+                            
+                            <SelectSeparator className="bg-zinc-800" />
+                            <div className="px-2 py-1 text-[10px] font-black uppercase text-zinc-500">Root Folders</div>
+                            {ROOT_FOLDERS.map(root => (
+                                <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     {folders.some(f => f.name === 'System Archives') && (
