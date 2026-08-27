@@ -148,7 +148,9 @@ const DEMO_FILES: DriveFile[] = [
 export default function BusinessDrive() {
     const { toast } = useToast();
     const { isDemoMode } = useDemoMode();
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+        return (localStorage.getItem('business_drive_view') as 'grid' | 'list') || 'list';
+    });
     const [sortType, setSortType] = useState<'upload' | 'modified' | 'name'>('upload');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [dateFilter, setDateFilter] = useState('all');
@@ -526,18 +528,19 @@ export default function BusinessDrive() {
         }
     }, [isLoaded, files]);
 
+    const hasAutoExpanded = React.useRef(false);
+    
     // 2. Auto-open System Archives in List View if it has files
     useEffect(() => {
-        if (!isLoaded) return;
-        const autoExpanded = sessionStorage.getItem('v6_auto_expanded_system_archives');
-        if (!autoExpanded) {
-            sessionStorage.setItem('v6_auto_expanded_system_archives', 'true');
-            // Check if System Archives contains files
-            const systemArchivesFiles = files.filter(f => f.path.length > 0 && f.path[0] === 'System Archives');
-            if (systemArchivesFiles.length > 0) {
-                // Force list view
-                setViewMode('list');
-                localStorage.setItem('business_drive_view', 'list');
+        if (!isLoaded || hasAutoExpanded.current) return;
+        
+        // Check if System Archives contains files
+        const systemArchivesFiles = files.filter(f => f.path.length > 0 && f.path[0] === 'System Archives');
+        if (systemArchivesFiles.length > 0) {
+            hasAutoExpanded.current = true;
+            // Force list view
+            setViewMode('list');
+            localStorage.setItem('business_drive_view', 'list');
                 
                 // Expand System Archives and relevant subfolders
                 setExpandedFolders(prev => {
@@ -553,7 +556,6 @@ export default function BusinessDrive() {
                     localStorage.setItem('business_drive_expanded_folders', JSON.stringify(next));
                     return next;
                 });
-            }
         }
     }, [isLoaded, files, folders]);
 
@@ -1050,170 +1052,193 @@ export default function BusinessDrive() {
         <div className="space-y-6 animate-fade-in p-1">
             {/* Header / Actions */}
             <div className="flex flex-col items-start justify-between gap-4 bg-[#0d1117] p-4 rounded-xl border border-zinc-800 shadow-xl">
-                <div className="flex flex-wrap items-center gap-2 w-full justify-between">
-                    <div className="relative flex-1 md:flex-none">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                        <Input 
-                            placeholder="Search by name or customer..." 
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 bg-[#161b22] border-zinc-800 w-full md:w-64 focus:ring-blue-500/20"
-                        />
-                    </div>
-                    <Select value={dateFilter} onValueChange={setDateFilter}>
-                        <SelectTrigger className="w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
-                            <SelectValue placeholder="Time" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
-                            <SelectItem value="all">All Time</SelectItem>
-                            <SelectItem value="today">Today</SelectItem>
-                            <SelectItem value="week">Past Week</SelectItem>
-                            <SelectItem value="month">Past Month</SelectItem>
-                            <SelectItem value="year">Past Year</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select 
-                        value={currentPath.length === 0 ? 'root' : (currentPath[0] === 'System Archives' && currentPath.length > 1 ? `sys-${currentPath[1]}` : (currentPath[0] === 'System Archives' ? 'system' : currentPath[0]))}
-                        onValueChange={(val) => {
-                        if (val === 'root') {
-                            setCurrentPath([]);
-                        } else if (val === 'system') {
-                            setCurrentPath(['System Archives']);
-                            setExpandedFolders(p => ({ ...p, 'system-archives-main': true }));
-                        } else if (val.startsWith('sys-')) {
-                            const catName = val.replace('sys-', '');
-                            setCurrentPath(['System Archives', catName]);
-                            // Also expand system archives and the selected folder in list view
-                            const folderId = folders.find(f => f.name === catName && f.path.length === 1 && f.path[0] === 'System Archives')?.id;
-                            setExpandedFolders(p => ({ ...p, 'system-archives-main': true, ...(folderId ? { [folderId]: true } : {}) }));
-                        } else {
-                            setCurrentPath([val]);
-                        }
-                    }}>
-                        <SelectTrigger className="w-[160px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
-                            <SelectValue placeholder="Jump to Folder..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                            <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
-                            <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
-                            
-                            <SelectSeparator className="bg-zinc-800" />
-                            <div className="px-2 py-1 text-[10px] font-black uppercase text-zinc-500">System Folders</div>
-                            {ALL_CATEGORIES.map(cat => (
-                                <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
-                            ))}
-                            
-                            <SelectSeparator className="bg-zinc-800" />
-                            <div className="px-2 py-1 text-[10px] font-black uppercase text-zinc-500">Root Folders</div>
-                            {ROOT_FOLDERS.map(root => (
-                                <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {folders.some(f => f.name === 'System Archives') && (
-                        <Button 
-                            className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-10 px-3 md:px-4 mr-1 md:mr-2 border border-purple-500/20 shrink-0" 
-                            onClick={() => setAdminModalOpen(true)}
-                        >
-                            <FileText className="w-4 h-4 md:mr-2" />
-                            <span className="hidden md:inline">Admin Update PDF</span>
-                        </Button>
-                    )}
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
-                        onClick={() => handleSync(true)}
-                        title="Cloud Sync"
-                    >
-                        <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
-                                <ArrowUpDown className="w-5 h-5" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 mb-1">Sort by</div>
-                            <DropdownMenuItem 
-                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'upload' && "text-blue-400 font-bold")}
-                                onClick={() => setSortType('upload')}
-                            >
-                                Upload Time
-                                {sortType === 'upload' && <span className="text-xs">✓</span>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'modified' && "text-blue-400 font-bold")}
-                                onClick={() => setSortType('modified')}
-                            >
-                                Modified Time
-                                {sortType === 'modified' && <span className="text-xs">✓</span>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'name' && "text-blue-400 font-bold")}
-                                onClick={() => setSortType('name')}
-                            >
-                                Name
-                                {sortType === 'name' && <span className="text-xs">✓</span>}
-                            </DropdownMenuItem>
-                            
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-800 mt-2 mb-1">Direction</div>
-                            <DropdownMenuItem 
-                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
-                                onClick={() => setSortDirection('desc')}
-                            >
-                                Newest / Z-A
-                                {sortDirection === 'desc' && <span className="text-xs">✓</span>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                                className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
-                                onClick={() => setSortDirection('asc')}
-                            >
-                                Oldest / A-Z
-                                {sortDirection === 'asc' && <span className="text-xs">✓</span>}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800">
+                <div className="flex flex-col gap-3 w-full">
+                    {/* Row 1 */}
+                    <div className="flex flex-wrap items-center gap-2 w-full justify-between">
+                        <div className="relative flex-1 md:flex-none">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                            <Input 
+                                placeholder="Search by name or customer..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-9 bg-[#161b22] border-zinc-800 w-full md:w-64 focus:ring-blue-500/20"
+                            />
+                        </div>
+                        <Select value={dateFilter} onValueChange={setDateFilter}>
+                            <SelectTrigger className="w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
+                                <SelectValue placeholder="Time" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="today">Today</SelectItem>
+                                <SelectItem value="week">Past Week</SelectItem>
+                                <SelectItem value="month">Past Month</SelectItem>
+                                <SelectItem value="year">Past Year</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        
+                        {/* System Folders Dropdown */}
+                        <Select 
+                            value={currentPath.length > 0 && currentPath[0] === 'System Archives' ? (currentPath.length > 1 ? `sys-${currentPath[1]}` : 'system') : 'none'}
+                            onValueChange={(val) => {
+                                if (val === 'none') return;
+                                if (val === 'system') {
+                                    setCurrentPath(['System Archives']);
+                                } else if (val.startsWith('sys-')) {
+                                    const catName = val.replace('sys-', '');
+                                    setCurrentPath(['System Archives', catName]);
+                                }
+                            }}>
+                            <SelectTrigger className="w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
+                                <SelectValue placeholder="System Folders" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
+                                <SelectItem value="none" className="hidden">System Folders</SelectItem>
+                                <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
+                                <SelectSeparator className="bg-zinc-800" />
+                                {ALL_CATEGORIES.map(cat => (
+                                    <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* Root Folders Dropdown */}
+                        <Select 
+                            value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
+                            onValueChange={(val) => {
+                                if (val === 'none') return;
+                                if (val === 'root') {
+                                    setCurrentPath([]);
+                                } else {
+                                    setCurrentPath([val]);
+                                }
+                            }}>
+                            <SelectTrigger className="w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
+                                <SelectValue placeholder="My Folders" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
+                                <SelectItem value="none" className="hidden">My Folders</SelectItem>
+                                <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
+                                <SelectSeparator className="bg-zinc-800" />
+                                {ROOT_FOLDERS.map(root => (
+                                    <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
                         <Button 
                             variant="ghost" 
-                            size="sm" 
-                            className={cn("h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
-                            onClick={() => setViewMode('grid')}
+                            size="icon" 
+                            className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
+                            onClick={() => handleSync(true)}
+                            title="Cloud Sync"
                         >
-                            <Grid className="w-4 h-4" />
+                            <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className={cn("h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
-                            onClick={() => setViewMode('list')}
-                        >
-                            <List className="w-4 h-4" />
-                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
+                                    <ArrowUpDown className="w-5 h-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
+                                <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 mb-1">Sort by</div>
+                                <DropdownMenuItem 
+                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'upload' && "text-blue-400 font-bold")}
+                                    onClick={() => setSortType('upload')}
+                                >
+                                    Upload Time
+                                    {sortType === 'upload' && <span className="text-xs">✓</span>}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'modified' && "text-blue-400 font-bold")}
+                                    onClick={() => setSortType('modified')}
+                                >
+                                    Modified Time
+                                    {sortType === 'modified' && <span className="text-xs">✓</span>}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'name' && "text-blue-400 font-bold")}
+                                    onClick={() => setSortType('name')}
+                                >
+                                    Name
+                                    {sortType === 'name' && <span className="text-xs">✓</span>}
+                                </DropdownMenuItem>
+                                
+                                <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-800 mt-2 mb-1">Direction</div>
+                                <DropdownMenuItem 
+                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
+                                    onClick={() => setSortDirection('desc')}
+                                >
+                                    Newest / Z-A
+                                    {sortDirection === 'desc' && <span className="text-xs">✓</span>}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
+                                    onClick={() => setSortDirection('asc')}
+                                >
+                                    Oldest / A-Z
+                                    {sortDirection === 'asc' && <span className="text-xs">✓</span>}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
-                                <Plus className="w-4 h-4 mr-2" />
-                                New
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                                <FolderPlus className="w-4 h-4 mr-2" /> New Folder
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-camera')?.click()}>
-                                <Camera className="w-4 h-4 mr-2" /> Take Photo
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
-                                <Upload className="w-4 h-4 mr-2" /> Upload Files
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <input type="file" id="drive-upload" className="hidden" multiple onChange={(e) => handleUpload(e, false)} />
-                    <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleUpload(e, true)} />
+
+                    {/* Row 2 */}
+                    <div className="flex items-center justify-between w-full mt-2">
+                        <div className="flex items-center gap-3">
+                            <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
+                                    onClick={() => setViewMode('grid')}
+                                >
+                                    <Grid className="w-4 h-4" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className={cn("h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
+                                    onClick={() => setViewMode('list')}
+                                >
+                                    <List className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            
+                            {folders.some(f => f.name === 'System Archives') && (
+                                <Button 
+                                    className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-10 px-3 md:px-4 border border-purple-500/20 shrink-0" 
+                                    onClick={() => setAdminModalOpen(true)}
+                                >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Admin Update PDF
+                                </Button>
+                            )}
+                        </div>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    New
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
+                                    <FolderPlus className="w-4 h-4 mr-2" /> New Folder
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-camera')?.click()}>
+                                    <Camera className="w-4 h-4 mr-2" /> Take Photo
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
+                                    <Upload className="w-4 h-4 mr-2" /> Upload Files
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <input type="file" id="drive-upload" className="hidden" multiple onChange={(e) => handleUpload(e, false)} />
+                        <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleUpload(e, true)} />
+                    </div>
                 </div>
             </div>
 
@@ -1348,6 +1373,11 @@ export default function BusinessDrive() {
 
             {/* Breadcrumbs Navigation - Moved directly above files */}
             <div className="flex items-center gap-3 text-sm text-zinc-400 px-2 mt-4 overflow-x-auto scrollbar-none pb-1">
+                {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
+                    <Button variant="outline" size="sm" className="border-red-500/50 text-red-500 hover:bg-red-500/10 shrink-0 mr-4" onClick={() => setDeleteAllOpen(true)}>
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete All
+                    </Button>
+                )}
                 {(currentPath.length > 0 || selectedTypeFilter !== null) && (
                     <Button 
                         variant="ghost" 
@@ -1379,14 +1409,6 @@ export default function BusinessDrive() {
                         </button>
                     </React.Fragment>
                 ))}
-                
-                {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
-                    <div className="flex gap-2 ml-4">
-                        <Button variant="destructive" size="sm" onClick={() => setDeleteAllOpen(true)}>
-                            <Trash2 className="w-4 h-4 mr-2" /> Delete All
-                        </Button>
-                    </div>
-                )}
             </div>
 
             {/* Content Section */}
