@@ -477,7 +477,7 @@ export default function BusinessDrive() {
                             newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: root, path: [] });
                         }
                     });
-
+                    
                     import('localforage').then(lf => {
                         lf.default.setItem('business_drive_folders_v3', newFolders);
                     });
@@ -485,10 +485,42 @@ export default function BusinessDrive() {
                 });
 
                 setFiles(prev => [...prev, ...newFiles]);
+
                 import('localforage').then(lf => {
                     lf.default.getItem<DriveFile[]>('business_drive_files_v3').then(existing => {
                         lf.default.setItem('business_drive_files_v3', [...(existing || []), ...newFiles]);
                     });
+                });
+            }
+        }
+        
+        // 1.5 Repair broken PDFs that were previously generated blank
+        if (files.length > 0) {
+            const badBase64_1 = 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=';
+            const badBase64_2 = 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmoKPDwKICAvVHlwZSAvUGFnZXMKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqCjw8CiAgL1R5cGUgL1BhZ2UKICAvUGFyZW50IDIgMCBSCiAgL1Jlc291cmNlcyA8PAogICAgL0ZvbnQgPDwKICAgICAgL0YxIDQgMCBSCj4+CiAgPj4KICAvQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8CiAgL1R5cGUgL0ZvbnQKICAvU3VidHlwZSAvVHlwZTEKICAvQmFzZUZvbnQgL1RpbWVzLVJvbWFuCj4+CmVuZG9iagoKNSAwIG9iago8PAogIC9MZW5ndGggMzAKPj4Kc3RhcnR4cmVmCkJUCi9GMSAxOCBUZgoyMCAxMDAgVGQKKFJlc3RvcmVkIEZpbGUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxMCAwMDAwMCBuIAowMDAwMDAwMDc5IDAwMDAwIG4gCjAwMDAwMDAxNzMgMDAwMDAgbiAKMDAwMDAwMDI5MiAwMDAwMCBuIAowMDAwMDAwMzg3IDAwMDAwIG4gCnRyYWlsZXIKPDwKICAvU2l6ZSA2CiAgL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjQ2NgolJUVPRgo=';
+            
+            let hasRepaired = false;
+            const repairedFiles = files.map(f => {
+                if (f.data === badBase64_1 || f.data === badBase64_2 || !f.data) {
+                    hasRepaired = true;
+                    const doc = new jsPDF();
+                    doc.setFontSize(16);
+                    doc.setTextColor(200, 0, 0);
+                    doc.text(`RESTORED FILE: ${f.name}`, 20, 20);
+                    doc.setFontSize(12);
+                    doc.setTextColor(50, 50, 50);
+                    doc.text("The original contents of this file were permanently lost", 20, 35);
+                    doc.text("due to a local storage wipe bug.", 20, 45);
+                    doc.text("This placeholder was generated automatically so you", 20, 55);
+                    doc.text("can safely test folder functionality and alerts.", 20, 65);
+                    return { ...f, data: doc.output('datauristring') };
+                }
+                return f;
+            });
+            if (hasRepaired) {
+                setFiles(repairedFiles);
+                import('localforage').then(lf => {
+                    lf.default.setItem('business_drive_files_v3', repairedFiles);
                 });
             }
         }
@@ -1896,11 +1928,33 @@ export default function BusinessDrive() {
                                     
                                     // Save via pdfArchive which will push to System Archives
                                     savePDFToArchive('Admin Updates', 'Admin', 'admin_updates', pdfDataUrl, { fileName, path: 'Admin Updates/' });
+                                    
+                                    // Inject into local state immediately to avoid cloud sync race conditions
+                                    const sizeKb = Math.round(pdfDataUrl.length * 0.75 / 1024);
+                                    const newFile: DriveFile = {
+                                        id: Math.random().toString(36).substring(2, 9),
+                                        name: fileName,
+                                        type: 'application/pdf',
+                                        size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
+                                        modified: new Date().toISOString(),
+                                        path: ['System Archives', 'Admin Updates'],
+                                        data: pdfDataUrl,
+                                        metadata: {
+                                            customerName: 'Admin',
+                                            recordType: 'Admin Updates',
+                                            recordId: 'admin_updates'
+                                        }
+                                    };
+                                    setFiles(prev => {
+                                        const updated = [...prev, newFile];
+                                        import('localforage').then(lf => {
+                                            lf.default.setItem('business_drive_files_v3', updated);
+                                        });
+                                        return updated;
+                                    });
+
                                     toast({ title: 'Saved', description: 'Admin Update PDF created.' });
                                     setAdminModalOpen(false);
-                                    
-                                    // Refresh drive data
-                                    handleSync(false);
                                 } catch (err: any) {
                                     toast({ title: 'Error', description: err?.message || String(err), variant: 'destructive' });
                                 }
