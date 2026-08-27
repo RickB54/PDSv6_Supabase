@@ -214,10 +214,16 @@ export default function BusinessDrive() {
                     const { files: cloudFiles, folders: cloudFolders } = JSON.parse(text);
                     
                     if (cloudFiles) setFiles(cloudFiles);
-                    if (cloudFolders) setFolders(cloudFolders);
+                    if (cloudFolders) {
+                        const updatedFolders = [...cloudFolders];
+                        if (!updatedFolders.some((f: any) => f.name === 'System Archives' && f.path.length === 0)) {
+                            updatedFolders.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
+                        }
+                        setFolders(updatedFolders);
+                        await localforage.setItem('business_drive_folders_v3', updatedFolders);
+                    }
                     
                     await localforage.setItem('business_drive_files_v3', cloudFiles);
-                    await localforage.setItem('business_drive_folders_v3', cloudFolders);
                     if (showToast) toast({ title: "Sync Complete", description: "Your drive is up to date." });
                 } else if (showToast) {
                     toast({ title: "Sync Check", description: "No new updates found in the cloud." });
@@ -267,10 +273,14 @@ export default function BusinessDrive() {
                 }
 
                 // 2. Initial Cloud Sync
-                handleSync(false);
+                await handleSync(false);
 
-                // 3. Migration: If both local and cloud are empty, try migrating from legacy localStorage
-                if (!localFiles && !files.length) {
+                // 3. Re-read localforage after sync!
+                const postSyncFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3') || [];
+                const postSyncFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3') || DEFAULT_FOLDERS;
+
+                // 4. Migration: If both local and cloud are empty, try migrating from legacy localStorage
+                if (!localFiles && postSyncFiles.length === 0) {
                     const legacyFiles = localStorage.getItem('business_drive_files_v2');
                     if (legacyFiles) {
                         try {
@@ -281,7 +291,7 @@ export default function BusinessDrive() {
                         } catch (e) { console.error("Legacy file migration failed", e); }
                     }
                 }
-                if ((!localFolders || localFolders.length === 0) && folders.length === DEFAULT_FOLDERS.length) {
+                if ((!localFolders || localFolders.length === 0) && postSyncFolders.length <= DEFAULT_FOLDERS.length) {
                     const legacyFolders = localStorage.getItem('business_drive_folders_v2');
                     if (legacyFolders) {
                         try {
@@ -293,14 +303,14 @@ export default function BusinessDrive() {
                     }
                 }
                 
-                // 4. Migration: legacy PDF Archive to Business Drive System Archives
+                // 5. Migration: legacy PDF Archive to Business Drive System Archives
                 try {
                     const legacyPdfs = localStorage.getItem('pdfArchive');
                     if (legacyPdfs) {
                         const parsedPdfs: any[] = JSON.parse(legacyPdfs);
                         if (parsedPdfs.length > 0) {
-                            let updatedFolders = [...(localFolders || folders)];
-                            let updatedFiles = [...(localFiles || files)];
+                            let updatedFolders = [...postSyncFolders];
+                            let updatedFiles = [...postSyncFiles];
 
                             if (!updatedFolders.some(f => f.name === 'System Archives' && f.path.length === 0)) {
                                 updatedFolders.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
@@ -402,14 +412,14 @@ export default function BusinessDrive() {
         return () => clearTimeout(timer);
     }, [files, folders, isLoaded]);
 
-    const handleDismissAlert = (file: DriveFile) => {
+    const handleDismissAlert = (file: DriveFile, silent = false) => {
         if (!file.metadata || !file.metadata.recordType) return;
         dismissAlertsForRecord(file.metadata.recordType, file.id);
         if (file.metadata.recordId) {
             dismissAlertsForRecord(file.metadata.recordType, file.metadata.recordId);
         }
         try { refreshAlerts(); } catch {}
-        toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
+        if (!silent) toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
     };
 
     const currentItems = useMemo(() => {
@@ -476,6 +486,8 @@ export default function BusinessDrive() {
 
         // Apply Sorting to Folders (always sort folders by name in normal view)
         filteredFolders = [...filteredFolders].sort((a, b) => {
+            if (a.name === 'System Archives') return -1;
+            if (b.name === 'System Archives') return 1;
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
             if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
@@ -490,6 +502,9 @@ export default function BusinessDrive() {
         setSelectedFile(file);
         setIsViewerOpen(true);
         setZoom(100);
+        if (fileHasAlert(file)) {
+            handleDismissAlert(file, true);
+        }
     };
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, skipCompression = false) => {
@@ -707,9 +722,9 @@ export default function BusinessDrive() {
                         )}
                     </div>
                     <span className="text-sm font-bold text-white truncate">{file.name}</span>
-                    {hasAlert && (
-                        <div title="Active Alert">
-                            <Bell className="w-4 h-4 text-red-500 animate-pulse ml-2" />
+                    {file.path.includes('System Archives') && (
+                        <div title={hasAlert ? "Unread Alert" : "Viewed"}>
+                            <Bell className={cn("w-4 h-4 ml-2", hasAlert ? "text-yellow-400" : "text-white")} />
                         </div>
                     )}
                 </div>
@@ -723,11 +738,7 @@ export default function BusinessDrive() {
                     </div>
                     <div className="w-20 text-right font-mono">{file.size}</div>
                     
-                    {hasAlert && (
-                        <Button variant="ghost" size="sm" onClick={() => handleDismissAlert(file)} className="text-red-400 hover:text-red-300 hover:bg-red-950/30">
-                            Dismiss
-                        </Button>
-                    )}
+
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -745,11 +756,7 @@ export default function BusinessDrive() {
                             <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
                                 <Download className="w-4 h-4 mr-2" /> Download
                             </DropdownMenuItem>
-                            {hasAlert && (
-                                <DropdownMenuItem className="hover:bg-zinc-800 text-red-400 cursor-pointer" onClick={() => handleDismissAlert(file)}>
-                                    <Bell className="w-4 h-4 mr-2" /> Dismiss Alert
-                                </DropdownMenuItem>
-                            )}
+
                             <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                 <Trash2 className="w-4 h-4 mr-2" /> Delete
                             </DropdownMenuItem>
@@ -822,13 +829,15 @@ export default function BusinessDrive() {
                 <div 
                     className={cn(
                         "flex items-center justify-between p-4 cursor-pointer transition-colors group",
-                        depth === 0 ? "bg-[#0d1117] hover:bg-[#161b22]" : "bg-[#161b22] border-t border-zinc-800 hover:bg-zinc-800",
+                        depth === 0 ? "bg-[#0d1117]" : "bg-[#161b22] border-t border-zinc-800",
+                        folder.name === 'System Archives' ? "hover:bg-purple-950/20" :
+                        (childFolders.length > 0 || childFiles.length > 0 ? "hover:bg-emerald-950/15" : "hover:bg-blue-900/10"),
                         isExpanded && depth === 0 && "border-b border-zinc-800"
                     )}
                     onClick={() => setExpandedFolders(p => ({...p, [folder.id]: !p[folder.id]}))}
                 >
                     <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
-                        <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : 'text-emerald-400')} />
+                        <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : (childFolders.length > 0 || childFiles.length > 0 ? 'text-emerald-400' : 'text-blue-400'))} />
                         <span className={cn("text-sm font-bold truncate", folder.name === 'System Archives' ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
                         <span className="text-[10px] text-zinc-500 font-bold ml-2">({childFolders.length + childFiles.length} items)</span>
                     </div>
@@ -1279,6 +1288,13 @@ export default function BusinessDrive() {
                                     onClick={() => openViewer(file)}
                                 >
                                     <div className="flex flex-col items-center text-center space-y-3">
+                                        <div className="absolute top-2 left-2 z-10">
+                                            {file.path.includes('System Archives') && (
+                                                <div title={fileHasAlert(file) ? "Unread Alert" : "Viewed"}>
+                                                    <Bell className={cn("w-4 h-4", fileHasAlert(file) ? "text-yellow-400 drop-shadow-md" : "text-white opacity-50")} />
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="w-20 h-20 bg-zinc-800/50 rounded-2xl flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all duration-300">
                                             {file.type.startsWith('image/') ? (
                                                 <img src={file.data} className="w-full h-full object-cover rounded-xl" alt={file.name} />
@@ -1308,11 +1324,7 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
                                                     <Download className="w-4 h-4 mr-2" /> Download
                                                 </DropdownMenuItem>
-                                                {fileHasAlert(file) && (
-                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-red-400 cursor-pointer" onClick={() => handleDismissAlert(file)}>
-                                                        <Bell className="w-4 h-4 mr-2" /> Dismiss Alert
-                                                    </DropdownMenuItem>
-                                                )}
+
                                                 <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
