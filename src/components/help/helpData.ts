@@ -1523,6 +1523,30 @@ export const adminMenuTopics: HelpTopic[] = [
     section: 'menu',
   },
   {
+    id: 'inventory-audit',
+    title: 'Inventory Audit Checklist (IAC)',
+    summary: 'Perform systematic physical counts of all shop inventory.',
+    content: [
+      '**Overview**: The master workflow for verifying physical stock against digital records.',
+      '• **Count Modes**: Toggle between Quick (Gallons) and Detailed (Ounces) counting.',
+      '• **Accuracy**: Helps identify shrinkage, over-usage, and ordering needs.',
+    ],
+    route: '/inventory-control?modal=iac',
+    section: 'menu',
+  },
+  {
+    id: 'usage-report',
+    title: 'Materials & Equipment Usage Log',
+    summary: 'Track standalone and job-specific consumption of shop resources.',
+    content: [
+      '**Overview**: Record exact amounts of chemicals, supplies, and tools used.',
+      '• **Standalone**: Log usage for personal projects or shop maintenance without a job tie.',
+      '• **History**: Review past entries to spot usage trends and calculate exact consumption costs.',
+    ],
+    route: '/inventory-control?modal=usage-report',
+    section: 'menu',
+  },
+  {
     id: 'mobile-setup',
     title: 'Mobile Unit Configuration',
     summary: 'Setup and inventory management for mobile detailing trucks.',

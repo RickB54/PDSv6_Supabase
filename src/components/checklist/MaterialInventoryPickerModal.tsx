@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Search, Plus, Trash2, Check, Droplets, Package, Wrench, Sparkles, SlidersHorizontal, ShieldCheck, Flame, WrenchIcon, Info, HelpCircle } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Chemical, Material, Tool as Equipment } from '@/lib/inventory-data';
+import { Chemical, Material, Tool as Equipment, getUsageHistory, deleteUsageHistory, saveUsageHistory, UsageHistory } from '@/lib/inventory-data';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { isChemicalLowStock } from '@/lib/chemicals';
 import { useToast } from '@/hooks/use-toast';
 
@@ -86,8 +88,30 @@ export default function MaterialInventoryPickerModal({
   onSaveRows,
 }: MaterialInventoryPickerModalProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'exterior' | 'interior' | 'supplies' | 'tools' | 'maintenance'>('exterior');
+  const [activeTab, setActiveTab] = useState<'exterior' | 'interior' | 'supplies' | 'tools' | 'maintenance' | 'history'>('exterior');
   const [searchQuery, setSearchQuery] = useState('');
+  const [historyRecords, setHistoryRecords] = useState<UsageHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [editingHistory, setEditingHistory] = useState<UsageHistory | null>(null);
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const records = await getUsageHistory();
+      setHistoryRecords(records);
+    } catch (e) {
+      console.error("Failed to load usage history", e);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'history' && historyRecords.length === 0) {
+      fetchHistory();
+    }
+  }, [activeTab]);
   
   // Sort State per Tab
   const [chemSortBy, setChemSortBy] = useState<string>('brand_asc');
@@ -375,6 +399,87 @@ export default function MaterialInventoryPickerModal({
     return localEquipLogs.find(l => l.equipmentId === equipId) || { equipmentId: equipId, equipmentName: '' };
   };
 
+  const handleExportPDF = () => {
+    if (historyRecords.length === 0) {
+      toast({ title: "No Data", description: "No history records to export.", variant: "destructive" });
+      return;
+    }
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Materials & Equipment Usage Log", 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 140, 22);
+
+    let currentY = 35;
+
+    // Filter based on active selection
+    const filteredRecords = historyRecords.filter(r => {
+      if (dateFilter === 'all') return true;
+      const rDate = new Date(r.date);
+      const now = new Date();
+      if (dateFilter === 'today') return rDate.toDateString() === now.toDateString();
+      if (dateFilter === 'week') return (now.getTime() - rDate.getTime()) / (1000 * 3600 * 24) <= 7;
+      if (dateFilter === 'month') return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+      return true;
+    });
+
+    filteredRecords.forEach((record, idx) => {
+      if (idx > 0 && currentY > 240) {
+        doc.addPage();
+        currentY = 20;
+      } else if (idx > 0) {
+        currentY += 10;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(30, 41, 59); // zinc-800
+      doc.text(`${record.serviceName}`, 14, currentY);
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139); // zinc-500
+      doc.text(`${new Date(record.date).toLocaleString()} | Tech: ${record.technicianName}`, 14, currentY + 5);
+      
+      currentY += 10;
+
+      if (record.chemicalLogs && record.chemicalLogs.length > 0) {
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Chemical Name', 'Amount Used', 'Ratio', 'Category']],
+          body: record.chemicalLogs.map((c: any) => [
+            c.chemicalName,
+            `${c.amountUsedOz} oz`,
+            c.dilutionRatioStr,
+            c.category
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 8, cellPadding: 3 },
+          margin: { left: 14 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 5;
+      }
+
+      if (record.materialLogs && record.materialLogs.length > 0) {
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Supply / Material', 'Quantity Used']],
+          body: record.materialLogs.map((m: any) => [
+            m.materialName,
+            m.quantityUsed.toString()
+          ]),
+          theme: 'grid',
+          headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold' },
+          styles: { fontSize: 8, cellPadding: 3 },
+          margin: { left: 14 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 5;
+      }
+    });
+
+    doc.save(`Usage_History_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: "PDF Generated", description: "Usage history exported successfully." });
+  };
+
   // Pure Report Save Handler (No IAC Stock Modification!)
   const handleSaveReportOnly = () => {
     if (standaloneMode && !standaloneNote.trim()) {
@@ -403,13 +508,13 @@ export default function MaterialInventoryPickerModal({
               <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
                 <Droplets className="h-6 w-6 text-blue-400" />
                 Materials & Equipment Usage Report Log
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-500 hover:text-blue-400 ml-1 rounded-full bg-zinc-800/50" title="How to use this modal">
                       <HelpCircle className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-4 bg-zinc-950 border-blue-900/50 text-sm shadow-2xl z-50">
+                  <PopoverContent className="w-[400px] p-4 bg-zinc-950 border-blue-900/50 text-sm shadow-2xl z-[9999]">
                     <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                       <h4 className="font-bold text-blue-400 flex items-center gap-2 border-b border-blue-900/30 pb-2">
                         <Info className="w-4 h-4" /> Using the Usage Report Log
@@ -514,10 +619,19 @@ export default function MaterialInventoryPickerModal({
                 <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
                 Equipment Maintenance
               </Button>
+              <Button
+                size="sm"
+                variant={activeTab === 'history' ? 'default' : 'outline'}
+                className={activeTab === 'history' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'border-zinc-800 text-zinc-400'}
+                onClick={() => setActiveTab('history')}
+              >
+                <FileText className="h-4 w-4 mr-1.5 text-cyan-400" />
+                Usage History
+              </Button>
             </div>
 
             {/* Search Bar & Tab-Specific Sort Options */}
-            {activeTab !== 'maintenance' && (
+            {activeTab !== 'maintenance' && activeTab !== 'history' && (
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
@@ -830,9 +944,87 @@ export default function MaterialInventoryPickerModal({
                 </div>
               </div>
             )}
+            
+            {activeTab === 'history' && (
+              <div className="flex flex-col h-[60vh] bg-zinc-900/40 border border-zinc-800/80 rounded-xl overflow-hidden p-4 space-y-4">
+                <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                  <div className="flex gap-2">
+                    {['all', 'today', 'week', 'month'].map(opt => (
+                      <Button
+                        key={opt}
+                        size="sm"
+                        variant={dateFilter === opt ? 'default' : 'outline'}
+                        className={dateFilter === opt ? 'bg-cyan-600 text-white' : 'text-zinc-400 border-zinc-700'}
+                        onClick={() => setDateFilter(opt as any)}
+                      >
+                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-950"
+                    onClick={handleExportPDF}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </Button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                  {historyLoading ? (
+                     <div className="text-zinc-500 text-center py-8">Loading history...</div>
+                  ) : historyRecords.length === 0 ? (
+                     <div className="text-zinc-500 text-center py-8">No usage logs found.</div>
+                  ) : (
+                     historyRecords.filter(r => {
+                       if (dateFilter === 'all') return true;
+                       const rDate = new Date(r.date);
+                       const now = new Date();
+                       if (dateFilter === 'today') return rDate.toDateString() === now.toDateString();
+                       if (dateFilter === 'week') return (now.getTime() - rDate.getTime()) / (1000 * 3600 * 24) <= 7;
+                       if (dateFilter === 'month') return rDate.getMonth() === now.getMonth() && rDate.getFullYear() === now.getFullYear();
+                       return true;
+                     }).map(record => (
+                       <div key={record.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
+                         <div className="flex justify-between items-start mb-2">
+                           <div>
+                             <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                               {record.serviceName}
+                               {record.serviceName.includes("Standalone") && (
+                                 <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20">Standalone</Badge>
+                               )}
+                             </h4>
+                             <p className="text-xs text-zinc-400">{new Date(record.date).toLocaleString()} • Logged by {record.technicianName}</p>
+                           </div>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:bg-red-950" onClick={async () => {
+                              if (window.confirm("Delete this usage log?")) {
+                                await deleteUsageHistory(record.id);
+                                fetchHistory();
+                              }
+                           }}>
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                         <div className="text-xs text-zinc-300 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 bg-zinc-950 p-2 rounded">
+                           <div>
+                             <strong className="text-zinc-500">Chemicals:</strong> {record.chemicalLogs?.length || 0}
+                           </div>
+                           <div>
+                             <strong className="text-zinc-500">Supplies:</strong> {record.materialLogs?.length || 0}
+                           </div>
+                         </div>
+                       </div>
+                     ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Logged Usage Summary for Job Report */}
+          {activeTab !== 'history' && (
           <div className="space-y-4 pt-4 border-t border-zinc-800">
             <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center justify-between">
               <span>Logged Job Usage Items ({localChemRows.length + localMatRows.length + localToolRows.length})</span>
@@ -1019,9 +1211,10 @@ export default function MaterialInventoryPickerModal({
               </div>
             )}
           </div>
+          )}
         </div>
 
-        {standaloneMode && (
+        {standaloneMode && activeTab !== 'history' && (
           <div className="p-4 border-t border-zinc-800 bg-zinc-900/80">
             <Label className="text-zinc-300 text-xs font-bold mb-1.5 block">Purpose / Note (Required for standalone entries)</Label>
             <Input 
@@ -1040,8 +1233,9 @@ export default function MaterialInventoryPickerModal({
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="border-zinc-800 text-zinc-400 hover:text-white">
-              Cancel
+              {activeTab === 'history' ? 'Close' : 'Cancel'}
             </Button>
+            {activeTab !== 'history' && (
             <Button
               size="sm"
               className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4"
@@ -1049,6 +1243,7 @@ export default function MaterialInventoryPickerModal({
             >
               Save Materials Usage Log
             </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

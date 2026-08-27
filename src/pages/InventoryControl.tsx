@@ -580,6 +580,8 @@ const InventoryControl = () => {
     }
     if (params.get("modal") === "usage-report") {
       setUsageReportModalOpen(true);
+    } else if (params.get("modal") === "iac") {
+      setInventoryAuditOpen(true);
     }
   }, [location.search]);
 

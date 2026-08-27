@@ -163,6 +163,8 @@ export const getMenuGroups = (counts: {
             title: "Inventory & Assets", icon: Package, iconColor: "text-cyan-400",
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
+                { title: "Inventory Audit Checklist (IAC)", url: "/inventory-control?modal=iac", role: "admin", key: "inventory-audit", icon: ClipboardCheck, helpTopicId: 'inventory-audit' },
+                { title: "Materials Usage Log", url: "/inventory-control?modal=usage-report", role: "admin", key: "usage-report", icon: FileText, helpTopicId: 'usage-report' },
                 { title: "Caddy Worksheet", url: "#static-caddy", key: "caddy-worksheet-inv", icon: Briefcase, helpTopicId: 'static-caddy-worksheet' },
                 { title: "Prime Dilution Chart", url: "/inventory-control?chart=interactive", role: "admin", key: "dilution-chart-interactive", icon: Printer, helpTopicId: 'dilution-chart-interactive' },
                 { title: "Mobile Setup", url: "/mobile-setup", key: "mobile-setup", icon: Package, helpTopicId: 'mobile-setup' },

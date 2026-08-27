@@ -1,5 +1,6 @@
 // Utility to save PDFs to the File Manager archive
 import { pushAdminAlert } from "@/lib/adminAlerts";
+import localforage from "localforage";
 
 interface PDFRecord {
   id: string;
@@ -165,4 +166,64 @@ export function savePDFToArchive(
       { id: record.id, recordId, recordType, customerName }
     );
   }
+
+  // 4. Dual-Save to Business Drive
+  const dualSaveToBusinessDrive = async () => {
+    try {
+       const folderMap: Record<string, string> = {
+           "Invoice": "Invoices",
+           "Estimate": "Estimates",
+           "Job": "Jobs",
+           "Checklist": "Checklists",
+           "Customer": "Customer Records",
+           "Employee Training": "Employee Training",
+           "Bookings": "Bookings",
+           "Admin Updates": "Admin Updates",
+           "Payroll": "Payroll",
+           "Employee Contact": "Employee Contact",
+           "add-Ons": "Addons",
+           "Sub Contractors": "Admin Updates",
+           "Sub-Contractors": "Admin Updates",
+           "Package Comparisons": "Estimates", 
+           "Upsell Scripts": "Employee Training",
+           "Client Evaluation": "Customer Records",
+           "Detailing Vendors": "Inventory Report",
+           "Vehicle Classification": "Vehicle History",
+           "Vehicle History": "Vehicle History",
+           "Inventory Report": "Inventory Report",
+           "Prospects": "Prospects"
+       };
+
+       const folderName = folderMap[recordType] || recordType;
+
+       let folders: any[] = await localforage.getItem('business_drive_folders_v3') || [];
+       if (!folders.some(f => f.name === folderName && f.path.length === 0)) {
+           folders.push({
+               id: Math.random().toString(36).substring(2, 9),
+               name: folderName,
+               path: []
+           });
+           await localforage.setItem('business_drive_folders_v3', folders);
+       }
+
+       let files: any[] = await localforage.getItem('business_drive_files_v3') || [];
+       const sizeKb = record.pdfData ? Math.round(record.pdfData.length * 0.75 / 1024) : 100;
+       
+       files.push({
+           id: Math.random().toString(36).substring(2, 9),
+           name: record.fileName,
+           type: "application/pdf",
+           size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
+           modified: new Date().toISOString(),
+           path: [folderName],
+           data: record.pdfData
+       });
+       
+       await localforage.setItem('business_drive_files_v3', files);
+    } catch (e) {
+       console.error("Failed to dual-save to Business Drive:", e);
+    }
+  };
+  
+  dualSaveToBusinessDrive();
 }
