@@ -929,22 +929,60 @@ export default function BusinessDrive() {
 
         return (
             <div key={folder.id} className={cn("flex flex-col", depth === 0 ? "mb-2 border border-zinc-800 rounded-xl overflow-hidden shadow-sm" : "")}>
-                <div 
-                    className={cn(
-                        "flex items-center justify-between p-4 cursor-pointer transition-colors group",
-                        depth === 0 ? "bg-[#0d1117]" : "bg-[#161b22] border-t border-zinc-800",
-                        folder.name === 'System Archives' ? "hover:bg-purple-950/20" :
-                        (childFolders.length > 0 || childFiles.length > 0 ? "hover:bg-emerald-950/15" : "hover:bg-blue-900/10"),
-                        isExpanded && depth === 0 && "border-b border-zinc-800"
-                    )}
-                    onClick={() => setExpandedFolders(p => ({...p, [folder.id]: !p[folder.id]}))}
-                >
-                    <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
-                        <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : (childFolders.length > 0 || childFiles.length > 0 ? 'text-emerald-400' : 'text-blue-400'))} />
-                        <span className={cn("text-sm font-bold truncate", folder.name === 'System Archives' ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
-                        <span className="text-[10px] text-zinc-500 font-bold ml-2">({childFolders.length + childFiles.length} items)</span>
+                <HoverCard openDelay={400}>
+                  <HoverCardTrigger asChild>
+                    <div 
+                        className={cn(
+                            "flex items-center justify-between p-4 cursor-pointer transition-colors group",
+                            depth === 0 ? "bg-[#0d1117]" : "bg-[#161b22] border-t border-zinc-800",
+                            folder.name === 'System Archives' ? "hover:bg-purple-950/20" :
+                            (childFolders.length > 0 || childFiles.length > 0 ? "hover:bg-emerald-950/15" : "hover:bg-blue-900/10"),
+                            isExpanded && depth === 0 && "border-b border-zinc-800"
+                        )}
+                        onClick={() => setExpandedFolders(p => ({...p, [folder.id]: !p[folder.id]}))}
+                    >
+                        <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
+                            <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : (childFolders.length > 0 || childFiles.length > 0 ? 'text-emerald-400' : 'text-blue-400'))} />
+                            <span className={cn("text-sm font-bold truncate", folder.name === 'System Archives' ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
+                            <span className="text-[10px] text-zinc-500 font-bold ml-2">({childFolders.length + childFiles.length} items)</span>
+                        </div>
                     </div>
-                </div>
+                  </HoverCardTrigger>
+                  {!isExpanded && (
+                  <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="start" side="right" sideOffset={10}>
+                      <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                              <Folder className="w-4 h-4 text-emerald-400" />
+                              <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{childFiles.length} file{childFiles.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
+                          {childFiles.slice(0, 10).map((file, idx) => (
+                              <div key={idx} className="flex items-center gap-2 p-2 hover:bg-zinc-800/50 rounded-lg group transition-colors">
+                                  {file.type.startsWith('image/') ? (
+                                      <img src={file.data} className="w-6 h-6 object-cover rounded-md border border-zinc-800" alt="" />
+                                  ) : (
+                                      <FileText className="w-5 h-5 text-zinc-400 group-hover:text-blue-400" />
+                                  )}
+                                  <span className="text-xs font-bold text-white truncate flex-1">{file.name}</span>
+                                  <span className="text-[10px] text-zinc-500">{file.size}</span>
+                              </div>
+                          ))}
+                          {childFiles.length > 10 && (
+                              <div className="text-center p-2 text-xs text-zinc-500 font-bold uppercase tracking-widest bg-zinc-900/50 rounded-lg mt-1">
+                                  + {childFiles.length - 10} more files
+                              </div>
+                          )}
+                          {childFiles.length === 0 && (
+                              <div className="text-center p-4 text-xs text-zinc-500 font-medium">
+                                  This folder is empty.
+                              </div>
+                          )}
+                      </div>
+                  </HoverCardContent>
+                  )}
+                </HoverCard>
                 {isExpanded && (
                     <div className="flex flex-col animate-fade-in bg-zinc-950/20">
                         {childFolders.map(cf => renderListFolder(cf, depth + 1))}
@@ -960,51 +998,9 @@ export default function BusinessDrive() {
 
     return (
         <div className="space-y-6 animate-fade-in p-1">
-            {/* Header / Breadcrumbs */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#0d1117] p-4 rounded-xl border border-zinc-800 shadow-xl">
-                <div className="flex items-center gap-3 text-sm text-zinc-400 overflow-hidden">
-                    {(currentPath.length > 0 || selectedTypeFilter !== null) && (
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 hover:bg-zinc-800 text-white" 
-                            onClick={handleBack}
-                            title="Go Back"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
-                        </Button>
-                    )}
-                    <button 
-                        onClick={() => setCurrentPath([])}
-                        className={cn("hover:text-white transition-colors whitespace-nowrap", currentPath.length === 0 && "text-white font-black")}
-                    >
-                        My Drive
-                    </button>
-                    {currentPath.map((segment, idx) => (
-                        <React.Fragment key={idx}>
-                            <ChevronRight className="w-4 h-4 shrink-0" />
-                            <button 
-                                onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
-                                className={cn(
-                                    "hover:text-white transition-colors whitespace-nowrap truncate max-w-[150px]",
-                                    idx === currentPath.length - 1 && "text-white font-black"
-                                )}
-                            >
-                                {segment}
-                            </button>
-                        </React.Fragment>
-                    ))}
-                    
-                    {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
-                        <div className="flex gap-2 ml-4">
-                            <Button variant="destructive" size="sm" onClick={() => setDeleteAllOpen(true)}>
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete All
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* Header / Actions */}
+            <div className="flex flex-col items-start justify-between gap-4 bg-[#0d1117] p-4 rounded-xl border border-zinc-800 shadow-xl">
+                <div className="flex flex-wrap items-center gap-2 w-full justify-between">
                     <div className="relative flex-1 md:flex-none">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <Input 
@@ -1026,7 +1022,9 @@ export default function BusinessDrive() {
                             <SelectItem value="year">Past Year</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Select value="jump" onValueChange={(val) => {
+                    <Select 
+                        value={currentPath.length === 0 ? 'root' : (currentPath[0] === 'System Archives' && currentPath.length > 1 ? `sys-${currentPath[1]}` : (currentPath[0] === 'System Archives' ? 'system' : currentPath[0]))}
+                        onValueChange={(val) => {
                         if (val === 'root') {
                             setCurrentPath([]);
                         } else if (val === 'system') {
@@ -1042,7 +1040,7 @@ export default function BusinessDrive() {
                             setCurrentPath([val]);
                         }
                     }}>
-                        <SelectTrigger className="w-[160px] h-10 bg-indigo-950/20 border-indigo-900/30 text-indigo-300 font-black text-xs uppercase tracking-wider">
+                        <SelectTrigger className="w-[160px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
                             <SelectValue placeholder="Jump to Folder..." />
                         </SelectTrigger>
                         <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
@@ -1293,6 +1291,49 @@ export default function BusinessDrive() {
                             className="text-[10px] font-black uppercase tracking-wider text-zinc-400 hover:text-white"
                         >
                             Cancel View [x]
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {/* Breadcrumbs Navigation - Moved directly above files */}
+            <div className="flex items-center gap-3 text-sm text-zinc-400 px-2 mt-4 overflow-x-auto scrollbar-none pb-1">
+                {(currentPath.length > 0 || selectedTypeFilter !== null) && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 hover:bg-zinc-800 text-white shrink-0" 
+                        onClick={handleBack}
+                        title="Go Back"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                )}
+                <button 
+                    onClick={() => setCurrentPath([])}
+                    className={cn("hover:text-white transition-colors whitespace-nowrap shrink-0", currentPath.length === 0 && "text-white font-black")}
+                >
+                    My Drive
+                </button>
+                {currentPath.map((segment, idx) => (
+                    <React.Fragment key={idx}>
+                        <ChevronRight className="w-4 h-4 shrink-0" />
+                        <button 
+                            onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
+                            className={cn(
+                                "hover:text-white transition-colors whitespace-nowrap shrink-0",
+                                idx === currentPath.length - 1 && "text-white font-black"
+                            )}
+                        >
+                            {segment}
+                        </button>
+                    </React.Fragment>
+                ))}
+                
+                {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
+                    <div className="flex gap-2 ml-4">
+                        <Button variant="destructive" size="sm" onClick={() => setDeleteAllOpen(true)}>
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete All
                         </Button>
                     </div>
                 )}
