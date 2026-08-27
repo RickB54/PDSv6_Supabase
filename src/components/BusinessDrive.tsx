@@ -6,7 +6,7 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw, Camera, ArrowUpDown
+    RefreshCw, Camera, ArrowUpDown, Bell
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -22,6 +22,13 @@ import {
     DialogFooter,
     DialogClose
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +62,7 @@ interface DriveFile {
     modified: string;
     path: string[]; // Array of folder names leading to this file
     data?: string; // base64 or blob URL
+    metadata?: any;
 }
 
 interface DriveFolder {
@@ -131,6 +139,18 @@ export default function BusinessDrive() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [sortType, setSortType] = useState<'upload' | 'modified' | 'name'>('upload');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [dateFilter, setDateFilter] = useState('all');
+    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(() => {
+        try {
+            const stored = localStorage.getItem('business_drive_expanded_folders');
+            if (stored) return JSON.parse(stored);
+        } catch {}
+        return { 'system-archives-main': true }; // System Archives expanded by default
+    });
+
+    useEffect(() => {
+        localStorage.setItem('business_drive_expanded_folders', JSON.stringify(expandedFolders));
+    }, [expandedFolders]);
     const [selectedTypeFilter, setSelectedTypeFilter] = useState<string | null>(null);
     const [filterHistory, setFilterHistory] = useState<string[]>([]);
     const [currentPath, setCurrentPath] = useState<string[]>(() => {
@@ -311,7 +331,12 @@ export default function BusinessDrive() {
                                         size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
                                         modified: new Date(pdf.timestamp || Date.now()).toISOString(),
                                         path: ['System Archives', folderName],
-                                        data: pdf.pdfData
+                                        data: pdf.pdfData,
+                                        metadata: {
+                                            customerName: pdf.customerName,
+                                            recordType: pdf.recordType,
+                                            recordId: pdf.recordId
+                                        }
                                     });
                                 }
                             }
@@ -377,6 +402,16 @@ export default function BusinessDrive() {
         return () => clearTimeout(timer);
     }, [files, folders, isLoaded]);
 
+    const handleDismissAlert = (file: DriveFile) => {
+        if (!file.metadata || !file.metadata.recordType) return;
+        dismissAlertsForRecord(file.metadata.recordType, file.id);
+        if (file.metadata.recordId) {
+            dismissAlertsForRecord(file.metadata.recordType, file.metadata.recordId);
+        }
+        try { refreshAlerts(); } catch {}
+        toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
+    };
+
     const currentItems = useMemo(() => {
         let filteredFiles = files;
         let filteredFolders = folders;
@@ -384,7 +419,8 @@ export default function BusinessDrive() {
         if (selectedTypeFilter) {
             // Pull out files of matching type from ANY path/folder (top level display)
             filteredFiles = files.filter(f => {
-                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const searchStr = searchTerm.toLowerCase();
+                const matchesSearch = f.name.toLowerCase().includes(searchStr) || f.metadata?.customerName?.toLowerCase().includes(searchStr);
                 const matchesType = getFileCategory(f) === selectedTypeFilter;
                 return matchesSearch && matchesType;
             });
@@ -393,7 +429,8 @@ export default function BusinessDrive() {
         } else {
             // Normal view restricted to currentPath
             filteredFiles = files.filter(f => {
-                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const searchStr = searchTerm.toLowerCase();
+                const matchesSearch = f.name.toLowerCase().includes(searchStr) || f.metadata?.customerName?.toLowerCase().includes(searchStr);
                 const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
                 return matchesSearch && matchesPath;
             });
@@ -402,6 +439,19 @@ export default function BusinessDrive() {
                 const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
                 return matchesSearch && matchesPath;
+            });
+        }
+
+        // Apply Time Range Filter
+        if (dateFilter !== 'all') {
+            const now = new Date();
+            filteredFiles = filteredFiles.filter(f => {
+                const d = new Date(f.modified);
+                if (dateFilter === 'today') return d.toDateString() === now.toDateString();
+                if (dateFilter === 'week') return (now.getTime() - d.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+                if (dateFilter === 'month') return (now.getTime() - d.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+                if (dateFilter === 'year') return (now.getTime() - d.getTime()) <= 365 * 24 * 60 * 60 * 1000;
+                return true;
             });
         }
 
@@ -619,6 +669,183 @@ export default function BusinessDrive() {
         });
     };
 
+    const fileHasAlert = (file: DriveFile) => {
+        if (!file.metadata || !file.metadata.recordType) return false;
+        return latestAlerts.some(a => {
+            const t = (a.title || "").toLowerCase();
+            return t.includes(file.id.toLowerCase()) || (file.metadata?.recordId && t.includes(file.metadata.recordId.toLowerCase()));
+        });
+    };
+
+    const printFile = (file: DriveFile) => {
+        if (!file.data) return;
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`<iframe src="${file.data}" width="100%" height="100%" style="border:none;"></iframe>`);
+            printWindow.document.title = file.name;
+            // Delay print to allow iframe to load
+            setTimeout(() => {
+                printWindow.print();
+            }, 500);
+        }
+    };
+
+    const renderListFile = (file: DriveFile, depth: number) => {
+        const hasAlert = fileHasAlert(file);
+        return (
+            <div 
+                key={file.id} 
+                className="flex items-center justify-between p-4 bg-[#0d1117]/80 border-t border-zinc-800/50 hover:bg-[#161b22] transition-all group shadow-sm cursor-pointer"
+                onClick={() => openViewer(file)}
+            >
+                <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
+                    <div className="p-2 bg-zinc-800/50 rounded-lg">
+                        {file.type.startsWith('image/') ? (
+                            <img src={file.data} className="w-5 h-5 object-cover rounded-sm" alt="" />
+                        ) : (
+                            <FileText className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                        )}
+                    </div>
+                    <span className="text-sm font-bold text-white truncate">{file.name}</span>
+                    {hasAlert && (
+                        <div title="Active Alert">
+                            <Bell className="w-4 h-4 text-red-500 animate-pulse ml-2" />
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
+                    <div className="hidden lg:flex items-center gap-2 w-32">
+                        <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] font-black">ME</div>
+                        Me
+                    </div>
+                    <div className="hidden sm:flex items-center gap-2 w-40">
+                        <Clock className="w-3.5 h-3.5" /> {new Date(file.modified).toLocaleDateString()}
+                    </div>
+                    <div className="w-20 text-right font-mono">{file.size}</div>
+                    
+                    {hasAlert && (
+                        <Button variant="ghost" size="sm" onClick={() => handleDismissAlert(file)} className="text-red-400 hover:text-red-300 hover:bg-red-950/30">
+                            Dismiss
+                        </Button>
+                    )}
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800 text-white">
+                                <MoreVertical className="w-4 h-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openViewer(file)}>
+                                <Eye className="w-4 h-4 mr-2" /> View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => printFile(file)}>
+                                <Printer className="w-4 h-4 mr-2" /> Print
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
+                                <Download className="w-4 h-4 mr-2" /> Download
+                            </DropdownMenuItem>
+                            {hasAlert && (
+                                <DropdownMenuItem className="hover:bg-zinc-800 text-red-400 cursor-pointer" onClick={() => handleDismissAlert(file)}>
+                                    <Bell className="w-4 h-4 mr-2" /> Dismiss Alert
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+        );
+    };
+
+    const renderListFolder = (folder: DriveFolder, depth = 0) => {
+        const isExpanded = !!expandedFolders[folder.id];
+        
+        // Find direct children (1 level deep from this folder)
+        const targetPathLength = folder.path.length + 1;
+        const targetPath = [...folder.path, folder.name];
+        
+        let childFolders = folders.filter(f => {
+            if (f.path.length !== targetPathLength) return false;
+            return targetPath.every((segment, idx) => f.path[idx] === segment);
+        });
+        
+        let childFiles = files.filter(f => {
+            if (f.path.length !== targetPathLength) return false;
+            return targetPath.every((segment, idx) => f.path[idx] === segment);
+        });
+
+        // Apply filters to child files
+        if (searchTerm) {
+            const searchStr = searchTerm.toLowerCase();
+            childFiles = childFiles.filter(f => {
+                const matchName = f.name.toLowerCase().includes(searchStr);
+                const matchCustomer = f.metadata?.customerName?.toLowerCase().includes(searchStr);
+                return matchName || matchCustomer;
+            });
+        }
+        if (dateFilter !== 'all') {
+            const now = new Date();
+            childFiles = childFiles.filter(f => {
+                const d = new Date(f.modified);
+                if (dateFilter === 'today') return d.toDateString() === now.toDateString();
+                if (dateFilter === 'week') return (now.getTime() - d.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+                if (dateFilter === 'month') return (now.getTime() - d.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+                if (dateFilter === 'year') return (now.getTime() - d.getTime()) <= 365 * 24 * 60 * 60 * 1000;
+                return true;
+            });
+        }
+        if (selectedTypeFilter) {
+            childFiles = childFiles.filter(f => getFileCategory(f) === selectedTypeFilter);
+        }
+
+        // Apply Sorting to child files
+        childFiles = [...childFiles].sort((a, b) => {
+            let valA: any = '';
+            let valB: any = '';
+            if (sortType === 'name') {
+                valA = a.name.toLowerCase();
+                valB = b.name.toLowerCase();
+            } else {
+                valA = a.modified ? new Date(a.modified).getTime() : 0;
+                valB = b.modified ? new Date(b.modified).getTime() : 0;
+            }
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return (
+            <div key={folder.id} className={cn("flex flex-col", depth === 0 ? "mb-2 border border-zinc-800 rounded-xl overflow-hidden shadow-sm" : "")}>
+                <div 
+                    className={cn(
+                        "flex items-center justify-between p-4 cursor-pointer transition-colors group",
+                        depth === 0 ? "bg-[#0d1117] hover:bg-[#161b22]" : "bg-[#161b22] border-t border-zinc-800 hover:bg-zinc-800",
+                        isExpanded && depth === 0 && "border-b border-zinc-800"
+                    )}
+                    onClick={() => setExpandedFolders(p => ({...p, [folder.id]: !p[folder.id]}))}
+                >
+                    <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
+                        <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : 'text-emerald-400')} />
+                        <span className={cn("text-sm font-bold truncate", folder.name === 'System Archives' ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
+                        <span className="text-[10px] text-zinc-500 font-bold ml-2">({childFolders.length + childFiles.length} items)</span>
+                    </div>
+                </div>
+                {isExpanded && (
+                    <div className="flex flex-col animate-fade-in bg-zinc-950/20">
+                        {childFolders.map(cf => renderListFolder(cf, depth + 1))}
+                        {childFiles.map(cf => renderListFile(cf, depth + 1))}
+                        {childFolders.length === 0 && childFiles.length === 0 && (
+                            <div className="p-4 text-xs text-zinc-500 italic" style={{ paddingLeft: `${1 + (depth + 1) * 1.5}rem` }}>Folder is empty</div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6 animate-fade-in p-1">
             {/* Header / Breadcrumbs */}
@@ -672,12 +899,24 @@ export default function BusinessDrive() {
                     <div className="relative flex-1 md:flex-none">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                         <Input 
-                            placeholder="Search Drive..." 
+                            placeholder="Search by name or customer..." 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-9 bg-[#161b22] border-zinc-800 w-full md:w-64 focus:ring-blue-500/20"
                         />
                     </div>
+                    <Select value={dateFilter} onValueChange={setDateFilter}>
+                        <SelectTrigger className="w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider">
+                            <SelectValue placeholder="Time" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="week">Past Week</SelectItem>
+                            <SelectItem value="month">Past Month</SelectItem>
+                            <SelectItem value="year">Past Year</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <Button 
                         variant="ghost" 
                         size="icon" 
@@ -1027,84 +1266,7 @@ export default function BusinessDrive() {
                                   </HoverCardContent>
                                 </HoverCard>
                             ) : (
-                                <HoverCard key={folder.id} openDelay={400}>
-                                  <HoverCardTrigger asChild>
-                                    <div 
-                                        className={cn(
-                                            "flex items-center justify-between p-4 bg-[#0d1117] rounded-xl transition-all group shadow-sm cursor-pointer border",
-                                            isSystemArchive ? "border-purple-500/50 bg-purple-950/10 hover:bg-purple-950/20" :
-                                            containsFiles
-                                                ? "border-emerald-500/50 bg-emerald-950/5 hover:bg-emerald-950/15"
-                                                : "border-zinc-800 hover:bg-[#161b22]"
-                                        )}
-                                        onClick={() => setCurrentPath([...currentPath, folder.name])}
-                                    >
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            <div className={cn(
-                                                "p-2 rounded-lg transition-all",
-                                                isSystemArchive ? "bg-purple-500/20 text-purple-400 group-hover:text-purple-300" :
-                                                containsFiles
-                                                    ? "bg-emerald-500/20 text-emerald-400 group-hover:text-emerald-300"
-                                                    : "bg-zinc-800/50 text-zinc-400 group-hover:text-blue-400"
-                                            )}>
-                                                <Folder className="w-5 h-5" />
-                                            </div>
-                                            <span className={cn(
-                                                "text-sm font-bold truncate transition-colors",
-                                                isSystemArchive ? "text-purple-300 group-hover:text-purple-200" :
-                                                containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
-                                            )}>{folder.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
-                                            <div className="w-40 text-right uppercase tracking-widest font-black text-zinc-600">Folder</div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800 text-white">
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
-                                                        <Eye className="w-4 h-4 mr-2" /> Open
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
-                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                  </HoverCardTrigger>
-                                  <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
-                                      <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
-                                          <div className="flex items-center gap-2">
-                                              <Folder className="w-4 h-4 text-emerald-400" />
-                                              <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
-                                          </div>
-                                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{folderFiles.length} file{folderFiles.length !== 1 ? 's' : ''}</span>
-                                      </div>
-                                      <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
-                                          {folderFiles.length === 0 ? (
-                                              <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
-                                          ) : (
-                                              folderFiles.slice(0, 10).map(ff => (
-                                                  <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
-                                                      <div className="flex items-center gap-2 overflow-hidden">
-                                                          <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
-                                                          <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
-                                                      </div>
-                                                      <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
-                                                  </div>
-                                              ))
-                                          )}
-                                          {folderFiles.length > 10 && (
-                                              <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-3 bg-[#0d1117]/50 rounded border border-zinc-800 mt-2">
-                                                  + {folderFiles.length - 10} more
-                                              </div>
-                                          )}
-                                      </div>
-                                  </HoverCardContent>
-                                </HoverCard>
+                                renderListFolder(folder, 0)
                             );
                         })}
 
@@ -1140,9 +1302,17 @@ export default function BusinessDrive() {
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openViewer(file)}>
                                                     <Eye className="w-4 h-4 mr-2" /> View
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => printFile(file)}>
+                                                    <Printer className="w-4 h-4 mr-2" /> Print
+                                                </DropdownMenuItem>
                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
                                                     <Download className="w-4 h-4 mr-2" /> Download
                                                 </DropdownMenuItem>
+                                                {fileHasAlert(file) && (
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-red-400 cursor-pointer" onClick={() => handleDismissAlert(file)}>
+                                                        <Bell className="w-4 h-4 mr-2" /> Dismiss Alert
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
@@ -1151,50 +1321,7 @@ export default function BusinessDrive() {
                                     </div>
                                 </Card>
                             ) : (
-                                <div 
-                                    key={file.id} 
-                                    className="flex items-center justify-between p-4 bg-[#0d1117] border border-zinc-800 rounded-xl hover:bg-[#161b22] transition-all group shadow-sm cursor-pointer"
-                                    onClick={() => openViewer(file)}
-                                >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className="p-2 bg-zinc-800/50 rounded-lg">
-                                            {file.type.startsWith('image/') ? (
-                                                <img src={file.data} className="w-5 h-5 object-cover rounded-sm" alt="" />
-                                            ) : (
-                                                <FileText className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
-                                            )}
-                                        </div>
-                                        <span className="text-sm font-bold text-white truncate">{file.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-8 text-xs text-zinc-500" onClick={(e) => e.stopPropagation()}>
-                                        <div className="hidden lg:flex items-center gap-2 w-32">
-                                            <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] font-black">ME</div>
-                                            Me
-                                        </div>
-                                        <div className="hidden sm:flex items-center gap-2 w-40">
-                                            <Clock className="w-3.5 h-3.5" /> {file.modified}
-                                        </div>
-                                        <div className="w-20 text-right font-mono">{file.size}</div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-zinc-800 text-white">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openViewer(file)}>
-                                                    <Eye className="w-4 h-4 mr-2" /> View
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
-                                                    <Download className="w-4 h-4 mr-2" /> Download
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
-                                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
+                                renderListFile(file, 0)
                             )
                         ))}
                     </>

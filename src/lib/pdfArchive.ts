@@ -227,7 +227,12 @@ export function savePDFToArchive(
            size: sizeKb > 1024 ? (sizeKb/1024).toFixed(1) + " MB" : sizeKb + " KB",
            modified: new Date().toISOString(),
            path: ['System Archives', folderName],
-           data: record.pdfData
+           data: record.pdfData,
+           metadata: {
+               customerName: customerName,
+               recordType: recordType,
+               recordId: recordId
+           }
        });
        
        await localforage.setItem('business_drive_files_v3', files);
